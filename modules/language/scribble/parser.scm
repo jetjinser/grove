@@ -145,7 +145,7 @@
            [(#\:)
             (read-char in)
             (let ([sym (scrib-read in)])
-              (if (symbol? (pk 'sym sym))
+              (if (symbol? sym)
                 (symbol->keyword sym)
                 (error "invalid keyword syntax")))]
            [else (error "unknown # syntax")])]
