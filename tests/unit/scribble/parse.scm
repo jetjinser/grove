@@ -116,6 +116,12 @@
 (test-parse/error "Unmatched opening brace"
   "@bold{unclosed")
 
+(test-parse/error "Unmatched opening square bracket"
+  "@cmd[unclosed")
+
+(test-parse/error "Invalid S-expr in square brackets"
+  "@cmd[(]")
+
 (test-parse/error "Unmatched closing brace"
   "closed}")
 
@@ -124,6 +130,15 @@
 
 (test-parse/error "Dangling at-sign at EOF"
   "Text ends with @")
+
+(test-parse/error "Unmatched pipe opening delimiter"
+  "@cmd|{unclosed")
+
+(test-parse/error "Unmatched custom pipe delimiter"
+  "@cmd|<<{unclosed")
+
+(test-parse/error "Empty command name"
+  "@")
 
 
 (test-parse "Float case 1" '(123.456)   "@123.456")
@@ -258,7 +273,6 @@
   '((cmd "a" "b" "c"))
   "@cmd[\"a\" \"b\" \"c\"]")
 
-(test-skip 1) ; TODO:
 (test-parse "Multiple keyword args without body"
   '((figure #:width 100 #:height 200))
   "@figure[#:width 100 #:height 200]")
@@ -271,24 +285,5 @@
 (test-parse "Command name with asterisk"
   '((cmd* "body"))
   "@cmd*{body}")
-
-
-(test-skip 1) ; FIXME:
-(test-parse/error "Unmatched pipe opening delimiter"
-  "@cmd|{unclosed")
-
-(test-skip 1) ; FIXME:
-(test-parse/error "Unmatched custom pipe delimiter"
-  "@cmd|<<{unclosed")
-
-(test-skip 1) ; FIXME:
-(test-parse/error "Empty command name"
-  "@")
-
-(test-parse/error "Unmatched opening square bracket"
-  "@cmd[unclosed")
-
-(test-parse/error "Invalid S-expr in square brackets"
-  "@cmd[(]")
 
 (test-end "scribble parse")
