@@ -76,9 +76,8 @@
   42
   "42")
 
-;; XXX: Is this right?
 (test-read/approximate "float"
-  42.2
+  42.42
   "42.42"
   0.01)
 
