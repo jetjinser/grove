@@ -233,7 +233,7 @@
          (let ([c (peek-char in)])
            (cond
              [(eof-object? c)
-              (tok str res punc depth)]
+              (error "dangling escape character at end of input")]
              [(char-whitespace? c)
               (tok (cons c str) res punc depth)]
              [(eqv? c comment-char)

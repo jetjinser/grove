@@ -122,11 +122,7 @@
 (test-parse/error "Unmatched square bracket"
   "@cmd[missing-closing-bracket{body}")
 
-(test-skip 1) ; FIXME: should error but not
 (test-parse/error "Dangling at-sign at EOF"
-  "Text ends with @")
-(test-parse "! Dangling at-sign at EOF"
-  '("Text ends with ")
   "Text ends with @")
 
 
