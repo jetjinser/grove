@@ -26,9 +26,13 @@
           };
           devshells.default = {
             packages = with pkgs; [
+              racket
+
               guile
               guile-quickcheck
               self'.packages.blue
+
+              reuse
             ];
             env = [
               {
