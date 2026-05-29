@@ -1,3 +1,15 @@
+;;; SPDX-FileCopyrightText: 2011 Alex Shinn
+;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+;;;
+;;; SPDX-License-Identifier: GPL-3.0-or-later OR BSD-3-Clause
+
+;;; Commentary:
+
+;; A library for parsing "scribble" format, introduced by Racket.
+;; https://docs.racket-lang.org/scribble/.
+
+;;; Code:
+
 (define-module (language scribble parser)
   #:export (scribble-read
             scribble-parse

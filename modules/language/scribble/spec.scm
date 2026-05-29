@@ -1,3 +1,7 @@
+;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+;;;
+;;; SPDX-License-Identifier: GPL-3.0-or-later
+
 (define-module (language scribble spec)
   #:use-module (system base language)
   #:use-module (language scribble parser)
