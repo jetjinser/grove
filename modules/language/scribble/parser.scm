@@ -104,8 +104,8 @@
                         (error "unterminated dotted list")
                         (let ([z (scrib-read in)])
                           (if (not (eq? z scribble-close))
-                              (error "dot in non-terminal position in list" y z)
-                              (append (reverse res) y)))))]
+                            (error "dot in non-terminal position in list" y z)
+                            (append (reverse res) y)))))]
                    [else (loop (cons x res))])))]
         [(#\} #\] #\)) scribble-close]
         [(#\.) (cond
@@ -146,11 +146,9 @@
                 (symbol->keyword sym)
                 (error "invalid keyword syntax")))]
            [else (error "unknown # syntax")])]
-        [else
-         (if (char-numeric? ch)
-             (begin (unread-char ch in)
-                    (read-number in))
-             (read-symbol in ch))])]))
+        [else (cond [(char-numeric? ch) (unread-char ch in)
+                                        (read-number in)]
+                    [else (read-symbol in ch)])])]))
 
 (define* (scribble-read in #:optional (ec default-escape-char))
   (let ([res (scrib-read in ec)])
@@ -164,12 +162,12 @@
 ;; scribble parser
 
 (define (read-punctuation in)
-  (if (not (eqv? #\| (peek-char in)))
-      '()
-      (let loop ([ls '()])
-        (let ([c (peek-char in)])
-          (cond [(or (eof-object? c) (not(char-punctuation? c))) ls]
-                [else (loop (cons (char-mirror (read-char in)) ls))])))))
+  (if (eqv? #\| (peek-char in))
+    (let loop ([ls '()])
+      (let ([c (peek-char in)])
+        (cond [(or (eof-object? c) (not (char-punctuation? c))) ls]
+              [else (loop (cons (char-mirror (read-char in)) ls))])))
+    '()))
 
 (define (read-prefix-wrapper in)
   (let loop ([wrap identity])
@@ -195,10 +193,9 @@
             [data  (if data? (scribble-read in ec) '())]
             [punc  (read-punctuation in)]
             [body? (eqv? (peek-char in) #\{)]
-            [body  (if body?
-                     (begin (read-char in)
-                            (scribble-parse in punc ec #:need-close? #t))
-                     '())])
+            [body  (cond [body? (read-char in)
+                                (scribble-parse in punc ec #:need-close? #t)]
+                         [else '()])])
        (wrap (if (or data? body?)
                (append cmd data body)
                (car cmd))))]))
