@@ -113,18 +113,10 @@
   "@code|{function() { return 0; }}|")
 
 
-(test-skip 1) ; FIXME: should error but not
 (test-parse/error "Unmatched opening brace"
   "@bold{unclosed")
-(test-parse "! Unmatched opening brace"
-  '((bold "unclosed"))
-  "@bold{unclosed")
 
-(test-skip 1) ; FIXME: should error but not
 (test-parse/error "Unmatched closing brace"
-  "closed}")
-(test-parse "! Unmatched closing brace"
-  '("closed")
   "closed}")
 
 (test-parse/error "Unmatched square bracket"

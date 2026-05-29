@@ -21,7 +21,7 @@
             scribble-parse
             scribble-reader))
 
-(define default-ecape-char #\@)
+(define default-escape-char #\@)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; general character utils
@@ -90,7 +90,7 @@
   (unread-char ch in)
   (string->symbol (read-delimited +scribble-delims+ in 'peek)))
 
-(define* (scrib-read in #:optional (ec default-ecape-char))
+(define* (scrib-read in #:optional (ec default-escape-char))
   (define ch (read-char in))
   (cond
     [(eof-object? ch) ch]
@@ -155,7 +155,7 @@
                     (read-number in))
              (read-symbol in ch))])]))
 
-(define* (scribble-read in #:optional (ec default-ecape-char))
+(define* (scribble-read in #:optional (ec default-escape-char))
   (let ([res (scrib-read in ec)])
     (cond [(eq? res scribble-dot)
            (error "invalid . in source")]
@@ -198,13 +198,17 @@
             [data  (if data? (scribble-read in ec) '())]
             [punc  (read-punctuation in)]
             [body? (eqv? (peek-char in) #\{)]
-            [body  (if body? (begin (read-char in) (scribble-parse in punc ec)) '())])
+            [body  (if body?
+                     (begin (read-char in)
+                            (scribble-parse in punc ec #:need-close? #t))
+                     '())])
        (wrap (if (or data? body?)
                (append cmd data body)
                (car cmd))))]))
 
 (define* (scribble-parse in #:optional (init-punc '())
-                                       (escape-char default-ecape-char))
+                                       (escape-char default-escape-char)
+                            #:key (need-close? #f))
   (define comment-char #\;)
   (define bracket-char #\[)
   (define brace-char   #\{)
@@ -222,7 +226,7 @@
     (let ([c (read-char in)])
       (cond
         [(eof-object? c)
-         (if (zero? depth)
+         (if (and (zero? depth) (not need-close?))
            (reverse (collect str res))
            (error "unterminated expression" punc))]
         [(and (eqv? c escape-char) (list-prefix? punc str))
@@ -256,8 +260,10 @@
          (cond
           [(zero? depth)
            (let loop ([p punc] [ls '()])
-             (cond [(null? p)
+             (cond [(and need-close? (null? p))
                     (reverse (collect str res))]
+                   [(and (null? p) (null? ls))
+                    (error "unexpected closing brace")]
                    [(not (eqv? (car p) (peek-char in)))
                     (tok (append ls (cons c str)) res punc (- depth 1))]
                    [else
