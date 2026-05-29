@@ -65,12 +65,6 @@
 (define scribble-dot   (list "."))
 (define scribble-close (list ")"))
 
-(define (if-peek-char ch in pass fail)
-  (cond [(eqv? ch (peek-char in))
-         (read-char in)
-         pass]
-        [else fail]))
-
 (define (read-number in)
   (let ([token (read-delimited +scribble-delims+ in 'peek)])
     (or (string->number token)
@@ -119,8 +113,11 @@
                  [else (unread-char #\. in) (read-number in)])]
         [(#\') (list 'quote (scrib-read in))]
         [(#\`) (list 'quasiquote (scrib-read in))]
-        [(#\,) (list (if-peek-char #\@ in 'unquote-splicing 'unquote)
-                     (scrib-read in))]
+        [(#\,) (cond [(eqv? #\@ (peek-char in))
+                      (read-char)
+                      (list 'unquote-splicing (scrib-read in))]
+                     [else
+                      (list 'unquote (scrib-read in))])]
         [(#\;) (read-line in) (scrib-read in)]
         [(#\|) (string->symbol (read-escaped in #\|))]
         [(#\") (read-escaped in #\")]
