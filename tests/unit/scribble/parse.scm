@@ -13,15 +13,6 @@
     expected
     (scribble-parse (open-input-string scribble-str))))
 
-(define-syntax-rule (test-parse/approximate test-name
-                                           expected
-                                           scribble-str
-                                           error)
-  (test-approximate test-name
-    expected
-    (scribble-parse (open-input-string scribble-str))
-    error))
-
 (define-syntax-rule (test-parse/error test-name
                                      scribble-str)
   (test-error test-name #t
@@ -100,12 +91,21 @@
   "Contact us at user@\"@\"example.com")
 
 (test-parse "Escaped braces"
-  '("Matching pairs \\{\\} inside text")
-  "Matching pairs \\{\\} inside text")
+  '("Matching pairs {}inside text")
+  "Matching pairs @\"{\"@\"}\"inside text")
 
 (test-parse "At-sign inside S-expr argument"
   '((email "foo@bar.com"))
   "@email[\"foo@bar.com\"]")
+
+(test-parse "Escaped at-sign in square bracket argument"
+  '((email "foo@" "bar.com"))
+  ;; racket: '((email "foo@" "bar.com"))
+  "@email[\"foo@\"@\"bar.com\"]")
+
+(test-parse "Escaped at-sign in pipe body"
+  '((code "x = user@\"@\"example.com"))
+  "@code|{x = user@\"@\"example.com}|")
 
 
 (test-parse "Alternative text body with vertical bars"
@@ -137,6 +137,9 @@
 (test-parse/error "Unmatched custom pipe delimiter"
   "@cmd|<<{unclosed")
 
+(test-parse/error "Nested unmatched brace inside body"
+  "@outer{@inner{text}")
+
 (test-parse/error "Empty command name"
   "@")
 
@@ -162,10 +165,26 @@
   '((cmd))
   "@cmd{\n}")
 
+(test-parse "Body with leading newline and text"
+  '((cmd "hello"))
+  "@cmd{\nhello}")
+
+(test-parse "Body with leading newline, spaces, and text"
+  '((cmd "  hello"))
+  "@cmd{\n  hello}")
+
+(test-parse "Body with leading space then newline"
+  '((cmd " " "\n" "hello"))
+  "@cmd{ \nhello}")
+
 
 (test-parse "Adjacent commands without space"
   '((a "1") (b "2"))
   "@a{1}@b{2}")
+
+(test-parse "Adjacent bare commands"
+  '(foo@bar)
+  "@foo@bar")
 
 (test-parse "Command embedded between text no space"
   '("prefix" (cmd "body") "suffix")
@@ -213,6 +232,14 @@
 (test-parse "Comment only input"
   '()
   "@; only comment")
+
+(test-parse "Multiple line comments"
+  '("a b c")
+  "a @; comment\nb @; another\nc")
+
+(test-parse "Comment discards @-commands on same line"
+  '("before after")
+  "before @; @bold{ignored}\nafter")
 
 
 (test-parse "Unicode plain text"
@@ -276,6 +303,18 @@
 (test-parse "Multiple keyword args without body"
   '((figure #:width 100 #:height 200))
   "@figure[#:width 100 #:height 200]")
+
+(test-parse "Nested S-expr in argument"
+  '((cmd (a (b c))))
+  "@cmd[(a (b c))]")
+
+(test-parse "Square brackets with only whitespace"
+  '((cmd))
+  "@cmd[ ]")
+
+(test-parse "Argument containing an @-command (error or literal)"
+  '((cmd "@bold{x}"))
+  "@cmd[\"@bold{x}\"]")
 
 
 (test-parse "Hyphenated command name"
