@@ -1,0 +1,20 @@
+(define-module (blueprint buildables)
+  #:use-module (blue build)
+  #:use-module (blue stencils guile)
+  #:use-module (blue stencils template-file)
+  #:use-module (blue stencils texinfo)
+  #:export (grv-modules))
+
+(define +grv-sources+
+  '("modules/language/scribble/parser.scm"))
+
+(define grv-modules
+  (map
+    (λ (source)
+      (guile-module
+        (inputs source)
+        (outputs (->.go source))
+        (load-path #%~(list #%?srcdir))
+        (optimizations
+          '(#:seal-private-binddings? #t))))
+    +grv-sources+))

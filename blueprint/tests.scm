@@ -22,15 +22,15 @@
   #:export (grv-tests))
 
 (define +test-resources+
-  '("tests/unit/scribble/read.scm"
-    "tests/unit/scribble/parse.scm"))
+  '("unit/scribble/read.scm"
+    "unit/scribble/parse.scm"))
 
 (define test-environment
   #%~(list (format #f "GRV_SRCDIR=~a" #%?srcdir)))
 
 (define test-options
   #%~(list
-       #:load-path (list (string-append #%?srcdir "/modules"))
+       #:load-path (list #%?srcdir)
        #:load-compiled-path (list #%?builddir)
        #:enable-coverage? (->bool (getenv "GRV_TESTS_ENABLE_COVERAGE"))
        #:time-limit (or (and=> (getenv "GRV_TESTS_TIME_LIMIT") string->number)
@@ -40,7 +40,7 @@
   (map
     (λ (script-name)
       (guile-test-suite
-        (inputs script-name)
+        (inputs #%~(string-append #%?testdir "/" script-name))
         (environment test-environment)
         (options test-options)))
     +test-resources+))
