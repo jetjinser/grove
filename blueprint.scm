@@ -11,7 +11,8 @@
              (blue types command)
              (blueprint tests)
              (blueprint install)
-             (blueprint buildables))
+             (blueprint buildables)
+             (language scribble parser))
 
 (define grove-variables
   (append
@@ -31,6 +32,15 @@
       [variable
         [name "builddir"]
         [value (const "build")]])))
+
+(define-command (parse-command args)
+  ([invoke   "parse"]
+   [category 'develop]
+   [synopsis "Parse a Scribble expression into an S-expression"]
+   [help     "Read a Scribble expression from the first command-line argument, parse it into an S-expression, and write the result to standard output."])
+
+  (write (scribble-parse (open-input-string (car args))))
+  (newline))
 
 (define grove-configuration
   (configuration (variables grove-variables)))
