@@ -143,6 +143,12 @@
                   [(newline) #\newline]
                   [else (string-ref (symbol->string name) 0)]))
               (read-char in))]
+           [(#\:)
+            (read-char in)
+            (let ([sym (scrib-read in)])
+              (if (symbol? (pk 'sym sym))
+                (symbol->keyword sym)
+                (error "invalid keyword syntax")))]
            [else (error "unknown # syntax")])]
         [else
          (if (char-numeric? ch)

@@ -69,16 +69,18 @@
   "@section{Title\nSubsection}")
 
 
-(test-skip 1) ; FIXME:
 (test-parse "Command with positional arguments"
   '((item #:style 'bold "content"))
   "@item[#:style 'bold]{content}")
+
+(test-parse "Command with positional arguments nested"
+  '((item #:style 'bold "Hello " (bold #:class 'noun "world") "!"))
+  "@item[#:style 'bold]{Hello @bold[#:class 'noun]{world}!}")
 
 (test-parse "Command with multiple S-expr args, no body"
   '((link "url" "label"))
   "@link[\"url\" \"label\"]")
 
-(test-skip 1) ; FIXME:
 (test-parse "Complex mixture of S-expr and body"
   '((image "logo.png" #:width 200 "Caption text"))
   "@image[\"logo.png\" #:width 200]{Caption text}")
