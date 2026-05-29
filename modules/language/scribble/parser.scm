@@ -90,9 +90,8 @@
   (unread-char ch in)
   (string->symbol (read-delimited +scribble-delims+ in 'peek)))
 
-(define (scrib-read in . o)
+(define* (scrib-read in #:optional (ec default-ecape-char))
   (define ch (read-char in))
-  (define ec (if (pair? o) (car o) default-ecape-char))
   (cond
     [(eof-object? ch) ch]
     [(char-whitespace? ch) (scrib-read in)]
@@ -156,8 +155,8 @@
                     (read-number in))
              (read-symbol in ch))])]))
 
-(define (scribble-read in . o)
-  (let ([res (scrib-read in (if (pair? o) (car o) default-ecape-char))])
+(define* (scribble-read in #:optional (ec default-ecape-char))
+  (let ([res (scrib-read in ec)])
     (cond [(eq? res scribble-dot)
            (error "invalid . in source")]
           [(eq? res scribble-close)
@@ -192,10 +191,6 @@
   (cond
     [(eqv? #\" (peek-char in))
      (scribble-read in)]
-    [(eqv? #\\ (peek-char in))
-     ;; not compatible with racket
-     (read-char in)
-     "\\"]
     [else
      (let* ([wrap  (read-prefix-wrapper in)]
             [cmd   (if (memv (peek-char in) '(#\[ #\{)) '() (list (scribble-read in ec)))]
@@ -208,9 +203,8 @@
                (append cmd data body)
                (car cmd))))]))
 
-(define (scribble-parse in . o)
-  (define init-punc    (if (pair? o) (car o) '()))
-  (define escape-char  (if (and (pair? o) (pair? (cdr o))) (cadr o) default-ecape-char))
+(define* (scribble-parse in #:optional (init-punc '())
+                                       (escape-char default-ecape-char))
   (define comment-char #\;)
   (define bracket-char #\[)
   (define brace-char   #\{)
