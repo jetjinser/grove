@@ -84,7 +84,22 @@
   (unread-char ch in)
   (string->symbol (read-delimited +scribble-delims+ in 'peek)))
 
-(define* (scrib-read in #:optional (ec default-escape-char))
+(define (read-list in)
+  (let loop ([res '()])
+    (let ([x (scrib-read in)])
+      (cond [(eof-object? x) (error "unterminated list" x)]
+            [(eq? x scribble-close) (reverse res)]
+            [(eq? x scribble-dot)
+             (let ([y (scrib-read in)])
+               (when (or (eof-object? y) (eq? y scribble-close))
+                 (error "unterminated dotted list"))
+               (let ([z (scrib-read in)])
+                 (unless (eq? z scribble-close)
+                   (error "dot in non-terminal position in list" y z))
+                 (append (reverse res) y)))]
+            [else (loop (cons x res))]))))
+
+(define* (scrib-read in #:optional [ec default-escape-char])
   (define ch (read-char in))
   (cond
     [(eof-object? ch) ch]
@@ -93,20 +108,7 @@
      (scribble-parse-escape in ec)]
     [else
       (case ch
-        [(#\( #\[ #\{)
-         (let loop ([res '()])
-           (let ([x (scrib-read in)])
-             (cond [(eof-object? x) (error "unterminated list" x)]
-                   [(eq? x scribble-close) (reverse res)]
-                   [(eq? x scribble-dot)
-                    (let ([y (scrib-read in)])
-                      (if (or (eof-object? y) (eq? y scribble-close))
-                        (error "unterminated dotted list")
-                        (let ([z (scrib-read in)])
-                          (if (not (eq? z scribble-close))
-                            (error "dot in non-terminal position in list" y z)
-                            (append (reverse res) y)))))]
-                   [else (loop (cons x res))])))]
+        [(#\( #\[ #\{) (read-list in)]
         [(#\} #\] #\)) scribble-close]
         [(#\.) (cond
                  [(char-delimiter? (peek-char in)) scribble-dot]
@@ -150,7 +152,7 @@
                                         (read-number in)]
                     [else (read-symbol in ch)])])]))
 
-(define* (scribble-read in #:optional (ec default-escape-char))
+(define* (scribble-read in #:optional [ec default-escape-char])
   (let ([res (scrib-read in ec)])
     (cond [(eq? res scribble-dot)
            (error "invalid . in source")]
@@ -200,14 +202,12 @@
                (append cmd data body)
                (car cmd))))]))
 
-(define* (scribble-parse in #:optional (init-punc '())
-                                       (escape-char default-escape-char)
-                            #:key (need-close? #f))
+(define* (scribble-parse in #:optional [init-punc '()]
+                                       [escape-char default-escape-char]
+                            #:key [need-close? #f])
   (define comment-char #\;)
-  (define bracket-char #\[)
   (define brace-char   #\{)
-  (define close-bracket-char (char-mirror bracket-char))
-  (define close-brace-char   (char-mirror brace-char))
+  (define close-brace-char (char-mirror brace-char))
 
   (define-inlinable (collect str res)
     (if (pair? str) (cons (list->string (reverse str)) res) res))
