@@ -23,6 +23,11 @@
 
 (define default-escape-char #\@)
 
+(define-syntax define-constant
+  (syntax-rules ()
+    ((_ name value)
+     (define-syntax name (identifier-syntax value)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; general character utils
 
@@ -205,16 +210,16 @@
 (define* (scribble-parse in #:optional [init-punc '()]
                                        [escape-char default-escape-char]
                             #:key [need-close? #f])
-  (define comment-char #\;)
-  (define brace-char   #\{)
-  (define close-brace-char (char-mirror brace-char))
+  (define-constant comment-char     #\;)
+  (define-constant brace-char       #\{)
+  (define-constant close-brace-char (char-mirror brace-char))
 
   (define-inlinable (collect str res)
     (if (pair? str) (cons (list->string (reverse str)) res) res))
   (define-inlinable (skip-space in)
     (let ([ch (peek-char in)])
-      (cond [(char-whitespace? ch) (read-char in) (skip-space in)]
-            [(eqv? ch #\;) (read-line in) (skip-space in)])))
+      (cond [(char-whitespace? ch)  (read-char in) (skip-space in)]
+            [(eqv? ch comment-char) (read-line in) (skip-space in)])))
 
   (define (tok str res punc depth)
     (let ([c (read-char in)])
