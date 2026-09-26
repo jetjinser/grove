@@ -23,7 +23,8 @@
 
 (define +test-resources+
   '("unit/scribble/read.scm"
-    "unit/scribble/parse.scm"))
+    "unit/scribble/parse.scm"
+    "unit/scribble/site.scm"))
 
 (define test-environment
   #%~(list (format #f "GRV_SRCDIR=~a" #%?srcdir)))
@@ -44,4 +45,3 @@
         (environment test-environment)
         (options test-options)))
     +test-resources+))
-

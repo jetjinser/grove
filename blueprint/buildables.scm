@@ -13,6 +13,7 @@
   '("modules/language/scribble/commands.scm"
     "modules/language/scribble/content.scm"
     "modules/language/scribble/parser.scm"
+    "modules/language/scribble/site.scm"
     "modules/language/scribble/spec.scm"))
 
 (define grv-modules

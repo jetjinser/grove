@@ -24,6 +24,14 @@
             make-content-document
             content-document-children
             content-document-source
+            content-link?
+            make-content-link
+            content-link-target
+            content-link-children
+            content-math?
+            make-content-math
+            content-math-source-text
+            content-math-display?
             content->sxml))
 
 (define-record-type <content-text>
@@ -69,6 +77,24 @@
 (define* (make-content-document children #:optional (source #f))
   (%make-content-document (map normalize-child children) source))
 
+(define-record-type <content-link>
+  (%make-content-link target children)
+  content-link?
+  (target content-link-target)
+  (children content-link-children))
+
+(define (make-content-link target children)
+  (%make-content-link target (map normalize-child children)))
+
+(define-record-type <content-math>
+  (%make-content-math source-text display?)
+  content-math?
+  (source-text content-math-source-text)
+  (display? content-math-display?))
+
+(define (make-content-math source-text display?)
+  (%make-content-math source-text display?))
+
 (define (content-verbatim-string fragments)
   (string-concatenate
     (map (lambda (fragment)
@@ -87,6 +113,17 @@
     ((content-element? content)
      (cons (content-element-tag content)
            (map content->sxml (content-element-children content))))
+    ((content-link? content)
+     `(a (@ (href ,(string-append "/" (content-link-target content) ".html")))
+         ,@(map content->sxml (content-link-children content))))
+    ((content-math? content)
+     `(,(if (content-math-display? content) 'div 'span)
+        (@ (class ,(if (content-math-display? content)
+                       "math-display" "math-inline")))
+        ,(string-append
+           (if (content-math-display? content) "\\[" "\\(")
+           (content-math-source-text content)
+           (if (content-math-display? content) "\\]" "\\)"))))
     ((content-document? content)
      (cons 'article
            (map content->sxml (content-document-children content))))
