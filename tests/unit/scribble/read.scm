@@ -98,6 +98,27 @@
   (test-equal "at-exp can be enabled in an ordinary Scheme expression"
     '(let ((value 40)) (increment 2))
     (read-with-scheme-language env "(let ((value 40)) @increment[2])"))
+  (test-equal "at-exp expressions use ordinary Scheme lexical scope"
+    42
+    (eval (read-with-scheme-language env
+                                     "(let ((n 41)) @+[@n 1])")
+          env))
+  (test-equal "parenthesized at-exp escape is an ordinary expression"
+    42
+    (eval (read-with-scheme-language env "@(+ 40 2)") env))
+  (test-equal "text bodies can call nested expressions in lexical scope"
+    "Hello, Ada!"
+    (eval (read-with-scheme-language
+            env
+            "(let ((name \"Ada\")) @string-append{Hello, @|name|!})")
+          env))
+  (eval '(define-syntax twice
+           (syntax-rules ()
+             ((_ n) (+ n n))))
+        env)
+  (test-equal "ordinary Scheme macros can expand at-exp calls"
+    42
+    (eval (read-with-scheme-language env "@twice[21]") env))
   (fluid-set! reader-fluid read-syntax)
   (test-equal "native Scheme reader can be restored"
     '(+ 1 2)
