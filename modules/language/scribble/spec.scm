@@ -37,4 +37,9 @@
   #:evaluator  (lambda (exp env) (primitive-eval exp))
   #:printer    write
   #:make-default-environment
-    (lambda () (resolve-module '(language scribble commands))))
+    (lambda ()
+      (let ((environment (make-fresh-user-module)))
+        (module-use! environment (resolve-interface '(grove ir)))
+        (module-use! environment
+                     (resolve-interface '(language scribble commands)))
+        environment)))

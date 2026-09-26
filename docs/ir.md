@@ -16,9 +16,8 @@ Input languages produce Grove content; renderers consume it.
 | `content-element` | Named element with children and properties. |
 | `content-document` | Root content sequence. |
 
-Each record has an optional `source` field. Element kinds are open; `link`
-elements use a logical page ID as their `target` property.
+Each record has an optional `source` field. Element kinds are open.
 
-`(grove site)` groups pages by ID and validates links between them. A page
+`(grove site)` groups pages by ID and checks for duplicate IDs. A page
 contains an ID, title, and content document. The site contains no output paths
 or markup.

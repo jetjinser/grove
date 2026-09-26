@@ -2,16 +2,19 @@
 ;;;
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(define-module (tests unit scribble site)
+(define-module (tests unit forester site)
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64)
   #:use-module (system base language)
   #:use-module (language scribble spec)
+  #:use-module (forester render html)
+  #:use-module (forester site)
   #:use-module (grove ir)
   #:use-module (grove render html)
   #:use-module (grove site))
 
 (define environment (default-environment scribble))
+(eval '(use-modules (forester commands)) environment)
 
 (define (evaluate-document source)
   (eval ((language-reader scribble)
@@ -33,7 +36,7 @@
     (evaluate-document
       "@paragraph{See @link[\"algebra\"]{the algebra note}.}")))
 
-(test-begin "scribble site")
+(test-begin "forester site")
 
 (let* ((paragraph-node
          (car (content-document-children (site-page-document algebra))))
@@ -51,7 +54,7 @@
   '(span (@ (class "notice")) "Hello")
   (content->sxml (make-content-element 'notice '("Hello"))))
 
-(let* ((rendered (site->html (make-site (list algebra limits))))
+(let* ((rendered (forest->html (make-forest (make-site (list algebra limits)))))
        (algebra-html (assoc-ref rendered "algebra"))
        (limits-html (assoc-ref rendered "limits")))
   (test-assert "at-exp link resolves to a page"
@@ -73,13 +76,14 @@
     (string-contains algebra-html "Algebra &amp; limits")))
 
 (test-error "unresolved links fail site analysis" #t
-  (make-site
-    (list (make-site-page "broken" "Broken"
-            (evaluate-document "@paragraph{@link[\"missing\"]{nowhere}}")))))
+  (make-forest
+    (make-site
+      (list (make-site-page "broken" "Broken"
+              (evaluate-document "@paragraph{@link[\"missing\"]{nowhere}}"))))))
 
 (test-error "duplicate page ids fail site analysis" #t
   (make-site
     (list (make-site-page "same" "First" (evaluate-document "first"))
           (make-site-page "same" "Second" (evaluate-document "second")))))
 
-(test-end "scribble site")
+(test-end "forester site")

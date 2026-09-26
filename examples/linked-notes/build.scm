@@ -5,13 +5,17 @@
 (use-modules (ice-9 ftw)
              (ice-9 textual-ports)
              (srfi srfi-13)
+             (system base language)
+             (language scribble spec)
+             (forester input scribble)
+             (forester render html)
+             (forester render text)
+             (forester site)
              (grove build)
              (grove collect)
              (grove input scribble)
              (grove output)
-             (grove render html)
              (grove render html routes)
-             (grove render text)
              (grove style html))
 
 (define examples-directory (dirname (current-filename)))
@@ -19,14 +23,20 @@
   (or (and (pair? (cdr (command-line))) (cadr (command-line)))
       "/tmp/grove-linked-notes"))
 
+(define notes-environment (default-environment scribble))
+(eval '(use-modules (forester commands)) notes-environment)
+
 (define notes-site
   (build-site
     (collect-directory
       examples-directory
       (lambda (filename)
         (string-suffix? ".scrbl" filename)))
-    (make-scribble-page-reader)
+    (make-forester-page-reader
+      (make-scribble-document-reader notes-environment))
     #:title "Linked Notes"))
+
+(define notes-forest (make-forest notes-site))
 
 (define notes-style
   (make-html-style
@@ -46,10 +56,11 @@
 
 (define artifacts
   (render-site
-    notes-site
-    (list (make-html-renderer #:style notes-style #:routes notes-routes)
-          (lambda (site)
-            (prefix-artifacts "text" (render-text site))))))
+    notes-forest
+    (list (make-forester-html-renderer
+            #:style notes-style #:routes notes-routes)
+          (lambda (forest)
+            (prefix-artifacts "text" (render-forest-text forest))))))
 
 (write-artifacts output-directory artifacts)
 

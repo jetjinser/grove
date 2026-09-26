@@ -7,7 +7,7 @@
   #:export (build-site
             render-site))
 
-(define* (build-site sources read-page #:key (title "Notes"))
+(define* (build-site sources read-page #:key (title "Site"))
   (make-site (map read-page sources) #:title title))
 
 (define (render-site site renderers)

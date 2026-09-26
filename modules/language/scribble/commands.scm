@@ -4,7 +4,7 @@
 
 (define-module (language scribble commands)
   #:use-module (grove ir)
-  #:export (bold verbatim paragraph link math display-math title))
+  #:export (bold verbatim paragraph math display-math))
 
 (define (bold . body)
   (make-content-element 'bold body))
@@ -16,14 +16,6 @@
 
 (define (paragraph . body)
   (make-content-element 'paragraph body))
-
-(define (title . body)
-  (make-content-element 'title body))
-
-(define* (link target . label)
-  (make-content-element 'link
-                        (if (null? label) (list target) label)
-                        #:properties `((target . ,target))))
 
 (define (math source-text)
   (make-content-element 'math (list source-text)))

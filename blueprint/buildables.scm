@@ -7,7 +7,7 @@
   #:use-module (blue stencils guile)
   #:use-module (blue stencils template-file)
   #:use-module (blue stencils texinfo)
-  #:export (grv-modules))
+  #:export (grv-modules forester-modules))
 
 (define +grv-sources+
   '("modules/grove/build.scm"
@@ -24,6 +24,13 @@
     "modules/language/scribble/parser.scm"
     "modules/language/scribble/spec.scm"))
 
+(define +forester-sources+
+  '("modules/forester/commands.scm"
+    "modules/forester/site.scm"
+    "modules/forester/input/scribble.scm"
+    "modules/forester/render/html.scm"
+    "modules/forester/render/text.scm"))
+
 (define grv-modules
   (map
     (λ (source)
@@ -34,3 +41,14 @@
         (optimizations
           '(#:seal-private-binddings? #t))))
     +grv-sources+))
+
+(define forester-modules
+  (map
+    (λ (source)
+      (guile-module
+        (inputs source)
+        (outputs (->.go source))
+        (load-path #%~(list #%?srcdir))
+        (optimizations
+          '(#:seal-private-binddings? #t))))
+    +forester-sources+))

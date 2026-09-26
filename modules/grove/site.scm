@@ -14,9 +14,7 @@
             site?
             make-site
             site-pages
-            site-title
-            site-links
-            site-backlinks))
+            site-title))
 
 (define-record-type <site-page>
   (%make-site-page id title document)
@@ -30,25 +28,13 @@
     (error "site page requires a content document" document))
   (%make-site-page id title document))
 
-(define (links-in content)
-  (cond
-    ((content-element? content)
-     (let ((nested (append-map links-in (content-element-children content))))
-       (if (eq? (content-element-kind content) 'link)
-           (cons (content-element-property content 'target) nested)
-           nested)))
-    ((content-document? content)
-     (append-map links-in (content-document-children content)))
-    (else '())))
-
 (define-record-type <site>
-  (%make-site pages title links)
+  (%make-site pages title)
   site?
   (pages site-pages)
-  (title site-title)
-  (links site-link-index))
+  (title site-title))
 
-(define* (make-site pages #:key (title "Notes"))
+(define* (make-site pages #:key (title "Site"))
   (unless (every site-page? pages)
     (error "site requires pages" pages))
   (unless (and (string? title) (not (string=? title "")))
@@ -59,34 +45,6 @@
                                         (equal? id candidate))
                                       ids)
                                1))
-                          ids))
-         (links (map (lambda (page)
-                       (cons (site-page-id page)
-                             (delete-duplicates
-                               (links-in (site-page-document page))
-                               equal?)))
-                     pages)))
+                          ids)))
     (when duplicate (error "duplicate site page id" duplicate))
-    (for-each
-      (lambda (entry)
-        (for-each
-          (lambda (target)
-            (unless (member target ids equal?)
-              (error "unresolved Grove link" (car entry) target)))
-          (cdr entry)))
-      links)
-    (%make-site pages title links)))
-
-(define (site-links site id)
-  (let ((entry (assoc id (site-link-index site))))
-    (unless entry
-      (error "unknown site page" id))
-    (cdr entry)))
-
-(define (site-backlinks site id)
-  (site-links site id)
-  (filter (lambda (source)
-            (member id
-                    (site-links site (site-page-id source))
-                    equal?))
-          (site-pages site)))
+    (%make-site pages title)))
