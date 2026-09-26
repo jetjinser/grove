@@ -10,6 +10,7 @@
              (grove input scribble)
              (grove output)
              (grove render html)
+             (grove render html routes)
              (grove render text)
              (grove style html))
 
@@ -37,10 +38,16 @@
           (string-append examples-directory "/style.css")
           get-string-all)))))
 
+(define notes-routes
+  (make-html-routes
+    #:page-path
+    (lambda (id)
+      (string-append "notes/" id ".html"))))
+
 (define artifacts
   (render-site
     notes-site
-    (list (make-html-renderer #:style notes-style)
+    (list (make-html-renderer #:style notes-style #:routes notes-routes)
           (lambda (site)
             (prefix-artifacts "text" (render-text site))))))
 

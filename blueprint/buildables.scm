@@ -17,6 +17,7 @@
     "modules/grove/site.scm"
     "modules/grove/input/scribble.scm"
     "modules/grove/render/html.scm"
+    "modules/grove/render/html/routes.scm"
     "modules/grove/render/text.scm"
     "modules/grove/style/html.scm"
     "modules/language/scribble/commands.scm"
