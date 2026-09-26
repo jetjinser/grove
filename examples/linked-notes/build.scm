@@ -3,40 +3,39 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (use-modules (ice-9 ftw)
+             (srfi srfi-13)
+             (grove build)
+             (grove collect)
              (grove input scribble)
+             (grove output)
              (grove render html)
-             (grove render text)
-             (grove site))
+             (grove render text))
 
 (define examples-directory (dirname (current-filename)))
 (define output-directory
   (or (and (pair? (cdr (command-line))) (cadr (command-line)))
       "/tmp/grove-linked-notes"))
 
-(unless (file-exists? output-directory)
-  (mkdir output-directory))
-
-(define text-directory (string-append output-directory "/text"))
-(unless (file-exists? text-directory)
-  (mkdir text-directory))
-
 (define notes-site
-  (make-site (load-site-pages examples-directory)
-             #:title "Linked Notes"))
+  (build-site
+    (collect-directory
+      examples-directory
+      (lambda (filename)
+        (string-suffix? ".scrbl" filename)))
+    (make-scribble-page-reader)
+    #:title "Linked Notes"))
 
-(define (write-pages directory extension pages)
-  (for-each
-    (lambda (output)
-      (call-with-output-file
-        (string-append directory "/" (car output) "." extension)
-        (lambda (port) (display (cdr output) port))))
-    pages))
+(define artifacts
+  (render-site
+    notes-site
+    (list render-html
+          (lambda (site)
+            (prefix-artifacts "text" (render-text site))))))
 
-(write-pages output-directory "html" (site->html notes-site))
-(write-pages text-directory "txt" (site->text notes-site))
+(write-artifacts output-directory artifacts)
 
 (display "Wrote HTML to ")
 (display output-directory)
 (display " and text to ")
-(display text-directory)
+(display (string-append output-directory "/text"))
 (newline)

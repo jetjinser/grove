@@ -10,14 +10,14 @@
   #:use-module (grove ir)
   #:use-module (grove site)
   #:use-module (language scribble spec)
-  #:export (load-site-pages))
+  #:export (make-scribble-page-reader))
 
 (define (title-element? child)
   (and (content-element? child)
        (eq? (content-element-kind child) 'title)))
 
-(define (page-from-file directory filename environment)
-  (let* ((path (string-append directory "/" filename))
+(define (page-from-file path environment)
+  (let* ((filename (basename path))
          (document
            (call-with-input-file path
              (lambda (port)
@@ -25,6 +25,8 @@
                      environment))))
          (children (content-document-children document))
          (titles (filter title-element? children)))
+    (unless (string-suffix? ".scrbl" filename)
+      (error "Scribble page requires a .scrbl source" path))
     (unless (= (length titles) 1)
       (error "Scribble page requires one top-level @title" path))
     (let ((title (string-trim-both
@@ -39,11 +41,7 @@
           (remove title-element? children)
           (content-document-source document))))))
 
-(define (load-site-pages directory)
-  (let ((environment (default-environment scribble)))
-    (map (lambda (filename)
-           (page-from-file directory filename environment))
-         (scandir directory
-                  (lambda (filename)
-                    (string-suffix? ".scrbl" filename))
-                  string<?))))
+(define* (make-scribble-page-reader
+           #:optional (environment (default-environment scribble)))
+  (lambda (path)
+    (page-from-file path environment)))

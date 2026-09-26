@@ -4,11 +4,13 @@
 
 (define-module (grove render text)
   #:use-module (grove ir)
+  #:use-module (grove output)
   #:use-module (grove site)
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-14)
   #:export (content->text
-            site->text))
+            site->text
+            render-text))
 
 (define (children->text children)
   (string-concatenate (map content->text children)))
@@ -84,3 +86,8 @@
         (map (lambda (page)
                (cons (site-page-id page) (page->text site page)))
              (site-pages site))))
+
+(define (render-text site)
+  (map (lambda (page)
+         (make-artifact (string-append (car page) ".txt") (cdr page)))
+       (site->text site)))

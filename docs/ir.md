@@ -30,8 +30,38 @@ that IDs are unique and every logical link target exists, then records outgoing
 links. `site-links` returns target IDs, and `site-backlinks` returns source
 pages. The site IR contains no HTML paths or markup.
 
-`(grove input scribble)` reads `.scrbl` files into this IR. It uses a top-level
-`@title{...}` element as page metadata and removes that element from the page
-body. `(grove render html)` and `(grove render text)` consume the same site IR
-without parsing Scribble or inspecting each other's output. The linked-notes
-example loads its input once and writes both formats.
+`(grove collect)` lists source paths from a directory using a caller-supplied
+filename predicate. `(grove input scribble)` provides a page reader for one
+source path at a time. It uses a top-level `@title{...}` element as page
+metadata and removes that element from the page body. The reader evaluates
+Scribble in a Guile environment shared by pages read through the same reader.
+
+`(grove build)` maps any page reader over a collection of sources, constructs
+the site, and applies any list of renderer functions to that site. Renderers
+consume the site IR and return `(grove output)` artifacts with relative paths
+and text content. `(grove output)` can prefix those paths and write the
+artifacts to a chosen directory; it rejects duplicate output paths before
+writing. The linked-notes example collects `.scrbl` files, reads them once,
+then renders HTML and text from the same site. The text artifacts are prefixed
+with `text` before both sets are written.
+
+The build stages can be composed directly:
+
+```scheme
+(define site
+  (build-site (collect-directory source-directory include-source?)
+              (make-scribble-page-reader)
+              #:title "My Site"))
+
+(write-artifacts output-directory
+  (render-site site
+    (list render-html
+          (lambda (site)
+            (prefix-artifacts "text" (render-text site))))))
+```
+
+`collect-directory` only chooses source paths. A different collection function
+can supply the same list, and a different reader can turn each source into a
+site page. A renderer is a function from a site to a list of artifacts, so
+renderer-specific configuration can be captured in a closure. The output
+writer only handles artifact paths and contents.

@@ -4,10 +4,12 @@
 
 (define-module (grove render html)
   #:use-module (grove ir)
+  #:use-module (grove output)
   #:use-module (grove site)
   #:use-module (sxml simple)
   #:export (content->sxml
-            site->html))
+            site->html
+            render-html))
 
 (define (element->sxml element)
   (let* ((kind (content-element-kind element))
@@ -116,3 +118,8 @@
                        (site-title site))))
           (cons (site-page-id page) (serialize html))))
       (site-pages site))))
+
+(define (render-html site)
+  (map (lambda (page)
+         (make-artifact (string-append (car page) ".html") (cdr page)))
+       (site->html site)))
