@@ -2,7 +2,7 @@
 ;;;
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(define-module (language scribble content)
+(define-module (grove ir)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
   #:export (content-text?

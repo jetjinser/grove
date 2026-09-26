@@ -3,8 +3,9 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (use-modules (ice-9 ftw)
-             (language scribble site)
-             (language scribble site load))
+             (grove input scribble)
+             (grove render html)
+             (grove site))
 
 (define examples-directory (dirname (current-filename)))
 (define output-directory
@@ -19,7 +20,7 @@
     (call-with-output-file
       (string-append output-directory "/" (car output) ".html")
       (lambda (port) (display (cdr output) port))))
-  (site->html (load-site-pages examples-directory)))
+  (site->html (make-site (load-site-pages examples-directory))))
 
 (display "Wrote pages to ")
 (display output-directory)

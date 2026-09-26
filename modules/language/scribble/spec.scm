@@ -4,10 +4,9 @@
 
 (define-module (language scribble spec)
   #:use-module (system base language)
+  #:use-module (language scheme compile-tree-il)
   #:use-module (language scribble parser)
-  #:use-module (language scribble content)
-  #:use-module (language scribble html)
-  #:use-module (sxml simple)
+  #:use-module (grove ir)
   #:export (scribble))
 
 (define* (fragment->expression fragment #:optional (top-level? #t))
@@ -26,20 +25,16 @@
     (else fragment)))
 
 (define (scribble-language-reader port env)
-  `(make-content-document
-     (list ,@(map fragment->expression (scribble-parse port)))))
-
-(define (compile-to-value exp env opts)
-  (let* ((content (eval exp env))
-         (xml (call-with-output-string
-                (lambda (port)
-                  (sxml->xml (content->sxml content) port)))))
-    (values `(quote ,xml) env env)))
+  (if (eof-object? (peek-char port))
+      (read-char port)
+      `(make-content-document
+         (list ,@(map fragment->expression (scribble-parse port))))))
 
 (define-language scribble
   #:title      "Scribble"
   #:reader     scribble-language-reader
-  #:compilers  `((scheme . ,compile-to-value))
+  #:compilers  `((tree-il . ,compile-tree-il))
+  #:evaluator  (lambda (exp env) (primitive-eval exp))
   #:printer    write
   #:make-default-environment
     (lambda () (resolve-module '(language scribble commands))))

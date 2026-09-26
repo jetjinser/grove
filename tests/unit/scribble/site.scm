@@ -7,9 +7,9 @@
   #:use-module (srfi srfi-64)
   #:use-module (system base language)
   #:use-module (language scribble spec)
-  #:use-module (language scribble content)
-  #:use-module (language scribble html)
-  #:use-module (language scribble site))
+  #:use-module (grove ir)
+  #:use-module (grove render html)
+  #:use-module (grove site))
 
 (define environment (default-environment scribble))
 
@@ -51,7 +51,7 @@
   '(span (@ (class "notice")) "Hello")
   (content->sxml (make-content-element 'notice '("Hello"))))
 
-(let* ((rendered (site->html (list algebra limits)))
+(let* ((rendered (site->html (make-site (list algebra limits))))
        (algebra-html (assoc-ref rendered "algebra"))
        (limits-html (assoc-ref rendered "limits")))
   (test-assert "at-exp link resolves to a page"
@@ -72,13 +72,13 @@
   (test-assert "HTML text is escaped"
     (string-contains algebra-html "Algebra &amp; limits")))
 
-(test-error "unresolved links fail site rendering" #t
-  (site->html
+(test-error "unresolved links fail site analysis" #t
+  (make-site
     (list (make-site-page "broken" "Broken"
             (evaluate-document "@paragraph{@link[\"missing\"]{nowhere}}")))))
 
-(test-error "duplicate page ids fail site rendering" #t
-  (site->html
+(test-error "duplicate page ids fail site analysis" #t
+  (make-site
     (list (make-site-page "same" "First" (evaluate-document "first"))
           (make-site-page "same" "Second" (evaluate-document "second")))))
 

@@ -10,12 +10,12 @@
   #:export (grv-modules))
 
 (define +grv-sources+
-  '("modules/language/scribble/commands.scm"
-    "modules/language/scribble/content.scm"
-    "modules/language/scribble/html.scm"
+  '("modules/grove/ir.scm"
+    "modules/grove/site.scm"
+    "modules/grove/input/scribble.scm"
+    "modules/grove/render/html.scm"
+    "modules/language/scribble/commands.scm"
     "modules/language/scribble/parser.scm"
-    "modules/language/scribble/site.scm"
-    "modules/language/scribble/site/load.scm"
     "modules/language/scribble/spec.scm"))
 
 (define grv-modules

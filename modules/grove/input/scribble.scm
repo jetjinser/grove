@@ -2,13 +2,13 @@
 ;;;
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(define-module (language scribble site load)
+(define-module (grove input scribble)
   #:use-module (ice-9 ftw)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:use-module (system base language)
-  #:use-module (language scribble content)
-  #:use-module (language scribble site)
+  #:use-module (grove ir)
+  #:use-module (grove site)
   #:use-module (language scribble spec)
   #:export (load-site-pages))
 

@@ -3,7 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (language scribble commands)
-  #:use-module (language scribble content)
+  #:use-module (grove ir)
   #:export (bold verbatim paragraph link math display-math title))
 
 (define (bold . body)
