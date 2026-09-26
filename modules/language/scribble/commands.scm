@@ -4,7 +4,7 @@
 
 (define-module (language scribble commands)
   #:use-module (language scribble content)
-  #:export (bold verbatim paragraph link math display-math))
+  #:export (bold verbatim paragraph link math display-math title))
 
 (define (bold . body)
   (make-content-element 'bold body))
@@ -16,6 +16,9 @@
 
 (define (paragraph . body)
   (make-content-element 'paragraph body))
+
+(define (title . body)
+  (make-content-element 'title body))
 
 (define* (link target . label)
   (make-content-element 'link

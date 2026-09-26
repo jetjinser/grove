@@ -10,6 +10,7 @@
   (let* ((kind (content-element-kind element))
          (children (map content->sxml (content-element-children element))))
     (case kind
+      ((title) (cons 'h1 children))
       ((bold) (cons 'strong children))
       ((paragraph) (cons 'p children))
       ((verbatim) (cons 'pre children))

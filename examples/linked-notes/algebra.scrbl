@@ -1,5 +1,6 @@
 @; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 @; SPDX-License-Identifier: CC0-1.0
 
+@title{Algebra}
 @paragraph{The @link["limits"]{limits} are useful. @math{x^2+y^2=z^2}}
 @display-math{a^2+b^2=c^2}

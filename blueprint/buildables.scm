@@ -15,6 +15,7 @@
     "modules/language/scribble/html.scm"
     "modules/language/scribble/parser.scm"
     "modules/language/scribble/site.scm"
+    "modules/language/scribble/site/load.scm"
     "modules/language/scribble/spec.scm"))
 
 (define grv-modules
