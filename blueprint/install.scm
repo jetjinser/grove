@@ -1,3 +1,7 @@
+;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+;;;
+;;; SPDX-License-Identifier: GPL-3.0-or-later
+
 (define-module (blueprint install)
   #:use-module (blue build)
   #:use-module (blue states)
