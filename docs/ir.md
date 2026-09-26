@@ -65,3 +65,15 @@ can supply the same list, and a different reader can turn each source into a
 site page. A renderer is a function from a site to a list of artifacts, so
 renderer-specific configuration can be captured in a closure. The output
 writer only handles artifact paths and contents.
+
+## HTML styles
+
+`(grove style html)` holds stylesheet artifacts and optional additional text
+assets. `(make-html-renderer #:style style)` returns a renderer function for
+`render-site`. The HTML renderer emits each style artifact once and links the
+stylesheets from every generated page. The default style has no assets, so
+existing `render-html` and `site->html` calls keep their output format.
+
+The linked-notes example reads its CSS file into an artifact, places that
+artifact in an HTML style, and passes the configured renderer to `render-site`.
+Text rendering consumes the same site without using the HTML style.

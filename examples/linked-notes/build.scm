@@ -3,13 +3,15 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (use-modules (ice-9 ftw)
+             (ice-9 textual-ports)
              (srfi srfi-13)
              (grove build)
              (grove collect)
              (grove input scribble)
              (grove output)
              (grove render html)
-             (grove render text))
+             (grove render text)
+             (grove style html))
 
 (define examples-directory (dirname (current-filename)))
 (define output-directory
@@ -25,10 +27,20 @@
     (make-scribble-page-reader)
     #:title "Linked Notes"))
 
+(define notes-style
+  (make-html-style
+    #:stylesheets
+    (list
+      (make-artifact
+        "style.css"
+        (call-with-input-file
+          (string-append examples-directory "/style.css")
+          get-string-all)))))
+
 (define artifacts
   (render-site
     notes-site
-    (list render-html
+    (list (make-html-renderer #:style notes-style)
           (lambda (site)
             (prefix-artifacts "text" (render-text site))))))
 

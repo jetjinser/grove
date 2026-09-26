@@ -6,10 +6,12 @@
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove site)
+  #:use-module (grove style html)
   #:use-module (sxml simple)
   #:export (content->sxml
             site->html
-            render-html))
+            render-html
+            make-html-renderer))
 
 (define (element->sxml element)
   (let* ((kind (content-element-kind element))
@@ -66,11 +68,16 @@
                                        (site-page-title source))))
                          incoming))))))
 
-(define (html-document title body math? home-title)
+(define (html-document title body math? home-title style)
   `(html
      (head
        (meta (@ (charset "utf-8")))
        (title ,title)
+       ,@(map (lambda (stylesheet)
+               `(link (@ (rel "stylesheet")
+                         (href ,(string-append
+                                  "/" (artifact-path stylesheet))))))
+             (html-style-stylesheets style))
        ,@(if math?
              '((script (@ (src "https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-chtml.js")
                           (async "async"))
@@ -85,7 +92,7 @@
          (h1 ,title))
        ,@body)))
 
-(define (index-sxml site)
+(define (index-sxml site style)
   (html-document
     (site-title site)
     (list
@@ -97,15 +104,18 @@
                                  ,(site-page-title page))))
                        (site-pages site))))))
     #f
-    #f))
+    #f
+    style))
 
-(define (site->html site)
+(define* (site->html site #:key (style (make-html-style)))
   (unless (site? site)
     (error "HTML renderer requires a Grove site" site))
+  (unless (html-style? style)
+    (error "HTML renderer requires an HTML style" style))
   (when (member "index" (map site-page-id (site-pages site)))
     (error "HTML index path conflicts with site page" "index"))
   (cons
-    (cons "index" (serialize (index-sxml site)))
+    (cons "index" (serialize (index-sxml site style)))
     (map
       (lambda (page)
         (let* ((incoming (site-backlinks site (site-page-id page)))
@@ -115,11 +125,19 @@
                        (site-page-title page)
                        (list article)
                        #t
-                       (site-title site))))
+                       (site-title site)
+                       style)))
           (cons (site-page-id page) (serialize html))))
       (site-pages site))))
 
-(define (render-html site)
-  (map (lambda (page)
-         (make-artifact (string-append (car page) ".html") (cdr page)))
-       (site->html site)))
+(define* (render-html site #:key (style (make-html-style)))
+  (let ((pages (site->html site #:style style)))
+    (append
+      (html-style-artifacts style)
+      (map (lambda (page)
+             (make-artifact (string-append (car page) ".html") (cdr page)))
+           pages))))
+
+(define* (make-html-renderer #:key (style (make-html-style)))
+  (lambda (site)
+    (render-html site #:style style)))

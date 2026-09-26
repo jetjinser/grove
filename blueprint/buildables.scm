@@ -18,6 +18,7 @@
     "modules/grove/input/scribble.scm"
     "modules/grove/render/html.scm"
     "modules/grove/render/text.scm"
+    "modules/grove/style/html.scm"
     "modules/language/scribble/commands.scm"
     "modules/language/scribble/parser.scm"
     "modules/language/scribble/spec.scm"))

@@ -1,0 +1,29 @@
+/* SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu> */
+/* SPDX-License-Identifier: CC0-1.0 */
+
+:root {
+  font-family: system-ui, sans-serif;
+  line-height: 1.6;
+  color-scheme: light dark;
+}
+
+body {
+  max-width: 44rem;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+a {
+  text-underline-offset: 0.15em;
+}
+
+pre,
+.math-display {
+  overflow-x: auto;
+}
+
+.backlinks {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid currentColor;
+}
