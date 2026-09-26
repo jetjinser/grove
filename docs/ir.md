@@ -32,5 +32,6 @@ pages. The site IR contains no HTML paths or markup.
 
 `(grove input scribble)` reads `.scrbl` files into this IR. It uses a top-level
 `@title{...}` element as page metadata and removes that element from the page
-body. `(grove render html)` turns the same IR into HTML; other renderers can
-consume it without parsing Scribble or inspecting HTML.
+body. `(grove render html)` and `(grove render text)` consume the same site IR
+without parsing Scribble or inspecting each other's output. The linked-notes
+example loads its input once and writes both formats.

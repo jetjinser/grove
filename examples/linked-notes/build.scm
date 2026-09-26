@@ -5,6 +5,7 @@
 (use-modules (ice-9 ftw)
              (grove input scribble)
              (grove render html)
+             (grove render text)
              (grove site))
 
 (define examples-directory (dirname (current-filename)))
@@ -15,15 +16,27 @@
 (unless (file-exists? output-directory)
   (mkdir output-directory))
 
-(for-each
-  (lambda (output)
-    (call-with-output-file
-      (string-append output-directory "/" (car output) ".html")
-      (lambda (port) (display (cdr output) port))))
-  (site->html
-    (make-site (load-site-pages examples-directory)
-               #:title "Linked Notes")))
+(define text-directory (string-append output-directory "/text"))
+(unless (file-exists? text-directory)
+  (mkdir text-directory))
 
-(display "Wrote pages to ")
+(define notes-site
+  (make-site (load-site-pages examples-directory)
+             #:title "Linked Notes"))
+
+(define (write-pages directory extension pages)
+  (for-each
+    (lambda (output)
+      (call-with-output-file
+        (string-append directory "/" (car output) "." extension)
+        (lambda (port) (display (cdr output) port))))
+    pages))
+
+(write-pages output-directory "html" (site->html notes-site))
+(write-pages text-directory "txt" (site->text notes-site))
+
+(display "Wrote HTML to ")
 (display output-directory)
+(display " and text to ")
+(display text-directory)
 (newline)
