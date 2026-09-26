@@ -5,7 +5,12 @@
 (define-module (tests unit scribble read)
   #:use-module (srfi srfi-64)
   #:use-module (rnrs io ports)
+  #:use-module (system base language)
+  #:use-module (language scheme spec)
   #:use-module (language scribble parser))
+
+(define (read-with-scheme-language env input)
+  ((language-reader scheme) (open-input-string input) env))
 
 ;; seems no need to test read individually?
 
@@ -86,5 +91,16 @@
 
 (test-read/error "too many )'s"
   ")")
+
+(let* ((env (default-environment scheme))
+       (reader-fluid (module-ref env 'current-reader)))
+  (fluid-set! reader-fluid scribble-read)
+  (test-equal "at-exp can be enabled in an ordinary Scheme expression"
+    '(let ((value 40)) (increment 2))
+    (read-with-scheme-language env "(let ((value 40)) @increment[2])"))
+  (fluid-set! reader-fluid read-syntax)
+  (test-equal "native Scheme reader can be restored"
+    '(+ 1 2)
+    (syntax->datum (read-with-scheme-language env "(+ 1 2)"))))
 
 (test-end "scribble read")
