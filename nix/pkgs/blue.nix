@@ -12,13 +12,13 @@
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "blue";
-  version = "0-unstable-2026-05-28";
+  version = "0-unstable-2026-09-26";
 
   src = fetchFromCodeberg {
     owner = "lapislazuli";
     repo = "blue";
-    rev = "40ae4f5f1ec2536a0ede54636701688b8569b9bf";
-    hash = "sha256-BsYoERsoj1ZepQi13ORRioq4iCLA3U7Wc9Srf9gKmSY=";
+    rev = "cbc0a0a65089b2cce2a8f572c97a6546054da833";
+    hash = "sha256-BBUo6muwl8z65Hf3PU8NFefO8nXEP+1cE5gujGvBE3w=";
   };
 
   strictDeps = true;
