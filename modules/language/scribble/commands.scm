@@ -7,21 +7,24 @@
   #:export (bold verbatim paragraph link math display-math))
 
 (define (bold . body)
-  (make-content-element 'strong body))
+  (make-content-element 'bold body))
 
 (define (verbatim . body)
   (make-content-element
-    'pre
+    'verbatim
     (list (make-content-text (content-verbatim-string body)))))
 
 (define (paragraph . body)
-  (make-content-element 'p body))
+  (make-content-element 'paragraph body))
 
 (define* (link target . label)
-  (make-content-link target (if (null? label) (list target) label)))
+  (make-content-element 'link
+                        (if (null? label) (list target) label)
+                        #:properties `((target . ,target))))
 
 (define (math source-text)
-  (make-content-math source-text #f))
+  (make-content-element 'math (list source-text)))
 
 (define (display-math source-text)
-  (make-content-math source-text #t))
+  (make-content-element 'math (list source-text)
+                        #:properties '((display? . #t))))

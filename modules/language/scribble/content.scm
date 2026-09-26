@@ -17,22 +17,15 @@
             content-verbatim-string
             content-element?
             make-content-element
-            content-element-tag
+            content-element-kind
             content-element-children
+            content-element-properties
+            content-element-property
             content-element-source
             content-document?
             make-content-document
             content-document-children
-            content-document-source
-            content-link?
-            make-content-link
-            content-link-target
-            content-link-children
-            content-math?
-            make-content-math
-            content-math-source-text
-            content-math-display?
-            content->sxml))
+            content-document-source))
 
 (define-record-type <content-text>
   (%make-content-text value source)
@@ -54,10 +47,11 @@
   (%make-content-layout kind raw source))
 
 (define-record-type <content-element>
-  (%make-content-element tag children source)
+  (%make-content-element kind children properties source)
   content-element?
-  (tag content-element-tag)
+  (kind content-element-kind)
   (children content-element-children)
+  (properties content-element-properties)
   (source content-element-source))
 
 (define (normalize-child child)
@@ -65,8 +59,13 @@
       (make-content-text child)
       child))
 
-(define* (make-content-element tag children #:optional (source #f))
-  (%make-content-element tag (map normalize-child children) source))
+(define* (make-content-element kind children #:optional (source #f)
+                               #:key (properties '()))
+  (%make-content-element kind (map normalize-child children)
+                         properties source))
+
+(define (content-element-property element key)
+  (assq-ref (content-element-properties element) key))
 
 (define-record-type <content-document>
   (%make-content-document children source)
@@ -77,24 +76,6 @@
 (define* (make-content-document children #:optional (source #f))
   (%make-content-document (map normalize-child children) source))
 
-(define-record-type <content-link>
-  (%make-content-link target children)
-  content-link?
-  (target content-link-target)
-  (children content-link-children))
-
-(define (make-content-link target children)
-  (%make-content-link target (map normalize-child children)))
-
-(define-record-type <content-math>
-  (%make-content-math source-text display?)
-  content-math?
-  (source-text content-math-source-text)
-  (display? content-math-display?))
-
-(define (make-content-math source-text display?)
-  (%make-content-math source-text display?))
-
 (define (content-verbatim-string fragments)
   (string-concatenate
     (map (lambda (fragment)
@@ -104,27 +85,3 @@
              ((content-layout? fragment) (content-layout-raw fragment))
              (else (error "not a content fragment" fragment))))
          fragments)))
-
-(define (content->sxml content)
-  (cond
-    ((string? content) content)
-    ((content-text? content) (content-text-value content))
-    ((content-layout? content) (content-layout-raw content))
-    ((content-element? content)
-     (cons (content-element-tag content)
-           (map content->sxml (content-element-children content))))
-    ((content-link? content)
-     `(a (@ (href ,(string-append "/" (content-link-target content) ".html")))
-         ,@(map content->sxml (content-link-children content))))
-    ((content-math? content)
-     `(,(if (content-math-display? content) 'div 'span)
-        (@ (class ,(if (content-math-display? content)
-                       "math-display" "math-inline")))
-        ,(string-append
-           (if (content-math-display? content) "\\[" "\\(")
-           (content-math-source-text content)
-           (if (content-math-display? content) "\\]" "\\)"))))
-    ((content-document? content)
-     (cons 'article
-           (map content->sxml (content-document-children content))))
-    (else (error "not a content node" content))))

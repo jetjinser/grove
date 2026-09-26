@@ -4,6 +4,7 @@
 
 (define-module (language scribble site)
   #:use-module (language scribble content)
+  #:use-module (language scribble html)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-1)
   #:use-module (sxml simple)
@@ -28,11 +29,11 @@
 
 (define (links-in content)
   (cond
-    ((content-link? content)
-     (cons (content-link-target content)
-           (append-map links-in (content-link-children content))))
     ((content-element? content)
-     (append-map links-in (content-element-children content)))
+     (let ((nested (append-map links-in (content-element-children content))))
+       (if (eq? (content-element-kind content) 'link)
+           (cons (content-element-property content 'target) nested)
+           nested)))
     ((content-document? content)
      (append-map links-in (content-document-children content)))
     (else '())))

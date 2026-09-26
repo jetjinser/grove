@@ -6,6 +6,7 @@
   #:use-module (system base language)
   #:use-module (language scribble parser)
   #:use-module (language scribble content)
+  #:use-module (language scribble html)
   #:use-module (sxml simple)
   #:export (scribble))
 

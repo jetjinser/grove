@@ -7,6 +7,8 @@
   #:use-module (srfi srfi-64)
   #:use-module (system base language)
   #:use-module (language scribble spec)
+  #:use-module (language scribble content)
+  #:use-module (language scribble html)
   #:use-module (language scribble site))
 
 (define environment (default-environment scribble))
@@ -32,6 +34,22 @@
       "@paragraph{See @link[\"algebra\"]{the algebra note}.}")))
 
 (test-begin "scribble site")
+
+(let* ((paragraph-node
+         (car (content-document-children (site-page-document algebra))))
+       (link-node (cadr (content-element-children paragraph-node)))
+       (math-node (list-ref (content-element-children paragraph-node) 3)))
+  (test-assert "links use the generic element container"
+    (and (content-element? link-node)
+         (eq? (content-element-kind link-node) 'link)
+         (equal? (content-element-property link-node 'target) "limits")))
+  (test-assert "math uses the generic element container"
+    (and (content-element? math-node)
+         (eq? (content-element-kind math-node) 'math))))
+
+(test-equal "custom element styles use the generic container"
+  '(span (@ (class "notice")) "Hello")
+  (content->sxml (make-content-element 'notice '("Hello"))))
 
 (let* ((rendered (site->html (list algebra limits)))
        (algebra-html (assoc-ref rendered "algebra"))
