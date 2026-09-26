@@ -5,8 +5,6 @@
 (use-modules (ice-9 ftw)
              (ice-9 textual-ports)
              (srfi srfi-13)
-             (system base language)
-             (language scribble spec)
              (forester input scribble)
              (forester render html)
              (forester render text)
@@ -23,17 +21,16 @@
   (or (and (pair? (cdr (command-line))) (cadr (command-line)))
       "/tmp/grove-linked-notes"))
 
-(define notes-environment (default-environment scribble))
-(eval '(use-modules (forester commands)) notes-environment)
+(define source-directory (string-append examples-directory "/source"))
 
 (define notes-site
   (build-site
     (collect-directory
-      examples-directory
+      source-directory
       (lambda (filename)
-        (string-suffix? ".scrbl" filename)))
+        (string-suffix? ".grv" filename)))
     (make-forester-page-reader
-      (make-scribble-document-reader notes-environment))
+      (make-scribble-document-reader))
     #:title "Linked Notes"))
 
 (define notes-forest (make-forest notes-site))

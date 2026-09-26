@@ -7,7 +7,8 @@
   #:use-module (language scheme compile-tree-il)
   #:use-module (language scribble parser)
   #:use-module (grove ir)
-  #:export (scribble))
+  #:export (scribble
+            scribble-evaluate-document))
 
 (define* (fragment->expression fragment #:optional (top-level? #t))
   (cond
@@ -29,6 +30,29 @@
       (read-char port)
       `(make-content-document
          (list ,@(map fragment->expression (scribble-parse port))))))
+
+(define (content-value? value)
+  (or (string? value)
+      (content-text? value)
+      (content-layout? value)
+      (content-element? value)
+      (content-document? value)))
+
+(define* (scribble-evaluate-document port environment #:optional (source #f))
+  (let loop ((fragments (scribble-parse port))
+             (children '()))
+    (if (null? fragments)
+        (make-content-document (reverse children) source)
+        (let ((value (eval (fragment->expression (car fragments))
+                           environment)))
+          (cond
+            ((eq? value (if #f #f))
+             (loop (cdr fragments) children))
+            ((content-value? value)
+             (loop (cdr fragments) (cons value children)))
+            (else
+             (error "Scribble expression did not produce content"
+                    source value)))))))
 
 (define-language scribble
   #:title      "Scribble"

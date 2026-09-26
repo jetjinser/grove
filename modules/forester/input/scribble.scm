@@ -18,8 +18,8 @@
   (let* ((filename (basename path))
          (children (content-document-children document))
          (titles (filter title-element? children)))
-    (unless (string-suffix? ".scrbl" filename)
-      (error "Forester page requires a .scrbl source" path))
+    (unless (string-suffix? ".grv" filename)
+      (error "Forester page requires a .grv source" path))
     (unless (= (length titles) 1)
       (error "Forester page requires one top-level @title" path))
     (let ((title (string-trim-both
@@ -28,7 +28,7 @@
       (when (string-null? title)
         (error "Forester page title is empty" path))
       (make-site-page
-        (string-drop-right filename (string-length ".scrbl"))
+        (string-drop-right filename (string-length ".grv"))
         title
         (make-content-document
           (remove title-element? children)
