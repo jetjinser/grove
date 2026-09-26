@@ -20,7 +20,9 @@
     (call-with-output-file
       (string-append output-directory "/" (car output) ".html")
       (lambda (port) (display (cdr output) port))))
-  (site->html (make-site (load-site-pages examples-directory))))
+  (site->html
+    (make-site (load-site-pages examples-directory)
+               #:title "Linked Notes")))
 
 (display "Wrote pages to ")
 (display output-directory)

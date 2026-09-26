@@ -25,10 +25,10 @@ optional `display?` property, and `title` for document titles. Strings passed
 to element or document constructors become `content-text` nodes.
 
 `(grove site)` provides site pages and a resolved site. A page has an ID,
-title, and content document. `make-site` checks that IDs are unique and every
-logical link target exists, then records outgoing links. `site-links` returns
-target IDs, and `site-backlinks` returns source pages. The site IR contains no
-HTML paths or markup.
+title, and content document; the site has its own title. `make-site` checks
+that IDs are unique and every logical link target exists, then records outgoing
+links. `site-links` returns target IDs, and `site-backlinks` returns source
+pages. The site IR contains no HTML paths or markup.
 
 `(grove input scribble)` reads `.scrbl` files into this IR. It uses a top-level
 `@title{...}` element as page metadata and removes that element from the page

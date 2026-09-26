@@ -14,6 +14,7 @@
             site?
             make-site
             site-pages
+            site-title
             site-links
             site-backlinks))
 
@@ -41,14 +42,17 @@
     (else '())))
 
 (define-record-type <site>
-  (%make-site pages links)
+  (%make-site pages title links)
   site?
   (pages site-pages)
+  (title site-title)
   (links site-link-index))
 
-(define (make-site pages)
+(define* (make-site pages #:key (title "Notes"))
   (unless (every site-page? pages)
     (error "site requires pages" pages))
+  (unless (and (string? title) (not (string=? title "")))
+    (error "site requires a title" title))
   (let* ((ids (map site-page-id pages))
          (duplicate (find (lambda (id)
                             (> (count (lambda (candidate)
@@ -71,7 +75,7 @@
               (error "unresolved Grove link" (car entry) target)))
           (cdr entry)))
       links)
-    (%make-site pages links)))
+    (%make-site pages title links)))
 
 (define (site-links site id)
   (let ((entry (assoc id (site-link-index site))))
