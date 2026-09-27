@@ -183,6 +183,84 @@
            (lambda (port)
              (write (list project-key renderer-keys) port))))))
 
+(define (render-all model renderers)
+  (let loop ((renderers renderers)
+             (index 0)
+             (artifacts '())
+             (owners '()))
+    (if (null? renderers)
+        (list artifacts owners)
+        (let ((generated (render-site model (list (car renderers)))))
+          (loop (cdr renderers)
+                (+ index 1)
+                (append artifacts generated)
+                (append owners
+                        (map (lambda (artifact)
+                               (cons (artifact-path artifact) index))
+                             generated)))))))
+
+(define (render-with-cache model renderers previous-entries cached-artifacts
+                           previous-sources changed)
+  (let loop ((renderers renderers)
+             (index 0)
+             (artifacts '())
+             (owners '()))
+    (if (null? renderers)
+        (list artifacts owners)
+        (let* ((renderer (car renderers))
+               (old-entries
+                 (filter (lambda (entry)
+                           (equal? (cadddr entry) index))
+                         previous-entries))
+               (old-artifacts
+                 (filter (lambda (artifact)
+                           (and (state-entry-by-path
+                                  old-entries (artifact-path artifact))
+                                #t))
+                         cached-artifacts))
+               (changed-proc
+                 (and (cached-renderer? renderer)
+                      (cached-renderer-render-changed renderer)))
+               (partial? (and changed-proc
+                              (every (lambda (entry)
+                                       (integer? (cadddr entry)))
+                                     old-entries)))
+               (dirty-entries
+                 (filter (lambda (entry)
+                           (or (any (lambda (path)
+                                      (not (state-entry-by-path
+                                             previous-sources path)))
+                                    changed)
+                               (not (caddr entry))
+                               (paths-intersect? (caddr entry) changed)))
+                         old-entries))
+               (dirty-paths (map car dirty-entries))
+               (generated
+                 (and partial?
+                      (changed-proc model changed dirty-paths old-artifacts)))
+               (rendered-fully? (or (not partial?) (not generated)))
+               (new-artifacts
+                 (if rendered-fully?
+                     (render-site model (list renderer))
+                     (begin
+                       (unless (and (list? generated) (every artifact? generated))
+                         (error "incremental renderer must return artifacts or #f"
+                                generated))
+                       generated)))
+               ;; An incremental callback returns the complete current output
+               ;; set for its renderer. This lets it preserve unaffected
+               ;; artifacts from OLD-ARTIFACTS and omit outputs that vanished.
+               (current new-artifacts)
+               (current-owners
+                 (map (lambda (artifact)
+                        (cons (artifact-path artifact) index))
+                      current))
+               )
+          (loop (cdr renderers)
+                (+ index 1)
+                (append artifacts current)
+                (append owners current-owners))))))
+
 (define (build-project/report project)
   (unless (project? project)
     (error "build-project/report requires a Grove project" project))
@@ -225,23 +303,35 @@
          (removed (caddr source-changes))
          (changed (append added modified removed))
          (cache-key (project-renderer-cache-key project))
-         (cache-attempt?
+         (cache-ready?
            (and cache-key previous-state
                 (equal? cache-key previous-cache-key)
-                (null? changed)))
-         (cached-artifacts
-           (and cache-attempt?
                 (load-cached-artifacts (project-output-directory project)
                                        previous-artifacts)))
-         (cache-hit? (and cache-attempt? cached-artifacts))
-         (artifacts
-           (if cache-hit?
-               cached-artifacts
-               (render-site model (project-renderers project))))
+         (cache-hit? (and cache-ready? (null? changed)))
+         (render-result
+           (cond
+             (cache-hit?
+              (list cache-ready?
+                    (map (lambda (entry)
+                           (cons (car entry) (cadddr entry)))
+                         previous-artifacts)
+                    '()))
+             (cache-ready?
+              (render-with-cache model (project-renderers project)
+                                 previous-artifacts cache-ready?
+                                 previous-sources changed))
+             (else
+              (render-all model (project-renderers project)))))
+         (artifacts (car render-result))
+         (owners (cadr render-result))
          (affected
            (cond
              (cache-hit? '())
-             (cache-attempt? (map artifact-path artifacts))
+             ((and cache-key previous-state
+                   (equal? cache-key previous-cache-key)
+                   (not cache-ready?))
+              (map artifact-path artifacts))
              ((and previous-state
                    (not (equal? cache-key previous-cache-key)))
               (append (map artifact-path artifacts)
@@ -257,7 +347,7 @@
               (affected-artifacts artifacts previous-artifacts changed)))))
     (write-artifacts (project-output-directory project) artifacts)
     (write-build-state state-path state-temp-path current-sources artifacts
-                       cache-key)
+                       owners cache-key)
     (%make-build-report artifacts added modified removed affected
                         (not cache-hit?))))
 

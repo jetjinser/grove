@@ -69,8 +69,8 @@ Forester renderers conservatively mark their outputs as depending on every
 input, since reverse links can make a change to any page affect every page.
 Custom renderers can pass a source-path list as the third argument to
 `make-artifact`; omitting it means dependencies are unknown.
-This provenance is groundwork for incremental builds; Grove still reads,
-analyzes, and renders the complete site on each build.
+This provenance lets Grove explain which outputs may be affected by source
+changes. Grove still reads and analyzes the complete site on each build.
 
 `build-project/report` returns a build report with added, modified, and removed
 input paths plus potentially affected artifact paths. `build-project` remains
@@ -85,9 +85,16 @@ project-level inputs. Bump either key when its configuration or external inputs
 change; cacheable renderers must not rely on side effects.
 Grove reuses outputs only when source fingerprints and both keys match and the
 saved output files still match their recorded contents. It still evaluates all
-page Scheme code and runs analysis on every build. If any input changes, Grove
-runs all renderers; per-output affected paths are reported but are not yet used
-to render only part of a site. Renderer side effects are skipped on cache hits.
+page Scheme code and runs analysis on every build. By default, input changes
+run all renderers. A cached renderer can opt into partial updates with
+`#:render-changed`; its callback receives the current model, changed source
+paths, dirty old output paths, and its old artifacts. Return the complete
+current artifact set for that renderer, reusing old artifacts where useful;
+return `#f` to request a full render. New inputs make all that renderer's old
+outputs candidates for replacement because they may add cross-page effects.
+Callbacks that perform partial updates take responsibility for keeping their
+complete output set correct. Cacheable renderers must not rely on skipped side
+effects, and partial callbacks run only on source changes.
 
 The complete runnable example, including custom routes and CSS, is in
 `examples/linked-notes/build.scm`.

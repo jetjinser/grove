@@ -5,6 +5,7 @@
 (define-module (tests unit grove state)
   #:use-module (ice-9 ftw)
   #:use-module (ice-9 textual-ports)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-64)
   #:use-module (grove build state)
   #:use-module (grove output))
@@ -36,13 +37,15 @@
            (artifacts
              (list (make-artifact "page.html" "rendered"
                                   (list input-path))))
-           (state (list 'grove-build-state-v2
+           (state (list 'grove-build-state-v3
                         sources
                         (list (list "page.html"
                                     (content-fingerprint "rendered")
-                                    (list input-path)))
+                                    (list input-path)
+                                    0))
                         "test-project-renderers-v1")))
       (write-build-state state-path temp-path sources artifacts
+                         '(("page.html" . 0))
                          "test-project-renderers-v1")
       (test-equal "build state round trips input and artifact provenance"
         state
@@ -55,7 +58,8 @@
         (call-with-output-string
           (lambda (port)
             (write (list 'grove-build-state-v1 sources
-                         (caddr state))
+                         (map (lambda (entry) (drop-right entry 1))
+                              (caddr state)))
                    port))))
       (test-equal "previous build-state versions remain readable"
         #f
