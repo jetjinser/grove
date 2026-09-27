@@ -4,9 +4,9 @@
 
 (define-module (forester input scribble)
   #:use-module (ice-9 ftw)
+  #:use-module (forester private date)
   #:use-module (grove ir)
   #:use-module (grove site)
-  #:use-module (srfi srfi-19)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (make-forester-page-reader))
@@ -41,23 +41,9 @@
                            kind path)))
           value))))
 
-(define (iso-date? value)
-  (and (= (string-length value) 10)
-       (char=? (string-ref value 4) #\-)
-       (char=? (string-ref value 7) #\-)
-       (every char-numeric?
-              (append (string->list (substring value 0 4))
-                      (string->list (substring value 5 7))
-                      (string->list (substring value 8 10))))
-       (catch #t
-         (lambda ()
-           (let ((date (string->date value "~Y-~m-~d")))
-             (string=? value (date->string date "~Y-~m-~d"))))
-         (lambda args #f))))
-
 (define (date-metadata elements kind path)
   (let ((value (one-metadata-value elements kind path)))
-    (when (and value (not (iso-date? value)))
+    (when (and value (not (forester-date? value)))
       (error (format #f "Forester page date ~a in ~a must use YYYY-MM-DD: ~a"
                      kind path value)))
     value))

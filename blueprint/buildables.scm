@@ -28,6 +28,7 @@
 
 (define +forester-sources+
   '("modules/forester/commands.scm"
+    "modules/forester/private/date.scm"
     "modules/forester/private/web.scm"
     "modules/forester/site.scm"
     "modules/forester/input/scribble.scm"

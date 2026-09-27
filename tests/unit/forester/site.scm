@@ -244,8 +244,12 @@
            (make-site
              (list (make-site-page
                      "a&b" "A and B" (make-content-document '())
-                     "notes/a&b.grv"))
-             #:sources '("notes/a&b.grv"))))
+                     "notes/a&b.grv"
+                     #:metadata '((updated . "2026-09-27")))
+                   (make-site-page
+                     "plain" "Plain" (make-content-document '())
+                     "notes/plain.grv"))
+             #:sources '("notes/a&b.grv" "notes/plain.grv"))))
        (artifact
          (car (render-forest-sitemap
                 forest
@@ -261,7 +265,7 @@
     "meta/sitemap.xml"
     (artifact-path artifact))
   (test-equal "sitemap depends on every site source"
-    '("notes/a&b.grv")
+    '("notes/a&b.grv" "notes/plain.grv")
     (artifact-sources artifact))
   (test-assert "sitemap includes the index and routed page URLs"
     (and (string-contains
@@ -269,7 +273,20 @@
            "<loc>https://notes.example/home/index.html</loc>")
          (string-contains
            content
-           "<loc>https://notes.example/notes/a&amp;b.html</loc>"))))
+           (string-append
+             "<loc>https://notes.example/notes/a&amp;b.html</loc>\n"
+             "      <lastmod>2026-09-27</lastmod>"))
+         (string-contains
+           content
+           "<loc>https://notes.example/notes/plain.html</loc>\n    </url>")))
+  (test-error "sitemap rejects invalid updated dates" #t
+    (render-forest-sitemap
+      (make-forest
+        (make-site
+          (list (make-site-page
+                  "invalid" "Invalid" (make-content-document '())
+                  #:metadata '((updated . "2026-02-31"))))))
+      #:site-url "https://notes.example")))
 
 (let* ((forest
          (make-forest

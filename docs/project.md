@@ -187,9 +187,10 @@ Forester can also emit a sitemap as an independent target:
 
 The sitemap contains the configured index URL and every routed page URL. It
 uses the same public site origin and HTML routes as the RSS renderer, escapes
-XML text, and declares all forest inputs as artifact dependencies. Include it
-in `#:renderers` beside HTML, text, or RSS; the renderer writes `sitemap.xml`
-by default.
+XML text, and declares all forest inputs as artifact dependencies. Pages with
+`@updated` include a sitemap `lastmod` date; `@published` is not used as a
+modification date. Include it in `#:renderers` beside HTML, text, or RSS; the
+renderer writes `sitemap.xml` by default.
 
 The project title and optional `#:description` become site-level metadata.
 Forester HTML emits the description in the index page and uses it as a page

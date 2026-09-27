@@ -6,6 +6,7 @@
 @title{Algebra}
 @summary{A note on algebraic identities, linked ideas, and mathematical notation.}
 @published{2026-09-27}
+@updated{2026-09-27}
 @paragraph{The @link["limits"]{limits} are useful. @math{x^2+y^2=z^2}}
 @display-math{a^2+b^2=c^2}
 @heading{A few examples}

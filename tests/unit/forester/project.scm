@@ -116,6 +116,18 @@
                (lambda (path) (make-content-document '())))
              (string-append source-directory "/no-title.grv")))
           (string-append source-directory "/no-title.grv")))
+      (test-assert "page reader rejects impossible calendar dates"
+        (exception-contains?
+          (lambda ()
+            ((make-forester-page-reader
+               (lambda (_)
+                 (make-content-document
+                   (list
+                     (make-content-element 'title '("Invalid date"))
+                     (make-content-element
+                       'published '("2026-02-31"))))))
+             (string-append source-directory "/invalid-date.grv")))
+          "must use YYYY-MM-DD"))
       (let* ((expected-sources
                (list (string-append module-directory "/commands.grv")
                      (string-append source-directory "/algebra.grv")

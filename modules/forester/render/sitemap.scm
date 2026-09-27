@@ -3,15 +3,24 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester render sitemap)
+  #:use-module (forester private date)
   #:use-module (forester private web)
   #:use-module (forester site)
   #:use-module (grove build)
   #:use-module (grove output)
   #:use-module (grove render html routes)
   #:use-module (grove site)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (render-forest-sitemap
             make-forester-sitemap-renderer))
+
+(define (page-lastmod page)
+  (let ((updated (assq-ref (site-page-metadata page) 'updated)))
+    (when (and updated (not (forester-date? updated)))
+      (error "Forester sitemap updated metadata must use YYYY-MM-DD"
+             (site-page-id page) updated))
+    updated))
 
 (define* (render-forest-sitemap forest #:key site-url
                                 (sitemap-path "sitemap.xml")
@@ -27,16 +36,28 @@
     (error "Forester sitemap renderer requires HTML routes" routes))
   (let* ((base (web-base-url site-url))
          (site (forest-site forest))
-         (paths (cons (html-index-path routes)
-                      (map (lambda (page)
-                             (html-page-path routes (site-page-id page)))
-                           (site-pages site))))
          (urls
-           (map (lambda (path)
-                  (string-append "    <url><loc>"
-                                 (web-xml-escape (web-absolute-url base path))
-                                 "</loc></url>"))
-                paths))
+           (cons
+             (string-append
+               "    <url>\n      <loc>"
+               (web-xml-escape
+                 (web-absolute-url base (html-index-path routes)))
+               "</loc>\n    </url>")
+             (map (lambda (page)
+                    (let ((lastmod (page-lastmod page)))
+                      (string-append
+                        "    <url>\n      <loc>"
+                        (web-xml-escape
+                          (web-absolute-url
+                            base
+                            (html-page-path routes (site-page-id page))))
+                        "</loc>\n"
+                        (if lastmod
+                            (string-append "      <lastmod>" lastmod
+                                           "</lastmod>\n")
+                            "")
+                        "    </url>")))
+                  (site-pages site))))
          (content
            (string-append
              "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
