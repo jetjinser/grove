@@ -5,6 +5,7 @@
 (use-modules (ice-9 ftw)
              (ice-9 textual-ports)
              (forester input scribble)
+             (forester render graph)
              (forester render html)
              (forester render rss)
              (forester render sitemap)
@@ -74,12 +75,15 @@
           (make-forester-sitemap-renderer
             #:site-url "https://notes.example"
             #:routes notes-routes
-            #:cache-key "linked-notes-sitemap-v1"))
+            #:cache-key "linked-notes-sitemap-v1")
+          (make-forester-graph-renderer
+            #:path "forest-graph.scm"
+            #:cache-key "linked-notes-graph-v1"))
     #:output-directory output-directory
     #:cache-key "linked-notes-project-v1"))
 
 (build-project notes-project)
 
-(display "Wrote HTML, text, RSS, and sitemap outputs to ")
+(display "Wrote HTML, text, RSS, sitemap, and graph outputs to ")
 (display output-directory)
 (newline)

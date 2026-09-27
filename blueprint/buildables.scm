@@ -35,6 +35,7 @@
     "modules/forester/site.scm"
     "modules/forester/input/scribble.scm"
     "modules/forester/render/html.scm"
+    "modules/forester/render/graph.scm"
     "modules/forester/render/rss.scm"
     "modules/forester/render/sitemap.scm"
     "modules/forester/render/text.scm"

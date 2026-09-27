@@ -31,7 +31,8 @@
     "unit/grove/project.scm"
     "unit/grove/platform.scm"
     "unit/forester/project.scm"
-    "unit/forester/site.scm"))
+    "unit/forester/site.scm"
+    "unit/forester/graph.scm"))
 
 (define test-environment
   #%~(list (format #f "GRV_SRCDIR=~a" #%?srcdir)))

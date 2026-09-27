@@ -225,6 +225,21 @@ XML text, and declares all forest inputs as artifact dependencies. Pages with
 modification date. Include it in `#:renderers` beside HTML, text, or RSS; the
 renderer writes `sitemap.xml` by default.
 
+The analyzed Forest can also be exported as a readable Scheme graph datum:
+
+```scheme
+(use-modules (forester render graph))
+
+(make-forester-graph-renderer
+  #:path "forest-graph.scm"
+  #:cache-key "notes-graph-v1")
+```
+
+The datum lists pages and their headings, followed by directed references with
+source occurrence IDs, target page and fragment, and visible labels. It can be
+loaded with Scheme's `read`; the renderer writes `forest-graph.scm` by default
+and tracks all forest source paths as dependencies.
+
 Forester links may target a page or a heading within one:
 
 ```scheme
