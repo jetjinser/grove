@@ -44,6 +44,15 @@
                         (artifact-content artifact)))
        artifacts))
 
+(define (ensure-directory directory)
+  (unless (or (string=? directory ".")
+              (string=? directory "/")
+              (file-exists? directory))
+    (let ((parent (dirname directory)))
+      (unless (string=? parent directory)
+        (ensure-directory parent))
+      (mkdir directory))))
+
 (define (write-artifacts directory artifacts)
   (let ((paths (map artifact-path artifacts)))
     (unless (= (length paths) (length (delete-duplicates paths string=?)))
@@ -51,7 +60,7 @@
   (for-each
     (lambda (artifact)
       (let ((path (string-append directory "/" (artifact-path artifact))))
-        (mkdir-p (dirname path))
+        (ensure-directory (dirname path))
         (call-with-output-file path
           (lambda (port)
             (display (artifact-content artifact) port)))))

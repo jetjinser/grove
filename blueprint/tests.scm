@@ -26,6 +26,7 @@
     "unit/scribble/parse.scm"
     "unit/grove/build.scm"
     "unit/grove/content.scm"
+    "unit/grove/output.scm"
     "unit/forester/site.scm"))
 
 (define test-environment

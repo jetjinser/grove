@@ -3,14 +3,18 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit forester site)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64)
   #:use-module (system base language)
   #:use-module (language scribble spec)
   #:use-module (forester render html)
+  #:use-module (forester render text)
   #:use-module (forester site)
+  #:use-module (grove build)
   #:use-module (grove ir)
   #:use-module (grove render html)
+  #:use-module (grove output)
   #:use-module (grove site))
 
 (define environment (default-environment scribble))
@@ -70,6 +74,35 @@
     (string-contains algebra-html "</script>"))
   (test-assert "HTML text is escaped"
     (string-contains algebra-html "Algebra &amp; limits")))
+
+(let* ((forest (make-forest (make-site (list algebra limits)
+                                       #:title "Linked Notes")))
+       (artifacts
+         (render-site
+           forest
+           (list (make-forester-html-renderer)
+                 (lambda (value)
+                   (prefix-artifacts "text" (render-forest-text value))))))
+       (paths (map artifact-path artifacts))
+       (algebra-html (artifact-content
+                       (find (lambda (artifact)
+                               (string=? (artifact-path artifact)
+                                         "algebra.html"))
+                             artifacts)))
+       (algebra-text (artifact-content
+                       (find (lambda (artifact)
+                               (string=? (artifact-path artifact)
+                                         "text/algebra.txt"))
+                             artifacts))))
+  (test-assert "HTML and text renderers compose into one artifact set"
+    (and (member "index.html" paths)
+         (member "algebra.html" paths)
+         (member "text/index.txt" paths)
+         (member "text/algebra.txt" paths)))
+  (test-assert "HTML renderer produces standalone HTML artifacts"
+    (string-contains algebra-html "<html>"))
+  (test-assert "text renderer produces independent text artifacts"
+    (string-contains algebra-text "are useful")))
 
 (test-error "unresolved links fail site analysis" #t
   (make-forest
