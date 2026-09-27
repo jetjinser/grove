@@ -25,6 +25,7 @@
   (string-append cache-output-directory "/summary.txt"))
 (define incremental-output-directory
   (string-append project-root "/incremental-output"))
+(define external-source-path (string-append project-root "/theme.css"))
 
 (define (write-test-file path content)
   (call-with-output-file path
@@ -37,6 +38,7 @@
     (mkdir project-root)
     (mkdir source-directory)
     (mkdir module-directory)
+    (write-test-file external-source-path "body { color: black; }")
     (write-test-file (string-append module-directory "/shared.grv") "module")
     (write-test-file (string-append source-directory "/first.grv") "first")
     (write-test-file (string-append source-directory "/second.grv") "second")
@@ -152,13 +154,15 @@
                    (list (make-artifact
                            "summary.txt"
                            (number->string (length (site-pages site)))
-                           (site-sources site)))))
+                           (append (site-sources site)
+                                   (list external-source-path))))))
                (cached-renderer
                  (make-cached-renderer
                    render #:cache-key "summary-renderer-v1"))
                (cached-project
-                 (make-project
+               (make-project
                    #:source-directory source-directory
+                   #:extra-sources (list external-source-path)
                    #:read-page
                    (lambda (path)
                      (let ((id (string-drop-right (basename path) 4)))
@@ -174,7 +178,11 @@
             (test-equal "cached renderer runs on the first build"
               1 render-count)
             (test-assert "first cacheable build reports rendering"
-              (build-report-rendered? first)))
+              (build-report-rendered? first))
+            (test-assert "extra source files appear in initial source report"
+              (member external-source-path
+                      (build-report-added-sources first)
+                      string=?)))
           (let ((second (build-project/report cached-project)))
             (test-equal "unchanged inputs reuse cached renderer output"
               1 render-count)
@@ -210,12 +218,23 @@
             (test-equal "cached build report includes changed source paths"
               (list (string-append source-directory "/first.grv"))
               (build-report-modified-sources changed-source)))
+          (write-test-file external-source-path "body { color: rebeccapurple; }")
+          (let ((changed-external (build-project/report cached-project)))
+            (test-equal "extra source modifications are reported"
+              (list external-source-path)
+              (build-report-modified-sources changed-external))
+            (test-equal "extra source modifications invalidate dependent outputs"
+              '("summary.txt")
+              (build-report-affected-artifacts changed-external))
+            (test-equal "extra source modifications rerun cached renderers"
+              5 render-count))
           (let* ((changed-renderer
                    (make-cached-renderer
                      render #:cache-key "summary-renderer-v2"))
                  (changed-project
-                   (make-project
+                 (make-project
                      #:source-directory source-directory
+                     #:extra-sources (list external-source-path)
                      #:read-page
                      (lambda (path)
                        (let ((id (string-drop-right (basename path) 4)))
@@ -229,13 +248,14 @@
                      #:cache-key "test-analysis-v1"))
                  (key-change (build-project/report changed-project)))
             (test-equal "renderer cache-key changes force rendering"
-              5 render-count)
+              6 render-count)
             (test-equal "renderer cache-key changes invalidate its output"
               '("summary.txt")
               (build-report-affected-artifacts key-change))
             (let* ((changed-project-key
                      (make-project
                        #:source-directory source-directory
+                       #:extra-sources (list external-source-path)
                        #:read-page
                        (lambda (path)
                          (let ((id (string-drop-right (basename path) 4)))
@@ -251,7 +271,7 @@
                    (project-key-change
                      (build-project/report changed-project-key)))
               (test-equal "project cache-key changes force rendering"
-                6 render-count)
+                7 render-count)
               (test-equal "project cache-key changes invalidate its outputs"
                 '("summary.txt")
               (build-report-affected-artifacts project-key-change))))
@@ -393,6 +413,8 @@
             (string-append source-directory "/third.grv")
             (string-append source-directory "/fourth.grv")
             (string-append source-directory "/ignore.txt")))
+    (when (file-exists? external-source-path)
+      (delete-file external-source-path))
     (rmdir module-directory)
     (rmdir source-directory)
     (rmdir project-root)))

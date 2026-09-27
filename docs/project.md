@@ -44,8 +44,7 @@ library:
     #:analyze make-forest
     #:renderers
     (list (make-forester-html-renderer #:style style #:routes routes)
-          (lambda (forest)
-            (prefix-artifacts "text" (render-forest-text forest))))
+          (make-forester-text-renderer #:prefix "text"))
     #:output-directory "result"))
 
 (build-project project)
@@ -63,8 +62,12 @@ On the next build it removes files listed in the previous manifest that are no
 longer produced, while leaving files it did not manage alone. The manifest path
 and `.grove-build-state` path are reserved for Grove metadata.
 
-Pages may carry an optional source path. A built site also carries its page and
-module input paths, and artifacts can declare which paths they depend on.
+Pages may carry an optional source path. A built site carries its page and
+module input paths. Projects can additionally declare external files with
+`#:extra-sources`; Grove fingerprints these paths and includes them in build
+reports. External files do not automatically become dependencies of every
+artifact: declare relevant paths on each artifact, such as a stylesheet
+artifact's source file.
 Forester indexes depend on all site inputs; each rendered page depends on its
 own source, incoming-link sources that supply backlink titles, and shared
 Scheme module sources. Custom renderers can pass a source-path list as the
@@ -102,6 +105,8 @@ shared Scheme module sources. The incremental callback uses those dependencies
 to preserve unrelated page output while refreshing indexes and pages whose
 backlinks changed. The key must cover the renderer's routes, style, and
 MathJax configuration.
+`make-forester-text-renderer` provides the same opt-in caching and incremental
+behavior, with an optional output `#:prefix` such as `"text"`.
 
 The complete runnable example, including custom routes and CSS, is in
 `examples/linked-notes/build.scm`.

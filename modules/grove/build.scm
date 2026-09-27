@@ -49,7 +49,7 @@
              #:title title
              #:sources (delete-duplicates
                          (filter string?
-                           (append module-sources sources
+                             (append module-sources sources
                              (filter-map site-page-source pages)))
                          string=?))))
 

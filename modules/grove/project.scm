@@ -36,7 +36,7 @@
 
 (define-record-type <project>
   (%make-project title source-directory source-filter module-directory
-                 module-filter load-modules read-page analyze renderers
+                 module-filter load-modules extra-sources read-page analyze renderers
                  output-directory cache-key)
   project?
   (title project-title)
@@ -45,6 +45,7 @@
   (module-directory project-module-directory)
   (module-filter project-module-filter)
   (load-modules project-load-modules)
+  (extra-sources project-extra-sources)
   (read-page project-read-page)
   (analyze project-analyze)
   (renderers project-renderers)
@@ -61,6 +62,7 @@
                        (module-directory #f)
                        (module-filter source-file?)
                        (load-modules #f)
+                       (extra-sources '())
                        read-page
                        (analyze (lambda (site) site))
                        (renderers '())
@@ -81,6 +83,8 @@
               (procedure? load-modules))
     (error "project module directory requires a module loader"
            module-directory))
+  (unless (and (list? extra-sources) (every string? extra-sources))
+    (error "project extra sources must be a list of paths" extra-sources))
   (unless (procedure? read-page)
     (error "project requires a page reader" read-page))
   (unless (procedure? analyze)
@@ -98,7 +102,7 @@
               (and (string? cache-key) (not (string-null? cache-key))))
     (error "project cache key must be a non-empty string or #f" cache-key))
   (%make-project title source-directory source-filter module-directory
-                 module-filter load-modules read-page analyze renderers
+                 module-filter load-modules extra-sources read-page analyze renderers
                  output-directory cache-key))
 
 (define (source-paths entries)
@@ -292,7 +296,10 @@
              #:load-modules (project-load-modules project)))
          (current-sources
            (map (lambda (path) (list path (file-fingerprint path)))
-                (site-sources site)))
+                (delete-duplicates
+                  (append (site-sources site)
+                          (project-extra-sources project))
+                  string=?)))
          (model ((project-analyze project) site))
          (source-changes
            (call-with-values
