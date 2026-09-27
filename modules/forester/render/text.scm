@@ -17,15 +17,14 @@
             render-forest-text
             make-forester-text-renderer))
 
-(define (link-handlers forest routes page)
-  (let ((references
-          (forest-outgoing-references forest (site-page-id page))))
+(define (page-content-handlers forest routes page)
+  (let ((references (forest-outgoing-references forest (site-page-id page)))
+        (headings (forest-headings forest (site-page-id page))))
     `((link . ,(lambda (_ body)
                  (when (null? references)
                    (error "Forester link rendering exceeded its index"
                           (site-page-id page)))
                  (let* ((reference (car references))
-                        (_ (set! references (cdr references)))
                         (path
                           (text-relative-path
                             (text-page-path routes (site-page-id page))
@@ -34,9 +33,20 @@
                               (forest-reference-target-page-id reference))))
                         (fragment
                           (forest-reference-target-fragment reference)))
-                 (string-append body " [" path
-                                (if fragment (string-append "#" fragment) "")
-                                "]")))))))
+                   (set! references (cdr references))
+                   (string-append body " [" path
+                                  (if fragment (string-append "#" fragment) "")
+                                  "]"))))
+      (heading . ,(lambda (_ body)
+                    (when (null? headings)
+                      (error "Forester heading rendering exceeded its index"
+                             (site-page-id page)))
+                    (let* ((heading-record (car headings))
+                           (id (forest-heading-id heading-record)))
+                      (set! headings (cdr headings))
+                      (string-append body "\n"
+                                     (make-string (string-length body) #\=)
+                                     "\n[#" id "]\n")))))))
 
 (define (heading title)
   (string-append title "\n" (make-string (string-length title) #\=) "\n"))
@@ -46,6 +56,20 @@
                  " (" (text-relative-path
                         from-path
                         (text-page-path routes (site-page-id page))) ")"))
+
+(define (table-of-contents-text forest page)
+  (let ((headings (forest-headings forest (site-page-id page))))
+    (if (null? headings)
+        ""
+        (string-append
+          (heading "Contents") "\n"
+          (string-concatenate
+            (map (lambda (heading-record)
+                   (string-append "- "
+                                  (forest-heading-label heading-record)
+                                  " [#" (forest-heading-id heading-record) "]\n"))
+                 headings))
+          "\n"))))
 
 (define (index->text forest routes)
   (let* ((site (forest-site forest))
@@ -65,13 +89,15 @@
         (page-path (text-page-path routes (site-page-id page)))
         (body (string-trim-both
                 (content->text (site-page-document page)
-                               #:handlers (link-handlers forest routes page))
+                               #:handlers
+                               (page-content-handlers forest routes page))
                 (char-set #\newline))))
     (string-append
       (heading (site-page-title page))
       "\nHome: "
       (text-relative-path page-path (text-index-path routes))
       "\n\n"
+      (table-of-contents-text forest page)
       body
       (if (null? incoming)
           "\n"

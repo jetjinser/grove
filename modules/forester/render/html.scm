@@ -64,6 +64,21 @@
                                        (site-page-title source))))
                          incoming))))))
 
+(define (table-of-contents-sxml forest page)
+  (let ((headings (forest-headings forest (site-page-id page))))
+    (if (null? headings)
+        '()
+        (list
+          `(nav (@ (class "table-of-contents") (aria-label "Contents"))
+             (h2 "Contents")
+             (ol
+               ,@(map (lambda (heading)
+                        `(li
+                           (a (@ (href ,(string-append
+                                          "#" (forest-heading-id heading))))
+                              ,(forest-heading-label heading))))
+                      headings)))))))
+
 (define default-mathjax-src
   "https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js")
 
@@ -152,7 +167,7 @@
       (html-document
         (site-page-title page)
         (page-description site page)
-        (list article)
+        (append (table-of-contents-sxml forest page) (list article))
         (content-has-math? (site-page-document page))
         (site-title site)
         style

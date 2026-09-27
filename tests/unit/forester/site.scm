@@ -109,6 +109,7 @@
        (html (forest->html forest))
        (text (forest->text forest))
        (target-html (assoc-ref html "target"))
+       (target-text (assoc-ref text "target"))
        (source-html (assoc-ref html "source"))
        (source-text (assoc-ref text "source"))
        (outgoing (forest-outgoing-references forest "source"))
@@ -124,6 +125,14 @@
                           "<h2 id=\"overview-2\">Overview</h2>")
          (string-contains target-html
                           "<h2 id=\"overview-2-2\">Overview-2</h2>")))
+  (test-assert "HTML pages include a table of contents linked to heading IDs"
+    (and (string-contains target-html
+                          "class=\"table-of-contents\" aria-label=\"Contents\"")
+         (string-contains target-html "href=\"#overview-2\">Overview</a>")))
+  (test-assert "text pages include a heading directory and matching markers"
+    (and (string-contains target-text "Contents")
+         (string-contains target-text "- Overview [#overview-2]")
+         (string-contains target-text "[#overview-2]")))
   (test-assert "HTML page links preserve fragment targets"
     (and (string-contains source-html
                           "href=\"/target.html#overview-2\">second section</a>")

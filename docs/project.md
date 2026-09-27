@@ -239,8 +239,9 @@ and an empty slug becomes `section`. Repeated slugs receive numeric suffixes
 are checked against these IDs while the forest is built, so a misspelled or
 stale fragment fails with the source page identified. Links in HTML and text
 retain the fragment. Reverse links continue to group references by page.
-Plain-text output keeps the fragment in its link path but does not emit HTML
-anchors.
+Pages with headings get an automatically generated table of contents in HTML
+and plain text. Plain-text headings carry matching `[#id]` markers, while
+fragment links retain their `#id` in the output path.
 
 The project title and optional `#:description` become site-level metadata.
 Forester HTML emits the description in the index page and uses it as a page

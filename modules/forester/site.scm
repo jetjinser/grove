@@ -22,6 +22,10 @@
             forest-reference-target-page-id
             forest-reference-target-fragment
             forest-reference-label
+            forest-heading?
+            forest-heading-id
+            forest-heading-label
+            forest-headings
             forest-outgoing-references
             forest-incoming-references
             forest-source-paths
@@ -128,6 +132,12 @@
   (target-fragment forest-reference-target-fragment)
   (label forest-reference-label))
 
+(define-record-type <forest-heading>
+  (%make-forest-heading id label)
+  forest-heading?
+  (id forest-heading-id)
+  (label forest-heading-label))
+
 (define-record-type <forest>
   (%make-forest site reference-index heading-index)
   forest?
@@ -141,9 +151,15 @@
   (let* ((pages (site-pages site))
          (heading-index
            (map (lambda (page)
-                  (cons (site-page-id page)
-                        (unique-heading-slugs
-                          (heading-elements (site-page-document page)))))
+                  (let* ((elements
+                           (heading-elements (site-page-document page)))
+                         (ids (unique-heading-slugs elements)))
+                    (cons
+                      (site-page-id page)
+                      (map (lambda (element id)
+                             (%make-forest-heading
+                               id (content->plain-text element)))
+                           elements ids))))
                 pages))
          (reference-index
            (map
@@ -177,8 +193,9 @@
                          (when (and fragment
                                     (not (member
                                            fragment
-                                           (cdr (assoc target-page-id
-                                                       heading-index))
+                                           (map forest-heading-id
+                                                (cdr (assoc target-page-id
+                                                            heading-index)))
                                            string=?)))
                            (error
                              (format #f
@@ -199,6 +216,9 @@
     (%make-forest site reference-index heading-index)))
 
 (define (forest-heading-ids forest id)
+  (map forest-heading-id (forest-headings forest id)))
+
+(define (forest-headings forest id)
   (let ((entry (assoc id (forest-heading-index forest))))
     (unless entry
       (error "unknown forest page" id))
