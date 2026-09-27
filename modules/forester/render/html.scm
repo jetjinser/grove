@@ -27,6 +27,11 @@
                        (forest-reference-target-fragment reference))
         "")))
 
+(define (reference-source-url routes reference)
+  (string-append
+    (html-page-url routes (forest-reference-source-page-id reference))
+    "#" (forest-reference-source-id reference)))
+
 (define (page-content-handlers forest routes page)
   (let ((heading-ids (forest-heading-ids forest (site-page-id page)))
         (references (forest-outgoing-references
@@ -37,7 +42,8 @@
                           (site-page-id page)))
                  (let ((reference (car references)))
                    (set! references (cdr references))
-                   `(a (@ (href ,(link-url routes reference)))
+                   `(a (@ (id ,(forest-reference-source-id reference))
+                         (href ,(link-url routes reference)))
                      ,@children))))
       (heading . ,(lambda (_ children)
                     (when (null? heading-ids)
@@ -47,22 +53,62 @@
                       (set! heading-ids (cdr heading-ids))
                       `(h2 (@ (id ,id)) ,@children)))))))
 
-(define (backlinks-sxml incoming routes)
-  (if (null? incoming)
-      '()
-      (list
-        (list 'aside '(@ (class "backlinks"))
-              '(h2 "Linked from")
-              (cons 'ul
-                    (map (lambda (source)
-                           (list 'li
-                                 (list 'a
-                                       (list '@ (list 'href
-                                                      (html-page-url
-                                                        routes
-                                                        (site-page-id source))))
-                                       (site-page-title source))))
-                         incoming))))))
+(define (backlink-groups forest page)
+  (let* ((page-id (site-page-id page))
+         (incoming (forest-incoming-references forest page-id))
+         (page-references
+           (filter (lambda (reference)
+                     (not (forest-reference-target-fragment reference)))
+                   incoming))
+         (heading-groups
+           (filter-map
+             (lambda (heading)
+               (let* ((fragment (forest-heading-id heading))
+                      (references
+                        (forest-incoming-references forest page-id fragment)))
+                 (and (pair? references) (cons fragment references))))
+             (forest-headings forest page-id))))
+    (append (if (null? page-references) '() (list (cons #f page-references)))
+            heading-groups)))
+
+(define (backlink-reference-sxml forest routes reference)
+  (let ((source
+          (find (lambda (candidate)
+                  (equal? (site-page-id candidate)
+                          (forest-reference-source-page-id reference)))
+                (site-pages (forest-site forest)))))
+    `(li
+       (a (@ (href ,(reference-source-url routes reference)))
+          ,(site-page-title source))
+       " — "
+       ,(forest-reference-label reference))))
+
+(define (backlink-group-sxml forest page routes group)
+  (let* ((fragment (car group))
+         (target-heading
+           (and fragment
+                (find (lambda (heading)
+                        (string=? fragment (forest-heading-id heading)))
+                      (forest-headings forest (site-page-id page)))))
+         (references (cdr group))
+         (label (if target-heading
+                    `(a (@ (href ,(string-append "#" fragment)))
+                        ,(forest-heading-label target-heading))
+                    "This page")))
+    `(li ,label
+         (ul ,@(map (lambda (reference)
+                      (backlink-reference-sxml forest routes reference))
+                    references)))))
+
+(define (backlinks-sxml forest page routes)
+  (let ((groups (backlink-groups forest page)))
+    (if (null? groups)
+        '()
+        (list `(aside (@ (class "backlinks"))
+                      (h2 "Linked from")
+                      (ul ,@(map (lambda (group)
+                                   (backlink-group-sxml forest page routes group))
+                                 groups)))))))
 
 (define (table-of-contents-sxml forest page)
   (let ((headings (forest-headings forest (site-page-id page))))
@@ -158,11 +204,10 @@
 
 (define (page-html forest page style routes mathjax-src)
   (let* ((site (forest-site forest))
-         (incoming (forest-backlinks forest (site-page-id page)))
          (body (content->sxml
                  (site-page-document page)
                  #:handlers (page-content-handlers forest routes page)))
-         (article (append body (backlinks-sxml incoming routes))))
+         (article (append body (backlinks-sxml forest page routes))))
     (sxml->html
       (html-document
         (site-page-title page)

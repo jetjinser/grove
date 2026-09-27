@@ -223,7 +223,7 @@
           "href=\"/notes/algebra.html#quadratic-equations\">about quadratics</a>"))
       (test-assert "HTML project output contains reverse links"
         (string-contains limits-html
-          "href=\"/notes/algebra.html\">Algebra</a>"))
+          "href=\"/notes/algebra.html#ref-1\">Algebra</a>"))
       (test-assert "HTML project output preserves TeX for MathJax"
         (and (string-contains algebra-html "\\(x^2+y^2=z^2\\)")
              (string-contains algebra-html
@@ -233,7 +233,7 @@
              (string-contains
                (read-test-file (string-append output-directory
                                                "/text/limits.txt"))
-               "algebra.txt#quadratic-equations")
+               "algebra.txt#ref-1")
              (file-exists? (string-append output-directory "/text/index.txt"))))
       (let* ((incremental-project
                (make-site-project

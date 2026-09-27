@@ -66,9 +66,11 @@
     (string-contains algebra-html "href=\"/limits.html\">limits</a>"))
   (test-assert "links produce reverse links"
     (and (string-contains algebra-html "class=\"backlinks\"")
-         (string-contains algebra-html "href=\"/limits.html\">Limits</a>")))
+         (string-contains algebra-html
+                          "href=\"/limits.html#ref-1\">Limits</a>")))
   (test-assert "reverse links point back to their source"
-    (string-contains limits-html "href=\"/algebra.html\">Algebra &amp; limits</a>"))
+    (string-contains limits-html
+                     "href=\"/algebra.html#ref-1\">Algebra &amp; limits</a>"))
   (test-assert "inline math keeps TeX delimiters"
     (string-contains algebra-html "\\(x^2+y^2=z^2\\)"))
   (test-assert "display math keeps TeX delimiters"
@@ -141,8 +143,9 @@
   (test-assert "plain-text page links preserve fragment targets"
     (and (string-contains source-text "target.txt#overview-2")
          (string-contains source-text "target.txt#about-trees")))
-  (test-assert "fragment links still produce page-level backlinks"
-    (string-contains target-html "href=\"/source.html\">Source</a>"))
+  (test-assert "fragment links produce section-aware backlinks"
+    (and (string-contains target-html "href=\"/source.html#ref-1\">Source</a>")
+         (string-contains target-html "href=\"#overview-2\">Overview</a>")))
   (test-assert "Forest references preserve source, target, label and fragment"
     (and (forest-reference? first-reference)
          (string=? (forest-reference-source-page-id first-reference) "source")

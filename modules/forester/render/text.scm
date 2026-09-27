@@ -36,7 +36,8 @@
                    (set! references (cdr references))
                    (string-append body " [" path
                                   (if fragment (string-append "#" fragment) "")
-                                  "]"))))
+                                  "] [#"
+                                  (forest-reference-source-id reference) "]"))))
       (heading . ,(lambda (_ body)
                     (when (null? headings)
                       (error "Forester heading rendering exceeded its index"
@@ -71,6 +72,59 @@
                  headings))
           "\n"))))
 
+(define (text-backlink-reference forest page-id routes reference)
+  (let* ((source-id (forest-reference-source-page-id reference))
+         (source (find (lambda (candidate)
+                         (equal? source-id (site-page-id candidate)))
+                       (site-pages (forest-site forest))))
+         (path (text-relative-path (text-page-path routes page-id)
+                                   (text-page-path routes source-id))))
+    (string-append "  - " (site-page-title source) " [" path "#"
+                   (forest-reference-source-id reference) "]: "
+                   (forest-reference-label reference) "\n")))
+
+(define (text-backlink-group forest page routes group)
+  (let ((heading-record (car group))
+        (references (cdr group)))
+    (string-append
+      (if heading-record
+          (string-append "- " (forest-heading-label heading-record)
+                         " [#" (forest-heading-id heading-record) "]:\n")
+          "- This page:\n")
+      (string-concatenate
+        (map (lambda (reference)
+               (text-backlink-reference forest (site-page-id page) routes
+                                        reference))
+             references)))))
+
+(define (linked-from-text forest page routes)
+  (let* ((page-id (site-page-id page))
+         (incoming (forest-incoming-references forest page-id))
+         (page-references
+           (filter (lambda (reference)
+                     (not (forest-reference-target-fragment reference)))
+                   incoming))
+         (heading-groups
+           (filter-map
+             (lambda (heading-record)
+               (let* ((fragment (forest-heading-id heading-record))
+                      (references
+                        (forest-incoming-references forest page-id fragment)))
+                 (and (pair? references) (cons heading-record references))))
+             (forest-headings forest page-id)))
+         (groups (append (if (null? page-references)
+                             '()
+                             (list (cons #f page-references)))
+                         heading-groups)))
+    (if (null? groups)
+        "\n"
+        (string-append
+          "\n\nLinked from:\n"
+          (string-concatenate
+            (map (lambda (group)
+                   (text-backlink-group forest page routes group))
+                 groups))))))
+
 (define (index->text forest routes)
   (let* ((site (forest-site forest))
          (index-path (text-index-path routes)))
@@ -85,8 +139,7 @@
              (site-pages site))))))
 
 (define (page->text forest page routes)
-  (let ((incoming (forest-backlinks forest (site-page-id page)))
-        (page-path (text-page-path routes (site-page-id page)))
+  (let ((page-path (text-page-path routes (site-page-id page)))
         (body (string-trim-both
                 (content->text (site-page-document page)
                                #:handlers
@@ -99,16 +152,7 @@
       "\n\n"
       (table-of-contents-text forest page)
       body
-      (if (null? incoming)
-          "\n"
-          (string-append
-            "\n\nLinked from:\n"
-            (string-concatenate
-              (map (lambda (source)
-                     (string-append "- "
-                                    (page-reference routes page-path source)
-                                    "\n"))
-                   incoming)))))))
+      (linked-from-text forest page routes))))
 
 (define (check-text-routes forest routes)
   (let* ((site (forest-site forest))
