@@ -61,7 +61,7 @@ receive the Grove site directly.
 `write-artifacts` keeps a `.grove-artifacts` manifest in the output directory.
 On the next build it removes files listed in the previous manifest that are no
 longer produced, while leaving files it did not manage alone. The manifest path
-is reserved for Grove metadata.
+and `.grove-build-state` path are reserved for Grove metadata.
 
 Pages may carry an optional source path. A built site also carries its page and
 module input paths, and artifacts can declare which paths they depend on.
@@ -77,6 +77,17 @@ input paths plus potentially affected artifact paths. `build-project` remains
 available and continues to return the artifact list. Outputs from renderers
 that leave their dependencies unknown are always reported as affected. Writing
 an artifact whose contents are already current leaves its file untouched.
+
+Renderer reuse is opt-in. Wrap a deterministic renderer with
+`make-cached-renderer`, giving it a key that covers its configuration, and set
+`#:cache-key` on the project for the reader, analyzer, title, and other
+project-level inputs. Bump either key when its configuration or external inputs
+change; cacheable renderers must not rely on side effects.
+Grove reuses outputs only when source fingerprints and both keys match and the
+saved output files still match their recorded contents. It still evaluates all
+page Scheme code and runs analysis on every build. If any input changes, Grove
+runs all renderers; per-output affected paths are reported but are not yet used
+to render only part of a site. Renderer side effects are skipped on cache hits.
 
 The complete runnable example, including custom routes and CSS, is in
 `examples/linked-notes/build.scm`.

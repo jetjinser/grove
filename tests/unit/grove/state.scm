@@ -36,12 +36,14 @@
            (artifacts
              (list (make-artifact "page.html" "rendered"
                                   (list input-path))))
-           (state (list 'grove-build-state-v1
+           (state (list 'grove-build-state-v2
                         sources
                         (list (list "page.html"
                                     (content-fingerprint "rendered")
-                                    (list input-path))))))
-      (write-build-state state-path temp-path sources artifacts)
+                                    (list input-path)))
+                        "test-project-renderers-v1")))
+      (write-build-state state-path temp-path sources artifacts
+                         "test-project-renderers-v1")
       (test-equal "build state round trips input and artifact provenance"
         state
         (read-build-state state-path))
@@ -49,7 +51,16 @@
       (test-assert "file fingerprints read source bytes"
         (not (= (cadar sources)
                 (file-fingerprint input-path))))
-      (write-test-file state-path "(grove-build-state-v9 () ())")
+      (write-test-file state-path
+        (call-with-output-string
+          (lambda (port)
+            (write (list 'grove-build-state-v1 sources
+                         (caddr state))
+                   port))))
+      (test-equal "previous build-state versions remain readable"
+        #f
+        (cadddr (read-build-state state-path)))
+      (write-test-file state-path "(grove-build-state-v9 () () #f)")
       (test-error "invalid build-state versions are rejected" #t
         (read-build-state state-path))))
   (lambda ()

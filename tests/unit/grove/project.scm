@@ -8,6 +8,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64)
+  #:use-module (grove build)
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove project)
@@ -19,6 +20,9 @@
 (define module-directory (string-append source-directory "/modules"))
 (define output-directory (string-append project-root "/output"))
 (define output-path (string-append output-directory "/text/summary.txt"))
+(define cache-output-directory (string-append project-root "/cache-output"))
+(define cache-output-path
+  (string-append cache-output-directory "/summary.txt"))
 
 (define (write-test-file path content)
   (call-with-output-file path
@@ -137,13 +141,129 @@
             (build-report-affected-artifacts changed))
           (test-equal "project output refreshes after source changes"
             "2"
-            (call-with-input-file output-path get-string-all))))))
+            (call-with-input-file output-path get-string-all)))
+        (let* ((render-count 0)
+               (analysis-count 0)
+               (render
+                 (lambda (site)
+                   (set! render-count (+ render-count 1))
+                   (list (make-artifact
+                           "summary.txt"
+                           (number->string (length (site-pages site)))
+                           (site-sources site)))))
+               (cached-renderer
+                 (make-cached-renderer
+                   render #:cache-key "summary-renderer-v1"))
+               (cached-project
+                 (make-project
+                   #:source-directory source-directory
+                   #:read-page
+                   (lambda (path)
+                     (let ((id (string-drop-right (basename path) 4)))
+                       (make-site-page id id (make-content-document '()) path)))
+                   #:analyze
+                   (lambda (site)
+                     (set! analysis-count (+ analysis-count 1))
+                     site)
+                   #:renderers (list cached-renderer)
+                   #:output-directory cache-output-directory
+                   #:cache-key "test-analysis-v1")))
+          (let ((first (build-project/report cached-project)))
+            (test-equal "cached renderer runs on the first build"
+              1 render-count)
+            (test-assert "first cacheable build reports rendering"
+              (build-report-rendered? first)))
+          (let ((second (build-project/report cached-project)))
+            (test-equal "unchanged inputs reuse cached renderer output"
+              1 render-count)
+            (test-assert "cache hit reports that rendering was skipped"
+              (not (build-report-rendered? second)))
+            (test-equal "cache hit has no affected artifacts"
+              '()
+              (build-report-affected-artifacts second)))
+          (test-equal "cache hits still run site analysis"
+            2 analysis-count)
+          (delete-file cache-output-path)
+          (let ((missing-output (build-project/report cached-project)))
+            (test-equal "missing cached outputs are rendered again"
+              2 render-count)
+            (test-assert "missing cached output is restored"
+              (file-exists? cache-output-path))
+            (test-assert "missing cached output reports rendering"
+              (build-report-rendered? missing-output)))
+          (write-test-file cache-output-path "tampered")
+          (let ((tampered-output (build-project/report cached-project)))
+            (test-equal "modified cached outputs are rendered again"
+              3 render-count)
+            (test-equal "modified cached outputs are restored"
+              "2"
+              (call-with-input-file cache-output-path get-string-all))
+            (test-assert "modified cached output reports rendering"
+              (build-report-rendered? tampered-output)))
+          (write-test-file (string-append source-directory "/first.grv")
+                           "cache source changed")
+          (let ((changed-source (build-project/report cached-project)))
+            (test-equal "changed source inputs invalidate renderer output"
+              4 render-count)
+            (test-equal "cached build report includes changed source paths"
+              (list (string-append source-directory "/first.grv"))
+              (build-report-modified-sources changed-source)))
+          (let* ((changed-renderer
+                   (make-cached-renderer
+                     render #:cache-key "summary-renderer-v2"))
+                 (changed-project
+                   (make-project
+                     #:source-directory source-directory
+                     #:read-page
+                     (lambda (path)
+                       (let ((id (string-drop-right (basename path) 4)))
+                         (make-site-page id id (make-content-document '()) path)))
+                     #:analyze
+                     (lambda (site)
+                       (set! analysis-count (+ analysis-count 1))
+                       site)
+                     #:renderers (list changed-renderer)
+                     #:output-directory cache-output-directory
+                     #:cache-key "test-analysis-v1"))
+                 (key-change (build-project/report changed-project)))
+            (test-equal "renderer cache-key changes force rendering"
+              5 render-count)
+            (test-equal "renderer cache-key changes invalidate its output"
+              '("summary.txt")
+              (build-report-affected-artifacts key-change))
+            (let* ((changed-project-key
+                     (make-project
+                       #:source-directory source-directory
+                       #:read-page
+                       (lambda (path)
+                         (let ((id (string-drop-right (basename path) 4)))
+                           (make-site-page id id (make-content-document '())
+                                           path)))
+                       #:analyze
+                       (lambda (site)
+                         (set! analysis-count (+ analysis-count 1))
+                         site)
+                       #:renderers (list changed-renderer)
+                       #:output-directory cache-output-directory
+                       #:cache-key "test-analysis-v2"))
+                   (project-key-change
+                     (build-project/report changed-project-key)))
+              (test-equal "project cache-key changes force rendering"
+                6 render-count)
+              (test-equal "project cache-key changes invalidate its outputs"
+                '("summary.txt")
+                (build-report-affected-artifacts project-key-change))))))))
   (lambda ()
     (for-each
       (lambda (path)
         (when (file-exists? path)
           (delete-file path)))
       (list output-path
+            cache-output-path
+            (string-append cache-output-directory "/.grove-artifacts")
+            (string-append cache-output-directory "/.grove-artifacts.tmp")
+            (string-append cache-output-directory "/.grove-build-state")
+            (string-append cache-output-directory "/.grove-build-state.tmp")
             (string-append output-directory "/pages/first.txt")
             (string-append output-directory "/pages/second.txt")
             (string-append output-directory "/pages/third.txt")
@@ -160,6 +280,8 @@
         (rmdir pages-directory)))
     (when (file-exists? output-directory)
       (rmdir output-directory))
+    (when (file-exists? cache-output-directory)
+      (rmdir cache-output-directory))
     (for-each (lambda (path)
                 (when (file-exists? path)
                   (delete-file path)))

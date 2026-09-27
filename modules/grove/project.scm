@@ -8,6 +8,7 @@
   #:use-module (grove collect)
   #:use-module (grove output)
   #:use-module (grove site)
+  #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-9)
@@ -19,22 +20,24 @@
             build-report-modified-sources
             build-report-removed-sources
             build-report-affected-artifacts
+            build-report-rendered?
             build-project/report
             build-project))
 
 (define-record-type <build-report>
-  (%make-build-report artifacts added modified removed affected)
+  (%make-build-report artifacts added modified removed affected rendered?)
   build-report?
   (artifacts build-report-artifacts)
   (added build-report-added-sources)
   (modified build-report-modified-sources)
   (removed build-report-removed-sources)
-  (affected build-report-affected-artifacts))
+  (affected build-report-affected-artifacts)
+  (rendered? build-report-rendered?))
 
 (define-record-type <project>
   (%make-project title source-directory source-filter module-directory
                  module-filter load-modules read-page analyze renderers
-                 output-directory)
+                 output-directory cache-key)
   project?
   (title project-title)
   (source-directory project-source-directory)
@@ -45,7 +48,8 @@
   (read-page project-read-page)
   (analyze project-analyze)
   (renderers project-renderers)
-  (output-directory project-output-directory))
+  (output-directory project-output-directory)
+  (cache-key project-cache-key))
 
 (define (source-file? filename)
   (string-suffix? ".grv" filename))
@@ -60,7 +64,8 @@
                        read-page
                        (analyze (lambda (site) site))
                        (renderers '())
-                       output-directory)
+                       output-directory
+                       (cache-key #f))
   (unless (and (string? title) (not (string-null? title)))
     (error "project requires a title" title))
   (unless (and (string? source-directory)
@@ -80,13 +85,21 @@
     (error "project requires a page reader" read-page))
   (unless (procedure? analyze)
     (error "project analyzer must be a procedure" analyze))
-  (unless (and (list? renderers) (every procedure? renderers))
-    (error "project renderers must be a list of procedures" renderers))
+  (unless (and (list? renderers)
+               (every (lambda (renderer)
+                        (or (procedure? renderer)
+                            (cached-renderer? renderer)))
+                      renderers))
+    (error "project renderers must be procedures or cached renderers"
+           renderers))
   (unless (string? output-directory)
     (error "project requires an output directory" output-directory))
+  (unless (or (not cache-key)
+              (and (string? cache-key) (not (string-null? cache-key))))
+    (error "project cache key must be a non-empty string or #f" cache-key))
   (%make-project title source-directory source-filter module-directory
                  module-filter load-modules read-page analyze renderers
-                 output-directory))
+                 output-directory cache-key))
 
 (define (source-paths entries)
   (map car entries))
@@ -142,6 +155,34 @@
                               artifacts)))
                  previous))))
 
+(define (load-cached-artifacts directory entries)
+  (let loop ((entries entries) (artifacts '()))
+    (if (null? entries)
+        (reverse artifacts)
+        (let* ((entry (car entries))
+               (path (string-append directory "/" (car entry)))
+               (content
+                 (and (file-exists? path)
+                      (not (file-is-directory? path))
+                      (catch #t
+                        (lambda ()
+                          (call-with-input-file path get-string-all))
+                        (lambda args #f)))))
+          (if (and content
+                   (= (content-fingerprint content) (cadr entry)))
+              (loop (cdr entries)
+                    (cons (make-artifact (car entry) content (caddr entry))
+                          artifacts))
+              #f)))))
+
+(define (project-renderer-cache-key project)
+  (let ((renderer-keys (renderer-cache-keys (project-renderers project)))
+        (project-key (project-cache-key project)))
+    (and project-key renderer-keys
+         (call-with-output-string
+           (lambda (port)
+             (write (list project-key renderer-keys) port))))))
+
 (define (build-project/report project)
   (unless (project? project)
     (error "build-project/report requires a Grove project" project))
@@ -163,6 +204,7 @@
          (previous-state (read-build-state state-path))
          (previous-sources (if previous-state (cadr previous-state) '()))
          (previous-artifacts (if previous-state (caddr previous-state) '()))
+         (previous-cache-key (and previous-state (cadddr previous-state)))
          (site
            (build-site
              page-sources
@@ -174,16 +216,50 @@
            (map (lambda (path) (list path (file-fingerprint path)))
                 (site-sources site)))
          (model ((project-analyze project) site))
-         (artifacts (render-site model (project-renderers project))))
-    (call-with-values
-      (lambda () (changed-sources previous-sources current-sources))
-      (lambda (added modified removed)
-        (let* ((changed (append added modified removed))
-               (affected
-                 (affected-artifacts artifacts previous-artifacts changed)))
-          (write-artifacts (project-output-directory project) artifacts)
-          (write-build-state state-path state-temp-path current-sources artifacts)
-          (%make-build-report artifacts added modified removed affected))))))
+         (source-changes
+           (call-with-values
+             (lambda () (changed-sources previous-sources current-sources))
+             list))
+         (added (car source-changes))
+         (modified (cadr source-changes))
+         (removed (caddr source-changes))
+         (changed (append added modified removed))
+         (cache-key (project-renderer-cache-key project))
+         (cache-attempt?
+           (and cache-key previous-state
+                (equal? cache-key previous-cache-key)
+                (null? changed)))
+         (cached-artifacts
+           (and cache-attempt?
+                (load-cached-artifacts (project-output-directory project)
+                                       previous-artifacts)))
+         (cache-hit? (and cache-attempt? cached-artifacts))
+         (artifacts
+           (if cache-hit?
+               cached-artifacts
+               (render-site model (project-renderers project))))
+         (affected
+           (cond
+             (cache-hit? '())
+             (cache-attempt? (map artifact-path artifacts))
+             ((and previous-state
+                   (not (equal? cache-key previous-cache-key)))
+              (append (map artifact-path artifacts)
+                      (map car
+                           (filter (lambda (entry)
+                                     (not (find
+                                            (lambda (artifact)
+                                              (string=? (artifact-path artifact)
+                                                        (car entry)))
+                                            artifacts)))
+                                   previous-artifacts))))
+             (else
+              (affected-artifacts artifacts previous-artifacts changed)))))
+    (write-artifacts (project-output-directory project) artifacts)
+    (write-build-state state-path state-temp-path current-sources artifacts
+                       cache-key)
+    (%make-build-report artifacts added modified removed affected
+                        (not cache-hit?))))
 
 (define (build-project project)
   (build-report-artifacts (build-project/report project)))

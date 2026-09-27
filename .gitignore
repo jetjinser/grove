@@ -9,3 +9,7 @@
 *.trs
 build/
 result*
+.grove-artifacts
+.grove-artifacts.tmp
+.grove-build-state
+.grove-build-state.tmp
