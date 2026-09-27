@@ -41,16 +41,15 @@
              (string-append
                "    <url>\n      <loc>"
                (web-xml-escape
-                 (web-absolute-url base (html-index-path routes)))
+                 (web-absolute-route-url base (html-index-url routes)))
                "</loc>\n    </url>")
              (map (lambda (page)
                     (let ((lastmod (page-lastmod page)))
                       (string-append
                         "    <url>\n      <loc>"
                         (web-xml-escape
-                          (web-absolute-url
-                            base
-                            (html-page-path routes (site-page-id page))))
+                          (web-absolute-route-url
+                            base (html-page-url routes (site-page-id page))))
                         "</loc>\n"
                         (if lastmod
                             (string-append "      <lastmod>" lastmod

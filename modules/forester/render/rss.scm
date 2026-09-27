@@ -18,7 +18,7 @@
             make-forester-rss-renderer))
 
 (define (page-url base routes page)
-  (web-absolute-url base (html-page-path routes (site-page-id page))))
+  (web-absolute-route-url base (html-page-url routes (site-page-id page))))
 
 (define (page-pub-date page)
   (or (assq-ref (site-page-metadata page) 'updated)
@@ -87,7 +87,7 @@
     (error "Forester RSS renderer requires HTML routes" routes))
   (let* ((base (web-base-url site-url))
          (site (forest-site forest))
-         (home-url (string-append base "/" (html-index-path routes)))
+         (home-url (web-absolute-route-url base (html-index-url routes)))
          (items
            (map (lambda (page)
                   (let ((url (page-url base routes page))

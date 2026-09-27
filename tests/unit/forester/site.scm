@@ -219,6 +219,30 @@
          (not (string-contains feed "=======\n"))
          (not (string-contains feed "`x + 1`")))))
 
+(let* ((forest (make-forest (make-site (list algebra limits)
+                                       #:title "Linked Notes")))
+       (routes (make-html-routes
+                 #:page-path
+                 (lambda (id) (string-append "notes/" id ".html"))
+                 #:url-prefix "/published/"))
+       (feed (artifact-content
+               (car (render-forest-rss
+                      forest #:site-url "https://notes.example" #:routes routes))))
+       (sitemap (artifact-content
+                  (car (render-forest-sitemap
+                         forest #:site-url "https://notes.example"
+                         #:routes routes)))))
+  (test-assert "RSS absolute links include the HTML URL prefix"
+    (and (string-contains
+           feed "https://notes.example/published/notes/algebra.html")
+         (string-contains
+           feed "https://notes.example/published/index.html")))
+  (test-assert "sitemap absolute links include the HTML URL prefix"
+    (and (string-contains
+           sitemap "https://notes.example/published/notes/algebra.html")
+         (string-contains
+           sitemap "https://notes.example/published/index.html"))))
+
 (let* ((pages
          (list
            (make-site-page "older" "Older" (make-content-document '())

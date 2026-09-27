@@ -7,6 +7,7 @@
   #:export (web-url?
             web-base-url
             web-absolute-url
+            web-absolute-route-url
             web-xml-escape))
 
 (define (web-url? url)
@@ -24,6 +25,11 @@
 
 (define (web-absolute-url base path)
   (string-append base "/" path))
+
+(define (web-absolute-route-url base route)
+  (unless (and (string? route) (string-prefix? "/" route))
+    (error "Web route URL must begin with /" route))
+  (web-absolute-url base (substring route 1)))
 
 (define (web-xml-escape text)
   (string-concatenate
