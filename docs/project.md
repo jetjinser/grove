@@ -5,18 +5,27 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # Grove projects
 
-`(grove project)` runs the common project pipeline:
+`(grove project)` runs a model-independent pipeline:
 
-1. Collect optional module sources and pass them to the configured module loader.
-2. Collect page sources and read each one into a Grove site.
-3. Pass the site to an optional library analyzer.
-4. Run each renderer over the analyzed value, combine the artifacts, and write
-   them to the configured output directory.
+1. Collect source paths, either from a directory or a project-supplied collector.
+2. Run an optional preparation hook before reading sources.
+3. Read each source path into any Scheme value, retaining its path in a
+   `project-input` record.
+4. Pass a `project-context` containing those inputs and auxiliary paths to the
+   project analyzer.
+5. Run each renderer over the analyzer's result, combine its artifacts, and
+   write them to the configured output directory.
 
-The project API does not choose a document language or a site model. The
-reader, analyzer, and renderers are procedures supplied by the project. For
-example, a linked-notes project can use Forester as its analyzer and renderer
-library:
+Neither `project-input` values nor the analyzer's result need to be Grove
+pages or Grove content. A project can use Grove's collector, artifact, and
+build-report facilities while defining its own data model. For example,
+[`examples/catalog/build.scm`](../examples/catalog/build.scm) reads `.quote`
+files into a private catalog record and renders HTML and plain text without
+using Forester.
+
+Projects that do want Grove's optional page/site convenience records can use
+`(grove project site)`. A linked-notes project then uses Forester as its
+analyzer and renderer library:
 
 ```scheme
 (use-modules (forester input scribble)
@@ -25,7 +34,7 @@ library:
              (forester site)
              (grove input scribble)
              (grove output)
-             (grove project)
+             (grove project site)
              (grove render html routes)
              (grove style html))
 
@@ -35,12 +44,11 @@ library:
 (define routes (make-html-routes))
 
 (define project
-  (make-project
+  (make-site-project
     #:title "Linked Notes"
     #:description "A linked notebook for mathematical ideas."
     #:source-directory source-directory
-    #:module-directory "source/modules"
-    #:load-modules load-scribble-modules!
+    #:prepare (make-scribble-module-setup "source/modules")
     #:read-page (make-forester-page-reader read-document)
     #:analyze make-forest
     #:renderers
@@ -58,41 +66,42 @@ library:
 
 | Component | Grove contract | Responsibility |
 | --- | --- | --- |
-| Collector | configured directories and filters → ordered paths | Grove owns file discovery and source fingerprints. |
-| Reader | source path → `site-page` | A reader chooses the input language and may evaluate Scheme. |
-| Analyzer | `site` → any model value | A library such as Forester builds links or other cross-page indexes. |
+| Collector | configuration → ordered source paths | Grove owns default directory collection and source fingerprints; projects can supply their own collector. |
+| Prepare hook | `() → auxiliary source paths` | A project may initialize its reader environment; returned paths become tracked inputs. |
+| Reader | source path → any Scheme value | An input library chooses the language and may evaluate Scheme. Grove pairs the value with its path. |
+| Analyzer | `project-context → any model value` | The project or a library builds domain indexes such as Forester's links. |
 | Renderer | model value → list of artifacts | Each renderer owns one output format and declares its artifact dependencies. |
 | Writer | artifacts → output directory | Grove owns unchanged-file writes, stale-file removal, and build state. |
 
 The analyzer result is opaque to Grove. Multiple renderers receive the same
-value and may produce unrelated output formats; the project does not require
-Forester or HTML. `grove` owns collection and build orchestration. Forester
-owns its forest/link model and its HTML/text renderers. Forester currently
-uses Grove's site, IR, and artifact types, so it is a library layered on Grove
-interfaces rather than a separately packaged implementation. Keep that
-dependency explicit; split it into a neutral shared interface only if a
-second host actually needs to construct or consume those values. The current
+value and may produce unrelated output formats; the generic project does not
+require pages, Forester, or HTML. `(grove project site)` is an optional adapter
+that gathers read values into Grove `site` records for libraries that want
+that model. Forester uses this adapter, Grove content records, and Grove's
+artifact API; it does not define the generic project contract. The current
 dependency and packaging decision is recorded in
 [`architecture.md`](architecture.md).
 
-The default collector selects `.grv` files directly inside each configured
-directory. Supply `#:source-filter` or `#:module-filter` to change that
-selection. Module sources are loaded before page sources; `.grv` module files
-declare their module with Guile's ordinary `define-module`. Page reading,
-analysis, and rendering remain independent phases. With no analyzer, renderers
-receive the Grove site directly.
+The default collector selects non-hidden regular files directly inside the
+configured directory, in sorted order. Supply `#:source-filter` to restrict
+them, or `#:collect-sources` to provide an ordered path list. The `#:prepare`
+hook runs before reading and returns auxiliary source paths. Input libraries
+can use it for shared modules or other setup. For Scribble, use
+`make-scribble-module-setup`; its `.grv` module files use Guile's ordinary
+`define-module` form. The generic project does not interpret module syntax.
+With no analyzer, renderers receive the `project-context` directly.
 
 `write-artifacts` keeps a `.grove-artifacts` manifest in the output directory.
 On the next build it removes files listed in the previous manifest that are no
 longer produced, while leaving files it did not manage alone. The manifest path
 and `.grove-build-state` path are reserved for Grove metadata.
 
-Pages may carry an optional source path. A built site carries its page and
-module input paths. Projects can additionally declare external files with
-`#:extra-sources`; Grove fingerprints these paths and includes them in build
-reports. External files do not automatically become dependencies of every
-artifact: declare relevant paths on each artifact, such as a stylesheet
-artifact's source file.
+Each `project-input` contains its source path and reader value. The context
+also exposes preparation paths and `#:extra-sources`; Grove fingerprints all
+of these and includes them in build reports. Auxiliary inputs do not
+automatically become dependencies of every artifact: declare relevant paths
+on each artifact, such as a stylesheet artifact's source file. The Site
+adapter gathers read page paths and preparation paths into `site-sources`.
 Forester indexes depend on all site inputs; each rendered page depends on its
 own source, incoming-link sources that supply backlink titles, and shared
 Scheme module sources. Custom renderers can pass a source-path list as the
@@ -116,15 +125,15 @@ retain source spans for Scheme forms.
 Renderer reuse is opt-in and applies only when every configured renderer is
 wrapped as a cached renderer. Wrap a deterministic renderer with
 `make-cached-renderer`, giving it a key that covers its configuration, and set
-`#:cache-key` on the project for the reader, analyzer, title, and other
-project-level inputs. These are caller-managed version keys, not hashes of
+`#:cache-key` on the project for the reader, analyzer, project configuration,
+and other project-level inputs. These are caller-managed version keys, not hashes of
 Scheme procedures. Bump them when reader, analyzer, or renderer code or
 configuration changes. File inputs declared with `#:extra-sources` are
 fingerprinted automatically; cacheable renderers must not rely on side effects.
 Grove reuses outputs only when source fingerprints and both keys match and the
-saved output files still match their recorded contents. Each build still loads
-shared modules, reads and evaluates every page, and runs the analyzer over the
-complete site; only renderer calls and their outputs are reused. This keeps
+saved output files still match their recorded contents. Each build still runs
+the preparation hook, reads every source, and runs the analyzer over the full
+project model; only renderer calls and their outputs are reused. This keeps
 Scheme evaluation and analysis semantics predictable while avoiding repeated
 output work. Consider caching earlier phases only if profiling shows they are
 a meaningful cost and their side effects and invalidation rules are clear.
@@ -211,6 +220,16 @@ renderer handlers.
 
 The complete runnable example, including custom routes and CSS, is in
 `examples/linked-notes/build.scm`.
+
+The model-independent catalog example can be run with:
+
+```sh
+guile -L modules examples/catalog/build.scm
+```
+
+It writes `index.html`, `catalog.css`, and `catalog.txt` to
+`/tmp/grove-catalog`. The catalog defines its own record model and uses Grove's
+generic project, IR, HTML, text, style, and artifact APIs.
 
 Forester pages can declare optional metadata at top level. `@summary` is plain
 text; `@published` and `@updated` use `YYYY-MM-DD` dates:

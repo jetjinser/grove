@@ -38,12 +38,24 @@ The example shows the main project pieces:
 - The HTML style declares `style.css` as both a project input and an artifact
   dependency, so edits are reported and rebuild the stylesheet output.
 
+## Try a non-Forester project
+
+```sh
+guile -L modules examples/catalog/build.scm
+```
+
+This project reads `.quote` files into its own catalog record, then writes
+`index.html`, `catalog.css`, and `catalog.txt` to `/tmp/grove-catalog`. Its
+reader, analyzer, HTML output, and text output use Grove's generic project and
+artifact APIs without importing Forester.
+
 ## Project structure
 
-Grove owns file collection, the generic content IR, build reports, artifact
-writing, and optional renderer caching. Projects supply a page reader and may
-provide an analyzer that returns any Scheme value. Each renderer consumes that
-value and returns artifacts; renderers can be combined for multiple targets.
+Grove owns file collection, model-independent project orchestration, the
+generic content IR, build reports, artifact writing, and optional renderer
+caching. Projects supply a source reader and analyzer; the analyzer can return
+any Scheme value, which each configured renderer consumes to produce
+artifacts. The page-oriented Site records are an optional adapter.
 
 Forester is one library built on those interfaces. It currently provides
 linked-page analysis and HTML, text, and RSS renderers. See
