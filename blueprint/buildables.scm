@@ -11,6 +11,7 @@
 
 (define +grv-sources+
   '("modules/grove/build.scm"
+    "modules/grove/build/state.scm"
     "modules/grove/collect.scm"
     "modules/grove/ir.scm"
     "modules/grove/output.scm"

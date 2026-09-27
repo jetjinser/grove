@@ -146,6 +146,8 @@
             (string-append output-directory "/text/limits.txt")
             (string-append output-directory "/.grove-artifacts")
             (string-append output-directory "/.grove-artifacts.tmp")
+            (string-append output-directory "/.grove-build-state")
+            (string-append output-directory "/.grove-build-state.tmp")
             (string-append module-directory "/commands.grv")
             (string-append source-directory "/algebra.grv")
             (string-append source-directory "/limits.grv")

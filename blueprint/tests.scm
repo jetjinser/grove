@@ -25,6 +25,7 @@
   '("unit/scribble/read.scm"
     "unit/scribble/parse.scm"
     "unit/grove/build.scm"
+    "unit/grove/state.scm"
     "unit/grove/content.scm"
     "unit/grove/output.scm"
     "unit/grove/project.scm"

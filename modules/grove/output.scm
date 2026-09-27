@@ -4,6 +4,7 @@
 
 (define-module (grove output)
   #:use-module (ice-9 ftw)
+  #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
@@ -67,7 +68,8 @@
   (any (lambda (reserved)
          (or (string=? path reserved)
              (string-prefix? (string-append reserved "/") path)))
-       (list artifact-manifest-name artifact-manifest-temp-name)))
+       (list artifact-manifest-name artifact-manifest-temp-name
+             ".grove-build-state" ".grove-build-state.tmp")))
 
 (define (read-artifact-manifest path)
   (if (not (file-exists? path))
@@ -95,6 +97,16 @@
       (newline port)))
   (rename-file temp-path path))
 
+(define (artifact-content-current? path content)
+  (and (file-exists? path)
+       (not (file-is-directory? path))
+       (catch #t
+         (lambda ()
+           (call-with-input-file path
+             (lambda (port)
+               (string=? content (get-string-all port)))))
+         (lambda args #f))))
+
 (define (write-artifacts directory artifacts)
   (let* ((paths (map artifact-path artifacts))
          (manifest-path
@@ -111,9 +123,10 @@
       (lambda (artifact)
         (let ((path (string-append directory "/" (artifact-path artifact))))
           (ensure-directory (dirname path))
-          (call-with-output-file path
-            (lambda (port)
-              (display (artifact-content artifact) port)))))
+          (unless (artifact-content-current? path (artifact-content artifact))
+            (call-with-output-file path
+              (lambda (port)
+                (display (artifact-content artifact) port))))))
       artifacts)
     (for-each
       (lambda (stale-path)

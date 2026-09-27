@@ -72,6 +72,12 @@ Custom renderers can pass a source-path list as the third argument to
 This provenance is groundwork for incremental builds; Grove still reads,
 analyzes, and renders the complete site on each build.
 
+`build-project/report` returns a build report with added, modified, and removed
+input paths plus potentially affected artifact paths. `build-project` remains
+available and continues to return the artifact list. Outputs from renderers
+that leave their dependencies unknown are always reported as affected. Writing
+an artifact whose contents are already current leaves its file untouched.
+
 The complete runnable example, including custom routes and CSS, is in
 `examples/linked-notes/build.scm`.
 

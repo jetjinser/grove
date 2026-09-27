@@ -1,0 +1,64 @@
+;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+;;;
+;;; SPDX-License-Identifier: GPL-3.0-or-later
+
+(define-module (tests unit grove state)
+  #:use-module (ice-9 ftw)
+  #:use-module (ice-9 textual-ports)
+  #:use-module (srfi srfi-64)
+  #:use-module (grove build state)
+  #:use-module (grove output))
+
+(define state-directory
+  (format #f "/tmp/grove-state-test-~a" (getpid)))
+(define input-path (string-append state-directory "/source.grv"))
+(define state-path (string-append state-directory "/state"))
+(define temp-path (string-append state-directory "/state.tmp"))
+
+(define (write-test-file path content)
+  (call-with-output-file path
+    (lambda (port) (display content port))))
+
+(test-begin "grove build state")
+
+(dynamic-wind
+  (lambda ()
+    (mkdir state-directory)
+    (write-test-file input-path "first"))
+  (lambda ()
+    (test-equal "content fingerprints are stable"
+      (content-fingerprint "same")
+      (content-fingerprint "same"))
+    (test-assert "content fingerprints detect different content"
+      (not (= (content-fingerprint "first")
+              (content-fingerprint "other"))))
+    (let* ((sources (list (list input-path (file-fingerprint input-path))))
+           (artifacts
+             (list (make-artifact "page.html" "rendered"
+                                  (list input-path))))
+           (state (list 'grove-build-state-v1
+                        sources
+                        (list (list "page.html"
+                                    (content-fingerprint "rendered")
+                                    (list input-path))))))
+      (write-build-state state-path temp-path sources artifacts)
+      (test-equal "build state round trips input and artifact provenance"
+        state
+        (read-build-state state-path))
+      (write-test-file input-path "other")
+      (test-assert "file fingerprints read source bytes"
+        (not (= (cadar sources)
+                (file-fingerprint input-path))))
+      (write-test-file state-path "(grove-build-state-v9 () ())")
+      (test-error "invalid build-state versions are rejected" #t
+        (read-build-state state-path))))
+  (lambda ()
+    (for-each
+      (lambda (path)
+        (when (file-exists? path)
+          (delete-file path)))
+      (list input-path state-path temp-path))
+    (when (file-exists? state-directory)
+      (rmdir state-directory))))
+
+(test-end "grove build state")

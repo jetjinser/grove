@@ -52,7 +52,7 @@
                  (lambda (path)
                    (let ((id (string-drop-right (basename path) 4)))
                      (set! events (append events (list (list 'read id))))
-                     (make-site-page id id (make-content-document '()))))
+                     (make-site-page id id (make-content-document '()) path)))
                  #:analyze
                  (lambda (site)
                    (set! observed-site-title (site-title site))
@@ -62,12 +62,23 @@
                  (list
                    (lambda (site)
                      (set! events (append events '(render)))
-                     (list
-                       (make-artifact
-                         "text/summary.txt"
-                         (number->string (length (site-pages site)))))))
+                     (append
+                       (list
+                         (make-artifact
+                           "text/summary.txt"
+                           (number->string (length (site-pages site)))
+                           (site-sources site)))
+                       (map (lambda (page)
+                              (make-artifact
+                                (string-append "pages/"
+                                               (site-page-id page) ".txt")
+                                (site-page-id page)
+                                (list (site-page-source page))))
+                            (site-pages site))
+                       (list (make-artifact "opaque.txt" "opaque")))))
                  #:output-directory output-directory))
-             (artifacts (build-project project)))
+             (report (build-project/report project))
+             (artifacts (build-report-artifacts report)))
         (test-equal "project phases run modules, readers, analysis, renderers"
           '((load ("shared.grv"))
             (read "first")
@@ -79,30 +90,83 @@
           "Configured"
           observed-site-title)
         (test-equal "project returns artifacts from all configured renderers"
-          '("text/summary.txt")
+          '("text/summary.txt" "pages/first.txt" "pages/second.txt"
+            "opaque.txt")
           (map artifact-path artifacts))
         (test-assert "project writes renderer artifacts to its output directory"
           (file-exists? output-path))
         (test-equal "project output contains renderer content"
           "2"
-          (call-with-input-file output-path get-string-all)))))
+          (call-with-input-file output-path get-string-all))
+        (test-equal "first build reports every input as added"
+          (list (string-append module-directory "/shared.grv")
+                (string-append source-directory "/first.grv")
+                (string-append source-directory "/second.grv"))
+          (build-report-added-sources report))
+        (test-equal "first build reports its output as affected"
+          '("text/summary.txt" "pages/first.txt" "pages/second.txt"
+            "opaque.txt")
+          (build-report-affected-artifacts report))
+        (let ((unchanged (build-project/report project)))
+          (test-equal "unchanged build reports no input changes"
+            '()
+            (append (build-report-added-sources unchanged)
+                    (build-report-modified-sources unchanged)
+                    (build-report-removed-sources unchanged)))
+          (test-equal "unknown renderer dependencies remain conservatively affected"
+            '("opaque.txt")
+            (build-report-affected-artifacts unchanged)))
+        (write-test-file (string-append source-directory "/first.grv")
+                         "first modified")
+        (delete-file (string-append source-directory "/second.grv"))
+        (write-test-file (string-append source-directory "/third.grv")
+                         "third")
+        (let ((changed (build-project/report project)))
+          (test-equal "build report detects added inputs"
+            (list (string-append source-directory "/third.grv"))
+            (build-report-added-sources changed))
+          (test-equal "build report detects modified inputs"
+            (list (string-append source-directory "/first.grv"))
+            (build-report-modified-sources changed))
+          (test-equal "build report detects removed inputs"
+            (list (string-append source-directory "/second.grv"))
+            (build-report-removed-sources changed))
+          (test-equal "input changes affect declared dependents and unknown outputs"
+            '("text/summary.txt" "pages/first.txt" "pages/third.txt"
+              "opaque.txt" "pages/second.txt")
+            (build-report-affected-artifacts changed))
+          (test-equal "project output refreshes after source changes"
+            "2"
+            (call-with-input-file output-path get-string-all))))))
   (lambda ()
     (for-each
       (lambda (path)
         (when (file-exists? path)
           (delete-file path)))
       (list output-path
+            (string-append output-directory "/pages/first.txt")
+            (string-append output-directory "/pages/second.txt")
+            (string-append output-directory "/pages/third.txt")
+            (string-append output-directory "/opaque.txt")
             (string-append output-directory "/.grove-artifacts")
-            (string-append output-directory "/.grove-artifacts.tmp")))
+            (string-append output-directory "/.grove-artifacts.tmp")
+            (string-append output-directory "/.grove-build-state")
+            (string-append output-directory "/.grove-build-state.tmp")))
     (let ((text-directory (string-append output-directory "/text")))
       (when (file-exists? text-directory)
         (rmdir text-directory)))
+    (let ((pages-directory (string-append output-directory "/pages")))
+      (when (file-exists? pages-directory)
+        (rmdir pages-directory)))
     (when (file-exists? output-directory)
       (rmdir output-directory))
-    (for-each delete-file
+    (for-each (lambda (path)
+                (when (file-exists? path)
+                  (delete-file path)))
       (list (string-append module-directory "/shared.grv")
             (string-append source-directory "/first.grv")
             (string-append source-directory "/second.grv")
+            (string-append source-directory "/third.grv")
             (string-append source-directory "/ignore.txt")))
     (rmdir module-directory)
     (rmdir source-directory)

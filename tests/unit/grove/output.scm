@@ -31,6 +31,13 @@
       #f
       (artifact-sources
         (make-artifact "unknown.txt" "unknown source set")))
+    (let ((inode (stat:ino (stat output-path))))
+      (write-artifacts output-directory
+        (list (make-artifact "nested/page.txt" "artifact content")
+              (make-artifact "obsolete.html" "old page")))
+      (test-equal "unchanged artifact contents are not rewritten"
+        inode
+        (stat:ino (stat output-path))))
     (call-with-output-file unmanaged-path
       (lambda (port) (display "user-owned" port)))
     (write-artifacts output-directory
@@ -51,7 +58,13 @@
         (list (make-artifact ".grove-artifacts" "user data"))))
     (test-error "artifact manifest directory is reserved" #t
       (write-artifacts output-directory
-        (list (make-artifact ".grove-artifacts/data" "user data")))))
+        (list (make-artifact ".grove-artifacts/data" "user data"))))
+    (test-error "build state path is reserved" #t
+      (write-artifacts output-directory
+        (list (make-artifact ".grove-build-state" "user data"))))
+    (test-error "build state directory is reserved" #t
+      (write-artifacts output-directory
+        (list (make-artifact ".grove-build-state/data" "user data")))))
   (lambda ()
     (when (file-exists? output-path)
       (delete-file output-path))
@@ -60,7 +73,9 @@
         (when (file-exists? path)
           (delete-file path)))
       (list obsolete-path unmanaged-path manifest-path
-            (string-append output-directory "/.grove-artifacts.tmp")))
+            (string-append output-directory "/.grove-artifacts.tmp")
+            (string-append output-directory "/.grove-build-state")
+            (string-append output-directory "/.grove-build-state.tmp")))
     (let ((nested (string-append output-directory "/nested")))
       (when (file-exists? nested)
         (rmdir nested)))
