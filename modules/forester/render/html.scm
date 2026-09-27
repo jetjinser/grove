@@ -126,6 +126,13 @@
         routes
         mathjax-src))))
 
+(define (forest-source-paths forest)
+  (delete-duplicates
+    (append (site-sources (forest-site forest))
+            (filter-map site-page-source
+                        (site-pages (forest-site forest))))
+    string=?))
+
 (define (check-html-input forest style routes mathjax-src)
   (unless (forest? forest)
     (error "Forester HTML renderer requires a forest" forest))
@@ -165,11 +172,14 @@
     (html-style-artifacts style)
     (cons
       (make-artifact (html-index-path routes)
-                     (index-html forest style routes mathjax-src))
+                     (index-html forest style routes mathjax-src)
+                     (forest-source-paths forest))
       (map (lambda (page)
              (make-artifact
                (html-page-path routes (site-page-id page))
-               (page-html forest page style routes mathjax-src)))
+               (page-html forest page style routes mathjax-src)
+               ;; Backlinks can make every page affect every rendered page.
+               (forest-source-paths forest)))
            (site-pages (forest-site forest))))))
 
 (define* (make-forester-html-renderer #:key

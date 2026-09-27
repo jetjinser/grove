@@ -8,6 +8,7 @@
   #:use-module (grove output)
   #:use-module (grove render text)
   #:use-module (grove site)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-14)
   #:export (forest->text
@@ -67,6 +68,14 @@
                (site-pages site)))))
 
 (define (render-forest-text forest)
-  (map (lambda (page)
-         (make-artifact (string-append (car page) ".txt") (cdr page)))
-       (forest->text forest)))
+  (let ((sources
+          (delete-duplicates
+            (append (site-sources (forest-site forest))
+                    (filter-map site-page-source
+                                (site-pages (forest-site forest))))
+            string=?)))
+    (map (lambda (page)
+           (make-artifact (string-append (car page) ".txt")
+                          (cdr page)
+                          sources))
+         (forest->text forest))))

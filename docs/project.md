@@ -63,6 +63,15 @@ On the next build it removes files listed in the previous manifest that are no
 longer produced, while leaving files it did not manage alone. The manifest path
 is reserved for Grove metadata.
 
+Pages may carry an optional source path. A built site also carries its page and
+module input paths, and artifacts can declare which paths they depend on.
+Forester renderers conservatively mark their outputs as depending on every
+input, since reverse links can make a change to any page affect every page.
+Custom renderers can pass a source-path list as the third argument to
+`make-artifact`; omitting it means dependencies are unknown.
+This provenance is groundwork for incremental builds; Grove still reads,
+analyzes, and renders the complete site on each build.
+
 The complete runnable example, including custom routes and CSS, is in
 `examples/linked-notes/build.scm`.
 

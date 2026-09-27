@@ -32,7 +32,8 @@
         title
         (make-content-document
           (remove title-element? children)
-          (content-document-source document))))))
+          (content-document-source document))
+        path))))
 
 (define (make-forester-page-reader read-document)
   (lambda (path)

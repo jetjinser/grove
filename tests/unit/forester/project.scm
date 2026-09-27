@@ -15,7 +15,8 @@
   #:use-module (grove input scribble)
   #:use-module (grove output)
   #:use-module (grove project)
-  #:use-module (grove render html routes))
+  #:use-module (grove render html routes)
+  #:use-module (grove site))
 
 (define project-root
   (format #f "/tmp/forester-project-test-~a" (getpid)))
@@ -79,6 +80,32 @@
            (algebra-text
              (read-test-file
                (string-append output-directory "/text/algebra.txt"))))
+      (let* ((expected-sources
+               (list (string-append module-directory "/commands.grv")
+                     (string-append source-directory "/algebra.grv")
+                     (string-append source-directory "/limits.grv")))
+             (algebra-html-artifact
+               (find (lambda (artifact)
+                       (string=? (artifact-path artifact)
+                                 "notes/algebra.html"))
+                     artifacts))
+             (algebra-text-artifact
+               (find (lambda (artifact)
+                       (string=? (artifact-path artifact)
+                                 "text/algebra.txt"))
+                     artifacts)))
+        (test-equal "page reader retains source paths"
+          (string-append source-directory "/algebra.grv")
+          (site-page-source
+            ((make-forester-page-reader
+               (make-scribble-document-reader))
+             (string-append source-directory "/algebra.grv"))))
+        (test-equal "Forester HTML artifacts declare site-wide sources"
+          expected-sources
+          (artifact-sources algebra-html-artifact))
+        (test-equal "prefixed text artifacts retain source dependencies"
+          expected-sources
+          (artifact-sources algebra-text-artifact)))
       (test-assert "project composes HTML and text renderer outputs"
         (and (member "index.html" paths)
              (member "notes/algebra.html" paths)
