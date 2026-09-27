@@ -63,6 +63,9 @@
       (string-trim-both
         (content->text (site-page-document page)))))
 
+(define (channel-description site)
+  (or (site-description site) (site-title site)))
+
 (define* (render-forest-rss forest #:key site-url
                             (feed-path "feed.xml")
                             (routes (make-html-routes)))
@@ -106,7 +109,8 @@
              "  <channel>\n"
              "    <title>" (xml-escape (site-title site)) "</title>\n"
              "    <link>" (xml-escape home-url) "</link>\n"
-             "    <description>" (xml-escape (site-title site))
+             "    <description>"
+             (xml-escape (channel-description site))
              "</description>\n"
              (if (null? items) "" (string-append (string-join items "\n") "\n"))
              "  </channel>\n"

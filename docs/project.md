@@ -37,6 +37,7 @@ library:
 (define project
   (make-project
     #:title "Linked Notes"
+    #:description "A linked notebook for mathematical ideas."
     #:source-directory source-directory
     #:module-directory "source/modules"
     #:load-modules load-scribble-modules!
@@ -164,6 +165,12 @@ declares all forest source paths as dependencies. The host must provide a
 correct public URL because local output paths alone cannot determine one. The
 optional cache key must change when the feed URL, route, or renderer behavior
 changes.
+
+The project title and optional `#:description` become site-level metadata.
+Forester HTML emits the description in the index page and uses it as a page
+description when a page has no `@summary`. RSS uses it for the channel
+description, falling back to the site title when omitted. A page's `@summary`
+is emitted as its HTML description and takes precedence over the site value.
 
 The complete runnable example, including custom routes and CSS, is in
 `examples/linked-notes/build.scm`.

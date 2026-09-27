@@ -163,12 +163,15 @@
                               (memq (content-element-kind node)
                                     '(summary published updated))))
                        (content-document-children
-                         (site-page-document algebra-page)))))
-          (test-assert "RSS uses summaries and updated dates"
-            (and (string-contains rss-feed
+                         (site-page-document algebra-page))))))
+        (test-assert "RSS uses summaries and updated dates"
+          (and (string-contains rss-feed
                    "<description>A short algebra note.</description>")
                  (string-contains rss-feed
-                   "<pubDate>Mon, 28 Sep 2026 00:00:00 GMT</pubDate>")))))
+                   "<pubDate>Mon, 28 Sep 2026 00:00:00 GMT</pubDate>")))
+        (test-assert "RSS channel description falls back to site title"
+          (string-contains rss-feed
+            "<description>Linked Notes</description>")))
       (test-assert "project composes HTML, RSS, and text renderer outputs"
         (and (member "index.html" paths)
              (member "feed.xml" paths)

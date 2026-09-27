@@ -35,11 +35,12 @@
   (rendered? build-report-rendered?))
 
 (define-record-type <project>
-  (%make-project title source-directory source-filter module-directory
+  (%make-project title description source-directory source-filter module-directory
                  module-filter load-modules extra-sources read-page analyze renderers
                  output-directory cache-key)
   project?
   (title project-title)
+  (description project-description)
   (source-directory project-source-directory)
   (source-filter project-source-filter)
   (module-directory project-module-directory)
@@ -57,6 +58,7 @@
 
 (define* (make-project #:key
                        (title "Site")
+                       (description #f)
                        source-directory
                        (source-filter source-file?)
                        (module-directory #f)
@@ -70,6 +72,9 @@
                        (cache-key #f))
   (unless (and (string? title) (not (string-null? title)))
     (error "project requires a title" title))
+  (unless (or (not description)
+              (and (string? description) (not (string-null? description))))
+    (error "project description must be a non-empty string or #f" description))
   (unless (and (string? source-directory)
                (procedure? source-filter))
     (error "project requires a source directory and filter"
@@ -101,7 +106,7 @@
   (unless (or (not cache-key)
               (and (string? cache-key) (not (string-null? cache-key))))
     (error "project cache key must be a non-empty string or #f" cache-key))
-  (%make-project title source-directory source-filter module-directory
+  (%make-project title description source-directory source-filter module-directory
                  module-filter load-modules extra-sources read-page analyze renderers
                  output-directory cache-key))
 
@@ -292,6 +297,7 @@
              page-sources
              (project-read-page project)
              #:title (project-title project)
+             #:description (project-description project)
              #:module-sources module-sources
              #:load-modules (project-load-modules project)))
          (current-sources

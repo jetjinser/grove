@@ -17,7 +17,8 @@
             make-site
             site-pages
             site-sources
-            site-title))
+            site-title
+            site-description))
 
 (define-record-type <site-page>
   (%make-site-page id title document source metadata)
@@ -42,17 +43,22 @@
   (%make-site-page id title document source metadata))
 
 (define-record-type <site>
-  (%make-site pages title sources)
+  (%make-site pages title sources description)
   site?
   (pages site-pages)
   (title site-title)
-  (sources site-sources))
+  (sources site-sources)
+  (description site-description))
 
-(define* (make-site pages #:key (title "Site") (sources '()))
+(define* (make-site pages #:key (title "Site") (description #f)
+                    (sources '()))
   (unless (every site-page? pages)
     (error "site requires pages" pages))
   (unless (and (string? title) (not (string=? title "")))
     (error "site requires a title" title))
+  (unless (or (not description)
+              (and (string? description) (not (string-null? description))))
+    (error "site description must be a non-empty string or #f" description))
   (unless (and (list? sources) (every string? sources))
     (error "site sources must be a list of paths" sources))
   (let* ((ids (map site-page-id pages))
@@ -63,4 +69,4 @@
                                1))
                           ids)))
     (when duplicate (error "duplicate site page id" duplicate))
-    (%make-site pages title sources)))
+    (%make-site pages title sources description)))

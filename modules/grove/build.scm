@@ -45,6 +45,7 @@
 
 (define* (build-site sources read-page #:key
                      (title "Site")
+                     (description #f)
                      (module-sources '())
                      (load-modules #f))
   (unless (null? module-sources)
@@ -60,6 +61,7 @@
                     sources)))
   (make-site pages
              #:title title
+             #:description description
              #:sources (delete-duplicates
                          (filter string?
                              (append module-sources sources

@@ -33,7 +33,8 @@
     "algebra"
     "Algebra & limits"
     (evaluate-document
-      "@paragraph{The @link[\"limits\"]{limits} are useful. @math{x^2+y^2=z^2}}\n@display-math{a^2+b^2=c^2}")))
+      "@paragraph{The @link[\"limits\"]{limits} are useful. @math{x^2+y^2=z^2}}\n@display-math{a^2+b^2=c^2}")
+    #:metadata '((summary . "Algebra notes and mathematical ideas."))))
 
 (define limits
   (make-site-page
@@ -80,7 +81,8 @@
     (string-contains algebra-html "Algebra &amp; limits")))
 
 (let* ((forest (make-forest (make-site (list algebra limits)
-                                       #:title "Linked Notes")))
+                                       #:title "Linked Notes"
+                                       #:description "Connected notes on math.")))
        (artifacts
          (render-site
            forest
@@ -94,6 +96,10 @@
                  (lambda (value)
                    (prefix-artifacts "text" (render-forest-text value))))))
        (paths (map artifact-path artifacts))
+       (limits-html (artifact-content
+                      (find (lambda (artifact)
+                              (string=? (artifact-path artifact) "limits.html"))
+                            artifacts)))
        (feed (artifact-content
                (find (lambda (artifact)
                        (string=? (artifact-path artifact) "feed.xml"))
@@ -103,6 +109,10 @@
                                (string=? (artifact-path artifact)
                                          "algebra.html"))
                              artifacts)))
+       (index-html (artifact-content
+                     (find (lambda (artifact)
+                             (string=? (artifact-path artifact) "index.html"))
+                           artifacts)))
        (algebra-text (artifact-content
                        (find (lambda (artifact)
                                (string=? (artifact-path artifact)
@@ -118,7 +128,18 @@
     (and (string-contains feed "<title>Algebra &amp; limits</title>")
          (string-contains feed
            "https://notes.example/notes/algebra.html")
-         (string-contains feed "&amp;")))
+         (string-contains feed "&amp;")
+         (string-contains feed
+           "<description>Connected notes on math.</description>")))
+  (test-assert "HTML index includes the site description"
+    (string-contains index-html
+      "<meta name=\"description\" content=\"Connected notes on math.\""))
+  (test-assert "HTML pages prefer their own summary"
+    (string-contains algebra-html
+      "<meta name=\"description\" content=\"Algebra notes and mathematical ideas.\""))
+  (test-assert "HTML pages fall back to the site description"
+    (string-contains limits-html
+      "<meta name=\"description\" content=\"Connected notes on math.\""))
   (test-assert "HTML renderer produces standalone HTML artifacts"
     (string-contains algebra-html "<html>"))
   (test-assert "text renderer produces independent text artifacts"

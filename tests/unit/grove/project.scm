@@ -45,10 +45,12 @@
     (write-test-file (string-append source-directory "/ignore.txt") "ignored"))
   (lambda ()
     (let ((events '())
-          (observed-site-title #f))
+          (observed-site-title #f)
+          (observed-site-description #f))
       (let* ((project
                (make-project
                  #:title "Configured"
+                 #:description "A configured site description."
                  #:source-directory source-directory
                  #:module-directory module-directory
                  #:load-modules
@@ -64,6 +66,7 @@
                  #:analyze
                  (lambda (site)
                    (set! observed-site-title (site-title site))
+                   (set! observed-site-description (site-description site))
                    (set! events (append events '(analyze)))
                    site)
                  #:renderers
@@ -97,6 +100,9 @@
         (test-equal "project configuration selects the site title"
           "Configured"
           observed-site-title)
+        (test-equal "project configuration passes the site description"
+          "A configured site description."
+          observed-site-description)
         (test-equal "project returns artifacts from all configured renderers"
           '("text/summary.txt" "pages/first.txt" "pages/second.txt"
             "opaque.txt")

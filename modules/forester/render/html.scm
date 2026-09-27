@@ -65,11 +65,19 @@
      (any content-has-math? (content-document-children content)))
     (else #f)))
 
-(define (html-document title body math? home-title style routes mathjax-src)
+(define (page-description site page)
+  (or (assq-ref (site-page-metadata page) 'summary)
+      (site-description site)))
+
+(define (html-document title description body math? home-title style routes
+                       mathjax-src)
   `(html
      (head
        (meta (@ (charset "utf-8")))
        (title ,title)
+       ,@(if description
+             (list `(meta (@ (name "description") (content ,description))))
+             '())
        ,@(map (lambda (stylesheet)
                `(link (@ (rel "stylesheet")
                          (href ,(html-asset-url
@@ -95,6 +103,7 @@
     (sxml->html
       (html-document
         (site-title site)
+        (site-description site)
         (list
           `(main
              (nav (@ (aria-label "Pages"))
@@ -120,6 +129,7 @@
     (sxml->html
       (html-document
         (site-page-title page)
+        (page-description site page)
         (list article)
         (content-has-math? (site-page-document page))
         (site-title site)
