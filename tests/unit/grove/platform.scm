@@ -66,6 +66,11 @@
                     (list (make-artifact "page-count"
                                          (number->string (length values))
                                          sources))))
+                (lambda (inputs)
+                  (set! rendered-models
+                        (append rendered-models
+                                (list (map project-input-value inputs))))
+                  '())
               )
               #:output-directory output-directory))
            (first-report (build-project/report project))
@@ -84,7 +89,7 @@
         '("beta" "alpha")
         (car rendered-models))
       (test-equal "multiple independent renderers receive the same model"
-        '(("beta" "alpha") ("beta" "alpha"))
+        '(("beta" "alpha") ("beta" "alpha") ("beta" "alpha"))
         rendered-models)
       (test-equal "independent renderers contribute their own artifact sets"
         '("pages.list" "page-count")
@@ -114,7 +119,27 @@
             (build-report-removed-sources removed))
           (test-equal "renderer artifact sets update after input removal"
             '("alpha updated")
-            (last rendered-models))))))
+            (last rendered-models))))
+      (let ((collision-project
+              (make-project
+                #:collect-sources (lambda () (list alpha-source))
+                #:read-source
+                (lambda (path)
+                  (call-with-input-file path get-string-all))
+                #:renderers
+                (list (lambda (_)
+                        (list (make-artifact "same.txt" "first")))
+                      (lambda (_)
+                        (list (make-artifact "same.txt" "second"))))
+                #:output-directory output-directory)))
+        (test-assert "renderer path collisions are rejected clearly"
+          (catch #t
+            (lambda ()
+              (build-project collision-project)
+              #f)
+            (lambda (key . args)
+              (string-contains (format #f "~s" (cons key args))
+                               "duplicate artifact path")))))))
   (lambda ()
     (for-each
       (lambda (path)
