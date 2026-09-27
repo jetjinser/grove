@@ -9,6 +9,7 @@
   #:use-module (system base language)
   #:use-module (language scribble spec)
   #:use-module (forester render html)
+  #:use-module (forester render rss)
   #:use-module (forester render text)
   #:use-module (forester site)
   #:use-module (grove build)
@@ -84,9 +85,19 @@
          (render-site
            forest
            (list (make-forester-html-renderer)
+                 (make-forester-rss-renderer
+                   #:site-url "https://notes.example/"
+                   #:routes (make-html-routes
+                              #:page-path
+                              (lambda (id)
+                                (string-append "notes/" id ".html"))))
                  (lambda (value)
                    (prefix-artifacts "text" (render-forest-text value))))))
        (paths (map artifact-path artifacts))
+       (feed (artifact-content
+               (find (lambda (artifact)
+                       (string=? (artifact-path artifact) "feed.xml"))
+                     artifacts)))
        (algebra-html (artifact-content
                        (find (lambda (artifact)
                                (string=? (artifact-path artifact)
@@ -97,11 +108,17 @@
                                (string=? (artifact-path artifact)
                                          "text/algebra.txt"))
                              artifacts))))
-  (test-assert "HTML and text renderers compose into one artifact set"
+  (test-assert "HTML, text, and RSS renderers compose into one artifact set"
     (and (member "index.html" paths)
          (member "algebra.html" paths)
+         (member "feed.xml" paths)
          (member "text/index.txt" paths)
          (member "text/algebra.txt" paths)))
+  (test-assert "RSS emits escaped metadata and absolute routed links"
+    (and (string-contains feed "<title>Algebra &amp; limits</title>")
+         (string-contains feed
+           "https://notes.example/notes/algebra.html")
+         (string-contains feed "&amp;")))
   (test-assert "HTML renderer produces standalone HTML artifacts"
     (string-contains algebra-html "<html>"))
   (test-assert "text renderer produces independent text artifacts"

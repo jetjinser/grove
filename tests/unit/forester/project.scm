@@ -10,6 +10,7 @@
   #:use-module (srfi srfi-64)
   #:use-module (forester input scribble)
   #:use-module (forester render html)
+  #:use-module (forester render rss)
   #:use-module (forester render text)
   #:use-module (forester site)
   #:use-module (grove input scribble)
@@ -72,6 +73,13 @@
                          #:page-path
                          (lambda (id)
                            (string-append "notes/" id ".html"))))
+                     (make-forester-rss-renderer
+                       #:site-url "https://notes.example"
+                       #:routes
+                       (make-html-routes
+                         #:page-path
+                         (lambda (id)
+                           (string-append "notes/" id ".html"))))
                      (make-forester-text-renderer #:prefix "text"))
                #:output-directory output-directory))
            (artifacts (build-project project))
@@ -117,8 +125,9 @@
         (test-equal "prefixed text artifacts retain source dependencies"
           expected-algebra-html-sources
           (artifact-sources algebra-text-artifact)))
-      (test-assert "project composes HTML and text renderer outputs"
+      (test-assert "project composes HTML, RSS, and text renderer outputs"
         (and (member "index.html" paths)
+             (member "feed.xml" paths)
              (member "notes/algebra.html" paths)
              (member "notes/limits.html" paths)
              (member "text/index.txt" paths)
@@ -243,6 +252,7 @@
         (when (file-exists? path)
           (delete-file path)))
       (list (string-append output-directory "/index.html")
+            (string-append output-directory "/feed.xml")
             (string-append output-directory "/notes/algebra.html")
             (string-append output-directory "/notes/limits.html")
             (string-append output-directory "/notes/unlinked.html")

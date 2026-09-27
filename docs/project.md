@@ -132,6 +132,26 @@ MathJax configuration.
 `make-forester-text-renderer` provides the same opt-in caching and incremental
 behavior, with an optional output `#:prefix` such as `"text"`.
 
+Forester can also add an RSS 2.0 feed as an independent target:
+
+```scheme
+(use-modules (forester render rss))
+
+(make-forester-rss-renderer
+  #:site-url "https://notes.example"
+  #:routes routes
+  #:feed-path "feed.xml"
+  #:cache-key "notes-rss-v1")
+```
+
+Add the returned renderer to `#:renderers` beside HTML or text. `#:site-url`
+is the public site origin; page links use the HTML routes and the feed contains
+each page's title and plain-text content. XML text is escaped, and the artifact
+declares all forest source paths as dependencies. The host must provide a
+correct public URL because local output paths alone cannot determine one. The
+optional cache key must change when the feed URL, route, or renderer behavior
+changes.
+
 The complete runnable example, including custom routes and CSS, is in
 `examples/linked-notes/build.scm`.
 
