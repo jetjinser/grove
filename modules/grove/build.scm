@@ -36,6 +36,13 @@
   (and (every cached-renderer? renderers)
        (map cached-renderer-cache-key renderers)))
 
+(define (read-page-with-context path read-page)
+  (catch #t
+    (lambda () (read-page path))
+    (lambda (key . args)
+      (error (format #f "failed to read project source ~a (~a): ~s"
+                     path key args)))))
+
 (define* (build-site sources read-page #:key
                      (title "Site")
                      (module-sources '())
@@ -43,8 +50,14 @@
   (unless (null? module-sources)
     (unless (procedure? load-modules)
       (error "site module sources require a module loader" module-sources))
-    (load-modules module-sources))
-  (let ((pages (map read-page sources)))
+    (catch #t
+      (lambda () (load-modules module-sources))
+      (lambda (key . args)
+        (error (format #f "failed to load project module sources ~s (~a): ~s"
+                       module-sources key args)))))
+  (let ((pages (map (lambda (path)
+                      (read-page-with-context path read-page))
+                    sources)))
   (make-site pages
              #:title title
              #:sources (delete-duplicates

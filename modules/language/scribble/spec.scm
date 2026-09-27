@@ -29,7 +29,34 @@
   (if (eof-object? (peek-char port))
       (read-char port)
       `(make-content-document
-         (list ,@(map fragment->expression (scribble-parse port))))))
+         (list ,@(map fragment->expression
+                      (parse-with-context port (port-filename port)))))))
+
+(define (source-name source)
+  (or source "<input>"))
+
+(define (parse-with-context port source)
+  (catch #t
+    (lambda () (scribble-parse port))
+    (lambda (key . args)
+      (error
+        (format #f "Scribble syntax error in ~a:~a:~a (~a): ~s"
+                (source-name source)
+                (+ 1 (or (port-line port) 0))
+                (+ 1 (or (port-column port) 0))
+                key
+                args)))))
+
+(define (evaluate-with-context expression source form-number)
+  (catch #t
+    (lambda () (primitive-eval expression))
+    (lambda (key . args)
+      (error
+        (format #f "Scribble evaluation failed in ~a at top-level form ~a (~a): ~s"
+                (source-name source)
+                form-number
+                key
+                args)))))
 
 (define (content-value? value)
   (or (string? value)
@@ -51,23 +78,27 @@
   (save-module-excursion
     (lambda ()
       (set-current-module environment)
-      (let loop ((fragments (scribble-parse port))
+      (let loop ((fragments (parse-with-context port source))
                  (children '())
-                 (active-module environment))
+                 (active-module environment)
+                 (form-number 1))
         (if (null? fragments)
             (make-content-document (reverse children) source)
-            (let* ((value (primitive-eval
-                            (fragment->expression (car fragments))))
+            (let* ((value (evaluate-with-context
+                            (fragment->expression (car fragments))
+                            source form-number))
                    (module (current-module)))
               ;; define-module changes Guile's current module while evaluating
               ;; the form. Preserve the language's default bindings there too.
               (unless (eq? module active-module)
                 (use-document-interfaces! module))
               (if (content-value? value)
-                  (loop (cdr fragments) (cons value children) module)
+                  (loop (cdr fragments) (cons value children) module
+                        (+ form-number 1))
                   ;; Definitions, imports, and other Scheme forms may return
                   ;; values that are not document content.
-                  (loop (cdr fragments) children module))))))))
+                  (loop (cdr fragments) children module
+                        (+ form-number 1)))))))))
 
 (define-language scribble
   #:title      "Scribble"

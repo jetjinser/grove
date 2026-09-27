@@ -25,15 +25,20 @@
 (define* (one-metadata-value elements kind path #:optional required?)
   (let ((matches (elements-of-kind elements kind)))
     (when (> (length matches) 1)
-      (error "Forester page has duplicate metadata" path kind))
+      (error (format #f "Forester page ~a has duplicate metadata ~a"
+                     path kind)))
     (if (null? matches)
-        (if required? (error "Forester page requires metadata" path kind) #f)
+        (if required?
+            (error (format #f "Forester page ~a requires metadata ~a"
+                           path kind))
+            #f)
         (let ((value
                 (string-trim-both
                   (content-verbatim-string
                     (content-element-children (car matches))))))
           (when (string-null? value)
-            (error "Forester page metadata cannot be empty" path kind))
+            (error (format #f "Forester page metadata ~a cannot be empty in ~a"
+                           kind path)))
           value))))
 
 (define (iso-date? value)
@@ -53,7 +58,8 @@
 (define (date-metadata elements kind path)
   (let ((value (one-metadata-value elements kind path)))
     (when (and value (not (iso-date? value)))
-      (error "Forester page date must use YYYY-MM-DD" path kind value))
+      (error (format #f "Forester page date ~a in ~a must use YYYY-MM-DD: ~a"
+                     kind path value)))
     value))
 
 (define (page-from-document path document)
@@ -65,14 +71,16 @@
          (published (date-metadata metadata-nodes 'published path))
          (updated (date-metadata metadata-nodes 'updated path)))
     (unless (string-suffix? ".grv" filename)
-      (error "Forester page requires a .grv source" path))
+      (error (format #f "Forester page source must end in .grv: ~a" path)))
     (unless (= (length titles) 1)
-      (error "Forester page requires one top-level @title" path))
+      (error (format #f
+                     "Forester page ~a requires exactly one top-level @title (found ~a)"
+                     path (length titles))))
     (let ((title (string-trim-both
                    (content-verbatim-string
                      (content-element-children (car titles))))))
       (when (string-null? title)
-        (error "Forester page title is empty" path))
+        (error (format #f "Forester page title is empty in ~a" path)))
       (make-site-page
         (string-drop-right filename (string-length ".grv"))
         title

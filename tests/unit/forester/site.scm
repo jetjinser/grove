@@ -151,6 +151,23 @@
       (list (make-site-page "broken" "Broken"
               (evaluate-document "@paragraph{@link[\"missing\"]{nowhere}}"))))))
 
+(let ((message
+        (catch #t
+          (lambda ()
+            (make-forest
+              (make-site
+                (list (make-site-page
+                        "broken" "Broken"
+                        (evaluate-document
+                          "@paragraph{@link[\"missing\"]{nowhere}}")
+                        "notes/broken.grv"))))
+            #f)
+          (lambda (key . args) (format #f "~s" (cons key args))))))
+  (test-assert "unresolved-link errors identify source page and target"
+    (and (string-contains message "notes/broken.grv")
+         (string-contains message "broken")
+         (string-contains message "missing"))))
+
 (test-error "duplicate page ids fail site analysis" #t
   (make-site
     (list (make-site-page "same" "First" (evaluate-document "first"))

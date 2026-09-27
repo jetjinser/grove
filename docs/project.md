@@ -103,6 +103,13 @@ available and continues to return the artifact list. Outputs from renderers
 that leave their dependencies unknown are always reported as affected. Writing
 an artifact whose contents are already current leaves its file untouched.
 
+Scribble syntax errors include the source path and current line/column. Errors
+while evaluating a Scheme fragment include the source path and top-level form
+number. Reader failures are wrapped with their input path; Forester metadata
+and unresolved-link errors identify the page source. Evaluation errors report
+the form number rather than a line because the current content IR does not
+retain source spans for Scheme forms.
+
 Renderer reuse is opt-in. Wrap a deterministic renderer with
 `make-cached-renderer`, giving it a key that covers its configuration, and set
 `#:cache-key` on the project for the reader, analyzer, title, and other

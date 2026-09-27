@@ -47,7 +47,15 @@
         (for-each
           (lambda (target)
             (unless (member target ids equal?)
-              (error "unresolved Forester link" (car entry) target)))
+              (let* ((id (car entry))
+                     (page (find (lambda (candidate)
+                                   (equal? id (site-page-id candidate)))
+                                 pages)))
+                (error
+                  (format #f "unresolved Forester link in page ~a (~a): ~a"
+                          id
+                          (or (site-page-source page) "<unknown source>")
+                          target)))))
           (cdr entry)))
       links)
     (%make-forest site links)))

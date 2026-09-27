@@ -43,6 +43,11 @@
       #:module-sources '("module.grv")
       #:load-modules (lambda (sources) #t))))
 
+(test-error "page reader failures include the input path" #t
+  (build-site
+    '("pages/broken.grv")
+    (lambda (source) (error "invalid page"))))
+
 (test-error "module sources require a loader" #t
   (build-site '() (lambda (source) source)
     #:module-sources '(shared-module)))

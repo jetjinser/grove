@@ -34,6 +34,12 @@
 (define (read-test-file path)
   (call-with-input-file path get-string-all))
 
+(define (exception-contains? thunk text)
+  (catch #t
+    (lambda () (thunk) #f)
+    (lambda (key . args)
+      (string-contains (format #f "~s" (cons key args)) text))))
+
 (test-begin "forester project")
 
 (dynamic-wind
@@ -103,6 +109,13 @@
                (string-append output-directory "/text/algebra.txt")))
            (rss-feed
              (read-test-file (string-append output-directory "/feed.xml"))))
+      (test-assert "missing page titles identify the source path"
+        (exception-contains?
+          (lambda ()
+            ((make-forester-page-reader
+               (lambda (path) (make-content-document '())))
+             (string-append source-directory "/no-title.grv")))
+          (string-append source-directory "/no-title.grv")))
       (let* ((expected-sources
                (list (string-append module-directory "/commands.grv")
                      (string-append source-directory "/algebra.grv")

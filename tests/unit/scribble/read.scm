@@ -20,6 +20,12 @@
 (define (evaluate-document env input)
   (scribble-evaluate-document (open-input-string input) env))
 
+(define (exception-contains? thunk text)
+  (catch #t
+    (lambda () (thunk) #f)
+    (lambda (key . args)
+      (string-contains (format #f "~s" (cons key args)) text))))
+
 (define temporary-source-index 0)
 
 (define (call-with-temporary-source input proc)
@@ -189,6 +195,22 @@
     (test-equal "Scheme expressions run in source order"
       '(last first)
       (module-ref env 'evaluation-order))))
+
+(let ((env (default-environment scribble)))
+  (test-assert "syntax errors report source file and line/column"
+    (exception-contains?
+      (lambda ()
+        (scribble-evaluate-document
+          (open-input-string "@title{unterminated\n") env
+          "notes/broken.grv"))
+      "notes/broken.grv:2:1"))
+  (test-assert "evaluation errors report source file and form number"
+    (exception-contains?
+      (lambda ()
+        (scribble-evaluate-document
+          (open-input-string "@undefined-command{}") env
+          "notes/eval-error.grv"))
+      "notes/eval-error.grv at top-level form 1")))
 
 (let ((read-document (make-scribble-document-reader)))
   (call-with-temporary-source
