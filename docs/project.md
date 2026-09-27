@@ -43,9 +43,12 @@ library:
     #:read-page (make-forester-page-reader read-document)
     #:analyze make-forest
     #:renderers
-    (list (make-forester-html-renderer #:style style #:routes routes)
-          (make-forester-text-renderer #:prefix "text"))
-    #:output-directory "result"))
+    (list (make-forester-html-renderer
+            #:style style #:routes routes #:cache-key "linked-html-v1")
+          (make-forester-text-renderer
+            #:prefix "text" #:cache-key "linked-text-v1"))
+    #:output-directory "result"
+    #:cache-key "linked-project-v1"))
 
 (build-project project)
 ```
@@ -84,8 +87,10 @@ an artifact whose contents are already current leaves its file untouched.
 Renderer reuse is opt-in. Wrap a deterministic renderer with
 `make-cached-renderer`, giving it a key that covers its configuration, and set
 `#:cache-key` on the project for the reader, analyzer, title, and other
-project-level inputs. Bump either key when its configuration or external inputs
-change; cacheable renderers must not rely on side effects.
+project-level inputs. These are caller-managed version keys, not hashes of
+Scheme procedures. Bump them when reader, analyzer, or renderer code or
+configuration changes. File inputs declared with `#:extra-sources` are
+fingerprinted automatically; cacheable renderers must not rely on side effects.
 Grove reuses outputs only when source fingerprints and both keys match and the
 saved output files still match their recorded contents. It still evaluates all
 page Scheme code and runs analysis on every build. By default, input changes

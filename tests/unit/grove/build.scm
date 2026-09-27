@@ -47,6 +47,17 @@
   (build-site '() (lambda (source) source)
     #:module-sources '(shared-module)))
 
+(test-error "cached renderers require procedures" #t
+  (make-cached-renderer #f #:cache-key "renderer-v1"))
+
+(test-error "cached renderers require non-empty keys" #t
+  (make-cached-renderer (lambda (site) '()) #:cache-key ""))
+
+(test-error "incremental callbacks must be procedures" #t
+  (make-cached-renderer (lambda (site) '())
+    #:cache-key "renderer-v1"
+    #:render-changed #t))
+
 (test-equal "site builds without an optional module phase"
   '()
   (site-pages (build-site '() (lambda (source) source))))

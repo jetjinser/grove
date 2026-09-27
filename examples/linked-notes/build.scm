@@ -20,18 +20,17 @@
       "/tmp/grove-linked-notes"))
 
 (define source-directory (string-append examples-directory "/source"))
+(define notes-css-path (string-append examples-directory "/style.css"))
 (define read-document (make-scribble-document-reader))
 
 (define notes-css
-  (call-with-input-file
-    (string-append examples-directory "/style.css")
-    get-string-all))
+  (call-with-input-file notes-css-path get-string-all))
 
 (define notes-style
   (make-html-style
     #:stylesheets
     (list
-      (make-artifact "style.css" notes-css))))
+      (make-artifact "style.css" notes-css (list notes-css-path)))))
 
 (define notes-routes
   (make-html-routes
@@ -44,6 +43,7 @@
     #:title "Linked Notes"
     #:source-directory source-directory
     #:module-directory (string-append source-directory "/modules")
+    #:extra-sources (list notes-css-path)
     #:load-modules load-scribble-modules!
     #:read-page (make-forester-page-reader read-document)
     #:analyze make-forest
@@ -51,7 +51,7 @@
     (list (make-forester-html-renderer
             #:style notes-style
             #:routes notes-routes
-            #:cache-key (string-append "linked-notes-html-v1:" notes-css))
+            #:cache-key "linked-notes-html-v1")
           (make-forester-text-renderer
             #:prefix "text"
             #:cache-key "linked-notes-text-v1"))
