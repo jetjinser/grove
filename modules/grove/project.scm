@@ -7,13 +7,19 @@
   #:use-module (grove build state)
   #:use-module (grove collect)
   #:use-module (grove output)
-  #:use-module (grove site)
   #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-9)
   #:export (project?
             make-project
+            project-input?
+            project-input-path
+            project-input-value
+            project-context?
+            project-context-inputs
+            project-context-module-sources
+            project-context-extra-sources
             build-report?
             build-report-artifacts
             build-report-added-sources
@@ -23,6 +29,19 @@
             build-report-rendered?
             build-project/report
             build-project))
+
+(define-record-type <project-input>
+  (make-project-input path value)
+  project-input?
+  (path project-input-path)
+  (value project-input-value))
+
+(define-record-type <project-context>
+  (make-project-context inputs module-sources extra-sources)
+  project-context?
+  (inputs project-context-inputs)
+  (module-sources project-context-module-sources)
+  (extra-sources project-context-extra-sources))
 
 (define-record-type <build-report>
   (%make-build-report artifacts added modified removed affected rendered?)
@@ -35,19 +54,18 @@
   (rendered? build-report-rendered?))
 
 (define-record-type <project>
-  (%make-project title description source-directory source-filter module-directory
-                 module-filter load-modules extra-sources read-page analyze renderers
+  (%make-project source-directory source-filter collect-sources module-directory
+                 module-filter load-modules extra-sources read-source analyze renderers
                  output-directory cache-key)
   project?
-  (title project-title)
-  (description project-description)
   (source-directory project-source-directory)
   (source-filter project-source-filter)
+  (collect-sources project-collect-sources)
   (module-directory project-module-directory)
   (module-filter project-module-filter)
   (load-modules project-load-modules)
   (extra-sources project-extra-sources)
-  (read-page project-read-page)
+  (read-source project-read-source)
   (analyze project-analyze)
   (renderers project-renderers)
   (output-directory project-output-directory)
@@ -57,28 +75,24 @@
   (string-suffix? ".grv" filename))
 
 (define* (make-project #:key
-                       (title "Site")
-                       (description #f)
-                       source-directory
+                       (source-directory #f)
                        (source-filter source-file?)
+                       (collect-sources #f)
                        (module-directory #f)
                        (module-filter source-file?)
                        (load-modules #f)
                        (extra-sources '())
-                       read-page
-                       (analyze (lambda (site) site))
+                       read-source
+                       (analyze (lambda (context) context))
                        (renderers '())
                        output-directory
                        (cache-key #f))
-  (unless (and (string? title) (not (string-null? title)))
-    (error "project requires a title" title))
-  (unless (or (not description)
-              (and (string? description) (not (string-null? description))))
-    (error "project description must be a non-empty string or #f" description))
-  (unless (and (string? source-directory)
-               (procedure? source-filter))
-    (error "project requires a source directory and filter"
-           source-directory source-filter))
+  (unless (and (or (not source-directory) (string? source-directory))
+               (procedure? source-filter)
+               (or (not collect-sources) (procedure? collect-sources))
+               (or source-directory collect-sources))
+    (error "project requires a source directory or collector"
+           source-directory collect-sources))
   (unless (or (not module-directory)
               (and (string? module-directory)
                    (procedure? module-filter)))
@@ -90,8 +104,8 @@
            module-directory))
   (unless (and (list? extra-sources) (every string? extra-sources))
     (error "project extra sources must be a list of paths" extra-sources))
-  (unless (procedure? read-page)
-    (error "project requires a page reader" read-page))
+  (unless (procedure? read-source)
+    (error "project requires a source reader" read-source))
   (unless (procedure? analyze)
     (error "project analyzer must be a procedure" analyze))
   (unless (and (list? renderers)
@@ -106,9 +120,42 @@
   (unless (or (not cache-key)
               (and (string? cache-key) (not (string-null? cache-key))))
     (error "project cache key must be a non-empty string or #f" cache-key))
-  (%make-project title description source-directory source-filter module-directory
-                 module-filter load-modules extra-sources read-page analyze renderers
+  (%make-project source-directory source-filter collect-sources module-directory
+                 module-filter load-modules extra-sources read-source analyze renderers
                  output-directory cache-key))
+
+(define (read-source-with-context path read-source)
+  (catch #t
+    (lambda () (read-source path))
+    (lambda (key . args)
+      (error (format #f "failed to read project source ~a (~a): ~s"
+                     path key args)))))
+
+(define (collect-project-sources project)
+  (let ((paths
+          ((or (project-collect-sources project)
+               (lambda ()
+                 (collect-directory (project-source-directory project)
+                                    (project-source-filter project)))))))
+    (unless (and (list? paths)
+                 (every (lambda (path)
+                          (and (string? path) (not (string-null? path))))
+                        paths))
+      (error "project collector must return a list of source paths" paths))
+    (when (not (= (length paths) (length (delete-duplicates paths string=?))))
+      (error "project collector returned duplicate paths" paths))
+    paths))
+
+(define (load-project-modules module-sources load-modules)
+  (unless (null? module-sources)
+    (unless (procedure? load-modules)
+      (error "project module sources require a loader" module-sources))
+    (catch #t
+      (lambda () (load-modules module-sources))
+      (lambda (key . args)
+        (error (format #f "failed to load project module sources ~s (~a): ~s"
+                       module-sources key args)))))
+  module-sources)
 
 (define (source-paths entries)
   (map car entries))
@@ -199,7 +246,7 @@
              (owners '()))
     (if (null? renderers)
         (list artifacts owners)
-        (let ((generated (render-site model (list (car renderers)))))
+        (let ((generated (render-model model (list (car renderers)))))
           (loop (cdr renderers)
                 (+ index 1)
                 (append artifacts generated)
@@ -250,7 +297,7 @@
                (rendered-fully? (or (not partial?) (not generated)))
                (new-artifacts
                  (if rendered-fully?
-                     (render-site model (list renderer))
+                     (render-model model (list renderer))
                      (begin
                        (unless (and (list? generated) (every artifact? generated))
                          (error "incremental renderer must return artifacts or #f"
@@ -279,9 +326,10 @@
                (collect-directory module-directory
                                   (project-module-filter project))
                '()))
-         (page-sources
-           (collect-directory (project-source-directory project)
-                              (project-source-filter project)))
+         (loaded-module-sources
+           (load-project-modules module-sources
+                                 (project-load-modules project)))
+         (source-paths (collect-project-sources project))
          (state-path
            (string-append (project-output-directory project) "/"
                           build-state-name))
@@ -292,21 +340,23 @@
          (previous-sources (if previous-state (cadr previous-state) '()))
          (previous-artifacts (if previous-state (caddr previous-state) '()))
          (previous-cache-key (and previous-state (cadddr previous-state)))
-         (site
-           (build-site
-             page-sources
-             (project-read-page project)
-             #:title (project-title project)
-             #:description (project-description project)
-             #:module-sources module-sources
-             #:load-modules (project-load-modules project)))
+         (inputs
+           (map (lambda (path)
+                  (make-project-input
+                    path
+                    (read-source-with-context path
+                                              (project-read-source project))))
+                source-paths))
          (current-sources
            (map (lambda (path) (list path (file-fingerprint path)))
                 (delete-duplicates
-                  (append (site-sources site)
+                  (append loaded-module-sources source-paths
                           (project-extra-sources project))
                   string=?)))
-         (model ((project-analyze project) site))
+         (context
+           (make-project-context inputs loaded-module-sources
+                                 (project-extra-sources project)))
+         (model ((project-analyze project) context))
          (source-changes
            (call-with-values
              (lambda () (changed-sources previous-sources current-sources))

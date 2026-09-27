@@ -5,6 +5,7 @@
 (define-module (tests unit grove build)
   #:use-module (srfi srfi-64)
   #:use-module (grove build)
+  #:use-module (grove site build)
   #:use-module (grove ir)
   #:use-module (grove site))
 

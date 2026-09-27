@@ -10,12 +10,13 @@
   #:use-module (srfi srfi-64)
   #:use-module (grove ir)
   #:use-module (grove output)
-  #:use-module (grove project)
-  #:use-module (grove site))
+  #:use-module (grove project))
 
 (define platform-root
   (format #f "/tmp/grove-platform-test-~a" (getpid)))
 (define source-directory (string-append platform-root "/source"))
+(define alpha-source (string-append source-directory "/alpha.data"))
+(define beta-source (string-append source-directory "/beta.data"))
 (define output-directory (string-append platform-root "/output"))
 
 (define (write-test-file path content)
@@ -28,20 +29,22 @@
   (lambda ()
     (mkdir platform-root)
     (mkdir source-directory)
-    (write-test-file (string-append source-directory "/alpha.grv") "alpha")
-    (write-test-file (string-append source-directory "/beta.grv") "beta"))
+    (write-test-file alpha-source "alpha")
+    (write-test-file beta-source "beta"))
   (lambda ()
     (let* ((rendered-models '())
+           (analyzed-context #f)
            (project
             (make-project
-              #:source-directory source-directory
-              #:read-page
+              #:collect-sources (lambda () (list beta-source alpha-source))
+              #:read-source
               (lambda (path)
-                (let ((id (string-drop-right (basename path) 4)))
-                  (make-site-page id id (make-content-document '()) path)))
+                (call-with-input-file path get-string-all))
               #:analyze
-              (lambda (site)
-                (map site-page-id (site-pages site)))
+              (lambda (context)
+                (set! analyzed-context context)
+                (map project-input-value
+                     (project-context-inputs context)))
               #:renderers
               (list
                 (lambda (page-ids)
@@ -55,17 +58,22 @@
               )
               #:output-directory output-directory))
            (artifacts (build-project project)))
-      (test-equal "analyzer model is opaque to Grove"
-        '("alpha" "beta")
+      (test-assert "analyzer model is opaque to Grove"
+        (and (project-context? analyzed-context)
+             (equal? (map project-input-path
+                          (project-context-inputs analyzed-context))
+                     (list beta-source alpha-source))))
+      (test-equal "readers can return non-page project values"
+        '("beta" "alpha")
         (car rendered-models))
       (test-equal "multiple independent renderers receive the same model"
-        '(("alpha" "beta") ("alpha" "beta"))
+        '(("beta" "alpha") ("beta" "alpha"))
         rendered-models)
       (test-equal "independent renderers contribute their own artifact sets"
         '("pages.list" "page-count")
         (map artifact-path artifacts))
       (test-equal "first output format renders the custom model"
-        "alpha\nbeta"
+        "beta\nalpha"
         (call-with-input-file
           (string-append output-directory "/pages.list") get-string-all))
       (test-equal "second output format renders the same custom model"
@@ -83,8 +91,8 @@
             (string-append output-directory "/.grove-artifacts.tmp")
             (string-append output-directory "/.grove-build-state")
             (string-append output-directory "/.grove-build-state.tmp")
-            (string-append source-directory "/alpha.grv")
-            (string-append source-directory "/beta.grv")))
+            alpha-source
+            beta-source))
     (when (file-exists? output-directory)
       (rmdir output-directory))
     (when (file-exists? source-directory)

@@ -18,6 +18,7 @@
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove project)
+  #:use-module (grove project site)
   #:use-module (grove render html routes)
   #:use-module (grove site))
 
@@ -72,7 +73,7 @@
       "@use-modules[(tests unit forester linked commands)]\n@title{Orphan}\n@paragraph{Unreferenced.}"))
   (lambda ()
     (let* ((project
-             (make-project
+             (make-site-project
                #:title "Linked Notes"
                #:source-directory source-directory
                #:module-directory module-directory
@@ -221,7 +222,7 @@
         (and (string-contains algebra-text "limits [limits.txt]")
              (file-exists? (string-append output-directory "/text/index.txt"))))
       (let* ((incremental-project
-               (make-project
+               (make-site-project
                  #:source-directory source-directory
                  #:module-directory module-directory
                  #:load-modules load-scribble-modules!

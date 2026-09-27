@@ -12,6 +12,7 @@
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove project)
+  #:use-module (grove project site)
   #:use-module (grove site))
 
 (define project-root
@@ -48,7 +49,7 @@
           (observed-site-title #f)
           (observed-site-description #f))
       (let* ((project
-               (make-project
+               (make-site-project
                  #:title "Configured"
                  #:description "A configured site description."
                  #:source-directory source-directory
@@ -167,7 +168,7 @@
                  (make-cached-renderer
                    render #:cache-key "summary-renderer-v1"))
                (cached-project
-               (make-project
+               (make-site-project
                    #:source-directory source-directory
                    #:extra-sources (list external-source-path)
                    #:read-page
@@ -244,7 +245,7 @@
                    (make-cached-renderer
                      render #:cache-key "summary-renderer-v2"))
                  (changed-project
-                 (make-project
+                 (make-site-project
                      #:source-directory source-directory
                      #:extra-sources (list external-source-path)
                      #:read-page
@@ -265,7 +266,7 @@
               '("summary.txt")
               (build-report-affected-artifacts key-change))
             (let* ((changed-project-key
-                     (make-project
+                     (make-site-project
                        #:source-directory source-directory
                        #:extra-sources (list external-source-path)
                        #:read-page
@@ -336,7 +337,7 @@
                                      (list (site-page-source page))))))
                            (site-pages site)))))))
                (incremental-project
-                 (make-project
+                 (make-site-project
                    #:source-directory source-directory
                    #:read-page
                    (lambda (path)

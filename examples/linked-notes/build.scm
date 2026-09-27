@@ -13,7 +13,7 @@
              (forester site)
              (grove input scribble)
              (grove output)
-             (grove project)
+             (grove project site)
              (grove render html routes)
              (grove style html))
 
@@ -48,7 +48,7 @@
       (string-append "notes/" id ".txt"))))
 
 (define notes-project
-  (make-project
+  (make-site-project
     #:title "Linked Notes"
     #:description "Connected notes on mathematics and its ideas."
     #:source-directory source-directory

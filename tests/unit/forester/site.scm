@@ -86,7 +86,7 @@
                                        #:title "Linked Notes"
                                        #:description "Connected notes on math.")))
        (artifacts
-         (render-site
+         (render-model
            forest
            (list (make-forester-html-renderer)
                  (make-forester-rss-renderer
