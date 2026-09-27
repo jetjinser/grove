@@ -14,6 +14,7 @@
     "modules/grove/build/state.scm"
     "modules/grove/collect.scm"
     "modules/grove/ir.scm"
+    "modules/grove/relation.scm"
     "modules/grove/output.scm"
     "modules/grove/project.scm"
     "modules/grove/project/site.scm"

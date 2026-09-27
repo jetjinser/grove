@@ -27,6 +27,7 @@
     "unit/grove/build.scm"
     "unit/grove/state.scm"
     "unit/grove/content.scm"
+    "unit/grove/relation.scm"
     "unit/grove/output.scm"
     "unit/grove/project.scm"
     "unit/grove/platform.scm"
