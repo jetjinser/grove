@@ -28,7 +28,20 @@
       events)
     (test-equal "site build preserves page source order"
       '("page-a" "page-b")
-      (map site-page-id (site-pages site)))))
+      (map site-page-id (site-pages site)))
+    (test-equal "site source paths omit symbolic build identifiers"
+      '()
+      (site-sources site))))
+
+(test-equal "site records page and module file paths"
+  '("module.grv" "page.grv")
+  (site-sources
+    (build-site
+      '("page.grv")
+      (lambda (source)
+        (make-site-page "page" "Page" (make-content-document '()) source))
+      #:module-sources '("module.grv")
+      #:load-modules (lambda (sources) #t))))
 
 (test-error "module sources require a loader" #t
   (build-site '() (lambda (source) source)

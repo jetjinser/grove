@@ -27,6 +27,10 @@
     (test-equal "artifact writer writes artifact contents"
       "artifact content"
       (call-with-input-file output-path get-string-all))
+    (test-equal "undeclared artifact sources remain unknown"
+      #f
+      (artifact-sources
+        (make-artifact "unknown.txt" "unknown source set")))
     (call-with-output-file unmanaged-path
       (lambda (port) (display "user-owned" port)))
     (write-artifacts output-directory

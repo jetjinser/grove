@@ -79,15 +79,15 @@
                (collect-directory module-directory
                                   (project-module-filter project))
                '())))
-    (unless (null? module-sources)
-      ((project-load-modules project) module-sources)))
   (let* ((site
            (build-site
              (collect-directory (project-source-directory project)
                                 (project-source-filter project))
              (project-read-page project)
-             #:title (project-title project)))
+             #:title (project-title project)
+             #:module-sources module-sources
+             #:load-modules (project-load-modules project)))
          (model ((project-analyze project) site))
          (artifacts (render-site model (project-renderers project))))
     (write-artifacts (project-output-directory project) artifacts)
-    artifacts))
+    artifacts)))

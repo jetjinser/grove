@@ -12,14 +12,16 @@
             make-artifact
             artifact-path
             artifact-content
+            artifact-sources
             prefix-artifacts
             write-artifacts))
 
 (define-record-type <artifact>
-  (%make-artifact path content)
+  (%make-artifact path content sources)
   artifact?
   (path artifact-path)
-  (content artifact-content))
+  (content artifact-content)
+  (sources artifact-sources))
 
 (define (artifact-path? path)
   (and (string? path)
@@ -29,19 +31,24 @@
                      (not (member part '("." "..")))))
               (string-split path #\/))))
 
-(define (make-artifact path content)
+(define* (make-artifact path content #:optional (sources #f))
   (unless (artifact-path? path)
     (error "artifact requires a relative path" path))
   (unless (string? content)
     (error "artifact requires text content" content))
-  (%make-artifact path content))
+  (unless (or (not sources)
+              (and (list? sources) (every string? sources)))
+    (error "artifact sources must be #f or a list of paths" sources))
+  (%make-artifact path content
+                  (and sources (delete-duplicates sources string=?))))
 
 (define (prefix-artifacts prefix artifacts)
   (unless (artifact-path? prefix)
     (error "artifact prefix requires a relative path" prefix))
   (map (lambda (artifact)
          (make-artifact (string-append prefix "/" (artifact-path artifact))
-                        (artifact-content artifact)))
+                        (artifact-content artifact)
+                        (artifact-sources artifact)))
        artifacts))
 
 (define (ensure-directory directory)

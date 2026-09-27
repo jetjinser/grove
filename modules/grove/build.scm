@@ -4,6 +4,7 @@
 
 (define-module (grove build)
   #:use-module (grove site)
+  #:use-module (srfi srfi-1)
   #:export (build-site
             render-site))
 
@@ -15,7 +16,14 @@
     (unless (procedure? load-modules)
       (error "site module sources require a module loader" module-sources))
     (load-modules module-sources))
-  (make-site (map read-page sources) #:title title))
+  (let ((pages (map read-page sources)))
+  (make-site pages
+             #:title title
+             #:sources (delete-duplicates
+                         (filter string?
+                           (append module-sources sources
+                             (filter-map site-page-source pages)))
+                         string=?))))
 
 (define (render-site site renderers)
   (apply append (map (lambda (renderer) (renderer site)) renderers)))
