@@ -146,6 +146,12 @@ MathJax configuration.
 `make-forester-text-renderer` provides the same opt-in caching and incremental
 behavior, with an optional output `#:prefix` such as `"text"`.
 
+Text output paths and cross-page references can be configured with
+`make-text-routes` from `(forester render text routes)`. The route object takes
+an `#:index-path` and a `#:page-path` procedure, both relative to the renderer's
+output root. Links between nested text pages are rewritten as relative paths;
+the renderer's optional `#:prefix` remains outside those routes.
+
 Forester can also add an RSS 2.0 feed as an independent target:
 
 ```scheme

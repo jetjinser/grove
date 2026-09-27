@@ -34,7 +34,8 @@
     "modules/forester/render/html.scm"
     "modules/forester/render/rss.scm"
     "modules/forester/render/sitemap.scm"
-    "modules/forester/render/text.scm"))
+    "modules/forester/render/text.scm"
+    "modules/forester/render/text/routes.scm"))
 
 (define grv-modules
   (map

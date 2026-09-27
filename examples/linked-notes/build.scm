@@ -8,6 +8,7 @@
              (forester render html)
              (forester render sitemap)
              (forester render text)
+             (forester render text routes)
              (forester site)
              (grove input scribble)
              (grove output)
@@ -39,6 +40,12 @@
     (lambda (id)
       (string-append "notes/" id ".html"))))
 
+(define notes-text-routes
+  (make-text-routes
+    #:page-path
+    (lambda (id)
+      (string-append "notes/" id ".txt"))))
+
 (define notes-project
   (make-project
     #:title "Linked Notes"
@@ -56,6 +63,7 @@
             #:cache-key "linked-notes-html-v1")
           (make-forester-text-renderer
             #:prefix "text"
+            #:routes notes-text-routes
             #:cache-key "linked-notes-text-v1")
           (make-forester-sitemap-renderer
             #:site-url "https://notes.example"

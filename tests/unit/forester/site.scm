@@ -12,6 +12,7 @@
   #:use-module (forester render rss)
   #:use-module (forester render sitemap)
   #:use-module (forester render text)
+  #:use-module (forester render text routes)
   #:use-module (forester site)
   #:use-module (grove build)
   #:use-module (grove ir)
@@ -269,5 +270,41 @@
          (string-contains
            content
            "<loc>https://notes.example/notes/a&amp;b.html</loc>"))))
+
+(let* ((forest
+         (make-forest
+           (make-site
+             (list
+               (make-site-page
+                 "alpha" "Alpha"
+                 (make-content-document
+                   (list
+                     (make-content-element
+                       'paragraph
+                       (list "See "
+                             (make-content-element
+                               'link '("Beta")
+                               #:properties '((target . "beta")))
+                             "."))))
+                 "alpha.grv")
+               (make-site-page "beta" "Beta" (make-content-document '())
+                               "beta.grv")))))
+       (routes
+         (make-text-routes
+           #:index-path "index.txt"
+           #:page-path
+           (lambda (id) (string-append "notes/" id ".md"))))
+       (artifacts (render-forest-text forest #:routes routes))
+       (index (artifact-content (car artifacts)))
+       (alpha (artifact-content (cadr artifacts))))
+  (test-equal "text routes configure the index and page output paths"
+    '("index.txt" "notes/alpha.md" "notes/beta.md")
+    (map artifact-path artifacts))
+  (test-assert "text links resolve relative to the source page route"
+    (string-contains alpha "Beta [beta.md]"))
+  (test-assert "nested text pages link back to the configured index"
+    (string-contains alpha "Home: ../index.txt"))
+  (test-assert "text index references configured page routes"
+    (string-contains index "Alpha (notes/alpha.md)")))
 
 (test-end "forester site")
