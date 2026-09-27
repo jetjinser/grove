@@ -12,7 +12,8 @@
              (grove output)
              (grove project)
              (grove render html)
-             (grove render text))
+             (grove render text)
+             (grove style html))
 
 (define-record-type <quote-entry>
   (make-quote-entry title body source)
@@ -28,6 +29,7 @@
 
 (define example-directory (dirname (current-filename)))
 (define quote-directory (string-append example-directory "/quotes"))
+(define catalog-css-path (string-append example-directory "/style.css"))
 (define output-directory
   (or (and (pair? (cdr (command-line))) (cadr (command-line)))
       "/tmp/grove-catalog"))
@@ -66,15 +68,27 @@
 (define (catalog-sources catalog)
   (map quote-entry-source (quote-catalog-entries catalog)))
 
+(define catalog-style
+  (make-html-style
+    #:stylesheets
+    (list (make-artifact
+            "catalog.css"
+            (call-with-input-file catalog-css-path get-string-all)
+            (list catalog-css-path)))))
+
 (define (render-catalog-html catalog)
-  (list
-    (make-artifact
-      "index.html"
-      (sxml->html
-        `(html
-           (head (title "Quote catalog"))
-           (body ,(content->sxml (catalog-document catalog)))))
-      (catalog-sources catalog))))
+  (append
+    (html-style-artifacts catalog-style)
+    (list
+      (make-artifact
+        "index.html"
+        (sxml->html
+          `(html
+             (head
+               (title "Quote catalog")
+               (link (@ (rel "stylesheet") (href "/catalog.css"))))
+             (body ,(content->sxml (catalog-document catalog)))))
+        (catalog-sources catalog)))))
 
 (define (render-catalog-text catalog)
   (list (make-artifact "catalog.txt"
@@ -87,6 +101,7 @@
     (lambda ()
       (collect-directory quote-directory
                          (lambda (name) (string-suffix? ".quote" name))))
+    #:extra-sources (list catalog-css-path)
     #:read-source read-quote
     #:analyze analyze-catalog
     #:renderers (list render-catalog-html render-catalog-text)

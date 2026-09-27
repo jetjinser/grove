@@ -1,0 +1,16 @@
+/* SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu> */
+/* SPDX-License-Identifier: CC0-1.0 */
+
+body {
+  color: #263238;
+  font-family: sans-serif;
+  line-height: 1.6;
+  margin: 3rem auto;
+  max-width: 42rem;
+  padding: 0 1.5rem;
+}
+
+h2 {
+  color: #315b4b;
+  margin-top: 2rem;
+}
