@@ -96,6 +96,13 @@ Callbacks that perform partial updates take responsibility for keeping their
 complete output set correct. Cacheable renderers must not rely on skipped side
 effects, and partial callbacks run only on source changes.
 
+`make-forester-html-renderer` accepts an optional `#:cache-key`. With a key,
+its HTML artifacts depend on the page itself and pages that link to it, plus
+shared Scheme module sources. The incremental callback uses those dependencies
+to preserve unrelated page output while refreshing indexes and pages whose
+backlinks changed. The key must cover the renderer's routes, style, and
+MathJax configuration.
+
 The complete runnable example, including custom routes and CSS, is in
 `examples/linked-notes/build.scm`.
 

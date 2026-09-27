@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester render html)
+  #:use-module (grove build)
   #:use-module (forester site)
   #:use-module ((grove output) #:select (artifact-path?))
   #:use-module (grove ir)
@@ -133,6 +134,64 @@
                         (site-pages (forest-site forest))))
     string=?))
 
+(define (forest-module-paths forest)
+  (let ((page-paths (filter-map site-page-source
+                               (site-pages (forest-site forest)))))
+    (filter (lambda (path) (not (member path page-paths string=?)))
+            (site-sources (forest-site forest)))))
+
+(define (page-source-paths forest page)
+  (delete-duplicates
+    (append (forest-module-paths forest)
+            (filter-map site-page-source
+                        (cons page
+                              (forest-backlinks forest
+                                                (site-page-id page)))))
+    string=?))
+
+(define (find-artifact artifacts path)
+  (find (lambda (artifact) (string=? (artifact-path artifact) path))
+        artifacts))
+
+(define (artifact-current? current previous changed)
+  (let ((sources (artifact-sources current)))
+    (and previous
+         (equal? sources (artifact-sources previous))
+         (not (and sources
+                   (any (lambda (path) (member path sources string=?))
+                        changed))))))
+
+(define (render-forest-html-changed forest style routes mathjax-src
+                                    changed old-artifacts)
+  (check-html-input forest style routes mathjax-src)
+  (let* ((site (forest-site forest))
+         (index-sources (forest-source-paths forest))
+         (index-path (html-index-path routes))
+         (old-index (find-artifact old-artifacts index-path))
+         (index-current
+           (make-artifact index-path "" index-sources))
+         (index-artifact
+           (make-artifact index-path
+                          (if (artifact-current? index-current old-index changed)
+                              (artifact-content old-index)
+                              (index-html forest style routes mathjax-src))
+                          index-sources))
+         (page-artifacts
+           (map (lambda (page)
+                  (let* ((path (html-page-path routes (site-page-id page)))
+                         (sources (page-source-paths forest page))
+                         (old (find-artifact old-artifacts path))
+                         (current (make-artifact path "" sources)))
+                    (if (artifact-current? current old changed)
+                        old
+                        (make-artifact
+                          path
+                          (page-html forest page style routes mathjax-src)
+                          sources))))
+                (site-pages site))))
+    (append (html-style-artifacts style)
+            (cons index-artifact page-artifacts))))
+
 (define (check-html-input forest style routes mathjax-src)
   (unless (forest? forest)
     (error "Forester HTML renderer requires a forest" forest))
@@ -178,16 +237,25 @@
              (make-artifact
                (html-page-path routes (site-page-id page))
                (page-html forest page style routes mathjax-src)
-               ;; Backlinks can make every page affect every rendered page.
-               (forest-source-paths forest)))
+               (page-source-paths forest page)))
            (site-pages (forest-site forest))))))
 
 (define* (make-forester-html-renderer #:key
                                       (style (make-html-style))
                                       (routes (make-html-routes))
-                                      (mathjax-src default-mathjax-src))
-  (lambda (forest)
-    (render-forest-html forest
-                        #:style style
-                        #:routes routes
-                        #:mathjax-src mathjax-src)))
+                                      (mathjax-src default-mathjax-src)
+                                      (cache-key #f))
+  (let ((render (lambda (forest)
+                  (render-forest-html forest
+                                      #:style style
+                                      #:routes routes
+                                      #:mathjax-src mathjax-src))))
+    (if cache-key
+        (make-cached-renderer
+          render
+          #:cache-key cache-key
+          #:render-changed
+          (lambda (forest changed dirty-paths old-artifacts)
+            (render-forest-html-changed forest style routes mathjax-src
+                                        changed old-artifacts)))
+        render)))
