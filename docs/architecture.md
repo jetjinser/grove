@@ -23,6 +23,13 @@ that want common page and site records. The catalog example exercises the
 generic path without importing Forester. Another library can provide a
 different reader, analyzer, and renderer set without depending on Forester.
 
+The catalog and inventory examples exercise two consumers with project-owned
+models. Inventory additionally produces CSV and Scheme data without Grove's
+content IR or any HTML module. The generic orchestration is format independent;
+its current source tracking and writer remain local-filesystem interfaces, as
+described in [`project.md`](project.md). Keep those I/O boundaries explicit
+rather than presenting the current project API as transport agnostic.
+
 Preparation is a general project hook that runs before reading and returns
 additional source paths for tracking. Input libraries use it for concerns
 such as loading shared Guile modules. The Grove core does not decide how those
@@ -37,6 +44,12 @@ verifies the source-level dependency boundary, but not a published or
 independently installable package.
 Forester's `(forester private ...)` modules are implementation helpers and are
 not host extension points.
+
+The next Forester-specific consumer milestone should extend link targets from
+page IDs to page IDs with optional fragments, then define how heading IDs are
+assigned and emitted consistently by HTML routes, links, and backlinks. That
+work belongs in Forester's model and renderers; Grove's generic project and
+artifact contracts need no Forester-specific changes.
 
 From the repository root, the isolated check is:
 

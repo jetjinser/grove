@@ -21,7 +21,9 @@ pages or Grove content. A project can use Grove's collector, artifact, and
 build-report facilities while defining its own data model. For example,
 [`examples/catalog/build.scm`](../examples/catalog/build.scm) reads `.quote`
 files into a private catalog record and renders HTML and plain text without
-using Forester.
+using Forester. [`examples/inventory/build.scm`](../examples/inventory/build.scm)
+reads CSV into private inventory records and emits CSV and Scheme data without
+using Grove's content IR or any HTML renderer.
 
 Projects that do want Grove's optional page/site convenience records can use
 `(grove project site)`. A linked-notes project then uses Forester as its
@@ -81,6 +83,26 @@ that model. Forester uses this adapter, Grove content records, and Grove's
 artifact API; it does not define the generic project contract. The current
 dependency and packaging decision is recorded in
 [`architecture.md`](architecture.md).
+
+## Platform extension boundary
+
+The extension points are callbacks and values, not subclasses: a project owns
+the reader, analyzer, and model; each renderer maps that model to artifacts;
+Grove coordinates phases, fingerprints declared inputs, writes artifacts, and
+reports changes. An analyzer can return any Scheme value, and renderers can
+produce unrelated formats. Grove's IR, Site records, HTML renderer, and HTML
+style are optional libraries for projects that want them.
+
+The current I/O contract is filesystem based. Collectors, preparation hooks,
+extra sources, and artifact dependencies identify files by path. Grove reads
+those files to fingerprint them, and the writer emits text artifacts beneath a
+local output directory. The default collector scans one directory level and
+selects regular files; a project collector can choose and order other file
+paths. Artifact paths are relative and cannot contain `.` or `..` path
+components. This contract does not currently model in-memory inputs, URLs,
+binary artifacts, or alternate output backends. A future source or writer
+interface should be introduced when a concrete consumer needs one, with
+stable identities and fingerprints defined for that backend.
 
 The default collector selects non-hidden regular files directly inside the
 configured directory, in sorted order. Supply `#:source-filter` to restrict
