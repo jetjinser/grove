@@ -53,6 +53,25 @@ library:
 (build-project project)
 ```
 
+## Component contracts
+
+| Component | Grove contract | Responsibility |
+| --- | --- | --- |
+| Collector | configured directories and filters → ordered paths | Grove owns file discovery and source fingerprints. |
+| Reader | source path → `site-page` | A reader chooses the input language and may evaluate Scheme. |
+| Analyzer | `site` → any model value | A library such as Forester builds links or other cross-page indexes. |
+| Renderer | model value → list of artifacts | Each renderer owns one output format and declares its artifact dependencies. |
+| Writer | artifacts → output directory | Grove owns unchanged-file writes, stale-file removal, and build state. |
+
+The analyzer result is opaque to Grove. Multiple renderers receive the same
+value and may produce unrelated output formats; the project does not require
+Forester or HTML. `grove` owns collection and build orchestration. Forester
+owns its forest/link model and its HTML/text renderers. Forester currently
+uses Grove's site, IR, and artifact types, so it is a library layered on Grove
+interfaces rather than a separately packaged implementation. Keep that
+dependency explicit; split it into a neutral shared interface only if a
+second host actually needs to construct or consume those values.
+
 The default collector selects `.grv` files directly inside each configured
 directory. Supply `#:source-filter` or `#:module-filter` to change that
 selection. Module sources are loaded before page sources; `.grv` module files
