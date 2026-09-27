@@ -38,20 +38,36 @@
       (content-element? value)
       (content-document? value)))
 
+(define (use-interface-if-needed! module name)
+  (let ((interface (resolve-interface name)))
+    (unless (memq interface (module-uses module))
+      (module-use! module interface))))
+
+(define (use-document-interfaces! module)
+  (use-interface-if-needed! module '(grove ir))
+  (use-interface-if-needed! module '(language scribble commands)))
+
 (define* (scribble-evaluate-document port environment #:optional (source #f))
-  (let loop ((fragments (scribble-parse port))
-             (children '()))
-    (if (null? fragments)
-        (make-content-document (reverse children) source)
-        (let ((value (eval (fragment->expression (car fragments))
-                           environment)))
-          (cond
-            ((content-value? value)
-             (loop (cdr fragments) (cons value children)))
-            ;; Definitions, imports, and other Scheme forms may return values
-            ;; that are not document content.
-            (else
-             (loop (cdr fragments) children)))))))
+  (save-module-excursion
+    (lambda ()
+      (set-current-module environment)
+      (let loop ((fragments (scribble-parse port))
+                 (children '())
+                 (active-module environment))
+        (if (null? fragments)
+            (make-content-document (reverse children) source)
+            (let* ((value (primitive-eval
+                            (fragment->expression (car fragments))))
+                   (module (current-module)))
+              ;; define-module changes Guile's current module while evaluating
+              ;; the form. Preserve the language's default bindings there too.
+              (unless (eq? module active-module)
+                (use-document-interfaces! module))
+              (if (content-value? value)
+                  (loop (cdr fragments) (cons value children) module)
+                  ;; Definitions, imports, and other Scheme forms may return
+                  ;; values that are not document content.
+                  (loop (cdr fragments) children module))))))))
 
 (define-language scribble
   #:title      "Scribble"

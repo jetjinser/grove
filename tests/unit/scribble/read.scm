@@ -11,6 +11,7 @@
   #:use-module (language scribble parser)
   #:use-module ((language scribble spec)
                 #:select (scribble scribble-evaluate-document))
+  #:use-module (grove input scribble)
   #:use-module (grove ir))
 
 (define (read-with-scheme-language env input)
@@ -18,6 +19,23 @@
 
 (define (evaluate-document env input)
   (scribble-evaluate-document (open-input-string input) env))
+
+(define temporary-source-index 0)
+
+(define (call-with-temporary-source input proc)
+  (let ((path
+          (format #f "/tmp/grove-scribble-~a-~a.grv"
+                  (getpid)
+                  temporary-source-index)))
+    (set! temporary-source-index (+ temporary-source-index 1))
+    (dynamic-wind
+      (lambda ()
+        (call-with-output-file path
+          (lambda (port) (display input port))))
+      (lambda () (proc path))
+      (lambda ()
+        (when (file-exists? path)
+          (delete-file path))))))
 
 ;; seems no need to test read individually?
 
@@ -171,5 +189,33 @@
     (test-equal "Scheme expressions run in source order"
       '(last first)
       (module-ref env 'evaluation-order))))
+
+(let ((read-document (make-scribble-document-reader)))
+  (call-with-temporary-source
+    "@(define page-local-value 'private)@paragraph{First page}"
+    read-document)
+  (call-with-temporary-source
+    "@paragraph{@|page-local-value|}"
+    (lambda (path)
+      (test-error "default reader isolates Scheme state per document" #t
+        (read-document path)))))
+
+(let ((read-document (make-scribble-document-reader)))
+  (call-with-temporary-source
+    "@(define-module (tests unit scribble named-page) #:use-module (forester commands) #:export (named-page-label))\n@(define named-page-label \"named module\")\n@title{Named page}\n@link[\"target\"]{Target}"
+    read-document)
+  (test-equal "define-module selects and exports the document environment"
+    "named module"
+    (module-ref (resolve-module '(tests unit scribble named-page))
+                'named-page-label))
+  (call-with-temporary-source
+    "@use-modules[(tests unit scribble named-page)]@paragraph{@|named-page-label|}"
+    (lambda (path)
+      (let* ((document (read-document path))
+             (paragraph (car (content-document-children document))))
+        (test-equal "a named document module can be imported by later sources"
+          "named module"
+          (content-verbatim-string
+            (content-element-children paragraph)))))))
 
 (test-end "scribble read")

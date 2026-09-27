@@ -10,12 +10,17 @@
   #:export (make-scribble-document-reader))
 
 (define* (make-scribble-document-reader
-           #:optional (environment (default-environment scribble)))
+           #:optional (environment #f)
+           #:key (environment-factory
+                   (lambda () (default-environment scribble))))
   (lambda (path)
     (call-with-input-file path
       (lambda (port)
         (let ((document
-                (scribble-evaluate-document port environment path)))
+                (scribble-evaluate-document port
+                                            (or environment
+                                                (environment-factory))
+                                            path)))
           (unless (content-document? document)
             (error "Scribble source requires a content document" path))
-          document))))
+          document)))))
