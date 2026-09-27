@@ -7,7 +7,18 @@
   #:use-module (grove ir)
   #:use-module ((language scribble spec)
                 #:select (scribble scribble-evaluate-document))
-  #:export (make-scribble-document-reader))
+  #:export (load-scribble-modules!
+            make-scribble-document-reader))
+
+(define* (load-scribble-modules! paths
+                                #:key
+                                (read-document
+                                 (make-scribble-document-reader)))
+  "Evaluate PATHS as Scribble sources before reading documents that import
+their named modules.  Each source selects its module through Guile's normal
+`define-module' form."
+  (for-each read-document paths)
+  (values))
 
 (define* (make-scribble-document-reader
            #:optional (environment #f)

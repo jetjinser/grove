@@ -218,4 +218,19 @@
           (content-verbatim-string
             (content-element-children paragraph)))))))
 
+(let ((read-document (make-scribble-document-reader)))
+  (call-with-temporary-source
+    "@(define-module (tests unit scribble preloaded-module) #:use-module (forester commands) #:export (preloaded-label))\n@(define preloaded-label \"preloaded module\")"
+    (lambda (module-path)
+      (load-scribble-modules! (list module-path))
+      (call-with-temporary-source
+        "@use-modules[(tests unit scribble preloaded-module)]@paragraph{@|preloaded-label|}"
+        (lambda (page-path)
+          (let* ((document (read-document page-path))
+                 (paragraph (car (content-document-children document))))
+            (test-equal "preloaded named modules are available to pages"
+              "preloaded module"
+              (content-verbatim-string
+                (content-element-children paragraph)))))))))
+
 (test-end "scribble read")
