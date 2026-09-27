@@ -110,7 +110,8 @@ and unresolved-link errors identify the page source. Evaluation errors report
 the form number rather than a line because the current content IR does not
 retain source spans for Scheme forms.
 
-Renderer reuse is opt-in. Wrap a deterministic renderer with
+Renderer reuse is opt-in and applies only when every configured renderer is
+wrapped as a cached renderer. Wrap a deterministic renderer with
 `make-cached-renderer`, giving it a key that covers its configuration, and set
 `#:cache-key` on the project for the reader, analyzer, title, and other
 project-level inputs. These are caller-managed version keys, not hashes of
@@ -118,9 +119,14 @@ Scheme procedures. Bump them when reader, analyzer, or renderer code or
 configuration changes. File inputs declared with `#:extra-sources` are
 fingerprinted automatically; cacheable renderers must not rely on side effects.
 Grove reuses outputs only when source fingerprints and both keys match and the
-saved output files still match their recorded contents. It still evaluates all
-page Scheme code and runs analysis on every build. By default, input changes
-run all renderers. A cached renderer can opt into partial updates with
+saved output files still match their recorded contents. Each build still loads
+shared modules, reads and evaluates every page, and runs the analyzer over the
+complete site; only renderer calls and their outputs are reused. This keeps
+Scheme evaluation and analysis semantics predictable while avoiding repeated
+output work. Consider caching earlier phases only if profiling shows they are
+a meaningful cost and their side effects and invalidation rules are clear.
+By default, input changes run all renderers. A cached renderer can opt into
+partial updates with
 `#:render-changed`; its callback receives the current model, changed source
 paths, dirty old output paths, and its old artifacts. Return the complete
 current artifact set for that renderer, reusing old artifacts where useful;

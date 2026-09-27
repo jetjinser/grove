@@ -147,6 +147,7 @@
             "2"
             (call-with-input-file output-path get-string-all)))
         (let* ((render-count 0)
+               (reader-count 0)
                (analysis-count 0)
                (render
                  (lambda (site)
@@ -165,6 +166,7 @@
                    #:extra-sources (list external-source-path)
                    #:read-page
                    (lambda (path)
+                     (set! reader-count (+ reader-count 1))
                      (let ((id (string-drop-right (basename path) 4)))
                        (make-site-page id id (make-content-document '()) path)))
                    #:analyze
@@ -177,6 +179,8 @@
           (let ((first (build-project/report cached-project)))
             (test-equal "cached renderer runs on the first build"
               1 render-count)
+            (test-equal "first build still reads every page"
+              2 reader-count)
             (test-assert "first cacheable build reports rendering"
               (build-report-rendered? first))
             (test-assert "extra source files appear in initial source report"
@@ -186,12 +190,14 @@
           (let ((second (build-project/report cached-project)))
             (test-equal "unchanged inputs reuse cached renderer output"
               1 render-count)
+            (test-equal "cache hit still reads every page"
+              4 reader-count)
             (test-assert "cache hit reports that rendering was skipped"
               (not (build-report-rendered? second)))
             (test-equal "cache hit has no affected artifacts"
               '()
               (build-report-affected-artifacts second)))
-          (test-equal "cache hits still run site analysis"
+          (test-equal "cache hit still analyzes the complete site"
             2 analysis-count)
           (delete-file cache-output-path)
           (let ((missing-output (build-project/report cached-project)))
