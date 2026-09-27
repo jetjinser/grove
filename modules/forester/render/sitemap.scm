@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester render sitemap)
+  #:use-module (forester private web)
   #:use-module (forester site)
   #:use-module (grove build)
   #:use-module (grove output)
@@ -12,47 +13,19 @@
   #:export (render-forest-sitemap
             make-forester-sitemap-renderer))
 
-(define (absolute-site-url? url)
-  (and (string? url)
-       (or (string-prefix? "https://" url)
-           (string-prefix? "http://" url))
-       (> (string-length url)
-          (if (string-prefix? "https://" url) 8 7))))
-
-(define (trim-trailing-slashes url)
-  (let ((end (string-length url)))
-    (if (and (> end 0) (char=? (string-ref url (- end 1)) #\/))
-        (trim-trailing-slashes (substring url 0 (- end 1)))
-        url)))
-
-(define (xml-escape text)
-  (string-concatenate
-    (map (lambda (character)
-           (case character
-             ((#\&) "&amp;")
-             ((#\<) "&lt;")
-             ((#\>) "&gt;")
-             ((#\") "&quot;")
-             ((#\') "&apos;")
-             (else (string character))))
-         (string->list text))))
-
-(define (absolute-url base path)
-  (string-append base "/" path))
-
 (define* (render-forest-sitemap forest #:key site-url
                                 (sitemap-path "sitemap.xml")
                                 (routes (make-html-routes)))
   (unless (forest? forest)
     (error "Forester sitemap renderer requires a forest" forest))
-  (unless (absolute-site-url? site-url)
+  (unless (web-url? site-url)
     (error "Forester sitemap renderer requires an absolute HTTP(S) site URL"
            site-url))
   (unless (artifact-path? sitemap-path)
     (error "Sitemap path must be a relative artifact path" sitemap-path))
   (unless (html-routes? routes)
     (error "Forester sitemap renderer requires HTML routes" routes))
-  (let* ((base (trim-trailing-slashes site-url))
+  (let* ((base (web-base-url site-url))
          (site (forest-site forest))
          (paths (cons (html-index-path routes)
                       (map (lambda (page)
@@ -61,7 +34,7 @@
          (urls
            (map (lambda (path)
                   (string-append "    <url><loc>"
-                                 (xml-escape (absolute-url base path))
+                                 (web-xml-escape (web-absolute-url base path))
                                  "</loc></url>"))
                 paths))
          (content
