@@ -6,6 +6,15 @@ version = 1
 
 [[annotations]]
 path = [
+    "examples/inventory/data/*.csv",
+    "examples/inventory/data/*.txt",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Jinser Kafka <aimer@purejs.icu>"
+SPDX-License-Identifier = "CC0-1.0"
+
+[[annotations]]
+path = [
     "nix/*.lock",
 ]
 precedence = "override"

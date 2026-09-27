@@ -49,6 +49,15 @@ This project reads `.quote` files into its own catalog record, then writes
 reader, analyzer, HTML output, and text output use Grove's generic project and
 artifact APIs without importing Forester.
 
+For a non-document project with no HTML renderer, try the inventory example:
+
+```sh
+guile -L modules examples/inventory/build.scm
+```
+
+It reads CSV into project-owned Scheme records and writes a summary CSV plus a
+Scheme data file to `/tmp/grove-inventory`.
+
 ## Project structure
 
 Grove owns file collection, model-independent project orchestration, the

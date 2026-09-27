@@ -20,6 +20,8 @@
 (define source-directory (string-append project-root "/source"))
 (define module-directory (string-append source-directory "/modules"))
 (define output-directory (string-append project-root "/output"))
+(define generic-output-directory
+  (string-append project-root "/generic-output"))
 (define output-path (string-append output-directory "/text/summary.txt"))
 (define cache-output-directory (string-append project-root "/cache-output"))
 (define cache-output-path
@@ -45,6 +47,60 @@
     (write-test-file (string-append source-directory "/second.grv") "second")
     (write-test-file (string-append source-directory "/ignore.txt") "ignored"))
   (lambda ()
+    (let* ((generic-events '())
+           (generic-project
+             (make-project
+               #:collect-sources
+               (lambda ()
+                 (set! generic-events (append generic-events '(collect)))
+                 (list (string-append source-directory "/first.grv")))
+               #:prepare
+               (lambda ()
+                 (set! generic-events (append generic-events '(prepare)))
+                 (list (string-append module-directory "/shared.grv")))
+               #:extra-sources (list external-source-path)
+               #:read-source
+               (lambda (path)
+                 (set! generic-events (append generic-events '(read)))
+                 (call-with-input-file path get-string-all))
+               #:analyze
+               (lambda (context)
+                 (set! generic-events (append generic-events '(analyze)))
+                 (list 'inventory
+                       (map project-input-value
+                            (project-context-inputs context))))
+               #:renderers
+               (list
+                 (lambda (model)
+                   (set! generic-events (append generic-events '(render-csv)))
+                   (list (make-artifact
+                           "summary.csv"
+                           (format #f "items,~a\n"
+                                   (length (cadr model)))
+                           (list (string-append source-directory "/first.grv")))))
+                 (lambda (model)
+                   (set! generic-events (append generic-events '(render-data)))
+                   (list (make-artifact
+                           "inventory.scm"
+                           (call-with-output-string
+                             (lambda (port) (write model port) (newline port)))
+                           (list (string-append module-directory "/shared.grv")
+                                 external-source-path)))))
+               #:output-directory generic-output-directory))
+           (generic-report (build-project/report generic-project)))
+      (test-equal "generic projects run independent collection, preparation, reading, analysis and renderers"
+        '(collect prepare read analyze render-csv render-data)
+        generic-events)
+      (test-equal "generic project passes an opaque model to unrelated outputs"
+        "items,1\n"
+        (call-with-input-file
+          (string-append generic-output-directory "/summary.csv")
+          get-string-all))
+      (test-equal "generic project tracks prepared, collected and extra files"
+        (list (string-append module-directory "/shared.grv")
+              (string-append source-directory "/first.grv")
+              external-source-path)
+        (build-report-added-sources generic-report)))
     (let ((events '())
           (observed-site-title #f)
           (observed-site-description #f))
@@ -382,6 +438,12 @@
         (when (file-exists? path)
           (delete-file path)))
       (list output-path
+            (string-append generic-output-directory "/summary.csv")
+            (string-append generic-output-directory "/inventory.scm")
+            (string-append generic-output-directory "/.grove-artifacts")
+            (string-append generic-output-directory "/.grove-artifacts.tmp")
+            (string-append generic-output-directory "/.grove-build-state")
+            (string-append generic-output-directory "/.grove-build-state.tmp")
             cache-output-path
             (string-append cache-output-directory "/.grove-artifacts")
             (string-append cache-output-directory "/.grove-artifacts.tmp")
@@ -415,6 +477,8 @@
         (rmdir pages-directory)))
     (when (file-exists? output-directory)
       (rmdir output-directory))
+    (when (file-exists? generic-output-directory)
+      (rmdir generic-output-directory))
     (when (file-exists? cache-output-directory)
       (rmdir cache-output-directory))
     (when (file-exists? incremental-output-directory)
