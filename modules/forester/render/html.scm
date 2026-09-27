@@ -18,12 +18,27 @@
             render-forest-html
             make-forester-html-renderer))
 
-(define (link-handlers routes)
-  `((link . ,(lambda (element children)
-               `(a (@ (href ,(html-page-url
-                               routes
-                               (content-element-property element 'target))))
-                   ,@children)))))
+(define (link-url routes target)
+  (string-append
+    (html-page-url routes (forest-page-id-from-link target))
+    (if (forest-fragment-from-link target)
+        (string-append "#" (forest-fragment-from-link target))
+        "")))
+
+(define (page-content-handlers forest routes page)
+  (let ((heading-ids (forest-heading-ids forest (site-page-id page))))
+    `((link . ,(lambda (element children)
+                 `(a (@ (href ,(link-url
+                                 routes
+                                 (content-element-property element 'target))))
+                   ,@children)))
+      (heading . ,(lambda (_ children)
+                    (when (null? heading-ids)
+                      (error "Forester heading rendering exceeded its index"
+                             (site-page-id page)))
+                    (let ((id (car heading-ids)))
+                      (set! heading-ids (cdr heading-ids))
+                      `(h2 (@ (id ,id)) ,@children)))))))
 
 (define (backlinks-sxml incoming routes)
   (if (null? incoming)
@@ -124,7 +139,7 @@
          (incoming (forest-backlinks forest (site-page-id page)))
          (body (content->sxml
                  (site-page-document page)
-                 #:handlers (link-handlers routes)))
+                 #:handlers (page-content-handlers forest routes page)))
          (article (append body (backlinks-sxml incoming routes))))
     (sxml->html
       (html-document
@@ -241,7 +256,7 @@
     (if cache-key
         (make-cached-renderer
           render
-          #:cache-key cache-key
+          #:cache-key (string-append "forester-html-v2:" cache-key)
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
             (render-forest-html-changed forest style routes mathjax-src

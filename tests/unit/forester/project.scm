@@ -60,11 +60,16 @@
         "@summary{A short algebra note.}\n"
         "@published{2026-09-27}\n"
         "@updated{2026-09-28}\n"
+        "@heading{Quadratic equations}\n"
         "@paragraph{See @link[\"limits\"]{limits}. "
         "@math{x^2+y^2=z^2}}\n@display-math{a^2+b^2=c^2}"))
     (write-test-file
       (string-append source-directory "/limits.grv")
-      "@use-modules[(tests unit forester linked commands)]\n@title{Limits}\n@paragraph{See @link[\"algebra\"]{algebra}.}")
+      (string-append
+        "@use-modules[(tests unit forester linked commands)]\n"
+        "@title{Limits}\n"
+        "@paragraph{See @link[\"algebra\"]{algebra}. "
+        "Read @link[\"algebra#quadratic-equations\"]{about quadratics}.}"))
     (write-test-file
       (string-append source-directory "/unlinked.grv")
       "@use-modules[(tests unit forester linked commands)]\n@title{Unlinked}\n@paragraph{Standalone.}")
@@ -210,6 +215,12 @@
       (test-assert "HTML project output resolves page links"
         (string-contains algebra-html
           "href=\"/notes/limits.html\">limits</a>"))
+      (test-assert "HTML project emits stable heading anchors"
+        (string-contains algebra-html
+          "<h2 id=\"quadratic-equations\">Quadratic equations</h2>"))
+      (test-assert "real .grv fragment links resolve through configured routes"
+        (string-contains limits-html
+          "href=\"/notes/algebra.html#quadratic-equations\">about quadratics</a>"))
       (test-assert "HTML project output contains reverse links"
         (string-contains limits-html
           "href=\"/notes/algebra.html\">Algebra</a>"))
@@ -219,6 +230,10 @@
                "mathjax@4/tex-chtml.js")))
       (test-assert "text target writes linked page content"
         (and (string-contains algebra-text "limits [limits.txt]")
+             (string-contains
+               (read-test-file (string-append output-directory
+                                               "/text/limits.txt"))
+               "algebra.txt#quadratic-equations")
              (file-exists? (string-append output-directory "/text/index.txt"))))
       (let* ((incremental-project
                (make-site-project
@@ -261,10 +276,18 @@
           (string-append
             "@use-modules[(tests unit forester linked commands)]\n"
             "@title{Algebra}\n"
+            "@heading{Polynomial equations}\n"
             "@paragraph{See @link[\"limits\"]{limits}. "
             "@math{x^2+y^2=z^2}}\n"
             "@display-math{a^2+b^2=c^2}\n"
             "@paragraph{Also @link[\"unlinked\"]{unlinked}.}"))
+        (write-test-file
+          (string-append source-directory "/limits.grv")
+          (string-append
+            "@use-modules[(tests unit forester linked commands)]\n"
+            "@title{Limits}\n"
+            "@paragraph{See @link[\"algebra\"]{algebra}. "
+            "Read @link[\"algebra#polynomial-equations\"]{about polynomials}.}"))
         (let ((changed-links (build-project/report incremental-project)))
           (test-equal "new links update the newly linked page's backlinks"
             '("index.html" "notes/algebra.html" "notes/limits.html"
@@ -281,7 +304,17 @@
             (string-contains
               (read-test-file
                 (string-append cache-output-directory "/text/unlinked.txt"))
-              "Algebra")))
+              "Algebra"))
+          (test-assert "changed heading text updates its HTML anchor"
+            (string-contains
+              (read-test-file
+                (string-append cache-output-directory "/notes/algebra.html"))
+              "<h2 id=\"polynomial-equations\">Polynomial equations</h2>"))
+          (test-assert "updated fragment references resolve in cached builds"
+            (string-contains
+              (read-test-file
+                (string-append cache-output-directory "/notes/limits.html"))
+              "href=\"/notes/algebra.html#polynomial-equations\">about polynomials</a>")))
         (write-test-file
           (string-append module-directory "/commands.grv")
           (string-append

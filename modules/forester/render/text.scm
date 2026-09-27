@@ -19,15 +19,16 @@
 
 (define (link-handlers routes page)
   `((link . ,(lambda (element body)
-               (string-append body " ["
-                              (text-relative-path
-                                (text-page-path routes
-                                               (site-page-id page))
-                                (text-page-path
-                                  routes
-                                  (content-element-property
-                                    element 'target)))
-                              "]")))))
+               (let* ((target (content-element-property element 'target))
+                      (path
+                        (text-relative-path
+                          (text-page-path routes (site-page-id page))
+                          (text-page-path
+                            routes (forest-page-id-from-link target))))
+                      (fragment (forest-fragment-from-link target)))
+                 (string-append body " [" path
+                                (if fragment (string-append "#" fragment) "")
+                                "]"))))))
 
 (define (heading title)
   (string-append title "\n" (make-string (string-length title) #\=) "\n"))
@@ -172,7 +173,7 @@
     (if cache-key
         (make-cached-renderer
           render
-          #:cache-key cache-key
+          #:cache-key (string-append "forester-text-v2:" cache-key)
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
             (render-forest-text-changed forest prefix routes changed

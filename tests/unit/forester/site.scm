@@ -82,6 +82,79 @@
   (test-assert "HTML text is escaped"
     (string-contains algebra-html "Algebra &amp; limits")))
 
+(let* ((target-document
+         (make-content-document
+           (list
+             (make-content-element 'heading '("Overview"))
+             (make-content-element 'heading '("Overview"))
+             (make-content-element 'heading '("About: Trees?"))
+             (make-content-element 'heading '("!!!"))
+             (make-content-element 'heading '("Overview-2")))))
+       (source-document
+         (make-content-document
+           (list
+             (make-content-element
+               'paragraph
+               (list (make-content-element
+                       'link '("second section")
+                       #:properties '((target . "target#overview-2")))))
+             (make-content-element
+               'paragraph
+               (list (make-content-element
+                       'link '("the trees")
+                       #:properties '((target . "target#about-trees"))))))))
+       (target (make-site-page "target" "Target" target-document))
+       (source (make-site-page "source" "Source" source-document))
+       (forest (make-forest (make-site (list target source))))
+       (html (forest->html forest))
+       (text (forest->text forest))
+       (target-html (assoc-ref html "target"))
+       (source-html (assoc-ref html "source"))
+       (source-text (assoc-ref text "source")))
+  (test-equal "heading anchors slugify text and disambiguate duplicate IDs"
+    '("overview" "overview-2" "about-trees" "section" "overview-2-2")
+    (forest-heading-ids forest "target"))
+  (test-assert "HTML headings emit their indexed anchor IDs"
+    (and (string-contains target-html "<h2 id=\"overview\">Overview</h2>")
+         (string-contains target-html
+                          "<h2 id=\"overview-2\">Overview</h2>")
+         (string-contains target-html
+                          "<h2 id=\"overview-2-2\">Overview-2</h2>")))
+  (test-assert "HTML page links preserve fragment targets"
+    (and (string-contains source-html
+                          "href=\"/target.html#overview-2\">second section</a>")
+         (string-contains source-html
+                          "href=\"/target.html#about-trees\">the trees</a>")))
+  (test-assert "plain-text page links preserve fragment targets"
+    (and (string-contains source-text "target.txt#overview-2")
+         (string-contains source-text "target.txt#about-trees")))
+  (test-assert "fragment links still produce page-level backlinks"
+    (string-contains target-html "href=\"/source.html\">Source</a>")))
+
+(test-error "links to missing heading fragments fail forest analysis" #t
+  (make-forest
+    (make-site
+      (list
+        (make-site-page "target" "Target"
+          (make-content-document
+            (list (make-content-element 'heading '("Existing")))))
+        (make-site-page "source" "Source"
+          (make-content-document
+            (list (make-content-element
+                    'link '("missing")
+                    #:properties '((target . "target#not-here"))))))))))
+
+(test-error "empty page fragments are rejected" #t
+  (make-forest
+    (make-site
+      (list
+        (make-site-page "target" "Target" (make-content-document '()))
+        (make-site-page "source" "Source"
+          (make-content-document
+            (list (make-content-element
+                    'link '("target")
+                    #:properties '((target . "target#"))))))))))
+
 (let* ((forest (make-forest (make-site (list algebra limits)
                                        #:title "Linked Notes"
                                        #:description "Connected notes on math.")))

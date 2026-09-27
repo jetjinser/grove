@@ -225,6 +225,23 @@ XML text, and declares all forest inputs as artifact dependencies. Pages with
 modification date. Include it in `#:renderers` beside HTML, text, or RSS; the
 renderer writes `sitemap.xml` by default.
 
+Forester links may target a page or a heading within one:
+
+```scheme
+@link["algebra"]{the algebra note}
+@link["algebra#quadratic-equations"]{the quadratic equations section}
+```
+
+Each `@heading{...}` receives an HTML `id` derived from its visible text:
+letters and numbers are lowercased, runs of other characters become hyphens,
+and an empty slug becomes `section`. Repeated slugs receive numeric suffixes
+(`overview`, `overview-2`); suffix collisions are skipped. Fragment targets
+are checked against these IDs while the forest is built, so a misspelled or
+stale fragment fails with the source page identified. Links in HTML and text
+retain the fragment. Reverse links continue to group references by page.
+Plain-text output keeps the fragment in its link path but does not emit HTML
+anchors.
+
 The project title and optional `#:description` become site-level metadata.
 Forester HTML emits the description in the index page and uses it as a page
 description when a page has no `@summary`. RSS uses it for the channel

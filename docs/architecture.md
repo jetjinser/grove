@@ -45,11 +45,11 @@ independently installable package.
 Forester's `(forester private ...)` modules are implementation helpers and are
 not host extension points.
 
-The next Forester-specific consumer milestone should extend link targets from
-page IDs to page IDs with optional fragments, then define how heading IDs are
-assigned and emitted consistently by HTML routes, links, and backlinks. That
-work belongs in Forester's model and renderers; Grove's generic project and
-artifact contracts need no Forester-specific changes.
+Forester supports page links with optional heading fragments. It derives and
+validates heading IDs in the forest model, then emits those IDs and links in
+its renderers. This remains inside the Forester model and renderer layer;
+Grove's generic project and artifact contracts need no Forester-specific
+changes.
 
 From the repository root, the isolated check is:
 

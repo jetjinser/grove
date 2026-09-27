@@ -13,6 +13,7 @@
              (forester site)
              (grove input scribble)
              (grove output)
+             (grove project)
              (grove project site)
              (grove render html routes)
              (grove style html))
