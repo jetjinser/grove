@@ -53,12 +53,14 @@
                  #:title "Configured"
                  #:description "A configured site description."
                  #:source-directory source-directory
-                 #:module-directory module-directory
-                 #:load-modules
-                 (lambda (paths)
+                 #:prepare
+                 (lambda ()
+                   (let ((paths (list (string-append module-directory
+                                                     "/shared.grv"))))
                    (set! events
                      (append events
-                       (list (list 'load (map basename paths))))))
+                       (list (list 'prepare (map basename paths)))))
+                   paths))
                  #:read-page
                  (lambda (path)
                    (let ((id (string-drop-right (basename path) 4)))
@@ -92,7 +94,7 @@
              (report (build-project/report project))
              (artifacts (build-report-artifacts report)))
         (test-equal "project phases run modules, readers, analysis, renderers"
-          '((load ("shared.grv"))
+          '((prepare ("shared.grv"))
             (read "first")
             (read "second")
             analyze

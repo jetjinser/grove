@@ -76,8 +76,7 @@
              (make-site-project
                #:title "Linked Notes"
                #:source-directory source-directory
-               #:module-directory module-directory
-               #:load-modules load-scribble-modules!
+               #:prepare (make-scribble-module-setup module-directory)
                #:read-page
                (make-forester-page-reader
                  (make-scribble-document-reader))
@@ -224,8 +223,7 @@
       (let* ((incremental-project
                (make-site-project
                  #:source-directory source-directory
-                 #:module-directory module-directory
-                 #:load-modules load-scribble-modules!
+                 #:prepare (make-scribble-module-setup module-directory)
                  #:read-page
                  (make-forester-page-reader (make-scribble-document-reader))
                  #:analyze make-forest

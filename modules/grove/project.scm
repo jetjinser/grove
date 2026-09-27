@@ -18,7 +18,7 @@
             project-input-value
             project-context?
             project-context-inputs
-            project-context-module-sources
+            project-context-prepared-sources
             project-context-extra-sources
             build-report?
             build-report-artifacts
@@ -37,10 +37,10 @@
   (value project-input-value))
 
 (define-record-type <project-context>
-  (make-project-context inputs module-sources extra-sources)
+  (make-project-context inputs prepared-sources extra-sources)
   project-context?
   (inputs project-context-inputs)
-  (module-sources project-context-module-sources)
+  (prepared-sources project-context-prepared-sources)
   (extra-sources project-context-extra-sources))
 
 (define-record-type <build-report>
@@ -54,16 +54,14 @@
   (rendered? build-report-rendered?))
 
 (define-record-type <project>
-  (%make-project source-directory source-filter collect-sources module-directory
-                 module-filter load-modules extra-sources read-source analyze renderers
+  (%make-project source-directory source-filter collect-sources prepare
+                 extra-sources read-source analyze renderers
                  output-directory cache-key)
   project?
   (source-directory project-source-directory)
   (source-filter project-source-filter)
   (collect-sources project-collect-sources)
-  (module-directory project-module-directory)
-  (module-filter project-module-filter)
-  (load-modules project-load-modules)
+  (prepare project-prepare)
   (extra-sources project-extra-sources)
   (read-source project-read-source)
   (analyze project-analyze)
@@ -71,16 +69,12 @@
   (output-directory project-output-directory)
   (cache-key project-cache-key))
 
-(define (source-file? filename)
-  (string-suffix? ".grv" filename))
-
 (define* (make-project #:key
                        (source-directory #f)
-                       (source-filter source-file?)
+                       (source-filter (lambda (filename)
+                                        (not (string-prefix? "." filename))))
                        (collect-sources #f)
-                       (module-directory #f)
-                       (module-filter source-file?)
-                       (load-modules #f)
+                       (prepare (lambda () '()))
                        (extra-sources '())
                        read-source
                        (analyze (lambda (context) context))
@@ -93,15 +87,8 @@
                (or source-directory collect-sources))
     (error "project requires a source directory or collector"
            source-directory collect-sources))
-  (unless (or (not module-directory)
-              (and (string? module-directory)
-                   (procedure? module-filter)))
-    (error "project module directory requires a module filter"
-           module-directory module-filter))
-  (unless (or (not module-directory)
-              (procedure? load-modules))
-    (error "project module directory requires a module loader"
-           module-directory))
+  (unless (procedure? prepare)
+    (error "project prepare hook must be a procedure" prepare))
   (unless (and (list? extra-sources) (every string? extra-sources))
     (error "project extra sources must be a list of paths" extra-sources))
   (unless (procedure? read-source)
@@ -120,8 +107,8 @@
   (unless (or (not cache-key)
               (and (string? cache-key) (not (string-null? cache-key))))
     (error "project cache key must be a non-empty string or #f" cache-key))
-  (%make-project source-directory source-filter collect-sources module-directory
-                 module-filter load-modules extra-sources read-source analyze renderers
+  (%make-project source-directory source-filter collect-sources prepare
+                 extra-sources read-source analyze renderers
                  output-directory cache-key))
 
 (define (read-source-with-context path read-source)
@@ -146,16 +133,21 @@
       (error "project collector returned duplicate paths" paths))
     paths))
 
-(define (load-project-modules module-sources load-modules)
-  (unless (null? module-sources)
-    (unless (procedure? load-modules)
-      (error "project module sources require a loader" module-sources))
-    (catch #t
-      (lambda () (load-modules module-sources))
-      (lambda (key . args)
-        (error (format #f "failed to load project module sources ~s (~a): ~s"
-                       module-sources key args)))))
-  module-sources)
+(define (prepare-project-sources prepare)
+  (let ((paths
+          (catch #t
+            (lambda () (prepare))
+            (lambda (key . args)
+              (error (format #f "project preparation failed (~a): ~s"
+                              key args))))))
+    (unless (and (list? paths)
+                 (every (lambda (path)
+                          (and (string? path) (not (string-null? path))))
+                        paths))
+      (error "project prepare hook must return source paths" paths))
+    (when (not (= (length paths) (length (delete-duplicates paths string=?))))
+      (error "project prepare hook returned duplicate paths" paths))
+    paths))
 
 (define (source-paths entries)
   (map car entries))
@@ -320,16 +312,9 @@
 (define (build-project/report project)
   (unless (project? project)
     (error "build-project/report requires a Grove project" project))
-  (let* ((module-directory (project-module-directory project))
-         (module-sources
-           (if module-directory
-               (collect-directory module-directory
-                                  (project-module-filter project))
-               '()))
-         (loaded-module-sources
-           (load-project-modules module-sources
-                                 (project-load-modules project)))
-         (source-paths (collect-project-sources project))
+  (let* ((source-paths (collect-project-sources project))
+         (prepared-sources (prepare-project-sources
+                             (project-prepare project)))
          (state-path
            (string-append (project-output-directory project) "/"
                           build-state-name))
@@ -350,11 +335,11 @@
          (current-sources
            (map (lambda (path) (list path (file-fingerprint path)))
                 (delete-duplicates
-                  (append loaded-module-sources source-paths
+                  (append prepared-sources source-paths
                           (project-extra-sources project))
                   string=?)))
          (context
-           (make-project-context inputs loaded-module-sources
+           (make-project-context inputs prepared-sources
                                  (project-extra-sources project)))
          (model ((project-analyze project) context))
          (source-changes

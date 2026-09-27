@@ -16,10 +16,7 @@
                             (source-filter (lambda (path)
                                              (string-suffix? ".grv" path)))
                             (collect-sources #f)
-                            (module-directory #f)
-                            (module-filter (lambda (path)
-                                             (string-suffix? ".grv" path)))
-                            (load-modules #f)
+                            (prepare (lambda () '()))
                             (extra-sources '())
                             read-page
                             (analyze (lambda (site) site))
@@ -34,9 +31,7 @@
     #:source-directory source-directory
     #:source-filter source-filter
     #:collect-sources collect-sources
-    #:module-directory module-directory
-    #:module-filter module-filter
-    #:load-modules load-modules
+    #:prepare prepare
     #:extra-sources extra-sources
     #:read-source read-page
     #:analyze
@@ -46,7 +41,7 @@
              (sources
                (delete-duplicates
                  (append (map project-input-path inputs)
-                         (project-context-module-sources context)
+                         (project-context-prepared-sources context)
                          (filter-map site-page-source pages))
                  string=?))
              (site (make-site pages #:title title #:description description

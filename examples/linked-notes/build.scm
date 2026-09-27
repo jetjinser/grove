@@ -52,9 +52,9 @@
     #:title "Linked Notes"
     #:description "Connected notes on mathematics and its ideas."
     #:source-directory source-directory
-    #:module-directory (string-append source-directory "/modules")
     #:extra-sources (list notes-css-path)
-    #:load-modules load-scribble-modules!
+    #:prepare
+    (make-scribble-module-setup (string-append source-directory "/modules"))
     #:read-page (make-forester-page-reader read-document)
     #:analyze make-forest
     #:renderers
