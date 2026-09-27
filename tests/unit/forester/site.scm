@@ -110,7 +110,11 @@
        (text (forest->text forest))
        (target-html (assoc-ref html "target"))
        (source-html (assoc-ref html "source"))
-       (source-text (assoc-ref text "source")))
+       (source-text (assoc-ref text "source"))
+       (outgoing (forest-outgoing-references forest "source"))
+       (first-reference (car outgoing))
+       (section-references
+         (forest-incoming-references forest "target" "overview-2")))
   (test-equal "heading anchors slugify text and disambiguate duplicate IDs"
     '("overview" "overview-2" "about-trees" "section" "overview-2-2")
     (forest-heading-ids forest "target"))
@@ -129,7 +133,22 @@
     (and (string-contains source-text "target.txt#overview-2")
          (string-contains source-text "target.txt#about-trees")))
   (test-assert "fragment links still produce page-level backlinks"
-    (string-contains target-html "href=\"/source.html\">Source</a>")))
+    (string-contains target-html "href=\"/source.html\">Source</a>"))
+  (test-assert "Forest references preserve source, target, label and fragment"
+    (and (forest-reference? first-reference)
+         (string=? (forest-reference-source-page-id first-reference) "source")
+         (string=? (forest-reference-source-id first-reference) "ref-1")
+         (string=? (forest-reference-target-page-id first-reference) "target")
+         (string=? (forest-reference-target-fragment first-reference)
+                   "overview-2")
+         (string=? (forest-reference-label first-reference)
+                   "second section")))
+  (test-equal "incoming-reference queries can select one heading"
+    '("second section")
+    (map forest-reference-label section-references))
+  (test-equal "legacy link queries retain page and fragment targets"
+    '("target#overview-2" "target#about-trees")
+    (forest-links forest "source")))
 
 (test-error "links to missing heading fragments fail forest analysis" #t
   (make-forest

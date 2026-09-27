@@ -18,20 +18,27 @@
             render-forest-html
             make-forester-html-renderer))
 
-(define (link-url routes target)
+(define (link-url routes reference)
   (string-append
-    (html-page-url routes (forest-page-id-from-link target))
-    (if (forest-fragment-from-link target)
-        (string-append "#" (forest-fragment-from-link target))
+    (html-page-url routes
+                   (forest-reference-target-page-id reference))
+    (if (forest-reference-target-fragment reference)
+        (string-append "#"
+                       (forest-reference-target-fragment reference))
         "")))
 
 (define (page-content-handlers forest routes page)
-  (let ((heading-ids (forest-heading-ids forest (site-page-id page))))
+  (let ((heading-ids (forest-heading-ids forest (site-page-id page)))
+        (references (forest-outgoing-references
+                      forest (site-page-id page))))
     `((link . ,(lambda (element children)
-                 `(a (@ (href ,(link-url
-                                 routes
-                                 (content-element-property element 'target))))
-                   ,@children)))
+                 (when (null? references)
+                   (error "Forester link rendering exceeded its index"
+                          (site-page-id page)))
+                 (let ((reference (car references)))
+                   (set! references (cdr references))
+                   `(a (@ (href ,(link-url routes reference)))
+                     ,@children))))
       (heading . ,(lambda (_ children)
                     (when (null? heading-ids)
                       (error "Forester heading rendering exceeded its index"

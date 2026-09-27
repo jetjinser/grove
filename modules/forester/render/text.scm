@@ -17,18 +17,26 @@
             render-forest-text
             make-forester-text-renderer))
 
-(define (link-handlers routes page)
-  `((link . ,(lambda (element body)
-               (let* ((target (content-element-property element 'target))
-                      (path
-                        (text-relative-path
-                          (text-page-path routes (site-page-id page))
-                          (text-page-path
-                            routes (forest-page-id-from-link target))))
-                      (fragment (forest-fragment-from-link target)))
+(define (link-handlers forest routes page)
+  (let ((references
+          (forest-outgoing-references forest (site-page-id page))))
+    `((link . ,(lambda (_ body)
+                 (when (null? references)
+                   (error "Forester link rendering exceeded its index"
+                          (site-page-id page)))
+                 (let* ((reference (car references))
+                        (_ (set! references (cdr references)))
+                        (path
+                          (text-relative-path
+                            (text-page-path routes (site-page-id page))
+                            (text-page-path
+                              routes
+                              (forest-reference-target-page-id reference))))
+                        (fragment
+                          (forest-reference-target-fragment reference)))
                  (string-append body " [" path
                                 (if fragment (string-append "#" fragment) "")
-                                "]"))))))
+                                "]")))))))
 
 (define (heading title)
   (string-append title "\n" (make-string (string-length title) #\=) "\n"))
@@ -57,7 +65,7 @@
         (page-path (text-page-path routes (site-page-id page)))
         (body (string-trim-both
                 (content->text (site-page-document page)
-                               #:handlers (link-handlers routes page))
+                               #:handlers (link-handlers forest routes page))
                 (char-set #\newline))))
     (string-append
       (heading (site-page-title page))
