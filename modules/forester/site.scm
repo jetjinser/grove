@@ -4,6 +4,7 @@
 
 (define-module (forester site)
   #:use-module (grove ir)
+  #:use-module (grove relation)
   #:use-module (grove site)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
@@ -139,11 +140,12 @@
   (label forest-heading-label))
 
 (define-record-type <forest>
-  (%make-forest site reference-index heading-index)
+  (%make-forest site reference-index heading-index page-reference-relation)
   forest?
   (site forest-site)
   (reference-index forest-reference-index)
-  (heading-index forest-heading-index))
+  (heading-index forest-heading-index)
+  (page-reference-relation forest-page-reference-relation))
 
 (define (make-forest site)
   (unless (site? site)
@@ -212,8 +214,18 @@
                            (content->plain-text element))))
                      elements
                      (iota (length elements) 1)))))
-             pages)))
-    (%make-forest site reference-index heading-index)))
+             pages))
+         (page-reference-relation
+           (make-relation
+             (append-map
+               (lambda (entry)
+                 (map (lambda (reference)
+                        (cons (forest-reference-source-page-id reference)
+                              (forest-reference-target-page-id reference)))
+                      (cdr entry)))
+               reference-index))))
+    (%make-forest site reference-index heading-index
+                  page-reference-relation)))
 
 (define (forest-heading-ids forest id)
   (map forest-heading-id (forest-headings forest id)))
@@ -252,11 +264,12 @@
           (append-map cdr (forest-reference-index forest))))
 
 (define (forest-backlinks forest id)
+  (unless (assoc id (forest-heading-index forest))
+    (error "unknown forest page" id))
   (let ((source-ids
-          (delete-duplicates
-            (map forest-reference-source-page-id
-                 (forest-incoming-references forest id))
-            equal?)))
+          (run* (source-id)
+            (relationo (forest-page-reference-relation forest)
+                      source-id id))))
     (filter (lambda (page) (member (site-page-id page) source-ids equal?))
             (site-pages (forest-site forest)))))
 

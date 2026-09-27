@@ -45,7 +45,45 @@
     (evaluate-document
       "@paragraph{See @link[\"algebra\"]{the algebra note}.}")))
 
+(define (page-with-links id targets)
+  (make-site-page
+    id id
+    (make-content-document
+      (map (lambda (target)
+             (make-content-element
+               'link (list target)
+               #:properties `((target . ,target))))
+           targets))))
+
+(define (backlinks-by-incoming-references forest id)
+  (let ((source-ids
+          (delete-duplicates
+            (map forest-reference-source-page-id
+                 (forest-incoming-references forest id))
+            equal?)))
+    (filter (lambda (page)
+              (member (site-page-id page) source-ids equal?))
+            (site-pages (forest-site forest)))))
+
 (test-begin "forester site")
+
+(let* ((destination (page-with-links "destination" '()))
+       (source (page-with-links "source" '("destination" "destination")))
+       (other-source (page-with-links "other-source" '("destination")))
+       (unlinked (page-with-links "unlinked" '()))
+       (forest
+         (make-forest
+           (make-site (list destination source other-source unlinked))))
+       (backlinks (forest-backlinks forest "destination")))
+  (test-equal "relation backlinks preserve the old page ordering and uniqueness"
+    '("source" "other-source")
+    (map site-page-id backlinks))
+  (test-equal "relation backlinks match the previous incoming-reference filter"
+    (map site-page-id (backlinks-by-incoming-references forest "destination"))
+    (map site-page-id backlinks))
+  (test-equal "incoming-reference queries still preserve each link occurrence"
+    3
+    (length (forest-incoming-references forest "destination"))))
 
 (let* ((paragraph-node
          (car (content-document-children (site-page-document algebra))))
