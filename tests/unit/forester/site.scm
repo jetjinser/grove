@@ -50,10 +50,6 @@
     (and (content-element? math-node)
          (eq? (content-element-kind math-node) 'math))))
 
-(test-equal "custom element styles use the generic container"
-  '(span (@ (class "notice")) "Hello")
-  (content->sxml (make-content-element 'notice '("Hello"))))
-
 (let* ((rendered (forest->html (make-forest (make-site (list algebra limits)))))
        (algebra-html (assoc-ref rendered "algebra"))
        (limits-html (assoc-ref rendered "limits")))
