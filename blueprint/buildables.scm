@@ -14,6 +14,7 @@
     "modules/grove/collect.scm"
     "modules/grove/ir.scm"
     "modules/grove/output.scm"
+    "modules/grove/project.scm"
     "modules/grove/site.scm"
     "modules/grove/input/scribble.scm"
     "modules/grove/render/html.scm"

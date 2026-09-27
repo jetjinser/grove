@@ -4,15 +4,13 @@
 
 (use-modules (ice-9 ftw)
              (ice-9 textual-ports)
-             (srfi srfi-13)
              (forester input scribble)
              (forester render html)
              (forester render text)
              (forester site)
-             (grove build)
-             (grove collect)
              (grove input scribble)
              (grove output)
+             (grove project)
              (grove render html routes)
              (grove style html))
 
@@ -22,25 +20,7 @@
       "/tmp/grove-linked-notes"))
 
 (define source-directory (string-append examples-directory "/source"))
-(define module-sources
-  (collect-directory
-    (string-append source-directory "/modules")
-    (lambda (filename)
-      (string-suffix? ".grv" filename))))
 (define read-document (make-scribble-document-reader))
-
-(define notes-site
-  (build-site
-    (collect-directory
-      source-directory
-      (lambda (filename)
-        (string-suffix? ".grv" filename)))
-    (make-forester-page-reader read-document)
-    #:title "Linked Notes"
-    #:module-sources module-sources
-    #:load-modules load-scribble-modules!))
-
-(define notes-forest (make-forest notes-site))
 
 (define notes-style
   (make-html-style
@@ -58,15 +38,22 @@
     (lambda (id)
       (string-append "notes/" id ".html"))))
 
-(define artifacts
-  (render-site
-    notes-forest
+(define notes-project
+  (make-project
+    #:title "Linked Notes"
+    #:source-directory source-directory
+    #:module-directory (string-append source-directory "/modules")
+    #:load-modules load-scribble-modules!
+    #:read-page (make-forester-page-reader read-document)
+    #:analyze make-forest
+    #:renderers
     (list (make-forester-html-renderer
             #:style notes-style #:routes notes-routes)
           (lambda (forest)
-            (prefix-artifacts "text" (render-forest-text forest))))))
+            (prefix-artifacts "text" (render-forest-text forest))))
+    #:output-directory output-directory))
 
-(write-artifacts output-directory artifacts)
+(build-project notes-project)
 
 (display "Wrote HTML to ")
 (display output-directory)
