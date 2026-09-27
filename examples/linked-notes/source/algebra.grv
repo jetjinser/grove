@@ -4,5 +4,14 @@
 @use-modules[(linked-notes commands)]
 
 @title{Algebra}
+@summary{A note on algebraic identities, linked ideas, and mathematical notation.}
+@published{2026-09-27}
 @paragraph{The @link["limits"]{limits} are useful. @math{x^2+y^2=z^2}}
 @display-math{a^2+b^2=c^2}
+@heading{A few examples}
+@itemize{
+  @item{Algebra describes patterns between quantities.}
+  @item{The @code{x^2+y^2=z^2} identity describes a right triangle.}
+}
+@blockquote{Definitions make relationships easier to follow.}
+@code-block{(define square (lambda (x) (* x x)))}

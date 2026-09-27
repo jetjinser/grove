@@ -159,6 +159,17 @@
   (let* ((document
            (evaluate-document
              env
+             "@heading{A heading}\n@blockquote{Quoted}\n@itemize{@item{One}@item{Two}}\n@paragraph{@code{x + 1}}\n@code-block{(display \"hi\")}"))
+         (elements (filter content-element?
+                           (content-document-children document))))
+    (test-equal "common content commands evaluate into generic IR elements"
+      '(heading blockquote itemize paragraph code-block)
+      (map content-element-kind elements))))
+
+(let ((env (default-environment scribble)))
+  (let* ((document
+           (evaluate-document
+             env
              "@use-modules[(forester commands)]\n@(define note-label \"from Scheme\")\n@title{@|note-label|}\n@link[\"target\"]{Target}"))
          (children (content-document-children document))
          (elements (filter content-element? children))

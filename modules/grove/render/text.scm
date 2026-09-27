@@ -28,6 +28,22 @@
           (handler element body)
           (case kind
             ((paragraph) (string-append body "\n"))
+            ((heading)
+             (string-append body "\n"
+                            (make-string (string-length body) #\=) "\n"))
+            ((blockquote)
+             (string-append
+               (string-join
+                 (map (lambda (line) (string-append "> " line))
+                      (string-split body #\newline))
+                 "\n")
+               "\n"))
+            ((item) (string-append "- " body "\n"))
+            ((code) (string-append "`" body "`"))
+            ((code-block)
+             (string-append "```\n" body
+                            (if (string-suffix? "\n" body) "" "\n")
+                            "```\n"))
             ((math)
              (let ((source-text
                      (content-verbatim-string

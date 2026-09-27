@@ -172,6 +172,15 @@ description when a page has no `@summary`. RSS uses it for the channel
 description, falling back to the site title when omitted. A page's `@summary`
 is emitted as its HTML description and takes precedence over the site value.
 
+The Scribble command library provides common structural content commands:
+`@heading{...}`, `@blockquote{...}`, `@itemize{@item{...} ...}`, `@code{...}`,
+and `@code-block{...}`. These evaluate to generic Grove IR elements, so a
+renderer can choose its own output semantics. Grove's HTML renderer maps them
+to `h2`, `blockquote`, `ul`/`li`, `code`, and `pre`/`code`; the plain-text
+renderer uses an underlined heading, quoted lines, bullets, backticks, and
+fenced code blocks. The IR remains open to other element kinds and custom
+renderer handlers.
+
 The complete runnable example, including custom routes and CSS, is in
 `examples/linked-notes/build.scm`.
 

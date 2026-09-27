@@ -41,6 +41,7 @@
 (define notes-project
   (make-project
     #:title "Linked Notes"
+    #:description "Connected notes on mathematics and its ideas."
     #:source-directory source-directory
     #:module-directory (string-append source-directory "/modules")
     #:extra-sources (list notes-css-path)

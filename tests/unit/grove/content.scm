@@ -30,4 +30,33 @@
                        (symbol->string (content-element-kind element))
                        ": " body)))))))
 
+(let* ((document
+         (make-content-document
+           (list (make-content-element 'heading '("Details"))
+                 (make-content-element 'blockquote '("A short quote."))
+                 (make-content-element
+                   'itemize
+                   (list (make-content-element 'item '("First"))
+                         (make-content-element 'item '("Second"))))
+                 (make-content-element 'paragraph
+                   (list "Run " (make-content-element 'code '("x + 1")) "."))
+                 (make-content-element 'code-block '("(display \"hi\")")))))
+       (text (content->text document)))
+  (test-equal "HTML renders common document structures semantically"
+    '(article
+       (h2 "Details")
+       (blockquote "A short quote.")
+       (ul (li "First") (li "Second"))
+       (p "Run " (code "x + 1") ".")
+       (pre (code "(display \"hi\")")))
+    (content->sxml document))
+  (test-equal "plain text keeps structure, bullets, and code readable"
+    (string-append
+      "Details\n=======\n"
+      "> A short quote.\n"
+      "- First\n- Second\n"
+      "Run `x + 1`.\n"
+      "```\n(display \"hi\")\n```\n")
+    text))
+
 (test-end "grove content")

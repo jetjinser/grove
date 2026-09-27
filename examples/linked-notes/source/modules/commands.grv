@@ -3,4 +3,4 @@
 
 @(define-module (linked-notes commands)
   #:use-module (forester commands)
-  #:re-export (link title))
+  #:re-export (link title summary published updated))
