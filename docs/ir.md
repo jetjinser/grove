@@ -23,5 +23,5 @@ Forester define domain-specific meaning for their elements and analyze them
 without adding those concepts to the Grove IR.
 
 `(grove site)` groups pages by ID and checks for duplicate IDs. A page
-contains an ID, title, and content document. The site contains no output paths
-or markup.
+contains an ID, title, content document, optional source path, and an extensible
+metadata alist keyed by symbols. The site contains no output paths or markup.

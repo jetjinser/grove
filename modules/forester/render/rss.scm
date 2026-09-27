@@ -10,6 +10,7 @@
   #:use-module (grove render html routes)
   #:use-module (grove render text)
   #:use-module (grove site)
+  #:use-module (srfi srfi-19)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (render-forest-rss
@@ -44,6 +45,24 @@
   (string-append base "/"
                  (html-page-path routes (site-page-id page))))
 
+(define (page-pub-date page)
+  (or (assq-ref (site-page-metadata page) 'updated)
+      (assq-ref (site-page-metadata page) 'published)))
+
+(define (rss-date iso-date)
+  (let* ((parsed (string->date iso-date "~Y-~m-~d"))
+         (utc-date (make-date 0 0 0 0
+                              (date-day parsed)
+                              (date-month parsed)
+                              (date-year parsed)
+                              0)))
+    (date->string utc-date "~a, ~d ~b ~Y 00:00:00 GMT")))
+
+(define (page-description page)
+  (or (assq-ref (site-page-metadata page) 'summary)
+      (string-trim-both
+        (content->text (site-page-document page)))))
+
 (define* (render-forest-rss forest #:key site-url
                             (feed-path "feed.xml")
                             (routes (make-html-routes)))
@@ -61,7 +80,8 @@
          (home-url (string-append base "/" (html-index-path routes)))
          (items
            (map (lambda (page)
-                  (let ((url (page-url base routes page)))
+                  (let ((url (page-url base routes page))
+                        (pub-date (page-pub-date page)))
                     (string-append
                       "    <item>\n"
                       "      <title>" (xml-escape (site-page-title page))
@@ -69,10 +89,13 @@
                       "      <link>" (xml-escape url) "</link>\n"
                       "      <guid isPermaLink=\"true\">"
                       (xml-escape url) "</guid>\n"
+                      (if pub-date
+                          (string-append "      <pubDate>"
+                                         (rss-date pub-date)
+                                         "</pubDate>\n")
+                          "")
                       "      <description>"
-                      (xml-escape
-                        (string-trim-both
-                          (content->text (site-page-document page))))
+                      (xml-escape (page-description page))
                       "</description>\n"
                       "    </item>")))
                 (site-pages site)))

@@ -12,6 +12,7 @@
             site-page-title
             site-page-document
             site-page-source
+            site-page-metadata
             site?
             make-site
             site-pages
@@ -19,19 +20,26 @@
             site-title))
 
 (define-record-type <site-page>
-  (%make-site-page id title document source)
+  (%make-site-page id title document source metadata)
   site-page?
   (id site-page-id)
   (title site-page-title)
   (document site-page-document)
-  (source site-page-source))
+  (source site-page-source)
+  (metadata site-page-metadata))
 
-(define* (make-site-page id title document #:optional (source #f))
+(define* (make-site-page id title document #:optional (source #f)
+                         #:key (metadata '()))
   (unless (content-document? document)
     (error "site page requires a content document" document))
   (unless (or (not source) (string? source))
     (error "site page source must be a path or #f" source))
-  (%make-site-page id title document source))
+  (unless (and (list? metadata)
+               (every (lambda (entry)
+                        (and (pair? entry) (symbol? (car entry))))
+                      metadata))
+    (error "site page metadata must be an alist keyed by symbols" metadata))
+  (%make-site-page id title document source metadata))
 
 (define-record-type <site>
   (%make-site pages title sources)

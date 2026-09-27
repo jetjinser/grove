@@ -14,6 +14,7 @@
   #:use-module (forester render text)
   #:use-module (forester site)
   #:use-module (grove input scribble)
+  #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove project)
   #:use-module (grove render html routes)
@@ -42,10 +43,17 @@
     (mkdir module-directory)
     (write-test-file
       (string-append module-directory "/commands.grv")
-      "@(define-module (tests unit forester linked commands)\n  #:use-module (forester commands)\n  #:re-export (link title))")
+      "@(define-module (tests unit forester linked commands)\n  #:use-module (forester commands)\n  #:re-export (link title summary published updated))")
     (write-test-file
       (string-append source-directory "/algebra.grv")
-      "@use-modules[(tests unit forester linked commands)]\n@title{Algebra}\n@paragraph{See @link[\"limits\"]{limits}. @math{x^2+y^2=z^2}}\n@display-math{a^2+b^2=c^2}")
+      (string-append
+        "@use-modules[(tests unit forester linked commands)]\n"
+        "@title{Algebra}\n"
+        "@summary{A short algebra note.}\n"
+        "@published{2026-09-27}\n"
+        "@updated{2026-09-28}\n"
+        "@paragraph{See @link[\"limits\"]{limits}. "
+        "@math{x^2+y^2=z^2}}\n@display-math{a^2+b^2=c^2}"))
     (write-test-file
       (string-append source-directory "/limits.grv")
       "@use-modules[(tests unit forester linked commands)]\n@title{Limits}\n@paragraph{See @link[\"algebra\"]{algebra}.}")
@@ -92,7 +100,9 @@
                (string-append output-directory "/notes/limits.html")))
            (algebra-text
              (read-test-file
-               (string-append output-directory "/text/algebra.txt"))))
+               (string-append output-directory "/text/algebra.txt")))
+           (rss-feed
+             (read-test-file (string-append output-directory "/feed.xml"))))
       (let* ((expected-sources
                (list (string-append module-directory "/commands.grv")
                      (string-append source-directory "/algebra.grv")
@@ -124,7 +134,28 @@
           (artifact-sources algebra-html-artifact))
         (test-equal "prefixed text artifacts retain source dependencies"
           expected-algebra-html-sources
-          (artifact-sources algebra-text-artifact)))
+          (artifact-sources algebra-text-artifact))
+        (let ((algebra-page
+                ((make-forester-page-reader
+                   (make-scribble-document-reader))
+                 (string-append source-directory "/algebra.grv"))))
+          (test-equal "page reader extracts Forester metadata"
+            '((summary . "A short algebra note.")
+              (published . "2026-09-27")
+              (updated . "2026-09-28"))
+            (site-page-metadata algebra-page))
+          (test-assert "page metadata stays out of the page body"
+            (not (find (lambda (node)
+                         (and (content-element? node)
+                              (memq (content-element-kind node)
+                                    '(summary published updated))))
+                       (content-document-children
+                         (site-page-document algebra-page)))))
+          (test-assert "RSS uses summaries and updated dates"
+            (and (string-contains rss-feed
+                   "<description>A short algebra note.</description>")
+                 (string-contains rss-feed
+                   "<pubDate>Mon, 28 Sep 2026 00:00:00 GMT</pubDate>")))))
       (test-assert "project composes HTML, RSS, and text renderer outputs"
         (and (member "index.html" paths)
              (member "feed.xml" paths)

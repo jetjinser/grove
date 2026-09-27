@@ -155,6 +155,23 @@ changes.
 The complete runnable example, including custom routes and CSS, is in
 `examples/linked-notes/build.scm`.
 
+Forester pages can declare optional metadata at top level. `@summary` is plain
+text; `@published` and `@updated` use `YYYY-MM-DD` dates:
+
+```scheme
+@title{Algebra}
+@summary{A short introduction to algebra.}
+@published{2026-09-27}
+@updated{2026-09-28}
+@paragraph{...}
+```
+
+The Forester page reader removes these declarations from the body and stores
+them in the Grove page metadata alist. RSS uses the summary instead of the
+whole page when present. It emits `updated`, or `published` when no updated
+date is supplied, as an RFC 822 `pubDate` at midnight UTC. Sites that do not
+need metadata can continue to provide only a title and body.
+
 Forester's HTML renderer uses MathJax 4's combined TeX-to-CommonHTML component
 on pages that contain math. It loads the component with `defer`; projects can
 pass `#:mathjax-src` to `make-forester-html-renderer` to use a locally hosted
