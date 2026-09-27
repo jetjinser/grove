@@ -82,6 +82,19 @@
         (content->text (site-page-document page)
                        #:handlers rss-text-handlers))))
 
+(define (feed-pages pages)
+  (stable-sort
+    pages
+    (lambda (left right)
+      (let ((left-date (page-pub-date left))
+            (right-date (page-pub-date right)))
+        (cond
+          ((and left-date right-date)
+           (string>? left-date right-date))
+          (left-date #t)
+          (right-date #f)
+          (else #f))))))
+
 (define (channel-description site)
   (or (site-description site) (site-title site)))
 
@@ -120,7 +133,7 @@
                       (xml-escape (page-description page))
                       "</description>\n"
                       "    </item>")))
-                (site-pages site)))
+                (feed-pages (site-pages site))))
          (content
            (string-append
              "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"

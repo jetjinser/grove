@@ -217,4 +217,24 @@
          (not (string-contains feed "=======\n"))
          (not (string-contains feed "`x + 1`")))))
 
+(let* ((pages
+         (list
+           (make-site-page "older" "Older" (make-content-document '())
+                           #:metadata '((published . "2024-01-01")))
+           (make-site-page "undated" "Undated" (make-content-document '()))
+           (make-site-page "newer" "Newer" (make-content-document '())
+                           #:metadata '((published . "2025-01-01")))))
+       (feed
+         (artifact-content
+           (car (render-forest-rss
+                  (make-forest (make-site pages))
+                  #:site-url "https://notes.example"))))
+       (newer-position (string-contains feed "<title>Newer</title>"))
+       (older-position (string-contains feed "<title>Older</title>"))
+       (undated-position (string-contains feed "<title>Undated</title>")))
+  (test-assert "RSS lists dated pages newest first and undated pages last"
+    (and newer-position older-position undated-position
+         (< newer-position older-position)
+         (< older-position undated-position))))
+
 (test-end "forester site")

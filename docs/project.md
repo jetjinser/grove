@@ -164,7 +164,8 @@ each page's title and plain-text content. XML text is escaped, and the artifact
 declares all forest source paths as dependencies. The host must provide a
 correct public URL because local output paths alone cannot determine one. The
 optional cache key must change when the feed URL, route, or renderer behavior
-changes.
+changes. Dated entries are ordered newest first using `@updated`, then
+`@published`; undated entries follow in site order.
 
 The project title and optional `#:description` become site-level metadata.
 Forester HTML emits the description in the index page and uses it as a page
