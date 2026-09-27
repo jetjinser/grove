@@ -6,6 +6,7 @@
              (ice-9 textual-ports)
              (forester input scribble)
              (forester render html)
+             (forester render sitemap)
              (forester render text)
              (forester site)
              (grove input scribble)
@@ -55,14 +56,16 @@
             #:cache-key "linked-notes-html-v1")
           (make-forester-text-renderer
             #:prefix "text"
-            #:cache-key "linked-notes-text-v1"))
+            #:cache-key "linked-notes-text-v1")
+          (make-forester-sitemap-renderer
+            #:site-url "https://notes.example"
+            #:routes notes-routes
+            #:cache-key "linked-notes-sitemap-v1"))
     #:output-directory output-directory
     #:cache-key "linked-notes-project-v1"))
 
 (build-project notes-project)
 
-(display "Wrote HTML to ")
+(display "Wrote HTML, text, and sitemap outputs to ")
 (display output-directory)
-(display " and text to ")
-(display (string-append output-directory "/text"))
 (newline)

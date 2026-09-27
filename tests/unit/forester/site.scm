@@ -10,6 +10,7 @@
   #:use-module (language scribble spec)
   #:use-module (forester render html)
   #:use-module (forester render rss)
+  #:use-module (forester render sitemap)
   #:use-module (forester render text)
   #:use-module (forester site)
   #:use-module (grove build)
@@ -236,5 +237,37 @@
     (and newer-position older-position undated-position
          (< newer-position older-position)
          (< older-position undated-position))))
+
+(let* ((forest
+         (make-forest
+           (make-site
+             (list (make-site-page
+                     "a&b" "A and B" (make-content-document '())
+                     "notes/a&b.grv"))
+             #:sources '("notes/a&b.grv"))))
+       (artifact
+         (car (render-forest-sitemap
+                forest
+                #:site-url "https://notes.example/"
+                #:sitemap-path "meta/sitemap.xml"
+                #:routes
+                (make-html-routes
+                  #:page-path
+                  (lambda (id) (string-append "notes/" id ".html"))
+                  #:index-path "home/index.html"))))
+       (content (artifact-content artifact)))
+  (test-equal "sitemap renderer supports a configured artifact path"
+    "meta/sitemap.xml"
+    (artifact-path artifact))
+  (test-equal "sitemap depends on every site source"
+    '("notes/a&b.grv")
+    (artifact-sources artifact))
+  (test-assert "sitemap includes the index and routed page URLs"
+    (and (string-contains
+           content
+           "<loc>https://notes.example/home/index.html</loc>")
+         (string-contains
+           content
+           "<loc>https://notes.example/notes/a&amp;b.html</loc>"))))
 
 (test-end "forester site")

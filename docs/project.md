@@ -167,6 +167,24 @@ optional cache key must change when the feed URL, route, or renderer behavior
 changes. Dated entries are ordered newest first using `@updated`, then
 `@published`; undated entries follow in site order.
 
+Forester can also emit a sitemap as an independent target:
+
+```scheme
+(use-modules (forester render sitemap))
+
+(make-forester-sitemap-renderer
+  #:site-url "https://notes.example"
+  #:routes routes
+  #:sitemap-path "sitemap.xml"
+  #:cache-key "notes-sitemap-v1")
+```
+
+The sitemap contains the configured index URL and every routed page URL. It
+uses the same public site origin and HTML routes as the RSS renderer, escapes
+XML text, and declares all forest inputs as artifact dependencies. Include it
+in `#:renderers` beside HTML, text, or RSS; the renderer writes `sitemap.xml`
+by default.
+
 The project title and optional `#:description` become site-level metadata.
 Forester HTML emits the description in the index page and uses it as a page
 description when a page has no `@summary`. RSS uses it for the channel

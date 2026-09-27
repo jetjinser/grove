@@ -25,8 +25,8 @@ guile -L modules examples/linked-notes/build.scm
 ```
 
 By default, the build writes HTML to `/tmp/grove-linked-notes` and plain text
-to `/tmp/grove-linked-notes/text`. Pass an output directory as the first
-argument to choose another location.
+to `/tmp/grove-linked-notes/text`, plus `sitemap.xml`. Pass an output directory
+as the first argument to choose another location.
 
 The example shows the main project pieces:
 
@@ -34,7 +34,7 @@ The example shows the main project pieces:
 - `source/modules/commands.grv` defines shared Scheme commands loaded before
   pages are read.
 - Forester turns page links into forward and reverse links.
-- HTML and plain-text renderers write separate targets.
+- HTML, plain-text, and sitemap renderers write separate targets.
 - The HTML style declares `style.css` as both a project input and an artifact
   dependency, so edits are reported and rebuild the stylesheet output.
 
