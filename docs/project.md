@@ -60,3 +60,8 @@ receive the Grove site directly.
 
 The complete runnable example, including custom routes and CSS, is in
 `examples/linked-notes/build.scm`.
+
+Forester's HTML renderer uses MathJax 4's combined TeX-to-CommonHTML component
+on pages that contain math. It loads the component with `defer`; projects can
+pass `#:mathjax-src` to `make-forester-html-renderer` to use a locally hosted
+copy or another compatible MathJax build, and can pass `#f` to disable it.

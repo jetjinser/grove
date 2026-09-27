@@ -14,6 +14,7 @@
   #:use-module (grove build)
   #:use-module (grove ir)
   #:use-module (grove render html)
+  #:use-module (grove render html routes)
   #:use-module (grove output)
   #:use-module (grove site))
 
@@ -69,7 +70,9 @@
   (test-assert "display math keeps TeX delimiters"
     (string-contains algebra-html "\\[a^2+b^2=c^2\\]"))
   (test-assert "HTML loads MathJax"
-    (string-contains algebra-html "mathjax@3.2.2/es5/tex-chtml.js"))
+    (string-contains algebra-html "mathjax@4/tex-chtml.js"))
+  (test-assert "HTML defers MathJax until the document is ready"
+    (string-contains algebra-html "defer=\"defer\""))
   (test-assert "MathJax script has an explicit closing tag"
     (string-contains algebra-html "</script>"))
   (test-assert "HTML text is escaped"
@@ -103,6 +106,27 @@
     (string-contains algebra-html "<html>"))
   (test-assert "text renderer produces independent text artifacts"
     (string-contains algebra-text "are useful")))
+
+(let* ((html (forest->html (make-forest (make-site (list algebra limits)))))
+       (limits-html (assoc-ref html "limits")))
+  (test-assert "pages without mathematics do not load MathJax"
+    (not (string-contains limits-html "mathjax"))))
+
+(let* ((forest (make-forest (make-site (list algebra limits))))
+       (html (forest->html forest
+               #:routes (make-html-routes
+                          #:page-path
+                          (lambda (id)
+                            (string-append "notes/" id ".html")))
+               #:mathjax-src "assets/mathjax.js"))
+       (algebra-html (assoc-ref html "algebra")))
+  (test-assert "projects can provide a local MathJax script"
+    (string-contains algebra-html "src=\"/assets/mathjax.js\"")))
+
+(let* ((forest (make-forest (make-site (list algebra limits))))
+       (html (forest->html forest #:mathjax-src #f)))
+  (test-assert "projects can disable browser-side math rendering"
+    (not (string-contains (assoc-ref html "algebra") "mathjax"))))
 
 (test-error "unresolved links fail site analysis" #t
   (make-forest
