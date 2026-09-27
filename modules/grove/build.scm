@@ -7,7 +7,14 @@
   #:export (build-site
             render-site))
 
-(define* (build-site sources read-page #:key (title "Site"))
+(define* (build-site sources read-page #:key
+                     (title "Site")
+                     (module-sources '())
+                     (load-modules #f))
+  (unless (null? module-sources)
+    (unless (procedure? load-modules)
+      (error "site module sources require a module loader" module-sources))
+    (load-modules module-sources))
   (make-site (map read-page sources) #:title title))
 
 (define (render-site site renderers)

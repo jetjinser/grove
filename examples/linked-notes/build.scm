@@ -22,6 +22,12 @@
       "/tmp/grove-linked-notes"))
 
 (define source-directory (string-append examples-directory "/source"))
+(define module-sources
+  (collect-directory
+    (string-append source-directory "/modules")
+    (lambda (filename)
+      (string-suffix? ".grv" filename))))
+(define read-document (make-scribble-document-reader))
 
 (define notes-site
   (build-site
@@ -29,9 +35,10 @@
       source-directory
       (lambda (filename)
         (string-suffix? ".grv" filename)))
-    (make-forester-page-reader
-      (make-scribble-document-reader))
-    #:title "Linked Notes"))
+    (make-forester-page-reader read-document)
+    #:title "Linked Notes"
+    #:module-sources module-sources
+    #:load-modules load-scribble-modules!))
 
 (define notes-forest (make-forest notes-site))
 

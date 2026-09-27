@@ -24,6 +24,7 @@
 (define +test-resources+
   '("unit/scribble/read.scm"
     "unit/scribble/parse.scm"
+    "unit/grove/build.scm"
     "unit/forester/site.scm"))
 
 (define test-environment
