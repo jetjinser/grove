@@ -22,15 +22,16 @@
 (define source-directory (string-append examples-directory "/source"))
 (define read-document (make-scribble-document-reader))
 
+(define notes-css
+  (call-with-input-file
+    (string-append examples-directory "/style.css")
+    get-string-all))
+
 (define notes-style
   (make-html-style
     #:stylesheets
     (list
-      (make-artifact
-        "style.css"
-        (call-with-input-file
-          (string-append examples-directory "/style.css")
-          get-string-all)))))
+      (make-artifact "style.css" notes-css))))
 
 (define notes-routes
   (make-html-routes
@@ -48,10 +49,14 @@
     #:analyze make-forest
     #:renderers
     (list (make-forester-html-renderer
-            #:style notes-style #:routes notes-routes)
-          (lambda (forest)
-            (prefix-artifacts "text" (render-forest-text forest))))
-    #:output-directory output-directory))
+            #:style notes-style
+            #:routes notes-routes
+            #:cache-key (string-append "linked-notes-html-v1:" notes-css))
+          (make-forester-text-renderer
+            #:prefix "text"
+            #:cache-key "linked-notes-text-v1"))
+    #:output-directory output-directory
+    #:cache-key "linked-notes-project-v1"))
 
 (build-project notes-project)
 

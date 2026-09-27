@@ -11,7 +11,10 @@
             make-forest
             forest-site
             forest-links
-            forest-backlinks))
+            forest-backlinks
+            forest-source-paths
+            forest-module-paths
+            forest-page-source-paths))
 
 (define (links-in content)
   (cond
@@ -62,3 +65,25 @@
                     (forest-links forest (site-page-id source))
                     equal?))
           (site-pages (forest-site forest))))
+
+(define (forest-source-paths forest)
+  (let ((site (forest-site forest)))
+    (delete-duplicates
+      (append (site-sources site)
+              (filter-map site-page-source (site-pages site)))
+      string=?)))
+
+(define (forest-module-paths forest)
+  (let* ((site (forest-site forest))
+         (page-paths (filter-map site-page-source (site-pages site))))
+    (filter (lambda (path) (not (member path page-paths string=?)))
+            (site-sources site))))
+
+(define (forest-page-source-paths forest page)
+  (delete-duplicates
+    (append (forest-module-paths forest)
+            (filter-map site-page-source
+                        (cons page
+                              (forest-backlinks forest
+                                                (site-page-id page)))))
+    string=?))

@@ -50,7 +50,10 @@
       "@use-modules[(tests unit forester linked commands)]\n@title{Limits}\n@paragraph{See @link[\"algebra\"]{algebra}.}")
     (write-test-file
       (string-append source-directory "/unlinked.grv")
-      "@use-modules[(tests unit forester linked commands)]\n@title{Unlinked}\n@paragraph{Standalone.}"))
+      "@use-modules[(tests unit forester linked commands)]\n@title{Unlinked}\n@paragraph{Standalone.}")
+    (write-test-file
+      (string-append source-directory "/orphan.grv")
+      "@use-modules[(tests unit forester linked commands)]\n@title{Orphan}\n@paragraph{Unreferenced.}"))
   (lambda ()
     (let* ((project
              (make-project
@@ -69,9 +72,7 @@
                          #:page-path
                          (lambda (id)
                            (string-append "notes/" id ".html"))))
-                     (lambda (forest)
-                       (prefix-artifacts "text"
-                         (render-forest-text forest))))
+                     (make-forester-text-renderer #:prefix "text"))
                #:output-directory output-directory))
            (artifacts (build-project project))
            (paths (map artifact-path artifacts))
@@ -88,7 +89,8 @@
                (list (string-append module-directory "/commands.grv")
                      (string-append source-directory "/algebra.grv")
                      (string-append source-directory "/limits.grv")
-                     (string-append source-directory "/unlinked.grv")))
+                     (string-append source-directory "/unlinked.grv")
+                     (string-append source-directory "/orphan.grv")))
              (expected-algebra-html-sources
                (list (string-append module-directory "/commands.grv")
                      (string-append source-directory "/algebra.grv")
@@ -113,7 +115,7 @@
           expected-algebra-html-sources
           (artifact-sources algebra-html-artifact))
         (test-equal "prefixed text artifacts retain source dependencies"
-          expected-sources
+          expected-algebra-html-sources
           (artifact-sources algebra-text-artifact)))
       (test-assert "project composes HTML and text renderer outputs"
         (and (member "index.html" paths)
@@ -137,17 +139,22 @@
       (let* ((incremental-project
                (make-project
                  #:source-directory source-directory
+                 #:module-directory module-directory
+                 #:load-modules load-scribble-modules!
                  #:read-page
                  (make-forester-page-reader (make-scribble-document-reader))
                  #:analyze make-forest
                  #:renderers
                  (list (make-forester-html-renderer
-                         #:routes
+                        #:routes
                          (make-html-routes
                            #:page-path
                            (lambda (id)
                              (string-append "notes/" id ".html")))
-                         #:cache-key "forester-html-test-v1"))
+                         #:cache-key "forester-html-test-v1")
+                       (make-forester-text-renderer
+                         #:prefix "text"
+                         #:cache-key "forester-text-test-v1"))
                  #:output-directory cache-output-directory
                  #:cache-key "forester-project-test-v1"))
              (first (build-project/report incremental-project)))
@@ -158,7 +165,8 @@
           "@use-modules[(tests unit forester linked commands)]\n@title{Unlinked}\n@paragraph{Changed standalone page.}")
         (let ((updated (build-project/report incremental-project)))
           (test-equal "unrelated pages are omitted from affected HTML outputs"
-            '("index.html" "notes/unlinked.html")
+            '("index.html" "notes/unlinked.html" "text/index.txt"
+              "text/unlinked.txt")
             (build-report-affected-artifacts updated))
           (test-assert "partial Forester render keeps backlink pages current"
             (string-contains
@@ -177,14 +185,50 @@
         (let ((changed-links (build-project/report incremental-project)))
           (test-equal "new links update the newly linked page's backlinks"
             '("index.html" "notes/algebra.html" "notes/limits.html"
-              "notes/unlinked.html")
+              "notes/unlinked.html" "text/index.txt" "text/algebra.txt"
+              "text/limits.txt" "text/unlinked.txt")
             (build-report-affected-artifacts changed-links))
           (test-assert "new backlinks appear in the target page"
             (string-contains
               (read-test-file
                 (string-append cache-output-directory
                                "/notes/unlinked.html"))
+              "Algebra"))
+          (test-assert "text target updates new backlink content"
+            (string-contains
+              (read-test-file
+                (string-append cache-output-directory "/text/unlinked.txt"))
               "Algebra")))
+        (write-test-file
+          (string-append module-directory "/commands.grv")
+          (string-append
+            "(define-module (tests unit forester linked commands)\n"
+            "  #:use-module (forester commands)\n"
+            "  #:re-export (link title))\n"
+            ";; changed module source\n"))
+        (let ((changed-module (build-project/report incremental-project)))
+          (test-equal "shared module changes are tracked as build inputs"
+            (list (string-append module-directory "/commands.grv"))
+            (build-report-modified-sources changed-module))
+          (test-equal "shared module changes affect all rendered pages"
+            '("index.html" "notes/algebra.html" "notes/limits.html"
+              "notes/orphan.html" "notes/unlinked.html" "text/index.txt"
+              "text/algebra.txt" "text/limits.txt" "text/orphan.txt"
+              "text/unlinked.txt")
+            (build-report-affected-artifacts changed-module)))
+        (delete-file (string-append source-directory "/orphan.grv"))
+        (let ((removed-page (build-project/report incremental-project)))
+          (test-equal "removing a page affects indexes and its own outputs"
+            '("index.html" "text/index.txt" "notes/orphan.html"
+              "text/orphan.txt")
+            (build-report-affected-artifacts removed-page))
+          (test-assert "removed page output is cleaned from HTML and text targets"
+            (and (not (file-exists?
+                       (string-append cache-output-directory
+                                      "/notes/orphan.html")))
+                 (not (file-exists?
+                       (string-append cache-output-directory
+                                      "/text/orphan.txt"))))))
       (write-test-file
         (string-append source-directory "/broken.grv")
         (string-append
@@ -202,10 +246,12 @@
             (string-append output-directory "/notes/algebra.html")
             (string-append output-directory "/notes/limits.html")
             (string-append output-directory "/notes/unlinked.html")
+            (string-append output-directory "/notes/orphan.html")
             (string-append output-directory "/text/index.txt")
             (string-append output-directory "/text/algebra.txt")
             (string-append output-directory "/text/limits.txt")
             (string-append output-directory "/text/unlinked.txt")
+            (string-append output-directory "/text/orphan.txt")
             (string-append output-directory "/.grove-artifacts")
             (string-append output-directory "/.grove-artifacts.tmp")
             (string-append output-directory "/.grove-build-state")
@@ -214,6 +260,12 @@
             (string-append cache-output-directory "/notes/algebra.html")
             (string-append cache-output-directory "/notes/limits.html")
             (string-append cache-output-directory "/notes/unlinked.html")
+            (string-append cache-output-directory "/notes/orphan.html")
+            (string-append cache-output-directory "/text/index.txt")
+            (string-append cache-output-directory "/text/algebra.txt")
+            (string-append cache-output-directory "/text/limits.txt")
+            (string-append cache-output-directory "/text/unlinked.txt")
+            (string-append cache-output-directory "/text/orphan.txt")
             (string-append cache-output-directory "/.grove-artifacts")
             (string-append cache-output-directory "/.grove-artifacts.tmp")
             (string-append cache-output-directory "/.grove-build-state")
@@ -222,6 +274,7 @@
             (string-append source-directory "/algebra.grv")
             (string-append source-directory "/limits.grv")
             (string-append source-directory "/unlinked.grv")
+            (string-append source-directory "/orphan.grv")
             (string-append source-directory "/broken.grv")))
     (for-each
       (lambda (path)
@@ -230,6 +283,7 @@
       (list (string-append output-directory "/notes")
             (string-append output-directory "/text")
             (string-append cache-output-directory "/notes")
+            (string-append cache-output-directory "/text")
             cache-output-directory
             output-directory
             module-directory

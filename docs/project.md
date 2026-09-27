@@ -65,10 +65,10 @@ and `.grove-build-state` path are reserved for Grove metadata.
 
 Pages may carry an optional source path. A built site also carries its page and
 module input paths, and artifacts can declare which paths they depend on.
-Forester renderers conservatively mark their outputs as depending on every
-input, since reverse links can make a change to any page affect every page.
-Custom renderers can pass a source-path list as the third argument to
-`make-artifact`; omitting it means dependencies are unknown.
+Forester indexes depend on all site inputs; each rendered page depends on its
+own source, incoming-link sources that supply backlink titles, and shared
+Scheme module sources. Custom renderers can pass a source-path list as the
+third argument to `make-artifact`; omitting it means dependencies are unknown.
 This provenance lets Grove explain which outputs may be affected by source
 changes. Grove still reads and analyzes the complete site on each build.
 

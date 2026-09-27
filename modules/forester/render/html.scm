@@ -127,28 +127,6 @@
         routes
         mathjax-src))))
 
-(define (forest-source-paths forest)
-  (delete-duplicates
-    (append (site-sources (forest-site forest))
-            (filter-map site-page-source
-                        (site-pages (forest-site forest))))
-    string=?))
-
-(define (forest-module-paths forest)
-  (let ((page-paths (filter-map site-page-source
-                               (site-pages (forest-site forest)))))
-    (filter (lambda (path) (not (member path page-paths string=?)))
-            (site-sources (forest-site forest)))))
-
-(define (page-source-paths forest page)
-  (delete-duplicates
-    (append (forest-module-paths forest)
-            (filter-map site-page-source
-                        (cons page
-                              (forest-backlinks forest
-                                                (site-page-id page)))))
-    string=?))
-
 (define (find-artifact artifacts path)
   (find (lambda (artifact) (string=? (artifact-path artifact) path))
         artifacts))
@@ -179,7 +157,7 @@
          (page-artifacts
            (map (lambda (page)
                   (let* ((path (html-page-path routes (site-page-id page)))
-                         (sources (page-source-paths forest page))
+                         (sources (forest-page-source-paths forest page))
                          (old (find-artifact old-artifacts path))
                          (current (make-artifact path "" sources)))
                     (if (artifact-current? current old changed)
@@ -237,7 +215,7 @@
              (make-artifact
                (html-page-path routes (site-page-id page))
                (page-html forest page style routes mathjax-src)
-               (page-source-paths forest page)))
+               (forest-page-source-paths forest page)))
            (site-pages (forest-site forest))))))
 
 (define* (make-forester-html-renderer #:key

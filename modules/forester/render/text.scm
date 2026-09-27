@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester render text)
+  #:use-module (grove build)
   #:use-module (forester site)
   #:use-module (grove ir)
   #:use-module (grove output)
@@ -12,7 +13,8 @@
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-14)
   #:export (forest->text
-            render-forest-text))
+            render-forest-text
+            make-forester-text-renderer))
 
 (define link-handlers
   `((link . ,(lambda (element body)
@@ -56,6 +58,49 @@
                      (string-append "- " (page-reference source) "\n"))
                    incoming)))))))
 
+(define (output-path prefix name)
+  (if prefix
+      (string-append prefix "/" name)
+      name))
+
+(define (find-artifact artifacts path)
+  (find (lambda (artifact) (string=? (artifact-path artifact) path))
+        artifacts))
+
+(define (artifact-current? current previous changed)
+  (let ((sources (artifact-sources current)))
+    (and previous
+         (equal? sources (artifact-sources previous))
+         (not (and sources
+                   (any (lambda (path) (member path sources string=?))
+                        changed))))))
+
+(define (render-forest-text-changed forest prefix changed old-artifacts)
+  (let* ((site (forest-site forest))
+         (index-path (output-path prefix "index.txt"))
+         (index-sources (forest-source-paths forest))
+         (old-index (find-artifact old-artifacts index-path))
+         (index-current (make-artifact index-path "" index-sources))
+         (index-artifact
+           (make-artifact index-path
+                          (if (artifact-current? index-current old-index changed)
+                              (artifact-content old-index)
+                              (index->text forest))
+                          index-sources))
+         (page-artifacts
+           (map (lambda (page)
+                  (let* ((path (output-path prefix
+                                            (string-append
+                                              (site-page-id page) ".txt")))
+                         (sources (forest-page-source-paths forest page))
+                         (old (find-artifact old-artifacts path))
+                         (current (make-artifact path "" sources)))
+                    (if (artifact-current? current old changed)
+                        old
+                        (make-artifact path (page->text forest page) sources))))
+                (site-pages site))))
+    (cons index-artifact page-artifacts)))
+
 (define (forest->text forest)
   (unless (forest? forest)
     (error "Forester text renderer requires a forest" forest))
@@ -68,14 +113,30 @@
                (site-pages site)))))
 
 (define (render-forest-text forest)
-  (let ((sources
-          (delete-duplicates
-            (append (site-sources (forest-site forest))
-                    (filter-map site-page-source
-                                (site-pages (forest-site forest))))
-            string=?)))
-    (map (lambda (page)
-           (make-artifact (string-append (car page) ".txt")
-                          (cdr page)
-                          sources))
-         (forest->text forest))))
+  (let* ((site (forest-site forest))
+         (sources (forest-source-paths forest)))
+    (cons
+      (make-artifact "index.txt" (index->text forest) sources)
+      (map (lambda (page)
+             (make-artifact
+               (string-append (site-page-id page) ".txt")
+               (page->text forest page)
+               (forest-page-source-paths forest page)))
+           (site-pages site)))))
+
+(define* (make-forester-text-renderer #:key (prefix #f) (cache-key #f))
+  (unless (or (not prefix) (artifact-path? prefix))
+    (error "Forester text output prefix must be a relative path or #f" prefix))
+  (let ((render (lambda (forest)
+                  (let ((artifacts (render-forest-text forest)))
+                    (if prefix
+                        (prefix-artifacts prefix artifacts)
+                        artifacts)))))
+    (if cache-key
+        (make-cached-renderer
+          render
+          #:cache-key cache-key
+          #:render-changed
+          (lambda (forest changed dirty-paths old-artifacts)
+            (render-forest-text-changed forest prefix changed old-artifacts)))
+        render)))
