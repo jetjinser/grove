@@ -85,6 +85,50 @@
     3
     (length (forest-incoming-references forest "destination"))))
 
+(define (bfs-reachable-page-ids forest source-id)
+  (let visit ((pending (list source-id)) (visited '()))
+    (if (null? pending)
+        (map site-page-id
+             (filter (lambda (page)
+                       (and (not (equal? (site-page-id page) source-id))
+                            (member (site-page-id page) visited equal?)))
+                     (site-pages (forest-site forest))))
+        (let ((current (car pending)))
+          (if (member current visited equal?)
+              (visit (cdr pending) visited)
+              (visit
+                (append
+                  (cdr pending)
+                  (map forest-reference-target-page-id
+                       (forest-outgoing-references forest current)))
+                (cons current visited)))))))
+
+(let* ((isolated (page-with-links "isolated" '()))
+       (hub (page-with-links "hub" '("left" "right")))
+       (left (page-with-links "left" '("merge")))
+       (right (page-with-links "right" '("merge")))
+       (merge (page-with-links "merge" '("hub")))
+       (forest (make-forest (make-site (list isolated hub left right merge)))))
+  (test-equal "reachability includes the transitive closure once in site order"
+    '("left" "right" "merge")
+    (map site-page-id (forest-reachable-pages forest "hub")))
+  (test-equal "reachability excludes the source even when a cycle returns to it"
+    '("hub" "left" "right")
+    (map site-page-id (forest-reachable-pages forest "merge")))
+  (test-equal "isolated pages have no reachable pages"
+    '()
+    (forest-reachable-pages forest "isolated"))
+  (test-equal "relation reachability agrees with breadth-first traversal"
+    (map (lambda (page)
+           (cons (site-page-id page)
+                 (bfs-reachable-page-ids forest (site-page-id page))))
+         (site-pages (forest-site forest)))
+    (map (lambda (page)
+           (cons (site-page-id page)
+                 (map site-page-id
+                      (forest-reachable-pages forest (site-page-id page)))))
+         (site-pages (forest-site forest)))))
+
 (let* ((paragraph-node
          (car (content-document-children (site-page-document algebra))))
        (link-node (cadr (content-element-children paragraph-node)))
