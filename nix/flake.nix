@@ -26,10 +26,16 @@
       ];
 
       perSystem =
-        { self', pkgs, ... }:
         {
-          packages = {
-            blue = pkgs.callPackage ./pkgs/blue.nix { };
+          self',
+          pkgs,
+          lib,
+          ...
+        }:
+        {
+          packages = lib.packagesFromDirectoryRecursive {
+            inherit (pkgs) callPackage;
+            directory = ./pkgs;
           };
           devshells.default = {
             packages = with pkgs; [
@@ -38,6 +44,7 @@
               guile
               guile-quickcheck
               self'.packages.blue
+              self'.packages.faster-minikanren
 
               reuse
             ];
@@ -45,6 +52,10 @@
               {
                 name = "GUILE_LOAD_PATH";
                 prefix = "$DEVSHELL_DIR/${pkgs.guile.siteDir}";
+              }
+              {
+                name = "GUILE_LOAD_COMPILED_PATH";
+                prefix = "$DEVSHELL_DIR/${pkgs.guile.siteCcacheDir}";
               }
             ];
           };
