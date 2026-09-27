@@ -11,6 +11,7 @@
   #:use-module (forester input scribble)
   #:use-module (forester render html)
   #:use-module (forester render rss)
+  #:use-module (forester render sitemap)
   #:use-module (forester render text)
   #:use-module (forester site)
   #:use-module (grove input scribble)
@@ -94,6 +95,13 @@
                          #:page-path
                          (lambda (id)
                            (string-append "notes/" id ".html"))))
+                     (make-forester-sitemap-renderer
+                       #:site-url "https://notes.example"
+                       #:routes
+                       (make-html-routes
+                         #:page-path
+                         (lambda (id)
+                           (string-append "notes/" id ".html"))))
                      (make-forester-text-renderer #:prefix "text"))
                #:output-directory output-directory))
            (artifacts (build-project project))
@@ -108,7 +116,10 @@
              (read-test-file
                (string-append output-directory "/text/algebra.txt")))
            (rss-feed
-             (read-test-file (string-append output-directory "/feed.xml"))))
+             (read-test-file (string-append output-directory "/feed.xml")))
+           (sitemap
+             (read-test-file
+               (string-append output-directory "/sitemap.xml"))))
       (test-assert "missing page titles identify the source path"
         (exception-contains?
           (lambda ()
@@ -187,10 +198,15 @@
       (test-assert "project composes HTML, RSS, and text renderer outputs"
         (and (member "index.html" paths)
              (member "feed.xml" paths)
+             (member "sitemap.xml" paths)
              (member "notes/algebra.html" paths)
              (member "notes/limits.html" paths)
              (member "text/index.txt" paths)
              (member "text/algebra.txt" paths)))
+      (test-assert "sitemap output uses the same routed page URLs"
+        (and (string-contains
+               sitemap "https://notes.example/notes/algebra.html")
+             (string-contains sitemap "<lastmod>2026-09-28</lastmod>")))
       (test-assert "HTML project output resolves page links"
         (string-contains algebra-html
           "href=\"/notes/limits.html\">limits</a>"))
@@ -312,6 +328,7 @@
           (delete-file path)))
       (list (string-append output-directory "/index.html")
             (string-append output-directory "/feed.xml")
+            (string-append output-directory "/sitemap.xml")
             (string-append output-directory "/notes/algebra.html")
             (string-append output-directory "/notes/limits.html")
             (string-append output-directory "/notes/unlinked.html")

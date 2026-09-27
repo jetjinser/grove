@@ -6,6 +6,7 @@
              (ice-9 textual-ports)
              (forester input scribble)
              (forester render html)
+             (forester render rss)
              (forester render sitemap)
              (forester render text)
              (forester render text routes)
@@ -65,6 +66,10 @@
             #:prefix "text"
             #:routes notes-text-routes
             #:cache-key "linked-notes-text-v1")
+          (make-forester-rss-renderer
+            #:site-url "https://notes.example"
+            #:routes notes-routes
+            #:cache-key "linked-notes-rss-v1")
           (make-forester-sitemap-renderer
             #:site-url "https://notes.example"
             #:routes notes-routes
@@ -74,6 +79,6 @@
 
 (build-project notes-project)
 
-(display "Wrote HTML, text, and sitemap outputs to ")
+(display "Wrote HTML, text, RSS, and sitemap outputs to ")
 (display output-directory)
 (newline)
