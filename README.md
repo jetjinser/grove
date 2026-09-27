@@ -50,6 +50,8 @@ linked-page analysis and HTML, text, and RSS renderers. See
 [`docs/project.md`](docs/project.md) for project configuration, source
 dependencies, cache behavior, routing, and MathJax. See
 [`docs/ir.md`](docs/ir.md) for the Grove content records.
+[`docs/architecture.md`](docs/architecture.md) records the Grove/Forester
+dependency and packaging boundary.
 
 ## Checks
 

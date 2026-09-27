@@ -71,7 +71,9 @@ owns its forest/link model and its HTML/text renderers. Forester currently
 uses Grove's site, IR, and artifact types, so it is a library layered on Grove
 interfaces rather than a separately packaged implementation. Keep that
 dependency explicit; split it into a neutral shared interface only if a
-second host actually needs to construct or consume those values.
+second host actually needs to construct or consume those values. The current
+dependency and packaging decision is recorded in
+[`architecture.md`](architecture.md).
 
 The default collector selects `.grv` files directly inside each configured
 directory. Supply `#:source-filter` or `#:module-filter` to change that
