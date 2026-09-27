@@ -194,4 +194,27 @@
     (list (make-site-page "same" "First" (evaluate-document "first"))
           (make-site-page "same" "Second" (evaluate-document "second")))))
 
+(let* ((page
+         (make-site-page
+           "preview" "Preview"
+           (make-content-document
+             (list
+               (make-content-element 'heading '("Details"))
+               (make-content-element
+                 'paragraph
+                 (list "Run " (make-content-element 'code '("x + 1")) "."))
+               (make-content-element 'code-block '("(display \"hi\")"))))))
+       (feed
+         (artifact-content
+           (car (render-forest-rss
+                  (make-forest (make-site (list page)))
+                  #:site-url "https://notes.example")))))
+  (test-assert "RSS fallback descriptions omit text-target markup"
+    (and (string-contains feed "Details")
+         (string-contains feed "Run x + 1.")
+         (string-contains feed "(display")
+         (not (string-contains feed "```"))
+         (not (string-contains feed "=======\n"))
+         (not (string-contains feed "`x + 1`")))))
+
 (test-end "forester site")

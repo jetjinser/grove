@@ -49,6 +49,24 @@
   (or (assq-ref (site-page-metadata page) 'updated)
       (assq-ref (site-page-metadata page) 'published)))
 
+(define rss-text-handlers
+  `((heading . ,(lambda (_ body) (string-append body "\n")))
+    (blockquote . ,(lambda (_ body)
+                     (string-append
+                       (string-join
+                         (map (lambda (line) (string-append "> " line))
+                              (string-split body #\newline))
+                         "\n")
+                       "\n")))
+    (item . ,(lambda (_ body) (string-append "- " body "\n")))
+    (code . ,(lambda (_ body) body))
+    (code-block . ,(lambda (_ body) (string-append body "\n")))
+    (math . ,(lambda (element _)
+               (string-append
+                 (content-verbatim-string
+                   (content-element-children element))
+                 "\n")))))
+
 (define (rss-date iso-date)
   (let* ((parsed (string->date iso-date "~Y-~m-~d"))
          (utc-date (make-date 0 0 0 0
@@ -61,7 +79,8 @@
 (define (page-description page)
   (or (assq-ref (site-page-metadata page) 'summary)
       (string-trim-both
-        (content->text (site-page-document page)))))
+        (content->text (site-page-document page)
+                       #:handlers rss-text-handlers))))
 
 (define (channel-description site)
   (or (site-description site) (site-title site)))
