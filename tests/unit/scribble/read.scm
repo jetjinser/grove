@@ -3,14 +3,21 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit scribble read)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-64)
   #:use-module (rnrs io ports)
   #:use-module (system base language)
   #:use-module (language scheme spec)
-  #:use-module (language scribble parser))
+  #:use-module (language scribble parser)
+  #:use-module ((language scribble spec)
+                #:select (scribble scribble-evaluate-document))
+  #:use-module (grove ir))
 
 (define (read-with-scheme-language env input)
   ((language-reader scheme) (open-input-string input) env))
+
+(define (evaluate-document env input)
+  (scribble-evaluate-document (open-input-string input) env))
 
 ;; seems no need to test read individually?
 
@@ -123,5 +130,46 @@
   (test-equal "native Scheme reader can be restored"
     '(+ 1 2)
     (syntax->datum (read-with-scheme-language env "(+ 1 2)"))))
+
+(let ((env (default-environment scribble)))
+  (let* ((document
+           (evaluate-document
+             env
+             "@use-modules[(forester commands)]\n@(define note-label \"from Scheme\")\n@title{@|note-label|}\n@link[\"target\"]{Target}"))
+         (children (content-document-children document))
+         (elements (filter content-element? children))
+         (title (car elements))
+         (link (last elements)))
+    (test-equal "source can import a module before using its bindings"
+      'link
+      (content-element-kind link))
+    (test-equal "source definitions are available to later at-expressions"
+      "from Scheme"
+      (content-verbatim-string (content-element-children title)))
+    (test-equal "module import expressions do not become document content"
+      2
+      (length (filter content-element? children))))
+
+  (let* ((document
+           (evaluate-document env "@paragraph{@|note-label|}"))
+         (paragraph
+           (car (content-document-children document))))
+    (test-equal "separate documents can share their Scheme environment"
+      "from Scheme"
+      (content-verbatim-string
+        (content-element-children paragraph))))
+
+  (let ((document
+          (evaluate-document
+            env
+            "@(define evaluation-order '())@(set! evaluation-order (cons 'first evaluation-order))@bold{body}@(set! evaluation-order (cons 'last evaluation-order))")))
+    (test-equal "non-content Scheme results are ignored"
+      '(bold)
+      (map content-element-kind
+           (filter content-element?
+                   (content-document-children document))))
+    (test-equal "Scheme expressions run in source order"
+      '(last first)
+      (module-ref env 'evaluation-order))))
 
 (test-end "scribble read")

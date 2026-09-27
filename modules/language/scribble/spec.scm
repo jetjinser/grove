@@ -46,13 +46,12 @@
         (let ((value (eval (fragment->expression (car fragments))
                            environment)))
           (cond
-            ((eq? value (if #f #f))
-             (loop (cdr fragments) children))
             ((content-value? value)
              (loop (cdr fragments) (cons value children)))
+            ;; Definitions, imports, and other Scheme forms may return values
+            ;; that are not document content.
             (else
-             (error "Scribble expression did not produce content"
-                    source value)))))))
+             (loop (cdr fragments) children)))))))
 
 (define-language scribble
   #:title      "Scribble"
