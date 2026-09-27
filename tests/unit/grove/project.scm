@@ -87,8 +87,13 @@
           "2"
           (call-with-input-file output-path get-string-all)))))
   (lambda ()
-    (when (file-exists? output-path)
-      (delete-file output-path))
+    (for-each
+      (lambda (path)
+        (when (file-exists? path)
+          (delete-file path)))
+      (list output-path
+            (string-append output-directory "/.grove-artifacts")
+            (string-append output-directory "/.grove-artifacts.tmp")))
     (let ((text-directory (string-append output-directory "/text")))
       (when (file-exists? text-directory)
         (rmdir text-directory)))

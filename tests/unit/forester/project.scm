@@ -117,6 +117,8 @@
             (string-append output-directory "/text/index.txt")
             (string-append output-directory "/text/algebra.txt")
             (string-append output-directory "/text/limits.txt")
+            (string-append output-directory "/.grove-artifacts")
+            (string-append output-directory "/.grove-artifacts.tmp")
             (string-append module-directory "/commands.grv")
             (string-append source-directory "/algebra.grv")
             (string-append source-directory "/limits.grv")

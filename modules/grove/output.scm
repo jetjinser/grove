@@ -53,15 +53,69 @@
         (ensure-directory parent))
       (mkdir directory))))
 
+(define artifact-manifest-name ".grove-artifacts")
+(define artifact-manifest-temp-name ".grove-artifacts.tmp")
+
+(define (reserved-artifact-path? path)
+  (any (lambda (reserved)
+         (or (string=? path reserved)
+             (string-prefix? (string-append reserved "/") path)))
+       (list artifact-manifest-name artifact-manifest-temp-name)))
+
+(define (read-artifact-manifest path)
+  (if (not (file-exists? path))
+      '()
+      (call-with-input-file path
+        (lambda (port)
+          (let ((manifest (read port)))
+            (unless (and (list? manifest)
+                         (= (length manifest) 2)
+                         (eq? (car manifest) 'grove-artifacts-v1)
+                         (list? (cadr manifest))
+                         (every (lambda (artifact-path)
+                                  (and (artifact-path? artifact-path)
+                                       (not (reserved-artifact-path?
+                                              artifact-path))))
+                                (cadr manifest))
+                         (eof-object? (read port)))
+              (error "invalid Grove artifact manifest" path manifest))
+            (cadr manifest))))))
+
+(define (write-artifact-manifest path temp-path paths)
+  (call-with-output-file temp-path
+    (lambda (port)
+      (write (list 'grove-artifacts-v1 paths) port)
+      (newline port)))
+  (rename-file temp-path path))
+
 (define (write-artifacts directory artifacts)
-  (let ((paths (map artifact-path artifacts)))
+  (let* ((paths (map artifact-path artifacts))
+         (manifest-path
+           (string-append directory "/" artifact-manifest-name))
+         (manifest-temp-path
+           (string-append directory "/" artifact-manifest-temp-name))
+         (previous-paths (read-artifact-manifest manifest-path)))
     (unless (= (length paths) (length (delete-duplicates paths string=?)))
-      (error "duplicate artifact path" paths)))
-  (for-each
-    (lambda (artifact)
-      (let ((path (string-append directory "/" (artifact-path artifact))))
-        (ensure-directory (dirname path))
-        (call-with-output-file path
-          (lambda (port)
-            (display (artifact-content artifact) port)))))
-    artifacts))
+      (error "duplicate artifact path" paths))
+    (when (any reserved-artifact-path? paths)
+      (error "artifact path is reserved for Grove metadata" paths))
+    (ensure-directory directory)
+    (for-each
+      (lambda (artifact)
+        (let ((path (string-append directory "/" (artifact-path artifact))))
+          (ensure-directory (dirname path))
+          (call-with-output-file path
+            (lambda (port)
+              (display (artifact-content artifact) port)))))
+      artifacts)
+    (for-each
+      (lambda (stale-path)
+        (unless (member stale-path paths string=?)
+          (let ((full-path (string-append directory "/" stale-path)))
+            (when (file-is-directory? full-path)
+              (error "stale artifact path is a directory; refusing to remove"
+                     full-path))
+            (when (file-exists? full-path)
+              (delete-file full-path)))))
+      previous-paths)
+    (write-artifact-manifest manifest-path manifest-temp-path paths)))

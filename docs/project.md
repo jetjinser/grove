@@ -58,6 +58,11 @@ declare their module with Guile's ordinary `define-module`. Page reading,
 analysis, and rendering remain independent phases. With no analyzer, renderers
 receive the Grove site directly.
 
+`write-artifacts` keeps a `.grove-artifacts` manifest in the output directory.
+On the next build it removes files listed in the previous manifest that are no
+longer produced, while leaving files it did not manage alone. The manifest path
+is reserved for Grove metadata.
+
 The complete runnable example, including custom routes and CSS, is in
 `examples/linked-notes/build.scm`.
 
