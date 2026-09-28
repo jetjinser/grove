@@ -278,6 +278,10 @@ tree's reference index. `@transclude["tree-id"]` embeds another tree's content
 at its call site. Transclusions form a relation distinct from ordinary links,
 and unresolved targets fail during forest analysis. HTML and plain-text
 renderers expand the target content while keeping its standalone tree page.
+Nested subtree and transclusion composition is supported; a cycle across either
+kind of edge fails during forest analysis. Host artifacts declare the source
+files of all composed trees as dependencies, and repeated transclusions receive
+separate HTML anchor prefixes.
 
 The project title and optional `#:description` become site-level metadata.
 Forester HTML emits the description in the index page and uses it as a page

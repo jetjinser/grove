@@ -80,6 +80,36 @@
      (append-map transclusion-elements (content-document-children content)))
     (else '())))
 
+(define (validate-composition-cycles! pages)
+  (let ((edges
+          (append
+            (append-map
+              (lambda (page)
+                (map (lambda (element)
+                       (list (site-page-id page)
+                             (content-element-property element 'tree-id)))
+                     (subtree-elements (site-page-document page))))
+              pages)
+            (append-map
+              (lambda (page)
+                (map (lambda (element)
+                       (list (site-page-id page)
+                             (content-element-property element 'target)))
+                     (transclusion-elements (site-page-document page))))
+              pages))))
+    (letrec ((visit
+               (lambda (id path)
+                 (when (member id path equal?)
+                   (error "cyclic Forester tree composition"
+                          (reverse (cons id path))))
+                 (for-each (lambda (target)
+                             (visit target (cons id path)))
+                           (map cadr
+                                (filter (lambda (edge)
+                                          (equal? id (car edge)))
+                                        edges))))))
+      (for-each (lambda (page) (visit (site-page-id page) '())) pages))))
+
 (define (owned-content content)
   (cond
     ((content-element? content)
@@ -339,6 +369,7 @@
                      elements
                      (iota (length elements) 1)))))
              pages))
+         (_ (validate-composition-cycles! pages))
          (reference-relation
            (make-forest-reference-relation
              (append-map
@@ -489,11 +520,33 @@
     (filter (lambda (path) (not (member path page-paths string=?)))
             (site-sources site))))
 
+(define (forest-included-tree-ids forest start-id)
+  (let loop ((pending (list start-id)) (seen '()))
+    (if (null? pending)
+        seen
+        (let ((id (car pending)))
+          (if (member id seen equal?)
+              (loop (cdr pending) seen)
+              (let ((page (forest-page forest id)))
+                (loop
+                  (append
+            (map (lambda (element)
+                   (content-element-property element 'target))
+                 (transclusion-elements
+                   (site-page-document (forest-page forest id))))
+                    (map (lambda (element)
+                           (content-element-property element 'tree-id))
+                         (subtree-elements (site-page-document page)))
+                    (cdr pending))
+                  (cons id seen))))))))
+
 (define (forest-page-source-paths forest page)
   (delete-duplicates
     (append (forest-module-paths forest)
+            (filter-map
+              (lambda (id)
+                (site-page-source (forest-page forest id)))
+              (forest-included-tree-ids forest (site-page-id page)))
             (filter-map site-page-source
-                        (cons page
-                              (forest-backlinks forest
-                                                (site-page-id page)))))
+                        (forest-backlinks forest (site-page-id page))))
     string=?))

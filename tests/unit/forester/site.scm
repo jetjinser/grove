@@ -431,12 +431,14 @@
 (let* ((target
          (make-site-page
            "reusable" "Reusable note"
-           (evaluate-document "@paragraph{Shared content.}")))
+           (evaluate-document "@paragraph{Shared content.}")
+           "trees/reusable.grv"))
        (host
          (make-site-page
            "host" "Host"
            (evaluate-document
-             "Before. @transclude[\"reusable\"] After.")))
+             "Before. @transclude[\"reusable\"] After.")
+           "trees/host.grv"))
        (forest (make-forest (make-site (list host target))))
        (html (forest->html forest #:mathjax-src #f))
        (text (forest->text forest))
@@ -461,7 +463,43 @@
       (and (string-contains host-html "class=\"transclusion\"")
            (string-contains host-html "Shared content."))))
   (test-assert "text output inserts the target content"
-    (string-contains (assoc-ref text "host") "Shared content.")))
+    (string-contains (assoc-ref text "host") "Shared content."))
+  (test-assert "host artifacts depend on transcluded tree sources"
+    (member "trees/reusable.grv"
+            (forest-page-source-paths forest host)
+            string=?)))
+
+(let* ((target
+         (make-site-page
+           "repeat-target" "Repeated target"
+           (evaluate-document "@heading{Unique heading}")))
+       (host
+         (make-site-page
+           "repeat-host" "Repeated host"
+           (evaluate-document
+             "@transclude[\"repeat-target\"] @transclude[\"repeat-target\"]")))
+       (html (assoc-ref (forest->html
+                          (make-forest (make-site (list host target)))
+                          #:mathjax-src #f)
+                        "repeat-host")))
+  (test-assert "repeated transclusions receive distinct HTML anchor prefixes"
+    (and (string-contains html "transcluded-transclude-1--unique-heading")
+         (string-contains html "transcluded-transclude-2--unique-heading"))))
+
+(test-error "transclusion cycles fail forest analysis" #t
+  (make-forest
+    (make-site
+      (list (make-site-page
+              "cycle" "Cycle"
+              (evaluate-document "@transclude[\"cycle\"]"))))))
+
+(test-error "subtree and transclusion cycles fail forest analysis" #t
+  (make-forest
+    (make-site
+      (list (make-site-page
+              "cycle-root" "Cycle root"
+              (evaluate-document
+                "@subtree[\"cycle-child\"]{@title{Child} @transclude[\"cycle-root\"]}"))))))
 
 (test-error "unresolved transclusions fail forest analysis" #t
   (make-forest

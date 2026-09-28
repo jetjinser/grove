@@ -56,7 +56,9 @@
                            ,@children)))))))
 
 (define* (subtree-content-sxml forest routes page #:optional (anchor-prefix ""))
-  (content->sxml
+  (let ((transclusions
+          (forest-outgoing-transclusions forest (site-page-id page))))
+   (content->sxml
     (site-page-document page)
     #:handlers (page-content-handlers
                  forest routes page
@@ -75,7 +77,9 @@
                                            "tree-" id "--"))))))
           (cons 'transclude (lambda (element _render)
                        (let* ((id (content-element-property element 'target))
+                              (transclusion (car transclusions))
                               (target (forest-page forest id)))
+                         (set! transclusions (cdr transclusions))
                          `(section (@ (class "transclusion")
                                       (data-tree-id ,id))
                             (h2 (a (@ (href ,(html-page-url routes id)))
@@ -83,7 +87,10 @@
                             ,(subtree-content-sxml
                                forest routes target
                                (string-append anchor-prefix
-                                              "transcluded-" id "--")))))))))
+                                              "transcluded-"
+                                              (forest-transclusion-source-id
+                                                transclusion)
+                                              "--"))))))))))
 
 (define (backlink-groups forest page)
   (let* ((page-id (site-page-id page))
