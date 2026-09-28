@@ -1,0 +1,31 @@
+/* SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu> */
+/* SPDX-License-Identifier: CC0-1.0 */
+
+:root {
+  font-family: system-ui, sans-serif;
+  line-height: 1.7;
+  color-scheme: light dark;
+  --measure: 48rem;
+}
+
+body {
+  max-width: var(--measure);
+  margin: 2.5rem auto;
+  padding: 0 1.25rem;
+}
+
+h1, h2 { line-height: 1.25; }
+a { text-underline-offset: 0.18em; }
+p { text-wrap: pretty; }
+
+pre, .math-display { overflow-x: auto; }
+.math-display {
+  margin: 1.6rem 0;
+  padding: 0.8rem 1rem;
+  border-inline-start: 3px solid currentColor;
+}
+.backlinks {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid currentColor;
+}

@@ -1,0 +1,23 @@
+@; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+@; SPDX-License-Identifier: CC0-1.0
+
+@use-modules[(heat-notes commands)]
+
+@title{Steady state and boundary data}
+@summary{The equilibrium equation needs boundary temperatures to select a profile.}
+@published{2026-09-28}
+
+@paragraph{At steady state, temperature no longer varies with time, so @math{u_t=0}. With no internal source and constant conductivity, the one-dimensional heat equation reduces to @math{u_{xx}=0}. Integrating twice shows that the temperature is affine in position:}
+
+@display-math{u(x)=Ax+B.}
+
+@paragraph{For a rod of length @math{L} whose ends are held at @math{T_0} and @math{T_L}, impose @math{u(0)=T_0} and @math{u(L)=T_L}. The constants are then fixed and the profile is}
+
+@display-math{u(x)=T_0+\frac{T_L-T_0}{L}x.}
+
+@paragraph{If @math{T_L<T_0}, the slope is negative, and @link["fourier-law"]{Fourier's law} gives a positive rightward flux. The steady flux is constant throughout the rod: energy does not accumulate anywhere inside it.}
+
+@heading{A time-dependent problem}
+@paragraph{For a transient problem, endpoint conditions still matter, and one also supplies an initial temperature profile @math{u(x,0)=u_0(x)}. The equation describes how that profile evolves. Boundary conditions might prescribe temperature, as above, or prescribe incoming heat flux instead. The right choice depends on how the rod meets its surroundings.}
+
+@paragraph{A distributed heater breaks the source-free linear profile. See @link["sources"]{how a source changes the balance}; for several spatial coordinates, see @link["dimensions"]{the Laplacian form}.}

@@ -1,0 +1,23 @@
+@; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+@; SPDX-License-Identifier: CC0-1.0
+
+@use-modules[(heat-notes commands)]
+
+@title{Volume sources and Joule heating}
+@summary{A heat-production rate per volume contributes a source term.}
+@published{2026-09-28}
+
+@paragraph{Let @math{H(x,t)} be heat generated per unit volume and time, measured in @math{\mathrm{W\,m^{-3}}}. In a slice, the generated energy over @math{\Delta t} is approximately @math{H S\Delta x\Delta t}. Add it to the incoming-minus-outgoing energy from @link["balance"]{the local balance}, then divide by the slice volume and time interval.}
+
+@display-math{\rho_m c\,u_t=k u_{xx}+H.}
+
+@paragraph{Equivalently, @math{u_t=\alpha u_{xx}+f}, where @math{f=H/(\rho_m c)} has units K/s. This separates transport from local production: the Laplacian spreads heat, while @math{f>0} heats material in place.}
+
+@heading{A current-carrying wire}
+@paragraph{For a uniform wire with current density @math{j} and electrical resistivity @math{\rho_e}, the volumetric Joule-heating rate is @math{H=j^2\rho_e}. Thus a simple model is}
+
+@display-math{u_t=\alpha u_{xx}+\frac{j^2\rho_e}{\rho_m c}.}
+
+@paragraph{The notation matters: @math{\rho_e} is electrical resistivity, while @math{\rho_m} is mass density. The source term assumes these quantities and the current density are uniform; if they vary, retain their spatial dependence. Boundary losses can also be important in an actual wire.}
+
+@paragraph{More generally, any known heating mechanism can be placed in @math{H}. In multiple dimensions the transport term becomes the Laplacian; @link["dimensions"]{the final note} writes that form and checks its dimensions.}

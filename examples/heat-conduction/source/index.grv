@@ -1,0 +1,26 @@
+@; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+@; SPDX-License-Identifier: CC0-1.0
+
+@use-modules[(heat-notes commands)]
+
+@title{Heat: a derivation in notes}
+@summary{A connected, checked derivation of the heat equation.}
+@published{2026-09-28}
+
+@paragraph{This small site follows energy as it moves through a solid. It begins with @link["fourier-law"]{Fourier's law}, applies @link["balance"]{energy conservation to a thin slice}, and arrives at the heat equation. Later notes add boundary conditions, internal sources, and higher dimensions.}
+
+@heading{The route through the model}
+@itemize{
+  @item{@link["fourier-law"]{A constitutive law}: how temperature gradients drive heat flux.}
+  @item{@link["balance"]{A local balance}: how a flux difference changes stored energy.}
+  @item{@link["steady-state"]{Boundary data}: what the equation says at equilibrium.}
+  @item{@link["sources"]{Internal heating}: how a source term enters, including Joule heating.}
+  @item{@link["dimensions"]{More dimensions}: the Laplacian form and its assumptions.}
+}
+
+@heading{Notation}
+@paragraph{Temperature is @math{u(x,t)}. The material has constant mass density @math{\rho_m}, specific heat @math{c}, and thermal conductivity @math{k}. The thermal diffusivity is @math{\alpha=k/(\rho_m c)}. Subscripts denote partial derivatives.}
+
+@display-math{\frac{\partial u}{\partial t}=\alpha\frac{\partial^2u}{\partial x^2}}
+
+@paragraph{The notes are an original exposition of the standard derivation, with equations checked independently. They were prompted by 顾樵《数学物理方法》（科学出版社，2012），第 5.2 节，ISBN 978-7-03-033064-2. The book excerpt itself is not reproduced here; no open license for it was identified.}

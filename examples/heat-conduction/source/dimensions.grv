@@ -1,0 +1,22 @@
+@; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+@; SPDX-License-Identifier: CC0-1.0
+
+@use-modules[(heat-notes commands)]
+
+@title{Several dimensions and the model's scope}
+@summary{The one-dimensional curvature term generalizes to the Laplacian.}
+@published{2026-09-28}
+
+@paragraph{In a homogeneous, isotropic solid, heat flux is a vector: @math{\mathbf q=-k\nabla u}. Applying energy conservation to a small volume replaces the one-dimensional flux derivative with the divergence @math{-\nabla\cdot\mathbf q}. For constant @math{k}, this is @math{k\nabla^2u}.}
+
+@display-math{\rho_m c\,u_t=k\nabla^2u+H,\qquad u_t=\alpha\nabla^2u+f.}
+
+@paragraph{In Cartesian coordinates, @math{\nabla^2u=u_{xx}+u_{yy}+u_{zz}} in three dimensions, or the corresponding sum over the coordinates of the domain. The source @math{f(x,y,z,t)} is a heat source measured in temperature change per time, not a wave source.}
+
+@heading{Dimensional check}
+@paragraph{Conductivity has units @math{\mathrm{W\,m^{-1}K^{-1}}}; mass density is @math{\mathrm{kg\,m^{-3}}}; and specific heat is @math{\mathrm{J\,kg^{-1}K^{-1}}}. Therefore @math{k/(\rho_m c)} has units @math{\mathrm{m^2s^{-1}}}. Since a second spatial derivative contributes inverse length squared, @math{\alpha\nabla^2u} has units temperature per time, matching @math{u_t}.}
+
+@heading{When properties vary}
+@paragraph{If conductivity varies with position, conservation gives @math{\rho_m c u_t=\nabla\cdot(k\nabla u)+H}; one cannot in general pull @math{k} outside the divergence. Anisotropic materials require a conductivity tensor. Temperature-dependent heat capacity, moving media, or phase changes need additional modeling. These are natural extensions once the constant-property equation is understood.}
+
+@paragraph{The path began with @link["fourier-law"]{a flux law} and @link["balance"]{a local energy balance}, then used boundary data and source terms. The overview is at @link["index"]{the site index}.}
