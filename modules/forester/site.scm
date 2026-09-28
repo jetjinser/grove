@@ -33,6 +33,13 @@
             forest-headings
             forest-outgoing-references
             forest-incoming-references
+            forest-transclusion?
+            forest-transclusion-source-tree-id
+            forest-transclusion-source-id
+            forest-transclusion-target-tree-id
+            forest-outgoing-transclusions
+            forest-incoming-transclusions
+            forest-transcluding-pages
             forest-source-paths
             forest-module-paths
             forest-page-source-paths))
@@ -59,6 +66,18 @@
                          (content-element-children content))))
     ((content-document? content)
      (append-map subtree-elements (content-document-children content)))
+    (else '())))
+
+(define (transclusion-elements content)
+  (cond
+    ((content-element? content)
+     (append (append-map transclusion-elements
+                         (content-element-children content))
+             (if (eq? (content-element-kind content) 'transclude)
+                 (list content)
+                 '())))
+    ((content-document? content)
+     (append-map transclusion-elements (content-document-children content)))
     (else '())))
 
 (define (owned-content content)
@@ -183,14 +202,24 @@
   (id forest-heading-id)
   (label forest-heading-label))
 
+(define-record-type <forest-transclusion>
+  (%make-forest-transclusion source-tree-id source-id target-tree-id)
+  forest-transclusion?
+  (source-tree-id forest-transclusion-source-tree-id)
+  (source-id forest-transclusion-source-id)
+  (target-tree-id forest-transclusion-target-tree-id))
+
 (define-record-type <forest>
-  (%make-forest site pages reference-index heading-index reference-relation)
+  (%make-forest site pages reference-index heading-index reference-relation
+                transclusion-index transclusion-relation)
   forest?
   (site forest-site)
   (pages forest-pages)
   (reference-index forest-reference-index)
   (heading-index forest-heading-index)
-  (reference-relation forest-reference-relation))
+  (reference-relation forest-reference-relation)
+  (transclusion-index forest-transclusion-index)
+  (transclusion-relation forest-transclusion-relation))
 
 (define (make-forest site)
   (unless (site? site)
@@ -275,6 +304,41 @@
                      elements
                      (iota (length elements) 1)))))
              pages))
+         (transclusion-index
+           (map
+             (lambda (source-tree)
+               (let* ((source-id (site-page-id source-tree))
+                      (elements
+                        (transclusion-elements
+                          (owned-content
+                            (site-page-document source-tree)))))
+                 (cons
+                   source-id
+                   (map
+                     (lambda (element index)
+                       (let ((target-id
+                               (content-element-property element 'target)))
+                         (unless (and (string? target-id)
+                                      (not (string-null? target-id)))
+                           (error "invalid Forester transclusion target"
+                                  source-id target-id))
+                         (unless (find
+                                   (lambda (page)
+                                     (equal? target-id (site-page-id page)))
+                                   pages)
+                           (error
+                             (format #f
+                               "unresolved Forester transclusion in tree ~a (~a): ~a"
+                               source-id
+                               (or (site-page-source source-tree)
+                                   "<unknown source>")
+                               target-id)))
+                         (%make-forest-transclusion
+                           source-id (format #f "transclude-~a" index)
+                           target-id)))
+                     elements
+                     (iota (length elements) 1)))))
+             pages))
          (reference-relation
            (make-forest-reference-relation
              (append-map
@@ -287,9 +351,21 @@
                           (forest-reference-target-fragment reference)
                           (forest-reference-label reference)))
                       (cdr entry)))
-               reference-index))))
+               reference-index)))
+         (transclusion-relation
+           (make-forest-transclusion-relation
+             (append-map
+               (lambda (entry)
+                 (map (lambda (transclusion)
+                        (list
+                          (forest-transclusion-source-tree-id transclusion)
+                          (forest-transclusion-source-id transclusion)
+                          (forest-transclusion-target-tree-id transclusion)))
+                      (cdr entry)))
+               transclusion-index))))
     (%make-forest site pages reference-index heading-index
-                  reference-relation)))
+                  reference-relation transclusion-index
+                  transclusion-relation)))
 
 (define (forest-page forest id)
   (or (find (lambda (page) (equal? id (site-page-id page)))
@@ -323,6 +399,39 @@
                 (member (forest-reference-source-id reference)
                         reference-ids equal?))
               (cdr entry)))))
+
+(define (forest-outgoing-transclusions forest id)
+  (let ((entry (assoc id (forest-transclusion-index forest))))
+    (unless entry
+      (error "unknown forest page" id))
+    (let ((ids (forest-outgoing-transclusion-ids
+                 (forest-transclusion-relation forest) id)))
+      (filter (lambda (transclusion)
+                (member (forest-transclusion-source-id transclusion)
+                        (map car ids) equal?))
+              (cdr entry)))))
+
+(define (forest-incoming-transclusions forest id)
+  (unless (assoc id (forest-heading-index forest))
+    (error "unknown forest page" id))
+  (let ((keys (forest-incoming-transclusion-ids
+                (forest-transclusion-relation forest) id)))
+    (filter
+      (lambda (transclusion)
+        (member (list (forest-transclusion-source-tree-id transclusion)
+                      (forest-transclusion-source-id transclusion))
+                keys equal?))
+      (append-map cdr (forest-transclusion-index forest)))))
+
+(define (forest-transcluding-pages forest id)
+  (let ((source-ids
+          (delete-duplicates
+            (map forest-transclusion-source-tree-id
+                 (forest-incoming-transclusions forest id))
+            equal?)))
+    (filter (lambda (page)
+              (member (site-page-id page) source-ids equal?))
+            (forest-pages forest))))
 
 (define* (forest-incoming-references forest id #:optional fragment)
   (unless (assoc id (forest-heading-index forest))
@@ -365,7 +474,7 @@
           (forest-reachable-page-ids (forest-reference-relation forest) id)))
     (filter (lambda (page)
               (member (site-page-id page) reachable-ids equal?))
-            (site-pages (forest-site forest)))))
+            (forest-pages forest))))
 
 (define (forest-source-paths forest)
   (let ((site (forest-site forest)))

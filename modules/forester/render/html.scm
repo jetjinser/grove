@@ -62,7 +62,7 @@
                  forest routes page
                  anchor-prefix)
     #:lazy-handlers
-    `((subtree . ,(lambda (element _render)
+    (list (cons 'subtree (lambda (element _render)
                     (let* ((id (content-element-property element 'tree-id))
                            (target (forest-page forest id)))
                       `(section (@ (class "inline-subtree")
@@ -72,7 +72,18 @@
                          ,(subtree-content-sxml
                             forest routes target
                             (string-append anchor-prefix
-                                           "tree-" id "--")))))))))
+                                           "tree-" id "--"))))))
+          (cons 'transclude (lambda (element _render)
+                       (let* ((id (content-element-property element 'target))
+                              (target (forest-page forest id)))
+                         `(section (@ (class "transclusion")
+                                      (data-tree-id ,id))
+                            (h2 (a (@ (href ,(html-page-url routes id)))
+                                   ,(site-page-title target)))
+                            ,(subtree-content-sxml
+                               forest routes target
+                               (string-append anchor-prefix
+                                              "transcluded-" id "--")))))))))
 
 (define (backlink-groups forest page)
   (let* ((page-id (site-page-id page))

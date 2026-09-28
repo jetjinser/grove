@@ -30,6 +30,11 @@
     (target-fragment . ,(forest-reference-target-fragment reference))
     (label . ,(forest-reference-label reference))))
 
+(define (transclusion->graph transclusion)
+  `((source-tree . ,(forest-transclusion-source-tree-id transclusion))
+    (source-id . ,(forest-transclusion-source-id transclusion))
+    (target-tree . ,(forest-transclusion-target-tree-id transclusion))))
+
 (define (forest->graph forest)
   (unless (forest? forest)
     (error "Forester graph renderer requires a forest" forest))
@@ -41,6 +46,13 @@
             (lambda (page)
               (map reference->graph
                    (forest-outgoing-references forest (site-page-id page))))
+            pages))
+       (transclusions
+         ,(append-map
+            (lambda (page)
+              (map transclusion->graph
+                   (forest-outgoing-transclusions forest
+                                                  (site-page-id page))))
             pages)))))
 
 (define* (render-forest-graph forest #:key (path "forest-graph.scm"))

@@ -6,8 +6,11 @@
   #:use-module (grove relation dsl)
   #:use-module (srfi srfi-1)
   #:export (make-forest-reference-relation
+            make-forest-transclusion-relation
             forest-incoming-reference-keys
+            forest-incoming-transclusion-ids
             forest-outgoing-reference-ids
+            forest-outgoing-transclusion-ids
             forest-backlink-page-ids
             forest-common-backlink-page-ids
             forest-reachable-page-ids))
@@ -15,6 +18,24 @@
 ;; Rows are (source-page-id local-reference-id target-page-id fragment label).
 (define-relation-schema make-forest-reference-relation referenceo
   (source-page-id reference-id target-page-id fragment label))
+
+;; Rows are (source-tree-id transclusion-id target-tree-id).
+(define-relation-schema make-forest-transclusion-relation transclusiono
+  (source-tree-id transclusion-id target-tree-id))
+
+(define (forest-incoming-transclusion-ids relation target-tree-id)
+  (query (source-tree-id transclusion-id)
+    (transclusiono relation
+                   (source-tree-id source-tree-id)
+                   (transclusion-id transclusion-id)
+                   (target-tree-id target-tree-id))))
+
+(define (forest-outgoing-transclusion-ids relation source-tree-id)
+  (query (transclusion-id target-tree-id)
+    (transclusiono relation
+                   (source-tree-id source-tree-id)
+                   (transclusion-id transclusion-id)
+                   (target-tree-id target-tree-id))))
 
 (define-relation (incoming-referenceo relation target-page-id
                                        source-page-id reference-id)

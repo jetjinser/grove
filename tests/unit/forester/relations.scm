@@ -53,4 +53,18 @@
       '(("self" "ref-1" "self" #f "Self")))
     "self"))
 
+(define transclusions
+  (make-forest-transclusion-relation
+    '(("lecture" "embed-1" "exercise")
+      ("lecture" "embed-2" "exercise")
+      ("exercise" "embed-1" "definition"))))
+
+(test-equal "incoming transclusion queries retain each occurrence"
+  '(("lecture" "embed-1") ("lecture" "embed-2"))
+  (forest-incoming-transclusion-ids transclusions "exercise"))
+
+(test-equal "outgoing transclusion queries return targets and local IDs"
+  '(("embed-1" "exercise") ("embed-2" "exercise"))
+  (forest-outgoing-transclusion-ids transclusions "lecture"))
+
 (test-end "forester relations")

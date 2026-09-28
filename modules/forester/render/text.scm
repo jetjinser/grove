@@ -54,12 +54,18 @@
     (site-page-document page)
     #:handlers (page-content-handlers forest routes page)
     #:lazy-handlers
-    `((subtree . ,(lambda (element _render)
+    (list (cons 'subtree (lambda (element _render)
                     (let* ((id (content-element-property element 'tree-id))
                            (target (forest-page forest id)))
                       (string-append
                         (heading (site-page-title target))
-                        (subtree-content-text forest routes target))))))))
+                        (subtree-content-text forest routes target)))))
+          (cons 'transclude (lambda (element _render)
+                       (let* ((id (content-element-property element 'target))
+                              (target (forest-page forest id)))
+                         (string-append
+                           (heading (site-page-title target))
+                           (subtree-content-text forest routes target))))))))
 
 (define (heading title)
   (string-append title "\n" (make-string (string-length title) #\=) "\n"))

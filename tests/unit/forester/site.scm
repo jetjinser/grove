@@ -428,6 +428,48 @@
               (evaluate-document
                 "@subtree[\"collision\"]{@title{Inline}}"))))))
 
+(let* ((target
+         (make-site-page
+           "reusable" "Reusable note"
+           (evaluate-document "@paragraph{Shared content.}")))
+       (host
+         (make-site-page
+           "host" "Host"
+           (evaluate-document
+             "Before. @transclude[\"reusable\"] After.")))
+       (forest (make-forest (make-site (list host target))))
+       (html (forest->html forest #:mathjax-src #f))
+       (text (forest->text forest))
+       (transclusions (forest-outgoing-transclusions forest "host")))
+  (test-equal "transclusions are indexed as a distinct tree relation"
+    '("reusable")
+    (map forest-transclusion-target-tree-id transclusions))
+  (test-equal "transclusion records identify their source occurrence"
+    '("transclude-1")
+    (map forest-transclusion-source-id transclusions))
+  (test-equal "incoming transclusions return every occurrence"
+    1
+    (length (forest-incoming-transclusions forest "reusable")))
+  (test-equal "incoming transclusions map to their host trees"
+    '("host")
+    (map site-page-id (forest-transcluding-pages forest "reusable")))
+  (test-equal "transclusions do not become ordinary link references"
+    '()
+    (forest-outgoing-references forest "host"))
+  (test-assert "HTML inserts the target content at the call site"
+    (let ((host-html (assoc-ref html "host")))
+      (and (string-contains host-html "class=\"transclusion\"")
+           (string-contains host-html "Shared content."))))
+  (test-assert "text output inserts the target content"
+    (string-contains (assoc-ref text "host") "Shared content.")))
+
+(test-error "unresolved transclusions fail forest analysis" #t
+  (make-forest
+    (make-site
+      (list (make-site-page
+              "host" "Host"
+              (evaluate-document "@transclude[\"missing\"]"))))))
+
 (test-error "unresolved links fail site analysis" #t
   (make-forest
     (make-site

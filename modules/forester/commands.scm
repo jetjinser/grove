@@ -6,7 +6,7 @@
   #:use-module (grove ir)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (title link subtree summary published updated))
+  #:export (title link subtree transclude summary published updated))
 
 (define (title . body)
   (make-content-element 'title body))
@@ -44,3 +44,8 @@
         'subtree
         (remove (lambda (element) (eq? element title-element)) body)
         #:properties `((tree-id . ,id) (title . ,title-text))))))
+
+(define (transclude id)
+  (unless (and (string? id) (not (string-null? id)))
+    (error "Forester transclusion target must be a non-empty tree ID" id))
+  (make-content-element 'transclude '() #:properties `((target . ,id))))
