@@ -423,7 +423,10 @@
     (string-contains (assoc-ref html "root") ".forest-tree-block:hover"))
   (test-assert "fragment navigation opens containing disclosures"
     (and (string-contains (assoc-ref html "root") "hashchange")
+         (string-contains (assoc-ref html "root")
+                          "addEventListener('hashchange', revealFragment)")
          (string-contains (assoc-ref html "root") "node.open = true")
+         (not (string-contains (assoc-ref html "root") "&quot;"))
          (string-contains (assoc-ref html "root") "target.scrollIntoView()")))
   (test-assert "HTML index lists file-backed trees but omits inline subtrees"
     (and (string-contains (assoc-ref html "index") "Root")
