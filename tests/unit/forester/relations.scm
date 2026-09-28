@@ -53,18 +53,25 @@
       '(("self" "ref-1" "self" #f "Self")))
     "self"))
 
-(define transclusions
-  (make-forest-transclusion-relation
-    '(("lecture" "embed-1" "exercise")
-      ("lecture" "embed-2" "exercise")
-      ("exercise" "embed-1" "definition"))))
+(define composition
+  (make-forest-composition-relation
+    '(("subtree" "lecture" "exercise" "exercise")
+      ("transclude" "lecture" "embed-1" "exercise")
+      ("transclude" "lecture" "embed-2" "exercise")
+      ("transclude" "exercise" "embed-1" "definition"))))
+
+(test-equal "composition queries retain kinds and occurrence order"
+  '(("subtree" "exercise" "exercise")
+    ("transclude" "embed-1" "exercise")
+    ("transclude" "embed-2" "exercise"))
+  (forest-composition-targets composition "lecture"))
+
+(test-equal "subtree definitions query containment facts"
+  '(("lecture" "exercise"))
+  (forest-subtree-definition-keys composition))
 
 (test-equal "incoming transclusion queries retain each occurrence"
   '(("lecture" "embed-1") ("lecture" "embed-2"))
-  (forest-incoming-transclusion-ids transclusions "exercise"))
-
-(test-equal "outgoing transclusion queries return targets and local IDs"
-  '(("embed-1" "exercise") ("embed-2" "exercise"))
-  (forest-outgoing-transclusion-ids transclusions "lecture"))
+  (forest-incoming-composition-keys composition "transclude" "exercise"))
 
 (test-end "forester relations")

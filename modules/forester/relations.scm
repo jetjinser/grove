@@ -6,11 +6,12 @@
   #:use-module (grove relation dsl)
   #:use-module (srfi srfi-1)
   #:export (make-forest-reference-relation
-            make-forest-transclusion-relation
+            make-forest-composition-relation
+            forest-composition-targets
+            forest-subtree-definition-keys
+            forest-incoming-composition-keys
             forest-incoming-reference-keys
-            forest-incoming-transclusion-ids
             forest-outgoing-reference-ids
-            forest-outgoing-transclusion-ids
             forest-backlink-page-ids
             forest-common-backlink-page-ids
             forest-reachable-page-ids))
@@ -19,23 +20,33 @@
 (define-relation-schema make-forest-reference-relation referenceo
   (source-page-id reference-id target-page-id fragment label))
 
-;; Rows are (source-tree-id transclusion-id target-tree-id).
-(define-relation-schema make-forest-transclusion-relation transclusiono
-  (source-tree-id transclusion-id target-tree-id))
+;; Rows are (kind source-tree-id occurrence-id target-tree-id). Subtree
+;; definitions and transclusions share one queryable composition relation.
+(define-relation-schema make-forest-composition-relation compositiono
+  (kind source-tree-id occurrence-id target-tree-id))
 
-(define (forest-incoming-transclusion-ids relation target-tree-id)
-  (query (source-tree-id transclusion-id)
-    (transclusiono relation
-                   (source-tree-id source-tree-id)
-                   (transclusion-id transclusion-id)
-                   (target-tree-id target-tree-id))))
+(define (forest-composition-targets relation source-tree-id)
+  (query (kind occurrence-id target-tree-id)
+    (compositiono relation
+                  (source-tree-id source-tree-id)
+                  (kind kind)
+                  (occurrence-id occurrence-id)
+                  (target-tree-id target-tree-id))))
 
-(define (forest-outgoing-transclusion-ids relation source-tree-id)
-  (query (transclusion-id target-tree-id)
-    (transclusiono relation
-                   (source-tree-id source-tree-id)
-                   (transclusion-id transclusion-id)
-                   (target-tree-id target-tree-id))))
+(define (forest-subtree-definition-keys relation)
+  (query (source-tree-id target-tree-id)
+    (compositiono relation
+                  (kind "subtree")
+                  (source-tree-id source-tree-id)
+                  (target-tree-id target-tree-id))))
+
+(define (forest-incoming-composition-keys relation kind target-tree-id)
+  (query (source-tree-id occurrence-id)
+    (compositiono relation
+                  (kind kind)
+                  (source-tree-id source-tree-id)
+                  (occurrence-id occurrence-id)
+                  (target-tree-id target-tree-id))))
 
 (define-relation (incoming-referenceo relation target-page-id
                                        source-page-id reference-id)
