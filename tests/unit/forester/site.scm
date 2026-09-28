@@ -13,13 +13,15 @@
   #:use-module (forester render sitemap)
   #:use-module (forester render text)
   #:use-module (forester render text routes)
+  #:use-module (forester style html)
   #:use-module (forester site)
   #:use-module (grove build)
   #:use-module (grove ir)
   #:use-module (grove render html)
   #:use-module (grove render html routes)
   #:use-module (grove output)
-  #:use-module (grove site))
+  #:use-module (grove site)
+  #:use-module (grove style html))
 
 (define environment (default-environment scribble))
 (eval '(use-modules (forester commands)) environment)
@@ -342,9 +344,37 @@
   (test-assert "HTML, text, and RSS renderers compose into one artifact set"
     (and (member "index.html" paths)
          (member "algebra.html" paths)
+         (member "forester.css" paths)
          (member "feed.xml" paths)
          (member "text/index.txt" paths)
          (member "text/algebra.txt" paths)))
+  (test-assert "HTML artifacts link the external Forester stylesheet"
+    (and (string-contains index-html "href=\"/forester.css\"")
+         (string-contains
+           (artifact-content
+             (find (lambda (artifact)
+                     (string=? (artifact-path artifact) "forester.css"))
+                   artifacts))
+           ".forest-tree-block:hover")))
+  (test-assert "user stylesheets follow the Forester defaults"
+    (let* ((custom
+             (make-artifact "custom.css" "body { color: black; }"))
+           (styled-artifacts
+             (render-forest-html
+               forest
+               #:style (make-html-style #:stylesheets (list custom))))
+           (stylesheet-paths (map artifact-path (take styled-artifacts 2)))
+           (styled-index
+             (artifact-content
+               (find (lambda (artifact)
+                       (string=? (artifact-path artifact) "index.html"))
+                     styled-artifacts)))
+           (base-position (string-contains styled-index "forester.css"))
+           (custom-position (string-contains styled-index "custom.css")))
+      (and (equal? stylesheet-paths '("forester.css" "custom.css"))
+           base-position
+           custom-position
+           (< base-position custom-position))))
   (test-assert "RSS emits escaped metadata and absolute routed links"
     (and (string-contains feed "<title>Algebra &amp; limits</title>")
          (string-contains feed
@@ -427,8 +457,9 @@
     (string-contains (assoc-ref html "root") "<details open=\"open\">"))
   (test-assert "inline tree title is a native disclosure control"
     (string-contains (assoc-ref html "root") "<summary>"))
-  (test-assert "tree blocks include hover styling"
-    (string-contains (assoc-ref html "root") ".forest-tree-block:hover"))
+  (test-assert "forest->html embeds the Forester stylesheet"
+    (string-contains (assoc-ref html "root")
+                     ".forest-tree-block:hover"))
   (test-assert "tree disclosure markers are hidden while summaries stay clickable"
     (and (string-contains (assoc-ref html "root") "summary::marker")
          (string-contains (assoc-ref html "root") "summary::-webkit-details-marker")

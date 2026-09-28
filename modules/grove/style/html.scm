@@ -8,6 +8,7 @@
   #:use-module (srfi srfi-9)
   #:export (html-style?
             make-html-style
+            compose-html-styles
             html-style-stylesheets
             html-style-artifacts))
 
@@ -24,6 +25,13 @@
                (every artifact? assets))
     (error "HTML style requires artifact lists" stylesheets assets))
   (%make-html-style stylesheets assets))
+
+(define (compose-html-styles . styles)
+  (unless (every html-style? styles)
+    (error "HTML styles can only be composed from HTML styles" styles))
+  (make-html-style
+    #:stylesheets (append-map html-style-stylesheets styles)
+    #:assets (append-map html-style-extra-assets styles)))
 
 (define (html-style-artifacts style)
   (append (html-style-stylesheets style)

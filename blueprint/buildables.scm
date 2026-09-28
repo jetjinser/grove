@@ -34,6 +34,7 @@
     "modules/forester/private/date.scm"
     "modules/forester/private/web.scm"
     "modules/forester/site.scm"
+    "modules/forester/style/html.scm"
     "modules/forester/input/scribble.scm"
     "modules/forester/render/html.scm"
     "modules/forester/render/graph.scm"

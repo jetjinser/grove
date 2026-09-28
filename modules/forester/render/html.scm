@@ -12,6 +12,7 @@
   #:use-module (grove render html routes)
   #:use-module (grove site)
   #:use-module (grove style html)
+  #:use-module (forester style html)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (forest->html
@@ -209,14 +210,11 @@
   (or (assq-ref (site-page-metadata page) 'summary)
       (site-description site)))
 
-(define tree-block-style
-  ".forest-tree-block { margin: 1rem 0; border-radius: .3rem; transition: background-color .12s ease; }\n.forest-tree-block:hover, .forest-tree-block:focus-within { background-color: rgba(0, 100, 255, .04); }\n.forest-tree-block summary { cursor: pointer; list-style: none; }\n.forest-tree-block summary::marker { content: ''; }\n.forest-tree-block summary::-webkit-details-marker { display: none; }\n.forest-tree-title { font-weight: 600; }\n.forest-tree-id { margin-left: .15em; font-size: .75em; opacity: .65; }\n.forest-tree-id:hover { opacity: 1; }\n.forest-tree-content { padding: .25rem .85rem; }")
-
 (define fragment-reveal-script
   "(function () {\n  function revealFragment() {\n    if (!location.hash) return;\n    var id = location.hash.slice(1);\n    try { id = decodeURIComponent(id); } catch (error) {}\n    var target = document.getElementById(id);\n    if (!target) return;\n    var node = target;\n    while (node) {\n      if (node.tagName === 'DETAILS') node.open = true;\n      node = node.parentElement;\n    }\n    window.requestAnimationFrame(function () { target.scrollIntoView(); });\n  }\n  window.addEventListener('hashchange', revealFragment);\n  revealFragment();\n}());")
 
 (define (html-document title title-id description body math? home-title style
-                       routes mathjax-src)
+                       routes mathjax-src inline-stylesheets?)
   `(html
      (head
        (meta (@ (charset "utf-8")))
@@ -224,12 +222,15 @@
        ,@(if description
              (list `(meta (@ (name "description") (content ,description))))
              '())
-       (style ,tree-block-style)
-       ,@(map (lambda (stylesheet)
-               `(link (@ (rel "stylesheet")
-                         (href ,(html-asset-url
-                                  routes (artifact-path stylesheet))))))
-             (html-style-stylesheets style))
+       ,@(if inline-stylesheets?
+             (map (lambda (stylesheet)
+                    `(style ,(artifact-content stylesheet)))
+                  (html-style-stylesheets style))
+             (map (lambda (stylesheet)
+                    `(link (@ (rel "stylesheet")
+                              (href ,(html-asset-url
+                                       routes (artifact-path stylesheet))))))
+                  (html-style-stylesheets style)))
        ,@(if (and math? mathjax-src)
              `((script (@ (src ,(mathjax-script-url mathjax-src routes))
                          (defer "defer"))
@@ -255,7 +256,8 @@
        ,@body
        (script ,fragment-reveal-script))))
 
-(define (index-html forest style routes mathjax-src)
+(define* (index-html forest style routes mathjax-src
+                     #:optional (inline-stylesheets? #f))
   (let ((site (forest-site forest)))
     (sxml->html
       (html-document
@@ -275,9 +277,11 @@
         #f
         style
         routes
-        mathjax-src))))
+        mathjax-src
+        inline-stylesheets?))))
 
-(define (page-html forest page style routes mathjax-src)
+(define* (page-html forest page style routes mathjax-src
+                    #:optional (inline-stylesheets? #f))
   (let* ((site (forest-site forest))
          (body (subtree-content-sxml forest routes page))
          (article (append body (backlinks-sxml forest page routes))))
@@ -291,7 +295,8 @@
         (site-title site)
         style
         routes
-        mathjax-src))))
+        mathjax-src
+        inline-stylesheets?))))
 
 (define (find-artifact artifacts path)
   (find (lambda (artifact) (string=? (artifact-path artifact) path))
@@ -355,21 +360,23 @@
                        (style (make-html-style))
                        (routes (make-html-routes))
                        (mathjax-src default-mathjax-src))
+  (set! style (make-forester-html-style #:style style))
   (check-html-input forest style routes mathjax-src)
   (let ((site (forest-site forest)))
     (when (member "index" (map site-page-id (forest-pages forest)))
       (error "HTML alist key conflicts with forest page" "index"))
     (cons
-      (cons "index" (index-html forest style routes mathjax-src))
+      (cons "index" (index-html forest style routes mathjax-src #t))
       (map (lambda (page)
              (cons (site-page-id page)
-                   (page-html forest page style routes mathjax-src)))
+                   (page-html forest page style routes mathjax-src #t)))
            (forest-pages forest)))))
 
 (define* (render-forest-html forest #:key
                              (style (make-html-style))
                              (routes (make-html-routes))
                              (mathjax-src default-mathjax-src))
+  (set! style (make-forester-html-style #:style style))
   (check-html-input forest style routes mathjax-src)
   (append
     (html-style-artifacts style)
@@ -389,7 +396,8 @@
                                       (routes (make-html-routes))
                                       (mathjax-src default-mathjax-src)
                                       (cache-key #f))
-  (let ((render (lambda (forest)
+  (let* ((style (make-forester-html-style #:style style))
+         (render (lambda (forest)
                   (render-forest-html forest
                                       #:style style
                                       #:routes routes
@@ -397,7 +405,7 @@
     (if cache-key
         (make-cached-renderer
           render
-          #:cache-key (string-append "forester-html-v10:" cache-key)
+          #:cache-key (string-append "forester-html-v11:" cache-key)
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
             (render-forest-html-changed forest style routes mathjax-src
