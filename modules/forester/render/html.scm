@@ -94,11 +94,15 @@
      (details (@ (open "open"))
        (summary
          (span (@ (class "forest-tree-title")) ,title)
-         " "
-         (a (@ (class "forest-tree-permalink")
-               (href ,page-url)
-               (aria-label ,(string-append "Open " title " as a page")))
-            "↗"))
+         ,@(if (string-prefix? "unstable-" id)
+               '()
+               (list
+                 " "
+                 `(a (@ (class "forest-tree-id")
+                       (href ,page-url)
+                       (aria-label ,(string-append
+                                      "Open tree " id " as a page")))
+                    "[" ,id "]"))))
        (div (@ (class "forest-tree-content")) ,@content))))
 
 (define (backlink-groups forest page)
@@ -201,7 +205,7 @@
       (site-description site)))
 
 (define tree-block-style
-  ".forest-tree-block { margin: 1rem 0; border-radius: .3rem; transition: background-color .12s ease; }\n.forest-tree-block:hover, .forest-tree-block:focus-within { background-color: rgba(0, 100, 255, .04); }\n.forest-tree-block summary { cursor: pointer; }\n.forest-tree-title { font-weight: 600; }\n.forest-tree-permalink { margin-left: .45em; font-size: .75em; text-decoration: none; opacity: .65; }\n.forest-tree-permalink:hover { opacity: 1; }\n.forest-tree-content { padding: .25rem .85rem; }")
+  ".forest-tree-block { margin: 1rem 0; border-radius: .3rem; transition: background-color .12s ease; }\n.forest-tree-block:hover, .forest-tree-block:focus-within { background-color: rgba(0, 100, 255, .04); }\n.forest-tree-block summary { cursor: pointer; list-style: none; }\n.forest-tree-block summary::marker { content: ''; }\n.forest-tree-block summary::-webkit-details-marker { display: none; }\n.forest-tree-title { font-weight: 600; }\n.forest-tree-id { margin-left: .45em; font-size: .75em; opacity: .65; }\n.forest-tree-id:hover { opacity: 1; }\n.forest-tree-content { padding: .25rem .85rem; }")
 
 (define fragment-reveal-script
   "(function () {\n  function revealFragment() {\n    if (!location.hash) return;\n    var id = location.hash.slice(1);\n    try { id = decodeURIComponent(id); } catch (error) {}\n    var target = document.getElementById(id);\n    if (!target) return;\n    var node = target;\n    while (node) {\n      if (node.tagName === 'DETAILS') node.open = true;\n      node = node.parentElement;\n    }\n    window.requestAnimationFrame(function () { target.scrollIntoView(); });\n  }\n  window.addEventListener('hashchange', revealFragment);\n  revealFragment();\n}());")

@@ -415,12 +415,18 @@
   (test-assert "subtree content is rendered at its definition site"
     (string-contains (assoc-ref html "root")
                      "class=\"forest-tree-block inline-subtree\""))
+  (test-assert "generated unstable tree IDs stay out of visible labels"
+    (not (string-contains (assoc-ref html "root") "[unstable-0001]")))
   (test-assert "inline trees render as initially open disclosure blocks"
     (string-contains (assoc-ref html "root") "<details open=\"open\">"))
   (test-assert "inline tree title is a native disclosure control"
     (string-contains (assoc-ref html "root") "<summary>"))
   (test-assert "tree blocks include hover styling"
     (string-contains (assoc-ref html "root") ".forest-tree-block:hover"))
+  (test-assert "tree disclosure markers are hidden while summaries stay clickable"
+    (and (string-contains (assoc-ref html "root") "summary::marker")
+         (string-contains (assoc-ref html "root") "summary::-webkit-details-marker")
+         (string-contains (assoc-ref html "root") "summary { cursor: pointer")))
   (test-assert "fragment navigation opens containing disclosures"
     (and (string-contains (assoc-ref html "root") "hashchange")
          (string-contains (assoc-ref html "root")
@@ -527,7 +533,9 @@
       (and (string-contains host-html
                             "class=\"forest-tree-block transclusion\"")
            (string-contains host-html "href=\"/reusable.html\"")
-           (string-contains host-html "forest-tree-permalink")
+           (string-contains host-html "class=\"forest-tree-id\"")
+           (string-contains host-html "[reusable]")
+           (not (string-contains host-html "↗"))
            (string-contains host-html "Reusable note")
            (string-contains host-html "Shared content."))))
   (test-assert "text output inserts the target content"
