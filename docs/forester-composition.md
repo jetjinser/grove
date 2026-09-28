@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 # Forester subtrees and transclusion
 
 Forester has two related ways to compose trees. A `subtree` declares content

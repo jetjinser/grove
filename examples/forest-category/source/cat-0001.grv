@@ -1,0 +1,30 @@
+@; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+@; SPDX-License-Identifier: CC0-1.0
+
+@use-modules[(forest-category commands)]
+
+@title{Category}
+@summary{A small adaptation of the category definition in cat-0001.tree.}
+@published{2024-05-21}
+
+@paragraph{A @bold{category} @math{\mathcal{C}} consists of objects, morphisms, domain and codomain operations, identity morphisms, and a partially defined composition operation.}
+
+@heading{Objects and morphisms}
+@itemize{
+  @item{A collection @math{\operatorname{ob}(\mathcal{C})} of objects, usually written @math{A, B, C, \ldots}.}
+  @item{A collection @math{\operatorname{mor}(\mathcal{C})} of morphisms, usually written @math{f, g, h, \ldots}.}
+}
+
+@heading{Domain, codomain, and composition}
+@paragraph{Each morphism has a domain and a codomain. We write @math{A \xrightarrow{f} B} when @math{f} has domain @math{A} and codomain @math{B}. Composition @math{fg} is defined when the codomain of @math{g} is the domain of @math{f}; then it has the same source as @math{g} and target as @math{f}.}
+
+@subtree{
+  @title{Identity and associativity}
+  @heading{Category axioms}
+  @paragraph{Every object @math{A} has an identity morphism @math{1_A}. Composition obeys the identity and associativity laws:}
+  @display-math{f 1_A = f = 1_B f}
+  @display-math{(fg)h = f(gh)}
+  @paragraph{The equations apply whenever the morphisms involved are composable.}
+}
+
+@paragraph{For qualifications and a discussion of notation, see @link["cat-0002"]{the remarks}.}
