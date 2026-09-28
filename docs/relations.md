@@ -51,28 +51,30 @@ miniKanren APIs from `(grove relation)` and adds `define-relation`, `exists`,
 ```scheme
 (use-modules (grove relation dsl))
 
-(define-relation (edgeo edges source target)
-  (relationo edges source target))
+(define-relation-schema make-reference-relation referenceo
+  (source-page reference-id target-page fragment label))
 
-(define-relation (common-sourceo edges left right source)
-  (exists (left-target right-target)
-    (all
-      (edgeo edges source left-target)
-      (edgeo edges source right-target)
-      (== left-target left)
-      (== right-target right))))
+(define-relation (incoming-referenceo references target source)
+  (referenceo references
+              (source-page source)
+              (target-page target)))
 
 (query (source)
-  (common-sourceo edges 'left 'right source))
+  (incoming-referenceo references "algebra" source))
 ```
 
 These forms expand to faster-minikanren relations, `fresh`, `conde`, and
-`run*`; they add no new evaluation engine. Terms are ordinary Scheme
-expressions in lexical scope. `either` clauses and `all` goals retain standard
-miniKanren search order, and results retain its duplicate-answer behavior.
-Libraries pass relation values explicitly and export their own named rules.
-The core forms remain available to code that prefers the underlying
-miniKanren vocabulary.
+`run*`; they add no new evaluation engine. `define-relation-schema` declares
+the tuple columns once, generates a constructor with fixed arity, and creates a
+named query macro. Query clauses name columns, so omitted columns become
+independent anonymous logic variables. Unknown or repeated columns are
+rejected during macro expansion. For example, a fragment query can constrain
+`(target-page "algebra")` and `(fragment "continuity")` without naming the
+other three columns. Terms are ordinary Scheme expressions in lexical scope.
+`either` clauses and `all` goals retain standard miniKanren search order, and
+results retain its duplicate-answer behavior. Libraries pass relation values
+explicitly and export their own named rules. The positional `relationo` and
+core miniKanren forms remain available for lower-level code.
 
 ## Query results
 

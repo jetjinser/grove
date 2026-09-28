@@ -13,19 +13,15 @@
             forest-reachable-page-ids))
 
 ;; Rows are (source-page-id local-reference-id target-page-id fragment label).
-(define (make-forest-reference-relation rows)
-  (make-relation rows #:arity 5))
-
-(define-relation (referenceo relation source-page-id reference-id
-                             target-page-id fragment label)
-  (relationo relation source-page-id reference-id target-page-id
-             fragment label))
+(define-relation-schema make-forest-reference-relation referenceo
+  (source-page-id reference-id target-page-id fragment label))
 
 (define-relation (incoming-referenceo relation target-page-id
                                        source-page-id reference-id)
-  (exists (fragment label)
-    (referenceo relation source-page-id reference-id target-page-id
-                fragment label)))
+  (referenceo relation
+              (source-page-id source-page-id)
+              (reference-id reference-id)
+              (target-page-id target-page-id)))
 
 (define (forest-incoming-page-reference-keys relation target-page-id)
   (query (source-page-id reference-id)
@@ -35,9 +31,11 @@
 (define (forest-incoming-fragment-reference-keys
          relation target-page-id fragment-id)
   (query (source-page-id reference-id)
-    (exists (label)
-      (referenceo relation source-page-id reference-id target-page-id
-                  fragment-id label))))
+    (referenceo relation
+                (source-page-id source-page-id)
+                (reference-id reference-id)
+                (target-page-id target-page-id)
+                (fragment fragment-id))))
 
 (define* (forest-incoming-reference-keys relation target-page-id
                                          #:optional fragment-id)
@@ -48,28 +46,28 @@
 
 (define (forest-outgoing-reference-ids relation source-page-id)
   (query (reference-id)
-    (exists (target-page-id fragment label)
-      (referenceo relation source-page-id reference-id target-page-id
-                  fragment label))))
+    (referenceo relation
+                (source-page-id source-page-id)
+                (reference-id reference-id))))
 
 (define (forest-backlink-page-ids relation target-page-id)
   (delete-duplicates
     (query (source-page-id)
-      (exists (reference-id fragment label)
-        (referenceo relation source-page-id reference-id target-page-id
-                    fragment label)))
+      (referenceo relation
+                  (source-page-id source-page-id)
+                  (target-page-id target-page-id)))
     equal?))
 
 (define (forest-common-backlink-page-ids relation left-page-id right-page-id)
   (delete-duplicates
     (query (source-page-id)
-      (exists (left-reference-id left-fragment left-label
-               right-reference-id right-fragment right-label)
-        (all
-          (referenceo relation source-page-id left-reference-id left-page-id
-                      left-fragment left-label)
-          (referenceo relation source-page-id right-reference-id right-page-id
-                      right-fragment right-label))))
+      (all
+        (referenceo relation
+                    (source-page-id source-page-id)
+                    (target-page-id left-page-id))
+        (referenceo relation
+                    (source-page-id source-page-id)
+                    (target-page-id right-page-id))))
     equal?))
 
 (define-relation (not-membero value values)
@@ -82,9 +80,9 @@
          (not-membero value tail))))))
 
 (define-relation (page-linko relation source-page-id target-page-id)
-  (exists (reference-id fragment label)
-    (referenceo relation source-page-id reference-id target-page-id
-                fragment label)))
+  (referenceo relation
+              (source-page-id source-page-id)
+              (target-page-id target-page-id)))
 
 (define-relation (reachableo relation source-page-id target-page-id)
   (reachable-step relation source-page-id target-page-id
