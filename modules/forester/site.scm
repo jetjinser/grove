@@ -222,7 +222,7 @@
              (append-map
                (lambda (entry)
                  (map (lambda (reference)
-                        (cons (forest-reference-source-page-id reference)
+                        (list (forest-reference-source-page-id reference)
                               (forest-reference-target-page-id reference)))
                       (cdr entry)))
                reference-index))))

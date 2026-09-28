@@ -20,7 +20,8 @@ not valid relation data. A relation cannot contain a live logic variable.
 Base facts have set semantics: structurally equal rows occur once. The
 constructor retains the first occurrence order, and `relation-facts` exposes
 that order. Relation arity is part of the relation value and is checked when a
-goal is created or run.
+goal runs. An empty relation defaults to arity two for convenience; pass
+`#:arity` to `make-relation` to construct an empty relation with another arity.
 
 The public construction and query forms are intended to be:
 
@@ -73,10 +74,3 @@ promise tabling. A future tabling facility must define how it handles
 constraints, duplicate answers, recursive cycles, and the lifetime of tables;
 it can be added as an explicit extension without changing ordinary goal
 semantics.
-
-## Current implementation transition
-
-The current implementation only supports binary dotted-pair facts and
-two-argument `relationo` calls. The contract above is the target for the
-relation API generalization; the implementation and callers are migrated in
-the following change.

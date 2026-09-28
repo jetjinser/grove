@@ -22,23 +22,23 @@
                matche)
   #:export (relation?
             make-relation
+            relation-arity
             relation-facts
             relationo))
 
 (define-record-type <relation>
-  (%make-relation facts by-source by-target)
+  (%make-relation arity facts indexes)
   relation?
+  (arity relation-arity)
   (facts relation-facts)
-  (by-source relation-by-source)
-  (by-target relation-by-target))
+  (indexes relation-indexes))
 
-(define (make-index facts key-procedure value-procedure)
+(define (make-index facts position)
   (let ((index (make-hash-table)))
     (for-each
       (lambda (fact)
-        (let ((key (key-procedure fact))
-              (value (value-procedure fact)))
-          (hash-set! index key (cons value (hash-ref index key '())))))
+        (let ((key (list-ref fact position)))
+          (hash-set! index key (cons fact (hash-ref index key '())))))
       facts)
     index))
 
@@ -62,18 +62,21 @@
           (vector-free-term? (cdr term))))
     (else #t)))
 
-(define (make-relation facts)
-  (unless (and (list? facts) (every pair? facts))
-    (error "relation facts must be a list of pairs" facts))
-  (unless (every (lambda (fact)
-                   (and (vector-free-term? (car fact))
-                        (vector-free-term? (cdr fact))))
-                 facts)
+(define* (make-relation facts #:key (arity 2))
+  (unless (and (integer? arity) (positive? arity))
+    (error "relation arity must be a positive integer" arity))
+  (unless (and (list? facts)
+               (every (lambda (fact)
+                        (and (list? fact) (= (length fact) arity)))
+                      facts))
+    (error "relation facts must be a list of rows matching the relation arity"
+           arity facts))
+  (unless (every (lambda (fact) (every vector-free-term? fact)) facts)
     (error "relation facts cannot contain vectors; miniKanren uses them for logic variables" facts))
-  (let ((facts (unique-facts facts)))
-    (%make-relation facts
-                    (make-index facts car cdr)
-                    (make-index facts cdr car))))
+  (let* ((facts (unique-facts facts))
+         (indexes (map (lambda (position) (make-index facts position))
+                       (iota arity))))
+    (%make-relation arity facts indexes)))
 
 (define (ground-term? term)
   (cond
@@ -89,27 +92,31 @@
        (== `(,value . ,rest) values)))
     ((fresh (head rest)
        (== `(,head . ,rest) values)
-       (membero value rest)))))
+      (membero value rest)))))
 
 (define (indexed-values index key)
   (reverse (hash-ref index key '())))
 
-(define (relationo relation source target)
+(define (relationo/ground relation terms)
   (unless (relation? relation)
     (error "relationo requires a relation" relation))
-  ((@@ (faster-minikanren mk-guile) project) (source target)
-    (cond
-      ((and (ground-term? source) (ground-term? target))
-       (if (member target
-                   (indexed-values (relation-by-source relation) source)
-                   equal?)
-           succeed
-           fail))
-      ((ground-term? source)
-       (membero target
-                (indexed-values (relation-by-source relation) source)))
-      ((ground-term? target)
-       (membero source
-                (indexed-values (relation-by-target relation) target)))
-      (else
-       (membero (cons source target) (relation-facts relation))))))
+  (unless (= (length terms) (relation-arity relation))
+    (error "relation goal arity does not match relation"
+           (relation-arity relation) (length terms)))
+  (let find-candidates ((remaining terms)
+                        (indexes (relation-indexes relation)))
+    (if (null? remaining)
+        (membero terms (relation-facts relation))
+        (if (ground-term? (car remaining))
+            (membero terms
+                     (indexed-values (car indexes) (car remaining)))
+            (find-candidates (cdr remaining)
+                             (cdr indexes))))))
+
+(define-syntax relationo
+  (syntax-rules ()
+    ((_ relation argument ...)
+     (fresh (row)
+       (== row (list argument ...))
+       ((@@ (faster-minikanren mk-guile) project) (row)
+         (relationo/ground relation row))))))

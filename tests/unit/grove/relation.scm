@@ -11,26 +11,30 @@
 
 (define links
   (make-relation
-    '((alpha . beta)
-      (alpha . gamma)
-      (beta . delta)
-      (gamma . delta)
-      (delta . alpha)
-      (alpha . beta))))
+    '((alpha beta)
+      (alpha gamma)
+      (beta delta)
+      (gamma delta)
+      (delta alpha)
+      (alpha beta))))
 
 (test-assert "relation constructor validates its facts"
   (relation? links))
+
+(test-equal "relation records its arity"
+  2
+  (relation-arity links))
 
 (test-equal "relations have set semantics for duplicate facts"
   5
   (length (relation-facts links)))
 
 (test-equal "fact deduplication preserves first occurrence order"
-  '((alpha . beta)
-    (alpha . gamma)
-    (beta . delta)
-    (gamma . delta)
-    (delta . alpha))
+  '((alpha beta)
+    (alpha gamma)
+    (beta delta)
+    (gamma delta)
+    (delta alpha))
   (relation-facts links))
 
 (test-equal "fact deduplication compares compound terms structurally"
@@ -38,9 +42,9 @@
   (length
     (relation-facts
       (make-relation
-        (list (cons '(tag alpha) 'topic)
-              (cons (list 'tag 'alpha) 'topic)
-              (cons '(tag beta) 'topic))))))
+        (list (list '(tag alpha) 'topic)
+              (list (list 'tag 'alpha) 'topic)
+              (list '(tag beta) 'topic))))))
 
 (test-equal "a bound source uses the outgoing relation"
   '(beta gamma)
@@ -68,8 +72,43 @@
   (relation-facts links)
   (run* (fact)
     (fresh (source target)
-      (== fact (cons source target))
+      (== fact (list source target))
       (relationo links source target))))
+
+(test-error "relation goal rejects an arity mismatch"
+  #t
+  (run* (value)
+    (relationo links value)))
+
+(let ((references
+        (make-relation
+          '((page-a page-b #f)
+            (page-a page-c introduction)
+            (page-b page-c #f))
+          #:arity 3)))
+  (test-equal "n-ary relations record their arity and join columns"
+    '((page-a introduction) (page-b #f))
+    (run* (source fragment)
+      (relationo references source 'page-c fragment)))
+  (test-equal "n-ary relation goals can bind a later column"
+    '((page-a page-c))
+    (run* (source target)
+      (relationo references source target 'introduction)))
+  (test-equal "n-ary relations enumerate their rows"
+    (relation-facts references)
+    (run* (source target fragment)
+      (relationo references source target fragment))))
+
+(test-equal "empty relations require and retain an explicit non-default arity"
+  '(1 ())
+  (let ((empty (make-relation '() #:arity 1)))
+    (list (relation-arity empty)
+          (run* (value)
+            (relationo empty value)))))
+
+(test-error "relation constructor rejects rows with inconsistent arity"
+  #t
+  (make-relation '((first second) (only-first))))
 
 (test-equal "relation goals compose through a shared logic variable"
   '(beta gamma)
@@ -81,12 +120,12 @@
 
 (let ((references
         (make-relation
-          '((first . left)
-            (first . right)
-            (second . left)
-            (second . right)
-            (third . left)
-            (unrelated . elsewhere)))))
+          '((first left)
+            (first right)
+            (second left)
+            (second right)
+            (third left)
+            (unrelated elsewhere)))))
   (test-equal "a shared logic variable joins two indexed relation lookups"
     '(first second)
     (run* (source)
@@ -95,8 +134,8 @@
 
 (let ((structured
         (make-relation
-          (list (cons '(tag alice) 'topic)
-                (cons '(tag bob) 'topic)))))
+          (list (list '(tag alice) 'topic)
+                (list '(tag bob) 'topic)))))
   (test-equal "an indexed lookup unifies structured terms with variables"
     '(alice bob)
     (run* (name)
@@ -132,20 +171,21 @@
     (lambda (left right)
       (string<? (symbol->string left) (symbol->string right)))))
 
-(test-error "relation constructor rejects non-pair facts"
+(test-error "relation constructor rejects non-row facts"
   #t
   (make-relation '((alpha beta) broken)))
 
 (test-error "relation constructor rejects vector terms reserved for logic variables"
   #t
-  (make-relation (list (cons 'alpha (vector 'tag 'value)))))
+  (make-relation (list (list 'alpha (vector 'tag 'value)))))
 
 (test-error "relation constructor rejects vectors nested in structured terms"
   #t
-  (make-relation (list (cons 'alpha (list 'metadata (vector 'tag 'value))))))
+  (make-relation (list (list 'alpha (list 'metadata (vector 'tag 'value))))))
 
 (test-error "relationo rejects non-relations"
   #t
-  (relationo 'not-a-relation 'alpha 'beta))
+  (run* (value)
+    (relationo 'not-a-relation 'alpha 'beta)))
 
 (test-end "grove relation")
