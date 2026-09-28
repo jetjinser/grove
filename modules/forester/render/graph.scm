@@ -33,16 +33,15 @@
 (define (forest->graph forest)
   (unless (forest? forest)
     (error "Forester graph renderer requires a forest" forest))
-  (let ((site (forest-site forest)))
+  (let ((pages (forest-pages forest)))
     `(forest-graph
-       (pages ,(map (lambda (page) (page->graph forest page))
-                    (site-pages site)))
+       (pages ,(map (lambda (page) (page->graph forest page)) pages))
        (references
          ,(append-map
             (lambda (page)
               (map reference->graph
                    (forest-outgoing-references forest (site-page-id page))))
-            (site-pages site))))))
+            pages)))))
 
 (define* (render-forest-graph forest #:key (path "forest-graph.scm"))
   (unless (forest? forest)

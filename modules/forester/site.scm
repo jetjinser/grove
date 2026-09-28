@@ -12,6 +12,8 @@
   #:export (forest?
             make-forest
             forest-site
+            forest-pages
+            forest-page
             forest-links
             forest-backlinks
             forest-common-backlinks
@@ -46,6 +48,46 @@
     ((content-document? content)
      (append-map link-elements (content-document-children content)))
     (else '())))
+
+(define (subtree-elements content)
+  (cond
+    ((content-element? content)
+     (append (if (eq? (content-element-kind content) 'subtree)
+                 (list content)
+                 '())
+             (append-map subtree-elements
+                         (content-element-children content))))
+    ((content-document? content)
+     (append-map subtree-elements (content-document-children content)))
+    (else '())))
+
+(define (owned-content content)
+  (cond
+    ((content-element? content)
+     (if (eq? (content-element-kind content) 'subtree)
+         #f
+         (make-content-element
+           (content-element-kind content)
+           (filter-map owned-content (content-element-children content))
+           (content-element-source content)
+           #:properties (content-element-properties content))))
+    ((content-document? content)
+     (make-content-document
+       (filter-map owned-content (content-document-children content))
+       (content-document-source content)))
+    (else content)))
+
+(define (subtree-page element source)
+  (let ((id (content-element-property element 'tree-id))
+        (title (content-element-property element 'title)))
+    (unless (and (string? id) (not (string-null? id))
+                 (string? title) (not (string-null? title)))
+      (error "invalid Forester subtree element" element))
+    (make-site-page
+      id title
+      (make-content-document (content-element-children element) source)
+      source
+      #:metadata '((inline-subtree . #t)))))
 
 (define (split-link-target target)
   (unless (and (string? target) (not (string-null? target)))
@@ -142,9 +184,10 @@
   (label forest-heading-label))
 
 (define-record-type <forest>
-  (%make-forest site reference-index heading-index reference-relation)
+  (%make-forest site pages reference-index heading-index reference-relation)
   forest?
   (site forest-site)
+  (pages forest-pages)
   (reference-index forest-reference-index)
   (heading-index forest-heading-index)
   (reference-relation forest-reference-relation))
@@ -152,11 +195,24 @@
 (define (make-forest site)
   (unless (site? site)
     (error "forest requires a Grove site" site))
-  (let* ((pages (site-pages site))
+  (let* ((root-pages (site-pages site))
+         (subtrees
+           (append-map
+             (lambda (page)
+               (map (lambda (element)
+                      (subtree-page element (site-page-source page)))
+                    (subtree-elements (site-page-document page))))
+             root-pages))
+         (pages (append root-pages subtrees))
+         (_ (make-site pages
+                       #:title (site-title site)
+                       #:description (site-description site)
+                       #:sources (site-sources site)))
          (heading-index
            (map (lambda (page)
                   (let* ((elements
-                           (heading-elements (site-page-document page)))
+                           (heading-elements
+                             (owned-content (site-page-document page))))
                          (ids (unique-heading-slugs elements)))
                     (cons
                       (site-page-id page)
@@ -170,7 +226,9 @@
              (lambda (source-page)
                (let* ((source-id (site-page-id source-page))
                       (elements
-                        (link-elements (site-page-document source-page))))
+                        (link-elements
+                          (owned-content
+                            (site-page-document source-page)))))
                  (cons
                    source-id
                    (map
@@ -230,8 +288,13 @@
                           (forest-reference-label reference)))
                       (cdr entry)))
                reference-index))))
-    (%make-forest site reference-index heading-index
+    (%make-forest site pages reference-index heading-index
                   reference-relation)))
+
+(define (forest-page forest id)
+  (or (find (lambda (page) (equal? id (site-page-id page)))
+            (forest-pages forest))
+      (error "unknown forest page" id)))
 
 (define (forest-heading-ids forest id)
   (map forest-heading-id (forest-headings forest id)))
@@ -281,7 +344,7 @@
   (let ((source-ids
           (forest-backlink-page-ids (forest-reference-relation forest) id)))
     (filter (lambda (page) (member (site-page-id page) source-ids equal?))
-            (site-pages (forest-site forest)))))
+            (forest-pages forest))))
 
 (define (forest-common-backlinks forest left-id right-id)
   (for-each
@@ -293,7 +356,7 @@
           (forest-common-backlink-page-ids
             (forest-reference-relation forest) left-id right-id)))
     (filter (lambda (page) (member (site-page-id page) source-ids equal?))
-            (site-pages (forest-site forest)))))
+            (forest-pages forest))))
 
 (define (forest-reachable-pages forest id)
   (unless (assoc id (forest-heading-index forest))

@@ -8,7 +8,7 @@
   #:export (content->sxml
             sxml->html))
 
-(define* (content->sxml content #:key (handlers '()))
+(define* (content->sxml content #:key (handlers '()) (lazy-handlers '()))
   (define (render content)
     (cond
       ((string? content) content)
@@ -21,11 +21,14 @@
 
   (define (render-element element)
     (let* ((kind (content-element-kind element))
-           (children (map render (content-element-children element)))
-           (handler (assq-ref handlers kind)))
-      (if handler
-          (handler element children)
-          (case kind
+           (lazy-handler (assq-ref lazy-handlers kind)))
+      (if lazy-handler
+          (lazy-handler element render)
+          (let ((children (map render (content-element-children element)))
+                (handler (assq-ref handlers kind)))
+            (if handler
+                (handler element children)
+                (case kind
             ((bold) (cons 'strong children))
             ((paragraph) (cons 'p children))
             ((heading) (cons 'h2 children))
@@ -45,8 +48,8 @@
                   ,(string-append (if display? "\\[" "\\(")
                                   source-text
                                   (if display? "\\]" "\\)")))))
-            (else
-             `(span (@ (class ,(symbol->string kind))) ,@children))))))
+                  (else
+                   `(span (@ (class ,(symbol->string kind))) ,@children))))))))
 
   (render content))
 

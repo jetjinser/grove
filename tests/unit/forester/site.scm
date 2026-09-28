@@ -387,6 +387,47 @@
   (test-assert "projects can disable browser-side math rendering"
     (not (string-contains (assoc-ref html "algebra") "mathjax"))))
 
+(let* ((root
+         (make-site-page
+           "root" "Root"
+           (evaluate-document
+             "@subtree[\"inline-1\"]{@title{Inline section}@paragraph{Owned text. @link[\"root\"]{Home}.}}")))
+       (forest (make-forest (make-site (list root))))
+       (html (forest->html forest #:mathjax-src #f))
+       (text (forest->text forest))
+       (inline (forest-page forest "inline-1")))
+  (test-equal "inline subtrees become independently addressable trees"
+    '("root" "inline-1")
+    (map site-page-id (forest-pages forest)))
+  (test-equal "subtree title is metadata, not body content"
+    "Inline section"
+    (site-page-title inline))
+  (test-equal "subtree body remains available in its standalone document"
+    '(paragraph)
+    (map content-element-kind
+         (content-document-children (site-page-document inline))))
+  (test-assert "subtree content is rendered at its definition site"
+    (string-contains (assoc-ref html "root")
+                     "class=\"inline-subtree\""))
+  (test-assert "subtrees receive standalone HTML routes"
+    (string-contains (assoc-ref html "inline-1") "Owned text."))
+  (test-assert "subtrees receive standalone text routes"
+    (string-contains (assoc-ref text "inline-1") "Owned text."))
+  (test-equal "references inside a subtree belong to that subtree"
+    '("inline-1")
+    (map forest-reference-source-page-id
+         (forest-incoming-references forest "root"))))
+
+(test-error "subtree IDs cannot collide with file page IDs" #t
+  (make-forest
+    (make-site
+      (list (make-site-page "collision" "File page"
+                            (make-content-document '()))
+            (make-site-page
+              "root" "Root"
+              (evaluate-document
+                "@subtree[\"collision\"]{@title{Inline}}"))))))
+
 (test-error "unresolved links fail site analysis" #t
   (make-forest
     (make-site

@@ -269,6 +269,14 @@ Pages with headings get an automatically generated table of contents in HTML
 and plain text. Plain-text headings carry matching `[#id]` markers, while
 fragment links retain their `#id` in the output path.
 
+An inline addressable tree is declared with `@subtree["exercise-1"]{...}` and
+must contain one direct `@title{...}`. It remains visible at its definition
+site and also receives its own HTML, text, and sitemap entry. Its ID shares the
+same namespace as file-backed page IDs, so collisions are errors. Links inside
+the subtree belong to its own ID and are validated and rendered using that
+tree's reference index. A subtree does not yet support transcluding another
+tree; that is the next part of the Forester model.
+
 The project title and optional `#:description` become site-level metadata.
 Forester HTML emits the description in the index page and uses it as a page
 description when a page has no `@summary`. RSS uses it for the channel

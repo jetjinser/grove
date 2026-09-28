@@ -49,6 +49,18 @@
                                      (make-string (string-length body) #\=)
                                      "\n[#" id "]\n")))))))
 
+(define (subtree-content-text forest routes page)
+  (content->text
+    (site-page-document page)
+    #:handlers (page-content-handlers forest routes page)
+    #:lazy-handlers
+    `((subtree . ,(lambda (element _render)
+                    (let* ((id (content-element-property element 'tree-id))
+                           (target (forest-page forest id)))
+                      (string-append
+                        (heading (site-page-title target))
+                        (subtree-content-text forest routes target))))))))
+
 (define (heading title)
   (string-append title "\n" (make-string (string-length title) #\=) "\n"))
 
@@ -76,7 +88,7 @@
   (let* ((source-id (forest-reference-source-page-id reference))
          (source (find (lambda (candidate)
                          (equal? source-id (site-page-id candidate)))
-                       (site-pages (forest-site forest))))
+                       (forest-pages forest)))
          (path (text-relative-path (text-page-path routes page-id)
                                    (text-page-path routes source-id))))
     (string-append "  - " (site-page-title source) " [" path "#"
@@ -141,9 +153,7 @@
 (define (page->text forest page routes)
   (let ((page-path (text-page-path routes (site-page-id page)))
         (body (string-trim-both
-                (content->text (site-page-document page)
-                               #:handlers
-                               (page-content-handlers forest routes page))
+                (subtree-content-text forest routes page)
                 (char-set #\newline))))
     (string-append
       (heading (site-page-title page))
@@ -159,7 +169,7 @@
          (paths (cons (text-index-path routes)
                       (map (lambda (page)
                              (text-page-path routes (site-page-id page)))
-                           (site-pages site)))))
+                           (forest-pages forest)))))
     (unless (= (length paths) (length (delete-duplicates paths string=?)))
       (error "text routes produce duplicate output paths" paths))))
 
@@ -206,7 +216,7 @@
                         old
                         (make-artifact
                           path (page->text forest page routes) sources))))
-                (site-pages site))))
+                (forest-pages forest))))
     (cons index-artifact page-artifacts)))
 
 (define* (forest->text forest #:key (routes (make-text-routes)))
@@ -218,7 +228,7 @@
           (map (lambda (page)
                  (cons (site-page-id page)
                        (page->text forest page routes)))
-               (site-pages site)))))
+               (forest-pages forest)))))
 
 (define* (render-forest-text forest #:key (routes (make-text-routes)))
   (let* ((site (forest-site forest))
@@ -233,7 +243,7 @@
                (text-page-path routes (site-page-id page))
                (page->text forest page routes)
                (forest-page-source-paths forest page)))
-           (site-pages site)))))
+           (forest-pages forest)))))
 
 (define* (make-forester-text-renderer #:key (prefix #f)
                                       (routes (make-text-routes))

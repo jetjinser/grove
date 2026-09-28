@@ -35,7 +35,6 @@
   (unless (html-routes? routes)
     (error "Forester sitemap renderer requires HTML routes" routes))
   (let* ((base (web-base-url site-url))
-         (site (forest-site forest))
          (urls
            (cons
              (string-append
@@ -56,7 +55,7 @@
                                            "</lastmod>\n")
                             "")
                         "    </url>")))
-                  (site-pages site))))
+                  (forest-pages forest))))
          (content
            (string-append
              "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"

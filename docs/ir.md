@@ -18,9 +18,10 @@ Input languages produce Grove content; renderers consume it.
 
 Each record has an optional `source` field. Element kinds are open.
 
-Grove provides generic rendering and per-kind handlers. Libraries such as
-Forester define domain-specific meaning for their elements and analyze them
-without adding those concepts to the Grove IR.
+Grove provides generic rendering, per-kind handlers, and lazy handlers for
+elements whose rendering chooses a different content context. Libraries such
+as Forester define domain-specific meaning for their elements and analyze
+them without adding those concepts to the Grove IR.
 
 `(grove site)` is an optional page-oriented model. It groups pages by ID and
 checks for duplicate IDs. A page contains an ID, title, content document,

@@ -7,7 +7,7 @@
   #:use-module (srfi srfi-13)
   #:export (content->text))
 
-(define* (content->text content #:key (handlers '()))
+(define* (content->text content #:key (handlers '()) (lazy-handlers '()))
   (define (render content)
     (cond
       ((string? content) content)
@@ -21,12 +21,15 @@
 
   (define (render-element element)
     (let* ((kind (content-element-kind element))
-           (body (string-concatenate
-                   (map render (content-element-children element))))
-           (handler (assq-ref handlers kind)))
-      (if handler
-          (handler element body)
-          (case kind
+           (lazy-handler (assq-ref lazy-handlers kind)))
+      (if lazy-handler
+          (lazy-handler element render)
+          (let ((body (string-concatenate
+                        (map render (content-element-children element))))
+                (handler (assq-ref handlers kind)))
+            (if handler
+                (handler element body)
+                (case kind
             ((paragraph) (string-append body "\n"))
             ((heading)
              (string-append body "\n"
@@ -51,6 +54,6 @@
                (if (content-element-property element 'display?)
                    (string-append "$$\n" source-text "\n$$\n")
                    (string-append "$" source-text "$"))))
-            (else body)))))
+                  (else body)))))))
 
   (render content))
