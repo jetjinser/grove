@@ -69,4 +69,31 @@
 (test-error "graph renderer rejects paths with parent traversal" #t
   (make-forester-graph-renderer #:path "../forest.scm"))
 
+(let* ((root
+         (make-site-page
+           "root" "Root"
+           (make-content-document
+             (list
+               (make-content-element
+                 'subtree
+                 (list (make-content-element 'heading '("Inline")))
+                 #:properties '((title . "Inline tree")))))))
+       (host
+         (make-site-page
+           "host" "Host"
+           (make-content-document
+             (list (make-content-element 'transclude '()
+                     #:properties '((target . "unstable-0001")))))))
+       (graph (forest->graph (make-forest (make-site (list root host)))))
+       (subtrees (cadr (assoc 'subtrees (cdr graph))))
+       (transclusions (cadr (assoc 'transclusions (cdr graph)))))
+  (test-equal "graph records containment and transclusion as distinct edges"
+    '(((parent-tree . "root") (subtree . "unstable-0001")))
+    subtrees)
+  (test-equal "graph preserves the transclusion source occurrence"
+    '(((source-tree . "host")
+       (source-id . "transclude-1")
+       (target-tree . "unstable-0001")))
+    transclusions))
+
 (test-end "forester graph")

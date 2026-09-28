@@ -37,6 +37,7 @@
             forest-transclusion-source-tree-id
             forest-transclusion-source-id
             forest-transclusion-target-tree-id
+            forest-subtree-definitions
             forest-outgoing-transclusions
             forest-incoming-transclusions
             forest-transcluding-pages
@@ -68,6 +69,17 @@
      (append-map subtree-elements (content-document-children content)))
     (else '())))
 
+(define (direct-subtree-elements content)
+  (cond
+    ((content-element? content)
+     (if (eq? (content-element-kind content) 'subtree)
+         (list content)
+         (append-map direct-subtree-elements
+                     (content-element-children content))))
+    ((content-document? content)
+     (append-map direct-subtree-elements (content-document-children content)))
+    (else '())))
+
 (define (transclusion-elements content)
   (cond
     ((content-element? content)
@@ -80,6 +92,18 @@
      (append-map transclusion-elements (content-document-children content)))
     (else '())))
 
+(define (describe-tree-cycle pages cycle)
+  (string-join
+    (map (lambda (tree-id)
+           (let ((page (find (lambda (candidate)
+                               (equal? tree-id (site-page-id candidate)))
+                             pages)))
+             (format #f "~a (~a)" tree-id
+                     (or (and page (site-page-source page))
+                         "<unknown source>"))))
+         cycle)
+    " -> "))
+
 (define (validate-composition-cycles! pages)
   (let ((edges
           (append
@@ -88,7 +112,7 @@
                 (map (lambda (element)
                        (list (site-page-id page)
                              (content-element-property element 'tree-id)))
-                     (subtree-elements (site-page-document page))))
+                     (direct-subtree-elements (site-page-document page))))
               pages)
             (append-map
               (lambda (page)
@@ -100,8 +124,10 @@
     (letrec ((visit
                (lambda (id path)
                  (when (member id path equal?)
-                   (error "cyclic Forester tree composition"
-                          (reverse (cons id path))))
+                   (error
+                     (format #f "cyclic Forester tree composition: ~a"
+                             (describe-tree-cycle
+                               pages (reverse (cons id path))))))
                  (for-each (lambda (target)
                              (visit target (cons id path)))
                            (map cadr
@@ -126,7 +152,7 @@
        (content-document-source content)))
     (else content)))
 
-(define (subtree-page element source)
+(define (subtree-page element source parent-id)
   (let ((id (content-element-property element 'tree-id))
         (title (content-element-property element 'title)))
     (unless (and (string? id) (not (string-null? id))
@@ -136,7 +162,20 @@
       id title
       (make-content-document (content-element-children element) source)
       source
-      #:metadata '((inline-subtree . #t)))))
+      #:metadata `((inline-subtree . #t)
+                   (parent-tree-id . ,parent-id)))))
+
+(define (subtree-pages pages)
+  (define (descendants page)
+    (append-map
+      (lambda (element)
+        (let ((child
+                (subtree-page element
+                              (site-page-source page)
+                              (site-page-id page))))
+          (cons child (descendants child))))
+      (direct-subtree-elements (site-page-document page))))
+  (append-map descendants pages))
 
 (define (assign-subtree-identifiers pages)
   (let ((next-id 0))
@@ -289,13 +328,7 @@
   (unless (site? site)
     (error "forest requires a Grove site" site))
   (let* ((root-pages (assign-subtree-identifiers (site-pages site)))
-         (subtrees
-           (append-map
-             (lambda (page)
-               (map (lambda (element)
-                      (subtree-page element (site-page-source page)))
-                    (subtree-elements (site-page-document page))))
-             root-pages))
+         (subtrees (subtree-pages root-pages))
          (pages (append root-pages subtrees))
          (_ (make-site pages
                        #:title (site-title site)
@@ -380,26 +413,29 @@
                    source-id
                    (map
                      (lambda (element index)
-                       (let ((target-id
-                               (content-element-property element 'target)))
+                       (let* ((target-id
+                                (content-element-property element 'target))
+                              (transclusion-id
+                                (format #f "transclude-~a" index))
+                              (source-path
+                                (or (site-page-source source-tree)
+                                    "<unknown source>")))
                          (unless (and (string? target-id)
                                       (not (string-null? target-id)))
-                           (error "invalid Forester transclusion target"
-                                  source-id target-id))
+                           (error
+                             (format #f
+                               "invalid Forester transclusion ~a in tree ~a (~a): ~s"
+                               transclusion-id source-id source-path target-id)))
                          (unless (find
                                    (lambda (page)
                                      (equal? target-id (site-page-id page)))
                                    pages)
                            (error
                              (format #f
-                               "unresolved Forester transclusion in tree ~a (~a): ~a"
-                               source-id
-                               (or (site-page-source source-tree)
-                                   "<unknown source>")
-                               target-id)))
+                               "unresolved Forester transclusion ~a in tree ~a (~a): target ~a"
+                               transclusion-id source-id source-path target-id)))
                          (%make-forest-transclusion
-                           source-id (format #f "transclude-~a" index)
-                           target-id)))
+                           source-id transclusion-id target-id)))
                      elements
                      (iota (length elements) 1)))))
              pages))
@@ -436,6 +472,14 @@
   (or (find (lambda (page) (equal? id (site-page-id page)))
             (forest-pages forest))
       (error "unknown forest page" id)))
+
+(define (forest-subtree-definitions forest)
+  (filter-map
+    (lambda (page)
+      (let ((parent-id
+              (assq-ref (site-page-metadata page) 'parent-tree-id)))
+        (and parent-id (list parent-id (site-page-id page)))))
+    (forest-pages forest)))
 
 (define (forest-heading-ids forest id)
   (map forest-heading-id (forest-headings forest id)))

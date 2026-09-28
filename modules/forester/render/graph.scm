@@ -47,6 +47,11 @@
               (map reference->graph
                    (forest-outgoing-references forest (site-page-id page))))
             pages))
+       (subtrees
+         ,(map (lambda (definition)
+                 `((parent-tree . ,(car definition))
+                   (subtree . ,(cadr definition))))
+               (forest-subtree-definitions forest)))
        (transclusions
          ,(append-map
             (lambda (page)

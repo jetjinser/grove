@@ -395,6 +395,12 @@
        (forest (make-forest (make-site (list root))))
        (html (forest->html forest #:mathjax-src #f))
        (text (forest->text forest))
+       (rss (artifact-content
+              (car (render-forest-rss forest
+                                      #:site-url "https://notes.example"))))
+       (sitemap (artifact-content
+                  (car (render-forest-sitemap
+                         forest #:site-url "https://notes.example"))))
        (inline (forest-page forest "unstable-0001")))
   (test-equal "inline subtrees become independently addressable trees"
     '("root" "unstable-0001")
@@ -409,10 +415,21 @@
   (test-assert "subtree content is rendered at its definition site"
     (string-contains (assoc-ref html "root")
                      "class=\"inline-subtree\""))
+  (test-assert "HTML index lists file-backed trees but omits inline subtrees"
+    (and (string-contains (assoc-ref html "index") "Root")
+         (not (string-contains (assoc-ref html "index") "Inline section"))))
   (test-assert "subtrees receive standalone HTML routes"
     (string-contains (assoc-ref html "unstable-0001") "Owned text."))
   (test-assert "subtrees receive standalone text routes"
     (string-contains (assoc-ref text "unstable-0001") "Owned text."))
+  (test-assert "text index lists file-backed trees but omits inline subtrees"
+    (and (string-contains (assoc-ref text "index") "Root")
+         (not (string-contains (assoc-ref text "index") "Inline section"))))
+  (test-assert "sitemap includes addressable inline subtrees"
+    (string-contains sitemap "/unstable-0001.html"))
+  (test-assert "RSS omits inline subtrees as standalone feed entries"
+    (and (string-contains rss "<title>Root</title>")
+         (not (string-contains rss "<title>Inline section</title>"))))
   (test-equal "references inside a subtree belong to that subtree"
     '("unstable-0001")
     (map forest-reference-source-page-id
@@ -481,9 +498,11 @@
   (test-assert "HTML inserts the target content at the call site"
     (let ((host-html (assoc-ref html "host")))
       (and (string-contains host-html "class=\"transclusion\"")
+           (string-contains host-html "href=\"/reusable.html\">Reusable note")
            (string-contains host-html "Shared content."))))
   (test-assert "text output inserts the target content"
-    (string-contains (assoc-ref text "host") "Shared content."))
+    (and (string-contains (assoc-ref text "host") "Reusable note")
+         (string-contains (assoc-ref text "host") "Shared content.")))
   (test-assert "host artifacts depend on transcluded tree sources"
     (member "trees/reusable.grv"
             (forest-page-source-paths forest host)
@@ -522,20 +541,39 @@
               "cycle" "Cycle"
               (evaluate-document "@transclude[\"cycle\"]"))))))
 
-(test-error "subtree and transclusion cycles fail forest analysis" #t
-  (make-forest
-    (make-site
-      (list (make-site-page
-              "cycle-root" "Cycle root"
-              (evaluate-document
-                "@subtree{@title{Child} @transclude[\"cycle-root\"]}"))))))
+(let ((message
+        (catch #t
+          (lambda ()
+            (make-forest
+              (make-site
+                (list (make-site-page
+                        "cycle-root" "Cycle root"
+                        (evaluate-document
+                          "@subtree{@title{Child} @transclude[\"cycle-root\"]}")
+                        "notes/cycle.grv"))))
+            #f)
+          (lambda (key . args) (format #f "~s" (cons key args))))))
+  (test-assert "cycle diagnostic reports the full tree path and source"
+    (and (string-contains message "cyclic Forester tree composition")
+         (string-contains message "cycle-root (notes/cycle.grv)")
+         (string-contains message "unstable-0001 (notes/cycle.grv)"))))
 
-(test-error "unresolved transclusions fail forest analysis" #t
-  (make-forest
-    (make-site
-      (list (make-site-page
-              "host" "Host"
-              (evaluate-document "@transclude[\"missing\"]"))))))
+(let ((message
+        (catch #t
+          (lambda ()
+            (make-forest
+              (make-site
+                (list (make-site-page
+                        "host" "Host"
+                        (evaluate-document "@transclude[\"missing\"]")
+                        "notes/host.grv"))))
+            #f)
+          (lambda (key . args) (format #f "~s" (cons key args))))))
+  (test-assert "unresolved transclusion diagnostic identifies tree, source, occurrence, target"
+    (and (string-contains message "host")
+         (string-contains message "notes/host.grv")
+         (string-contains message "transclude-1")
+         (string-contains message "missing"))))
 
 (test-error "unresolved links fail site analysis" #t
   (make-forest
