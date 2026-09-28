@@ -404,9 +404,9 @@
        (sitemap (artifact-content
                   (car (render-forest-sitemap
                          forest #:site-url "https://notes.example"))))
-       (inline (forest-page forest "unstable-0001")))
+       (inline (forest-page forest "unstable-0")))
   (test-equal "inline subtrees become independently addressable trees"
-    '("root" "unstable-0001")
+    '("root" "unstable-0")
     (map site-page-id (forest-pages forest)))
   (test-equal "subtree title is metadata, not body content"
     "Inline section"
@@ -422,7 +422,7 @@
     (and (not (string-contains (assoc-ref html "root") ">article "))
          (string-contains (assoc-ref html "root") "Owned text.")))
   (test-assert "generated tree IDs use the local-ID display form"
-    (string-contains (assoc-ref html "root") "[#0001]"))
+    (string-contains (assoc-ref html "root") "[#0]"))
   (test-assert "inline trees render as initially open disclosure blocks"
     (string-contains (assoc-ref html "root") "<details open=\"open\">"))
   (test-assert "inline tree title is a native disclosure control"
@@ -444,26 +444,26 @@
     (and (string-contains (assoc-ref html "index") "Root")
          (not (string-contains (assoc-ref html "index") "Inline section"))))
   (test-assert "subtrees receive standalone HTML routes"
-    (string-contains (assoc-ref html "unstable-0001") "Owned text."))
+    (string-contains (assoc-ref html "unstable-0") "Owned text."))
   (test-assert "subtrees receive standalone text routes"
-    (string-contains (assoc-ref text "unstable-0001") "Owned text."))
+    (string-contains (assoc-ref text "unstable-0") "Owned text."))
   (test-assert "text index lists file-backed trees but omits inline subtrees"
     (and (string-contains (assoc-ref text "index") "Root")
          (not (string-contains (assoc-ref text "index") "Inline section"))))
   (test-assert "sitemap includes addressable inline subtrees"
-    (string-contains sitemap "/unstable-0001.html"))
+    (string-contains sitemap "/unstable-0.html"))
   (test-assert "RSS omits inline subtrees as standalone feed entries"
     (and (string-contains rss "<title>Root</title>")
          (not (string-contains rss "<title>Inline section</title>"))))
   (test-equal "references inside a subtree belong to that subtree"
-    '("unstable-0001")
+    '("unstable-0")
     (map forest-reference-source-page-id
          (forest-incoming-references forest "root"))))
 
 (test-error "generated subtree IDs cannot collide with file page IDs" #t
   (make-forest
     (make-site
-      (list (make-site-page "unstable-0001" "File page"
+      (list (make-site-page "unstable-0" "File page"
                             (make-content-document '()))
             (make-site-page
               "root" "Root"
@@ -481,8 +481,8 @@
        (make-forest-pages
          (lambda () (map site-page-id
                          (forest-pages (make-forest (make-site (list root)))))))
-       (expected '("numbering" "unstable-0001" "unstable-0002"
-                   "unstable-0003")))
+       (expected '("numbering" "unstable-0" "unstable-1"
+                   "unstable-2")))
   (test-equal "subtree IDs use preorder and sibling source order"
     expected (make-forest-pages))
   (test-equal "subtree IDs reset deterministically for each analysis"
@@ -569,14 +569,14 @@
        (host
          (make-site-page
            "host" "Host"
-           (evaluate-document "@transclude[\"unstable-0001\"]")
+           (evaluate-document "@transclude[\"unstable-0\"]")
            "trees/host.grv"))
        (forest (make-forest (make-site (list source host))))
        (host-html (assoc-ref (forest->html forest #:mathjax-src #f) "host")))
   (test-assert "transclusions display generated IDs in local-ID form"
-    (and (string-contains host-html "data-tree-id=\"unstable-0001\"")
-         (string-contains host-html "href=\"/unstable-0001.html\"")
-         (string-contains host-html "[#0001]"))))
+    (and (string-contains host-html "data-tree-id=\"unstable-0\"")
+         (string-contains host-html "href=\"/unstable-0.html\"")
+         (string-contains host-html "[#0]"))))
 
 (let* ((target
          (make-site-page
@@ -617,7 +617,7 @@
   (test-assert "cycle diagnostic reports the full tree path and source"
     (and (string-contains message "cyclic Forester tree composition")
          (string-contains message "cycle-root (notes/cycle.grv)")
-         (string-contains message "unstable-0001 (notes/cycle.grv)"))))
+         (string-contains message "unstable-0 (notes/cycle.grv)"))))
 
 (let ((message
         (catch #t

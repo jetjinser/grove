@@ -17,7 +17,7 @@
 
 @heading{The laws in context}
 @paragraph{Here are the identity and associativity laws used by the definition, embedded from the source tree:}
-@transclude["unstable-0001"]
+@transclude["unstable-0"]
 
 @heading{An equivalent identity test}
 @paragraph{A morphism @math{f} is an identity exactly when composing it on the right leaves every compatible morphism unchanged and composing it on the left does the same. This lets us characterize identities using composition alone.}

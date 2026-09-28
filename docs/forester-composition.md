@@ -35,7 +35,7 @@ tree, including when that body is rendered inside another tree.
 ## Generated IDs
 
 The analyzer assigns IDs in source-page order and document preorder, counting
-from `unstable-0001` for each forest analysis. An outer subtree is numbered
+from `unstable-0` for each forest analysis. An outer subtree is numbered
 before subtrees nested inside it; siblings follow their content order. The
 number is deterministic for the same ordered inputs, but adding or moving a
 subtree can change later numbers.
@@ -52,13 +52,13 @@ remain the appropriate choice for stable references.
 ```scheme
 @title{Two uses}
 @paragraph{First context:}
-@transclude["unstable-0001"]
+@transclude["unstable-0"]
 
 @paragraph{Another context:}
-@transclude["unstable-0001"]
+@transclude["unstable-0"]
 ```
 
-This example assumes the desired subtree received `unstable-0001` in the
+This example assumes the desired subtree received `unstable-0` in the
 current source order. If the order changes, update the internal transclusion
 target accordingly. The target still has a standalone page. Unresolved targets
 and cycles across subtree/transclusion composition fail during analysis.
@@ -85,13 +85,13 @@ transclusion occurrences; consumers query those meanings directly:
 ```scheme
 (define composition
   (make-forest-composition
-    (list (make-subtree-definition "math-0003" "unstable-0001"))
+    (list (make-subtree-definition "math-0003" "unstable-0"))
     (list (make-forest-transclusion
-            "math-0004" "transclude-1" "unstable-0001"))))
+            "math-0004" "transclude-1" "unstable-0"))))
 
 (forest-composition-subtree-definitions composition)
 (forest-composition-outgoing-transclusions composition "math-0004")
-(forest-composition-incoming-transclusions composition "unstable-0001")
+(forest-composition-incoming-transclusions composition "unstable-0")
 ```
 
 The API preserves fact and occurrence order and rejects duplicate definitions

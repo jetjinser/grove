@@ -271,7 +271,7 @@ fragment links retain their `#id` in the output path.
 
 An inline addressable tree is declared with `@subtree{...}` and must contain
 one direct `@title{...}`. Forester assigns internal IDs such as
-`unstable-0001` in traversal order; these are deliberately unstable and are
+`unstable-0` in traversal order; these are deliberately unstable and are
 not durable page names. The subtree remains visible at its definition site and
 also receives its own HTML, text, and sitemap entry. Its ID shares the same
 namespace as file-backed page IDs, so collisions are errors. Links inside the

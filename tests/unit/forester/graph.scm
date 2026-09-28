@@ -83,17 +83,17 @@
            "host" "Host"
            (make-content-document
              (list (make-content-element 'transclude '()
-                     #:properties '((target . "unstable-0001")))))))
+                     #:properties '((target . "unstable-0")))))))
        (graph (forest->graph (make-forest (make-site (list root host)))))
        (subtrees (cadr (assoc 'subtrees (cdr graph))))
        (transclusions (cadr (assoc 'transclusions (cdr graph)))))
   (test-equal "graph records containment and transclusion as distinct edges"
-    '(((parent-tree . "root") (subtree . "unstable-0001")))
+    '(((parent-tree . "root") (subtree . "unstable-0")))
     subtrees)
   (test-equal "graph preserves the transclusion source occurrence"
     '(((source-tree . "host")
        (source-id . "transclude-1")
-       (target-tree . "unstable-0001")))
+       (target-tree . "unstable-0")))
     transclusions))
 
 (test-end "forester graph")

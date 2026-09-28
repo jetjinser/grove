@@ -7,4 +7,4 @@
 @summary{A separate tree that embeds a subtree defined by another source file.}
 
 @paragraph{This page lives in a separate source file from the Difference of squares subtree.}
-@transclude["unstable-0001"]
+@transclude["unstable-0"]

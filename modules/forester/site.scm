@@ -171,8 +171,9 @@
          (let* ((subtree? (eq? (content-element-kind content) 'subtree))
                 (id (and subtree?
                          (begin
-                           (set! next-id (1+ next-id))
-                           (format #f "unstable-~4,'0d" next-id))))
+                           (let ((id next-id))
+                             (set! next-id (1+ next-id))
+                             (format #f "unstable-~d" id)))))
                 (children (map transform (content-element-children content)))
                 (properties
                   (filter (lambda (entry) (not (eq? (car entry) 'tree-id)))
