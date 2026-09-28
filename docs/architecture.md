@@ -51,6 +51,10 @@ its renderers. This remains inside the Forester model and renderer layer;
 Grove's generic project and artifact contracts need no Forester-specific
 changes.
 
+Grove's miniKanren-based relation API and its extension contract are described
+in [`relations.md`](relations.md). Domain libraries own relation schemas and
+rules; Grove owns the generic finite relation and goal interface.
+
 From the repository root, the isolated check is:
 
 ```sh
