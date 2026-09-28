@@ -1,0 +1,10 @@
+@; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+@; SPDX-License-Identifier: CC0-1.0
+
+@use-modules[(linked-notes commands)]
+
+@title{Using a Reusable Calculation}
+@summary{A separate tree that embeds a subtree defined by another source file.}
+
+@paragraph{This page lives in a separate source file from the Difference of squares subtree.}
+@transclude["unstable-0001"]

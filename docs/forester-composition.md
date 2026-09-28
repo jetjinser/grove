@@ -71,9 +71,23 @@ output route where the embedded content appears.
 Host artifacts depend on the source files of trees they compose, so edits to a
 transcluded tree invalidate the pages that embed it.
 
+## Output format policy
+
+- HTML and text generate a standalone route for each inline subtree and render
+  the subtree at its definition. Their main site indexes list file-backed
+  trees only, keeping the index focused on authored pages.
+- The sitemap includes inline subtree routes because they are independently
+  addressable pages.
+- RSS includes file-backed pages only; inline subtrees are fragments of their
+  defining page and do not become feed entries.
+- The graph contains every page/tree node, `subtrees` edges for definition
+  containment, and `transclusions` edges for each embedding occurrence. These
+  two edge types have different meanings and remain separate.
+
 ## Complete example
 
 The runnable [linked-notes example](../examples/linked-notes/source/algebra/math-0003.grv)
 defines a reusable identity, links from its body to an existing heading, and
-transcludes it twice. Run `guile -L modules examples/linked-notes/build.scm`; output
+transcludes it twice. A second [source file](../examples/linked-notes/source/algebra/math-0004.grv)
+also transcludes that subtree. Run `guile -L modules examples/linked-notes/build.scm`; output
 goes to `/tmp/grove-linked-notes` unless another output directory is passed.
