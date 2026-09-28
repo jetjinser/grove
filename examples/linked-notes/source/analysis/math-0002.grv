@@ -6,5 +6,5 @@
 @title{Limits}
 @summary{A short note connected from the algebra page.}
 @published{2026-09-27}
-@paragraph{See @link["algebra"]{the algebra note}.}
-@paragraph{For worked examples, see @link["algebra#a-few-examples"]{a few examples}.}
+@paragraph{See @link["math-0001"]{the algebra note}.}
+@paragraph{For worked examples, see @link["math-0001#a-few-examples"]{a few examples}.}

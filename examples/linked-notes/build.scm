@@ -42,13 +42,13 @@
   (make-html-routes
     #:page-path
     (lambda (id)
-      (string-append "notes/" id ".html"))))
+      (string-append id ".html"))))
 
 (define notes-text-routes
   (make-text-routes
     #:page-path
     (lambda (id)
-      (string-append "notes/" id ".txt"))))
+      (string-append id ".txt"))))
 
 (define notes-project
   (make-site-project
@@ -64,24 +64,24 @@
     (list (make-forester-html-renderer
             #:style notes-style
             #:routes notes-routes
-            #:cache-key "linked-notes-html-v1")
+            #:cache-key "linked-notes-html-v2")
           (make-forester-text-renderer
             #:prefix "text"
             #:routes notes-text-routes
-            #:cache-key "linked-notes-text-v1")
+            #:cache-key "linked-notes-text-v2")
           (make-forester-rss-renderer
             #:site-url "https://notes.example"
             #:routes notes-routes
-            #:cache-key "linked-notes-rss-v1")
+            #:cache-key "linked-notes-rss-v2")
           (make-forester-sitemap-renderer
             #:site-url "https://notes.example"
             #:routes notes-routes
-            #:cache-key "linked-notes-sitemap-v1")
+            #:cache-key "linked-notes-sitemap-v2")
           (make-forester-graph-renderer
             #:path "forest-graph.scm"
             #:cache-key "linked-notes-graph-v1"))
     #:output-directory output-directory
-    #:cache-key "linked-notes-project-v1"))
+    #:cache-key "linked-notes-project-v2"))
 
 (build-project notes-project)
 

@@ -118,10 +118,11 @@ syntax. With no analyzer, renderers receive the `project-context` directly.
 
 `make-forester-page-reader` derives a page ID from the source file's basename,
 without its `.grv` extension. Directories organize the source tree but do not
-become part of the ID or page link. For example,
-`source/mathematics/limits.grv` has the ID `limits`; a configured HTML route
-may publish it as `notes/limits.html`. Two files with the same basename
-produce a duplicate page ID error that lists their source paths.
+become part of the ID or page link. A prefix-and-sequence name such as
+`math-0002` gives trees a globally unique, flat namespace; the source could be
+`source/analysis/math-0002.grv` while the configured HTML route publishes it
+at `/math-0002.html`. Two files with the same basename produce a duplicate
+page ID error that lists their source paths.
 
 `write-artifacts` keeps a `.grove-artifacts` manifest in the output directory.
 On the next build it removes files listed in the previous manifest that are no

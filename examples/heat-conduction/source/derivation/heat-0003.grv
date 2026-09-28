@@ -9,7 +9,7 @@
 
 @paragraph{Take a rod slice of length @math{\Delta x} and cross-section @math{S}. Its mass is @math{\rho_m S\Delta x}. If its temperature changes by @math{\Delta u}, its stored thermal energy changes by @math{c\rho_m S\Delta x\Delta u}, assuming constant specific heat.}
 
-@paragraph{Using the rightward flux convention from @link["fourier-law"]{Fourier's law}, the energy entering at the left minus the energy leaving at the right is}
+@paragraph{Using the rightward flux convention from @link["heat-0002"]{Fourier's law}, the energy entering at the left minus the energy leaving at the right is}
 
 @display-math{S\bigl(q(x,t)-q(x+\Delta x,t)\bigr)\Delta t.}
 
@@ -22,4 +22,4 @@
 @heading{What the limit assumes}
 @paragraph{The slice is small compared with the scale over which temperature varies, but large enough to have a meaningful local temperature. The continuum model also assumes local thermal equilibrium, no bulk motion, and no phase change. Material constants are treated as uniform and independent of temperature. Relaxing these assumptions changes the balance or the constitutive law.}
 
-@paragraph{The equation alone does not fix a unique temperature field. @link["steady-state"]{Boundary and initial data} complete a particular problem. A volume source adds another term, as shown in @link["sources"]{the source note}.}
+@paragraph{The equation alone does not fix a unique temperature field. @link["heat-0004"]{Boundary and initial data} complete a particular problem. A volume source adds another term, as shown in @link["heat-0005"]{the source note}.}

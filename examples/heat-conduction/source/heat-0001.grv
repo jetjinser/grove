@@ -7,15 +7,15 @@
 @summary{A connected, checked derivation of the heat equation.}
 @published{2026-09-28}
 
-@paragraph{This small site follows energy as it moves through a solid. It begins with @link["fourier-law"]{Fourier's law}, applies @link["balance"]{energy conservation to a thin slice}, and arrives at the heat equation. Later notes add boundary conditions, internal sources, and higher dimensions.}
+@paragraph{This small site follows energy as it moves through a solid. It begins with @link["heat-0002"]{Fourier's law}, applies @link["heat-0003"]{energy conservation to a thin slice}, and arrives at the heat equation. Later notes add boundary conditions, internal sources, and higher dimensions.}
 
 @heading{The route through the model}
 @itemize{
-  @item{@link["fourier-law"]{A constitutive law}: how temperature gradients drive heat flux.}
-  @item{@link["balance"]{A local balance}: how a flux difference changes stored energy.}
-  @item{@link["steady-state"]{Boundary data}: what the equation says at equilibrium.}
-  @item{@link["sources"]{Internal heating}: how a source term enters, including Joule heating.}
-  @item{@link["dimensions"]{More dimensions}: the Laplacian form and its assumptions.}
+  @item{@link["heat-0002"]{A constitutive law}: how temperature gradients drive heat flux.}
+  @item{@link["heat-0003"]{A local balance}: how a flux difference changes stored energy.}
+  @item{@link["heat-0004"]{Boundary data}: what the equation says at equilibrium.}
+  @item{@link["heat-0005"]{Internal heating}: how a source term enters, including Joule heating.}
+  @item{@link["heat-0006"]{More dimensions}: the Laplacian form and its assumptions.}
 }
 
 @heading{Notation}

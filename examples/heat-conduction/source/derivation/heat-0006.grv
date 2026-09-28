@@ -19,4 +19,4 @@
 @heading{When properties vary}
 @paragraph{If conductivity varies with position, conservation gives @math{\rho_m c u_t=\nabla\cdot(k\nabla u)+H}; one cannot in general pull @math{k} outside the divergence. Anisotropic materials require a conductivity tensor. Temperature-dependent heat capacity, moving media, or phase changes need additional modeling. These are natural extensions once the constant-property equation is understood.}
 
-@paragraph{The path began with @link["fourier-law"]{a flux law} and @link["balance"]{a local energy balance}, then used boundary data and source terms. The overview is at @link["index"]{the site index}.}
+@paragraph{The path began with @link["heat-0002"]{a flux law} and @link["heat-0003"]{a local energy balance}, then used boundary data and source terms. The overview is at @link["heat-0001"]{the site overview}.}

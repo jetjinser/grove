@@ -36,10 +36,10 @@
                          (list stylesheet-path)))))
 (define heat-routes
   (make-html-routes #:page-path
-    (lambda (id) (string-append "heat/" id ".html"))))
+    (lambda (id) (string-append id ".html"))))
 (define text-routes
   (make-text-routes #:page-path
-    (lambda (id) (string-append "heat/" id ".txt"))))
+    (lambda (id) (string-append id ".txt"))))
 
 (define heat-project
   (make-site-project
@@ -53,21 +53,21 @@
     #:renderers
     (list (make-forester-html-renderer
             #:style heat-style #:routes heat-routes
-            #:cache-key "heat-conduction-html-v1")
+            #:cache-key "heat-conduction-html-v2")
           (make-forester-text-renderer
             #:prefix "text" #:routes text-routes
-            #:cache-key "heat-conduction-text-v1")
+            #:cache-key "heat-conduction-text-v2")
           (make-forester-rss-renderer
             #:site-url "https://heat.example"
-            #:routes heat-routes #:cache-key "heat-conduction-rss-v1")
+            #:routes heat-routes #:cache-key "heat-conduction-rss-v2")
           (make-forester-sitemap-renderer
             #:site-url "https://heat.example"
-            #:routes heat-routes #:cache-key "heat-conduction-sitemap-v1")
+            #:routes heat-routes #:cache-key "heat-conduction-sitemap-v2")
           (make-forester-graph-renderer
             #:path "forest-graph.scm"
             #:cache-key "heat-conduction-graph-v1"))
     #:output-directory output-directory
-    #:cache-key "heat-conduction-project-v1"))
+    #:cache-key "heat-conduction-project-v2"))
 
 (build-project heat-project)
 (display "Wrote heat-conduction site to ")
