@@ -270,9 +270,10 @@ and plain text. Plain-text headings carry matching `[#id]` markers, while
 fragment links retain their `#id` in the output path.
 
 An inline addressable tree is declared with `@subtree{...}` and must contain
-one direct `@title{...}`. Forester assigns IDs such as `unstable-0001` in
-source traversal order. It remains visible at its definition site and also
-receives its own HTML, text, and sitemap entry. Its ID shares the same
+one direct `@title{...}`. Forester assigns internal IDs such as
+`unstable-0001` in traversal order; these are deliberately unstable and are
+not durable page names. The subtree remains visible at its definition site and
+also receives its own HTML, text, and sitemap entry. Its ID shares the same
 namespace as file-backed page IDs, so collisions are errors. Links inside the
 subtree belong to its own ID and are validated and rendered using that tree's
 reference index. `@transclude["tree-id"]` embeds another tree's content
@@ -283,6 +284,9 @@ Nested subtree and transclusion composition is supported; a cycle across either
 kind of edge fails during forest analysis. Host artifacts declare the source
 files of all composed trees as dependencies, and repeated transclusions receive
 separate HTML anchor prefixes.
+
+See [Forester subtrees and transclusion](forester-composition.md) for the
+numbering rules, link behavior, and a complete runnable example.
 
 The project title and optional `#:description` become site-level metadata.
 Forester HTML emits the description in the index page and uses it as a page

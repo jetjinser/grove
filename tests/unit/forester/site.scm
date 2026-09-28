@@ -428,18 +428,38 @@
               (evaluate-document
                 "@subtree{@title{Inline}}"))))))
 
+(let* ((root
+         (make-site-page
+           "numbering" "Numbering"
+           (evaluate-document
+             "@subtree{@title{Outer} @subtree{@title{Nested}}} @subtree{@title{Sibling}}")))
+       (make-forest-pages
+         (lambda () (map site-page-id
+                         (forest-pages (make-forest (make-site (list root)))))))
+       (expected '("numbering" "unstable-0001" "unstable-0002"
+                   "unstable-0003")))
+  (test-equal "subtree IDs use preorder and sibling source order"
+    expected (make-forest-pages))
+  (test-equal "subtree IDs reset deterministically for each analysis"
+    expected (make-forest-pages)))
+
 (let* ((target
          (make-site-page
            "reusable" "Reusable note"
-           (evaluate-document "@paragraph{Shared content.}")
+           (evaluate-document
+             "@heading{Included section} @paragraph{Shared content. @link[\"destination\"]{Follow destination.}}")
            "trees/reusable.grv"))
+       (destination
+         (make-site-page
+           "destination" "Destination"
+           (evaluate-document "@paragraph{Destination page.}")))
        (host
          (make-site-page
            "host" "Host"
            (evaluate-document
              "Before. @transclude[\"reusable\"] After.")
            "trees/host.grv"))
-       (forest (make-forest (make-site (list host target))))
+       (forest (make-forest (make-site (list host target destination))))
        (html (forest->html forest #:mathjax-src #f))
        (text (forest->text forest))
        (transclusions (forest-outgoing-transclusions forest "host")))
@@ -467,7 +487,16 @@
   (test-assert "host artifacts depend on transcluded tree sources"
     (member "trees/reusable.grv"
             (forest-page-source-paths forest host)
-            string=?)))
+            string=?))
+  (test-equal "links in transcluded content remain owned by the source tree"
+    '("reusable")
+    (map forest-reference-source-page-id
+         (forest-incoming-references forest "destination")))
+  (test-assert "transcluded HTML links keep their resolved destination"
+    (string-contains (assoc-ref html "host")
+                     "href=\"/destination.html\""))
+  (test-assert "transcluded text links use the host route and destination"
+    (string-contains (assoc-ref text "host") "destination.txt")))
 
 (let* ((target
          (make-site-page
