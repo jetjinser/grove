@@ -41,6 +41,39 @@ relation goal accepts one logic argument per row column; callers use ordinary
 miniKanren variables and compose relation goals with `conde`, `=/=`, and other
 supported goals.
 
+## Relation library DSL
+
+The optional `(grove relation dsl)` module provides a small macro vocabulary
+for libraries that define reusable rules. It re-exports the relation and
+miniKanren APIs from `(grove relation)` and adds `define-relation`, `exists`,
+`all`, `either`, and `query`:
+
+```scheme
+(use-modules (grove relation dsl))
+
+(define-relation (edgeo edges source target)
+  (relationo edges source target))
+
+(define-relation (common-sourceo edges left right source)
+  (exists (left-target right-target)
+    (all
+      (edgeo edges source left-target)
+      (edgeo edges source right-target)
+      (== left-target left)
+      (== right-target right))))
+
+(query (source)
+  (common-sourceo edges 'left 'right source))
+```
+
+These forms expand to faster-minikanren relations, `fresh`, `conde`, and
+`run*`; they add no new evaluation engine. Terms are ordinary Scheme
+expressions in lexical scope. `either` clauses and `all` goals retain standard
+miniKanren search order, and results retain its duplicate-answer behavior.
+Libraries pass relation values explicitly and export their own named rules.
+The core forms remain available to code that prefers the underlying
+miniKanren vocabulary.
+
 ## Query results
 
 Queries enumerate successful derivations in miniKanren search order. Two
