@@ -361,6 +361,9 @@
   (test-assert "HTML pages fall back to the site description"
     (string-contains limits-html
       "<meta name=\"description\" content=\"Connected notes on math.\""))
+  (test-assert "HTML page titles expose their stable tree ID"
+    (and (string-contains algebra-html "[algebra]</a>")
+         (string-contains algebra-html "href=\"/algebra.html\"")))
   (test-assert "HTML renderer produces standalone HTML artifacts"
     (string-contains algebra-html "<html>"))
   (test-assert "text renderer produces independent text artifacts"

@@ -210,8 +210,8 @@
 (define fragment-reveal-script
   "(function () {\n  function revealFragment() {\n    if (!location.hash) return;\n    var id = location.hash.slice(1);\n    try { id = decodeURIComponent(id); } catch (error) {}\n    var target = document.getElementById(id);\n    if (!target) return;\n    var node = target;\n    while (node) {\n      if (node.tagName === 'DETAILS') node.open = true;\n      node = node.parentElement;\n    }\n    window.requestAnimationFrame(function () { target.scrollIntoView(); });\n  }\n  window.addEventListener('hashchange', revealFragment);\n  revealFragment();\n}());")
 
-(define (html-document title description body math? home-title style routes
-                       mathjax-src)
+(define (html-document title title-id description body math? home-title style
+                       routes mathjax-src)
   `(html
      (head
        (meta (@ (charset "utf-8")))
@@ -237,7 +237,16 @@
                            (a (@ (href ,(html-index-url routes)))
                               ,home-title)))
                '())
-       (h1 ,title))
+       (h1 ,title
+           ,@(if (and title-id (not (string-prefix? "unstable-" title-id)))
+                 (list " "
+                       `(a (@ (class "forest-tree-id")
+                             (href ,(html-page-url routes title-id))
+                             (aria-label ,(string-append
+                                            "Open tree " title-id
+                                            " as a page")))
+                          "[" ,title-id "]"))
+                 '())))
        ,@body
        (script ,fragment-reveal-script))))
 
@@ -246,6 +255,7 @@
     (sxml->html
       (html-document
         (site-title site)
+        #f
         (site-description site)
         (list
           `(main
@@ -269,6 +279,7 @@
     (sxml->html
       (html-document
         (site-page-title page)
+        (site-page-id page)
         (page-description site page)
         (append (table-of-contents-sxml forest page) (list article))
         (content-has-math? (site-page-document page))
@@ -381,7 +392,7 @@
     (if cache-key
         (make-cached-renderer
           render
-          #:cache-key (string-append "forester-html-v4:" cache-key)
+          #:cache-key (string-append "forester-html-v6:" cache-key)
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
             (render-forest-html-changed forest style routes mathjax-src
