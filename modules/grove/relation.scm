@@ -4,6 +4,7 @@
 
 (define-module (grove relation)
   #:use-module (faster-minikanren mk-guile)
+  #:use-module (grove private minikanren)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:re-export (run
@@ -80,7 +81,7 @@
 
 (define (ground-term? term)
   (cond
-    (((@@ (faster-minikanren mk-guile) var?) term) #f)
+    ((logic-variable? term) #f)
     ((pair? term)
      (and (ground-term? (car term))
           (ground-term? (cdr term))))
@@ -118,5 +119,5 @@
     ((_ relation argument ...)
      (fresh (row)
        (== row (list argument ...))
-       ((@@ (faster-minikanren mk-guile) project) (row)
+       (with-projected-terms (row)
          (relationo/ground relation row))))))

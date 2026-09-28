@@ -61,6 +61,14 @@ Domain libraries own their fact schemas, named predicates, and recursive
 rules. They receive relation values explicitly; Grove does not keep an
 implicit global fact database or import domain-specific relation modules.
 
+Grove's relation implementation needs two operations that faster-minikanren
+does not export: identifying a logic variable and projecting ground values
+inside a goal. Their `@@` access is confined to `(grove private minikanren)`;
+the public relation tests exercise indexing, unification, joins, and variable
+projection through `(grove relation)`. If faster-minikanren changes these
+internals, this adapter and those public behavior tests are the compatibility
+boundary to update.
+
 The Forester adapter lives in `(forester relations)`, independently of
 `(forester site)`. It stores each reference occurrence as a five-column row:
 `(source-page-id local-reference-id target-page-id fragment label)`. Its
