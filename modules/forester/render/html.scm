@@ -103,7 +103,10 @@
                        (aria-label ,(string-append
                                       "Open tree " id " as a page")))
                     "[" ,id "]"))))
-       (div (@ (class "forest-tree-content")) ,@content))))
+       (div (@ (class "forest-tree-content"))
+            ,@(if (and (pair? content) (eq? (car content) 'article))
+                  (cdr content)
+                  (list content))))))
 
 (define (backlink-groups forest page)
   (let* ((page-id (site-page-id page))
@@ -392,7 +395,7 @@
     (if cache-key
         (make-cached-renderer
           render
-          #:cache-key (string-append "forester-html-v6:" cache-key)
+          #:cache-key (string-append "forester-html-v7:" cache-key)
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
             (render-forest-html-changed forest style routes mathjax-src

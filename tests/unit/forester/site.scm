@@ -418,6 +418,9 @@
   (test-assert "subtree content is rendered at its definition site"
     (string-contains (assoc-ref html "root")
                      "class=\"forest-tree-block inline-subtree\""))
+  (test-assert "inline subtree bodies omit the document wrapper label"
+    (and (not (string-contains (assoc-ref html "root") ">article "))
+         (string-contains (assoc-ref html "root") "Owned text.")))
   (test-assert "generated unstable tree IDs stay out of visible labels"
     (not (string-contains (assoc-ref html "root") "[unstable-0001]")))
   (test-assert "inline trees render as initially open disclosure blocks"
