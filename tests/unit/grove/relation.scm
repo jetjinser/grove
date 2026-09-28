@@ -25,6 +25,23 @@
   5
   (length (relation-facts links)))
 
+(test-equal "fact deduplication preserves first occurrence order"
+  '((alpha . beta)
+    (alpha . gamma)
+    (beta . delta)
+    (gamma . delta)
+    (delta . alpha))
+  (relation-facts links))
+
+(test-equal "fact deduplication compares compound terms structurally"
+  2
+  (length
+    (relation-facts
+      (make-relation
+        (list (cons '(tag alpha) 'topic)
+              (cons (list 'tag 'alpha) 'topic)
+              (cons '(tag beta) 'topic))))))
+
 (test-equal "a bound source uses the outgoing relation"
   '(beta gamma)
   (run* (target)

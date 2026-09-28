@@ -42,10 +42,22 @@
       facts)
     index))
 
+(define (unique-facts facts)
+  (let ((seen (make-hash-table)))
+    (let loop ((facts facts) (unique '()))
+      (if (null? facts)
+          (reverse unique)
+          (let ((fact (car facts)))
+            (if (hash-ref seen fact #f)
+                (loop (cdr facts) unique)
+                (begin
+                  (hash-set! seen fact #t)
+                  (loop (cdr facts) (cons fact unique)))))))))
+
 (define (make-relation facts)
   (unless (and (list? facts) (every pair? facts))
     (error "relation facts must be a list of pairs" facts))
-  (let ((facts (delete-duplicates facts equal?)))
+  (let ((facts (unique-facts facts)))
     (%make-relation facts
                     (make-index facts car cdr)
                     (make-index facts cdr car))))
