@@ -67,30 +67,39 @@
     (list (cons 'subtree (lambda (element _render)
                     (let* ((id (content-element-property element 'tree-id))
                            (target (forest-page forest id)))
-                      `(section (@ (class "inline-subtree")
-                                   (data-tree-id ,id))
-                         (h2 (a (@ (href ,(html-page-url routes id)))
-                                ,(site-page-title target)))
-                         ,(subtree-content-sxml
-                            forest routes target
-                            (string-append anchor-prefix
-                                           "tree-" id "--"))))))
+                      (tree-block-sxml
+                        "inline-subtree" id (site-page-title target)
+                        (html-page-url routes id)
+                        (subtree-content-sxml
+                          forest routes target
+                          (string-append anchor-prefix "tree-" id "--"))))))
           (cons 'transclude (lambda (element _render)
                        (let* ((id (content-element-property element 'target))
                               (transclusion (car transclusions))
                               (target (forest-page forest id)))
                          (set! transclusions (cdr transclusions))
-                         `(section (@ (class "transclusion")
-                                      (data-tree-id ,id))
-                            (h2 (a (@ (href ,(html-page-url routes id)))
-                                   ,(site-page-title target)))
-                            ,(subtree-content-sxml
-                               forest routes target
-                               (string-append anchor-prefix
-                                              "transcluded-"
-                                              (forest-transclusion-source-id
-                                                transclusion)
-                                              "--"))))))))))
+                         (tree-block-sxml
+                           "transclusion" id (site-page-title target)
+                           (html-page-url routes id)
+                           (subtree-content-sxml
+                             forest routes target
+                             (string-append anchor-prefix "transcluded-"
+                                            (forest-transclusion-source-id
+                                              transclusion)
+                                            "--"))))))))))
+
+(define (tree-block-sxml kind id title page-url content)
+  `(section (@ (class ,(string-append "forest-tree-block " kind))
+               (data-tree-id ,id))
+     (details (@ (open "open"))
+       (summary
+         (span (@ (class "forest-tree-title")) ,title)
+         " "
+         (a (@ (class "forest-tree-permalink")
+               (href ,page-url)
+               (aria-label ,(string-append "Open " title " as a page")))
+            "↗"))
+       (div (@ (class "forest-tree-content")) ,@content))))
 
 (define (backlink-groups forest page)
   (let* ((page-id (site-page-id page))
@@ -191,6 +200,12 @@
   (or (assq-ref (site-page-metadata page) 'summary)
       (site-description site)))
 
+(define tree-block-style
+  ".forest-tree-block { margin: 1rem 0; border-radius: .3rem; transition: background-color .12s ease; }\n.forest-tree-block:hover { background-color: rgba(0, 100, 255, .045); }\n.forest-tree-block summary { cursor: pointer; }\n.forest-tree-title { font-weight: 600; }\n.forest-tree-permalink { margin-left: .45em; font-size: .75em; text-decoration: none; opacity: .65; }\n.forest-tree-permalink:hover { opacity: 1; }\n.forest-tree-content { padding: .25rem .85rem; }")
+
+(define fragment-reveal-script
+  "(function () {\n  function revealFragment() {\n    if (!location.hash) return;\n    var id = location.hash.slice(1);\n    try { id = decodeURIComponent(id); } catch (error) {}\n    var target = document.getElementById(id);\n    if (!target) return;\n    var node = target;\n    while (node) {\n      if (node.tagName === \"DETAILS\") node.open = true;\n      node = node.parentElement;\n    }\n    window.requestAnimationFrame(function () { target.scrollIntoView(); });\n  }\n  window.addEventListener(\"hashchange\", revealFragment);\n  revealFragment();\n}());")
+
 (define (html-document title description body math? home-title style routes
                        mathjax-src)
   `(html
@@ -200,6 +215,7 @@
        ,@(if description
              (list `(meta (@ (name "description") (content ,description))))
              '())
+       (style ,tree-block-style)
        ,@(map (lambda (stylesheet)
                `(link (@ (rel "stylesheet")
                          (href ,(html-asset-url
@@ -217,8 +233,9 @@
                            (a (@ (href ,(html-index-url routes)))
                               ,home-title)))
                '())
-         (h1 ,title))
-       ,@body)))
+       (h1 ,title))
+       ,@body
+       (script ,fragment-reveal-script))))
 
 (define (index-html forest style routes mathjax-src)
   (let ((site (forest-site forest)))
@@ -360,7 +377,7 @@
     (if cache-key
         (make-cached-renderer
           render
-          #:cache-key (string-append "forester-html-v2:" cache-key)
+          #:cache-key (string-append "forester-html-v3:" cache-key)
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
             (render-forest-html-changed forest style routes mathjax-src

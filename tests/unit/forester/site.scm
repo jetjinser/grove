@@ -414,7 +414,17 @@
          (content-document-children (site-page-document inline))))
   (test-assert "subtree content is rendered at its definition site"
     (string-contains (assoc-ref html "root")
-                     "class=\"inline-subtree\""))
+                     "class=\"forest-tree-block inline-subtree\""))
+  (test-assert "inline trees render as initially open disclosure blocks"
+    (string-contains (assoc-ref html "root") "<details open=\"open\">"))
+  (test-assert "inline tree title is a native disclosure control"
+    (string-contains (assoc-ref html "root") "<summary>"))
+  (test-assert "tree blocks include hover styling"
+    (string-contains (assoc-ref html "root") ".forest-tree-block:hover"))
+  (test-assert "fragment navigation opens containing disclosures"
+    (and (string-contains (assoc-ref html "root") "hashchange")
+         (string-contains (assoc-ref html "root") "node.open = true")
+         (string-contains (assoc-ref html "root") "target.scrollIntoView()")))
   (test-assert "HTML index lists file-backed trees but omits inline subtrees"
     (and (string-contains (assoc-ref html "index") "Root")
          (not (string-contains (assoc-ref html "index") "Inline section"))))
@@ -450,6 +460,9 @@
            "numbering" "Numbering"
            (evaluate-document
              "@subtree{@title{Outer} @subtree{@title{Nested}}} @subtree{@title{Sibling}}")))
+       (forest (make-forest (make-site (list root))))
+       (nested-html (assoc-ref (forest->html forest #:mathjax-src #f)
+                               "numbering"))
        (make-forest-pages
          (lambda () (map site-page-id
                          (forest-pages (make-forest (make-site (list root)))))))
@@ -458,7 +471,18 @@
   (test-equal "subtree IDs use preorder and sibling source order"
     expected (make-forest-pages))
   (test-equal "subtree IDs reset deterministically for each analysis"
-    expected (make-forest-pages)))
+    expected (make-forest-pages))
+  (test-equal "nested subtrees each render as an open disclosure"
+    3
+    (let loop ((start 0) (count 0))
+      (let ((found (string-contains nested-html "<details open=\"open\">"
+                                    start)))
+        (if found
+            (loop (+ found 1) (+ count 1))
+            count))))
+  (test-assert "nested subtree titles remain nested in source order"
+    (< (string-contains nested-html "Outer")
+       (string-contains nested-html "Nested"))))
 
 (let* ((target
          (make-site-page
@@ -497,8 +521,11 @@
     (forest-outgoing-references forest "host"))
   (test-assert "HTML inserts the target content at the call site"
     (let ((host-html (assoc-ref html "host")))
-      (and (string-contains host-html "class=\"transclusion\"")
-           (string-contains host-html "href=\"/reusable.html\">Reusable note")
+      (and (string-contains host-html
+                            "class=\"forest-tree-block transclusion\"")
+           (string-contains host-html "href=\"/reusable.html\"")
+           (string-contains host-html "forest-tree-permalink")
+           (string-contains host-html "Reusable note")
            (string-contains host-html "Shared content."))))
   (test-assert "text output inserts the target content"
     (and (string-contains (assoc-ref text "host") "Reusable note")
