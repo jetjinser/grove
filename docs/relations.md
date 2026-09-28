@@ -104,12 +104,19 @@ projection through `(grove relation)`. If faster-minikanren changes these
 internals, this adapter and those public behavior tests are the compatibility
 boundary to update.
 
-The Forester adapter lives in `(forester relations)`, independently of
-`(forester site)`. It stores each reference occurrence as a five-column row:
-`(source-page-id local-reference-id target-page-id fragment label)`. Its
+The Forester reference adapter lives in `(forester relations)` independently
+of `(forester site)`. It stores each reference occurrence as a five-column
+row: `(source-page-id local-reference-id target-page-id fragment label)`. Its
 exports provide incoming and outgoing reference queries, backlinks, common
-backlinks, and transitive reachability. The site layer maps those query results
-back to page and reference records and preserves site ordering.
+backlinks, and transitive reachability. The site layer maps those query
+results back to page and reference records and preserves site ordering.
+
+Forester tree composition has a separate semantic interface in
+`(forester composition)`. That module accepts typed subtree-definition and
+transclusion facts, then uses Grove's relation layer internally. Forester's
+site analyzer and renderers do not depend on its tuple layout or miniKanren
+queries. See [`forester-composition.md`](forester-composition.md) for the
+composition contract.
 
 Rules are ordinary Guile module definitions built from miniKanren goals. A
 library can export its own relation queries without changing Grove. Scheme

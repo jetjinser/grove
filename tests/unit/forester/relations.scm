@@ -4,8 +4,8 @@
 
 (define-module (tests unit forester relations)
   #:use-module (srfi srfi-64)
-  #:use-module (forester relations)
-  #:use-module (grove relation))
+  #:use-module (forester composition)
+  #:use-module (forester relations))
 
 (test-begin "forester relations")
 
@@ -54,24 +54,42 @@
     "self"))
 
 (define composition
-  (make-forest-composition-relation
-    '(("subtree" "lecture" "exercise" "exercise")
-      ("transclude" "lecture" "embed-1" "exercise")
-      ("transclude" "lecture" "embed-2" "exercise")
-      ("transclude" "exercise" "embed-1" "definition"))))
+  (make-forest-composition
+    (list (make-subtree-definition "lecture" "exercise"))
+    (list (make-forest-transclusion "lecture" "embed-1" "exercise")
+          (make-forest-transclusion "lecture" "embed-2" "exercise")
+          (make-forest-transclusion "exercise" "embed-1" "definition"))))
 
-(test-equal "composition queries retain kinds and occurrence order"
-  '(("subtree" "exercise" "exercise")
-    ("transclude" "embed-1" "exercise")
-    ("transclude" "embed-2" "exercise"))
-  (forest-composition-targets composition "lecture"))
+(test-equal "composition queries targets across its relation kinds"
+  '("exercise" "exercise" "exercise")
+  (forest-composition-target-ids composition "lecture"))
 
-(test-equal "subtree definitions query containment facts"
+(test-equal "composition API returns typed subtree definitions"
   '(("lecture" "exercise"))
-  (forest-subtree-definition-keys composition))
+  (map (lambda (definition)
+         (list (subtree-definition-parent definition)
+               (subtree-definition-child definition)))
+       (forest-composition-subtree-definitions composition)))
+
+(test-equal "outgoing composition API returns transclusion occurrences"
+  '("embed-1" "embed-2")
+  (map forest-transclusion-source-id
+       (forest-composition-outgoing-transclusions composition "lecture")))
 
 (test-equal "incoming transclusion queries retain each occurrence"
   '(("lecture" "embed-1") ("lecture" "embed-2"))
-  (forest-incoming-composition-keys composition "transclude" "exercise"))
+  (map (lambda (transclusion)
+         (list (forest-transclusion-source-tree-id transclusion)
+               (forest-transclusion-source-id transclusion)))
+       (forest-composition-incoming-transclusions composition "exercise")))
+
+(test-error "subtree definition API rejects empty tree IDs" #t
+  (make-subtree-definition "parent" ""))
+
+(test-error "composition API rejects duplicate transclusion occurrences" #t
+  (make-forest-composition
+    '()
+    (list (make-forest-transclusion "lecture" "embed-1" "exercise")
+          (make-forest-transclusion "lecture" "embed-1" "definition"))))
 
 (test-end "forester relations")

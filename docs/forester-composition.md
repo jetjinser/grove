@@ -71,6 +71,29 @@ output route where the embedded content appears.
 Host artifacts depend on the source files of trees they compose, so edits to a
 transcluded tree invalidate the pages that embed it.
 
+## Scheme API
+
+The `(forester composition)` module is the shared interface for providing and
+querying composition facts. Providers pass typed subtree definitions and
+transclusion occurrences; consumers query those meanings directly:
+
+```scheme
+(define composition
+  (make-forest-composition
+    (list (make-subtree-definition "math-0003" "unstable-0001"))
+    (list (make-forest-transclusion
+            "math-0004" "transclude-1" "unstable-0001"))))
+
+(forest-composition-subtree-definitions composition)
+(forest-composition-outgoing-transclusions composition "math-0004")
+(forest-composition-incoming-transclusions composition "unstable-0001")
+```
+
+The API preserves fact and occurrence order and rejects duplicate definitions
+or duplicate occurrence IDs within a source tree. Grove relation values, tuple
+columns, and kind tags are internal to this module. A project can provide
+composition facts from another source while using the same semantic queries.
+
 ## Output format policy
 
 - HTML and text generate a standalone route for each inline subtree and render
