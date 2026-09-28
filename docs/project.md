@@ -269,12 +269,13 @@ Pages with headings get an automatically generated table of contents in HTML
 and plain text. Plain-text headings carry matching `[#id]` markers, while
 fragment links retain their `#id` in the output path.
 
-An inline addressable tree is declared with `@subtree["exercise-1"]{...}` and
-must contain one direct `@title{...}`. It remains visible at its definition
-site and also receives its own HTML, text, and sitemap entry. Its ID shares the
-same namespace as file-backed page IDs, so collisions are errors. Links inside
-the subtree belong to its own ID and are validated and rendered using that
-tree's reference index. `@transclude["tree-id"]` embeds another tree's content
+An inline addressable tree is declared with `@subtree{...}` and must contain
+one direct `@title{...}`. Forester assigns IDs such as `unstable-0001` in
+source traversal order. It remains visible at its definition site and also
+receives its own HTML, text, and sitemap entry. Its ID shares the same
+namespace as file-backed page IDs, so collisions are errors. Links inside the
+subtree belong to its own ID and are validated and rendered using that tree's
+reference index. `@transclude["tree-id"]` embeds another tree's content
 at its call site. Transclusions form a relation distinct from ordinary links,
 and unresolved targets fail during forest analysis. HTML and plain-text
 renderers expand the target content while keeping its standalone tree page.

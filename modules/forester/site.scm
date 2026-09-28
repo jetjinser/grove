@@ -138,6 +138,40 @@
       source
       #:metadata '((inline-subtree . #t)))))
 
+(define (assign-subtree-identifiers pages)
+  (let ((next-id 0))
+    (define (transform content)
+      (cond
+        ((content-element? content)
+         (let* ((subtree? (eq? (content-element-kind content) 'subtree))
+                (id (and subtree?
+                         (begin
+                           (set! next-id (1+ next-id))
+                           (format #f "unstable-~4,'0d" next-id))))
+                (children (map transform (content-element-children content)))
+                (properties
+                  (filter (lambda (entry) (not (eq? (car entry) 'tree-id)))
+                          (content-element-properties content))))
+           (make-content-element
+             (content-element-kind content) children
+             (content-element-source content)
+             #:properties (if id
+                              (cons (cons 'tree-id id) properties)
+                              properties))))
+        ((content-document? content)
+         (make-content-document
+           (map transform (content-document-children content))
+           (content-document-source content)))
+        (else content)))
+    (map (lambda (page)
+           (make-site-page
+             (site-page-id page)
+             (site-page-title page)
+             (transform (site-page-document page))
+             (site-page-source page)
+             #:metadata (site-page-metadata page)))
+         pages)))
+
 (define (split-link-target target)
   (unless (and (string? target) (not (string-null? target)))
     (error "Forester link target must be a non-empty string" target))
@@ -254,7 +288,7 @@
 (define (make-forest site)
   (unless (site? site)
     (error "forest requires a Grove site" site))
-  (let* ((root-pages (site-pages site))
+  (let* ((root-pages (assign-subtree-identifiers (site-pages site)))
          (subtrees
            (append-map
              (lambda (page)

@@ -391,13 +391,13 @@
          (make-site-page
            "root" "Root"
            (evaluate-document
-             "@subtree[\"inline-1\"]{@title{Inline section}@paragraph{Owned text. @link[\"root\"]{Home}.}}")))
+             "@subtree{@title{Inline section}@paragraph{Owned text. @link[\"root\"]{Home}.}}")))
        (forest (make-forest (make-site (list root))))
        (html (forest->html forest #:mathjax-src #f))
        (text (forest->text forest))
-       (inline (forest-page forest "inline-1")))
+       (inline (forest-page forest "unstable-0001")))
   (test-equal "inline subtrees become independently addressable trees"
-    '("root" "inline-1")
+    '("root" "unstable-0001")
     (map site-page-id (forest-pages forest)))
   (test-equal "subtree title is metadata, not body content"
     "Inline section"
@@ -410,23 +410,23 @@
     (string-contains (assoc-ref html "root")
                      "class=\"inline-subtree\""))
   (test-assert "subtrees receive standalone HTML routes"
-    (string-contains (assoc-ref html "inline-1") "Owned text."))
+    (string-contains (assoc-ref html "unstable-0001") "Owned text."))
   (test-assert "subtrees receive standalone text routes"
-    (string-contains (assoc-ref text "inline-1") "Owned text."))
+    (string-contains (assoc-ref text "unstable-0001") "Owned text."))
   (test-equal "references inside a subtree belong to that subtree"
-    '("inline-1")
+    '("unstable-0001")
     (map forest-reference-source-page-id
          (forest-incoming-references forest "root"))))
 
-(test-error "subtree IDs cannot collide with file page IDs" #t
+(test-error "generated subtree IDs cannot collide with file page IDs" #t
   (make-forest
     (make-site
-      (list (make-site-page "collision" "File page"
+      (list (make-site-page "unstable-0001" "File page"
                             (make-content-document '()))
             (make-site-page
               "root" "Root"
               (evaluate-document
-                "@subtree[\"collision\"]{@title{Inline}}"))))))
+                "@subtree{@title{Inline}}"))))))
 
 (let* ((target
          (make-site-page
@@ -499,7 +499,7 @@
       (list (make-site-page
               "cycle-root" "Cycle root"
               (evaluate-document
-                "@subtree[\"cycle-child\"]{@title{Child} @transclude[\"cycle-root\"]}"))))))
+                "@subtree{@title{Child} @transclude[\"cycle-root\"]}"))))))
 
 (test-error "unresolved transclusions fail forest analysis" #t
   (make-forest
