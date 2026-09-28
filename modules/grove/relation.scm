@@ -54,9 +54,22 @@
                   (hash-set! seen fact #t)
                   (loop (cdr facts) (cons fact unique)))))))))
 
+(define (vector-free-term? term)
+  (cond
+    ((vector? term) #f)
+    ((pair? term)
+     (and (vector-free-term? (car term))
+          (vector-free-term? (cdr term))))
+    (else #t)))
+
 (define (make-relation facts)
   (unless (and (list? facts) (every pair? facts))
     (error "relation facts must be a list of pairs" facts))
+  (unless (every (lambda (fact)
+                   (and (vector-free-term? (car fact))
+                        (vector-free-term? (cdr fact))))
+                 facts)
+    (error "relation facts cannot contain vectors; miniKanren uses them for logic variables" facts))
   (let ((facts (unique-facts facts)))
     (%make-relation facts
                     (make-index facts car cdr)

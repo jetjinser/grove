@@ -136,6 +136,14 @@
   #t
   (make-relation '((alpha beta) broken)))
 
+(test-error "relation constructor rejects vector terms reserved for logic variables"
+  #t
+  (make-relation (list (cons 'alpha (vector 'tag 'value)))))
+
+(test-error "relation constructor rejects vectors nested in structured terms"
+  #t
+  (make-relation (list (cons 'alpha (list 'metadata (vector 'tag 'value))))))
+
 (test-error "relationo rejects non-relations"
   #t
   (relationo 'not-a-relation 'alpha 'beta))
