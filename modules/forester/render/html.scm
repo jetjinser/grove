@@ -88,21 +88,24 @@
                                               transclusion)
                                             "--"))))))))))
 
+(define (display-tree-id id)
+  (if (string-prefix? "unstable-" id)
+      (string-append "#" (substring id (string-length "unstable-")))
+      id))
+
 (define (tree-block-sxml kind id title page-url content)
   `(section (@ (class ,(string-append "forest-tree-block " kind))
                (data-tree-id ,id))
      (details (@ (open "open"))
        (summary
          (span (@ (class "forest-tree-title")) ,title)
-         ,@(if (string-prefix? "unstable-" id)
-               '()
-               (list
-                 " "
-                 `(a (@ (class "forest-tree-id")
-                       (href ,page-url)
-                       (aria-label ,(string-append
-                                      "Open tree " id " as a page")))
-                    "[" ,id "]"))))
+         " "
+         (a (@ (class "forest-tree-id")
+               (href ,page-url)
+               (aria-label ,(string-append
+                              "Open tree " (display-tree-id id)
+                              " as a page")))
+            "[" ,(display-tree-id id) "]"))
        (div (@ (class "forest-tree-content"))
             ,@(if (and (pair? content) (eq? (car content) 'article))
                   (cdr content)
@@ -241,14 +244,15 @@
                               ,home-title)))
                '())
        (h1 ,title
-           ,@(if (and title-id (not (string-prefix? "unstable-" title-id)))
+           ,@(if title-id
                  (list " "
                        `(a (@ (class "forest-tree-id")
                              (href ,(html-page-url routes title-id))
                              (aria-label ,(string-append
-                                            "Open tree " title-id
+                                            "Open tree "
+                                            (display-tree-id title-id)
                                             " as a page")))
-                          "[" ,title-id "]"))
+                          "[" ,(display-tree-id title-id) "]"))
                  '())))
        ,@body
        (script ,fragment-reveal-script))))
@@ -395,7 +399,7 @@
     (if cache-key
         (make-cached-renderer
           render
-          #:cache-key (string-append "forester-html-v7:" cache-key)
+          #:cache-key (string-append "forester-html-v9:" cache-key)
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
             (render-forest-html-changed forest style routes mathjax-src

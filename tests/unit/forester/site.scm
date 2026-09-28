@@ -421,8 +421,8 @@
   (test-assert "inline subtree bodies omit the document wrapper label"
     (and (not (string-contains (assoc-ref html "root") ">article "))
          (string-contains (assoc-ref html "root") "Owned text.")))
-  (test-assert "generated unstable tree IDs stay out of visible labels"
-    (not (string-contains (assoc-ref html "root") "[unstable-0001]")))
+  (test-assert "generated tree IDs use the local-ID display form"
+    (string-contains (assoc-ref html "root") "[#0001]"))
   (test-assert "inline trees render as initially open disclosure blocks"
     (string-contains (assoc-ref html "root") "<details open=\"open\">"))
   (test-assert "inline tree title is a native disclosure control"
@@ -560,6 +560,23 @@
                      "href=\"/destination.html\""))
   (test-assert "transcluded text links use the host route and destination"
     (string-contains (assoc-ref text "host") "destination.txt")))
+
+(let* ((source
+         (make-site-page
+           "source" "Source"
+           (evaluate-document "@subtree{@title{Inline section}}")
+           "trees/source.grv"))
+       (host
+         (make-site-page
+           "host" "Host"
+           (evaluate-document "@transclude[\"unstable-0001\"]")
+           "trees/host.grv"))
+       (forest (make-forest (make-site (list source host))))
+       (host-html (assoc-ref (forest->html forest #:mathjax-src #f) "host")))
+  (test-assert "transclusions display generated IDs in local-ID form"
+    (and (string-contains host-html "data-tree-id=\"unstable-0001\"")
+         (string-contains host-html "href=\"/unstable-0001.html\"")
+         (string-contains host-html "[#0001]"))))
 
 (let* ((target
          (make-site-page
