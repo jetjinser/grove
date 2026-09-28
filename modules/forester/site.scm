@@ -290,28 +290,38 @@
     (filter (lambda (page) (member (site-page-id page) source-ids equal?))
             (site-pages (forest-site forest)))))
 
+(define (not-membero value values)
+  (conde
+    ((== '() values))
+    ((fresh (head tail)
+       (== `(,head . ,tail) values)
+       (=/= value head)
+       (not-membero value tail)))))
+
+(define (forest-reachableo relation source target)
+  (forest-walko relation source target (list source)))
+
+(define (forest-walko relation source target seen)
+  (conde
+    ((relationo relation source target)
+     (not-membero target seen))
+    ((fresh (middle)
+       (relationo relation source middle)
+       (not-membero middle seen)
+       (forest-walko relation middle target (cons middle seen))))))
+
 (define (forest-reachable-pages forest id)
   (unless (assoc id (forest-heading-index forest))
     (error "unknown forest page" id))
-  ;; Keep visited nodes across frontier steps instead of enumerating every
-  ;; simple path as a recursive logic goal.
   (let ((relation (forest-page-reference-relation forest)))
-    (let traverse ((pending (list id)) (seen (list id)))
-      (if (null? pending)
-          (filter (lambda (page)
-                    (and (not (equal? (site-page-id page) id))
-                         (member (site-page-id page) seen equal?)))
-                  (site-pages (forest-site forest)))
-          (let* ((current (car pending))
-                 (neighbors
-                   (run* (target-id)
-                     (relationo relation current target-id)))
-                 (new-neighbors
-                   (filter (lambda (target-id)
-                             (not (member target-id seen equal?)))
-                           neighbors)))
-            (traverse (append (cdr pending) new-neighbors)
-                      (append seen new-neighbors)))))))
+    (let ((reachable-ids
+            (delete-duplicates
+              (run* (target-id)
+                (forest-reachableo relation id target-id))
+              equal?)))
+      (filter (lambda (page)
+                (member (site-page-id page) reachable-ids equal?))
+              (site-pages (forest-site forest))))))
 
 (define (forest-source-paths forest)
   (let ((site (forest-site forest)))
