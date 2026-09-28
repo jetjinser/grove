@@ -46,4 +46,11 @@
   '()
   (forest-reachable-page-ids references "isolated"))
 
+(test-equal "a self-link does not make its page reachable from itself"
+  '()
+  (forest-reachable-page-ids
+    (make-forest-reference-relation
+      '(("self" "ref-1" "self" #f "Self")))
+    "self"))
+
 (test-end "forester relations")

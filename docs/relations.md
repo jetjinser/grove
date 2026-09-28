@@ -82,3 +82,14 @@ promise tabling. A future tabling facility must define how it handles
 constraints, duplicate answers, recursive cycles, and the lifetime of tables;
 it can be added as an explicit extension without changing ordinary goal
 semantics.
+
+Forester reachability currently uses path-local cycle checking. A recursive
+branch cannot visit the same page twice, so cyclic graphs terminate and a
+page is never reported as reachable from itself, including when a cycle
+returns to the starting page. Multiple paths can still derive the same page;
+the public Forester query removes duplicate page IDs, and the site API returns
+pages in site order. This is an explicit finite-graph rule, not general
+tabling or a fixed-point facility. Grove keeps tabling out of core until an
+extension needs broader recursive semantics; such an extension can define
+table scope, answer deduplication, and constraint behavior without changing
+this relation API.
