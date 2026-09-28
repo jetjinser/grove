@@ -25,7 +25,8 @@
 (define project-root
   (format #f "/tmp/forester-project-test-~a" (getpid)))
 (define source-directory (string-append project-root "/source"))
-(define module-directory (string-append source-directory "/modules"))
+(define module-directory (string-append project-root "/modules"))
+(define mathematics-directory (string-append source-directory "/mathematics"))
 (define output-directory (string-append project-root "/output"))
 (define cache-output-directory (string-append project-root "/cache-output"))
 
@@ -49,6 +50,7 @@
     (mkdir project-root)
     (mkdir source-directory)
     (mkdir module-directory)
+    (mkdir mathematics-directory)
     (write-test-file
       (string-append module-directory "/commands.grv")
       "@(define-module (tests unit forester linked commands)\n  #:use-module (forester commands)\n  #:re-export (link title summary published updated))")
@@ -64,7 +66,7 @@
         "@paragraph{See @link[\"limits\"]{limits}. "
         "@math{x^2+y^2=z^2}}\n@display-math{a^2+b^2=c^2}"))
     (write-test-file
-      (string-append source-directory "/limits.grv")
+      (string-append mathematics-directory "/limits.grv")
       (string-append
         "@use-modules[(tests unit forester linked commands)]\n"
         "@title{Limits}\n"
@@ -147,13 +149,13 @@
       (let* ((expected-sources
                (list (string-append module-directory "/commands.grv")
                      (string-append source-directory "/algebra.grv")
-                     (string-append source-directory "/limits.grv")
+                     (string-append mathematics-directory "/limits.grv")
                      (string-append source-directory "/unlinked.grv")
                      (string-append source-directory "/orphan.grv")))
              (expected-algebra-html-sources
                (list (string-append module-directory "/commands.grv")
                      (string-append source-directory "/algebra.grv")
-                     (string-append source-directory "/limits.grv")))
+                     (string-append mathematics-directory "/limits.grv")))
              (algebra-html-artifact
                (find (lambda (artifact)
                        (string=? (artifact-path artifact)
@@ -168,8 +170,20 @@
           (string-append source-directory "/algebra.grv")
           (site-page-source
             ((make-forester-page-reader
-               (make-scribble-document-reader))
+             (make-scribble-document-reader))
              (string-append source-directory "/algebra.grv"))))
+        (test-equal "nested source directories do not become page IDs"
+          "limits"
+          (site-page-id
+            ((make-forester-page-reader
+             (make-scribble-document-reader))
+             (string-append mathematics-directory "/limits.grv"))))
+        (test-equal "nested source paths remain available for diagnostics"
+          (string-append mathematics-directory "/limits.grv")
+          (site-page-source
+            ((make-forester-page-reader
+             (make-scribble-document-reader))
+             (string-append mathematics-directory "/limits.grv"))))
         (test-equal "HTML page artifacts depend on their backlinks"
           expected-algebra-html-sources
           (artifact-sources algebra-html-artifact))
@@ -282,7 +296,7 @@
             "@display-math{a^2+b^2=c^2}\n"
             "@paragraph{Also @link[\"unlinked\"]{unlinked}.}"))
         (write-test-file
-          (string-append source-directory "/limits.grv")
+          (string-append mathematics-directory "/limits.grv")
           (string-append
             "@use-modules[(tests unit forester linked commands)]\n"
             "@title{Limits}\n"
@@ -354,6 +368,8 @@
         #t
         (build-project project)))))
   (lambda ()
+    (when (file-exists? (string-append mathematics-directory "/limits.grv"))
+      (delete-file (string-append mathematics-directory "/limits.grv")))
     (for-each
       (lambda (path)
         (when (file-exists? path)
@@ -390,7 +406,7 @@
             (string-append cache-output-directory "/.grove-build-state.tmp")
             (string-append module-directory "/commands.grv")
             (string-append source-directory "/algebra.grv")
-            (string-append source-directory "/limits.grv")
+            (string-append mathematics-directory "/limits.grv")
             (string-append source-directory "/unlinked.grv")
             (string-append source-directory "/orphan.grv")
             (string-append source-directory "/broken.grv")))
@@ -405,6 +421,8 @@
             cache-output-directory
             output-directory
             module-directory
+            (string-append mathematics-directory "/limits.grv")
+            mathematics-directory
             source-directory
             project-root))))
 

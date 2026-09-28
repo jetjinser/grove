@@ -415,6 +415,23 @@
     (list (make-site-page "same" "First" (evaluate-document "first"))
           (make-site-page "same" "Second" (evaluate-document "second")))))
 
+(let ((message
+        (catch #t
+          (lambda ()
+            (make-site
+              (list (make-site-page
+                      "same" "First" (evaluate-document "first")
+                      "trees/math/cat-0001.grv")
+                    (make-site-page
+                      "same" "Second" (evaluate-document "second")
+                      "trees/logic/cat-0001.grv")))
+            #f)
+          (lambda (key . args) (format #f "~s" (cons key args))))))
+  (test-assert "duplicate page id errors identify every source path"
+    (and (string-contains message "cat-0001")
+         (string-contains message "trees/math/cat-0001.grv")
+         (string-contains message "trees/logic/cat-0001.grv"))))
+
 (let* ((page
          (make-site-page
            "preview" "Preview"

@@ -50,7 +50,7 @@ analyzer and renderer library:
     #:title "Linked Notes"
     #:description "A linked notebook for mathematical ideas."
     #:source-directory source-directory
-    #:prepare (make-scribble-module-setup "source/modules")
+    #:prepare (make-scribble-module-setup "modules")
     #:read-page (make-forester-page-reader read-document)
     #:analyze make-forest
     #:renderers
@@ -96,22 +96,32 @@ style are optional libraries for projects that want them.
 The current I/O contract is filesystem based. Collectors, preparation hooks,
 extra sources, and artifact dependencies identify files by path. Grove reads
 those files to fingerprint them, and the writer emits text artifacts beneath a
-local output directory. The default collector scans one directory level and
-selects regular files; a project collector can choose and order other file
-paths. Artifact paths are relative and cannot contain `.` or `..` path
-components. This contract does not currently model in-memory inputs, URLs,
-binary artifacts, or alternate output backends. A future source or writer
-interface should be introduced when a concrete consumer needs one, with
-stable identities and fingerprints defined for that backend.
+local output directory. The default collector recursively scans the configured
+directory, skips hidden directories, and selects regular files in sorted
+order. Its filter receives each file's basename, while the returned source
+paths retain their directory structure. A project collector can choose and
+order other file paths. Artifact paths are relative and cannot contain `.` or
+`..` path components. This contract does not currently model in-memory inputs,
+URLs, binary artifacts, or alternate output backends. A future source or
+writer interface should be introduced when a concrete consumer needs one,
+with stable identities and fingerprints defined for that backend.
 
-The default collector selects non-hidden regular files directly inside the
+The default collector selects non-hidden regular files recursively below the
 configured directory, in sorted order. Supply `#:source-filter` to restrict
-them, or `#:collect-sources` to provide an ordered path list. The `#:prepare`
-hook runs before reading and returns auxiliary source paths. Input libraries
-can use it for shared modules or other setup. For Scribble, use
-`make-scribble-module-setup`; its `.grv` module files use Guile's ordinary
-`define-module` form. The generic project does not interpret module syntax.
-With no analyzer, renderers receive the `project-context` directly.
+them, or `#:collect-sources` to provide an ordered path list. Keep shared
+Scribble module sources outside a recursively collected page directory, then
+load them with `make-scribble-module-setup`; their `.grv` files use Guile's
+ordinary `define-module` form. The generic project does not interpret module
+syntax. With no analyzer, renderers receive the `project-context` directly.
+
+## Forester source paths and page IDs
+
+`make-forester-page-reader` derives a page ID from the source file's basename,
+without its `.grv` extension. Directories organize the source tree but do not
+become part of the ID or page link. For example,
+`source/mathematics/limits.grv` has the ID `limits`; a configured HTML route
+may publish it as `notes/limits.html`. Two files with the same basename
+produce a duplicate page ID error that lists their source paths.
 
 `write-artifacts` keeps a `.grove-artifacts` manifest in the output directory.
 On the next build it removes files listed in the previous manifest that are no

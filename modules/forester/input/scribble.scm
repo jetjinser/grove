@@ -68,6 +68,8 @@
       (when (string-null? title)
         (error (format #f "Forester page title is empty in ~a" path)))
       (make-site-page
+        ;; Forester addresses trees by filename; directories only organize
+        ;; the source tree and must not leak into page IDs or links.
         (string-drop-right filename (string-length ".grv"))
         title
         (make-content-document
@@ -80,5 +82,6 @@
                            (cons 'updated updated)))))))
 
 (define (make-forester-page-reader read-document)
+  "Return a reader whose page IDs are source basenames without `.grv'."
   (lambda (path)
     (page-from-document path (read-document path))))

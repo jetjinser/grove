@@ -68,5 +68,13 @@
                                       ids)
                                1))
                           ids)))
-    (when duplicate (error "duplicate site page id" duplicate))
+    (when duplicate
+      (error
+        (format #f "duplicate site page id ~s in sources: ~{~a~^, ~}"
+                duplicate
+                (map (lambda (page)
+                       (or (site-page-source page) "<unknown source>"))
+                     (filter (lambda (page)
+                               (equal? duplicate (site-page-id page)))
+                             pages)))))
     (%make-site pages title sources description)))

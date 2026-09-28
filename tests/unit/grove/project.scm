@@ -18,7 +18,7 @@
 (define project-root
   (format #f "/tmp/grove-project-test-~a" (getpid)))
 (define source-directory (string-append project-root "/source"))
-(define module-directory (string-append source-directory "/modules"))
+(define module-directory (string-append project-root "/modules"))
 (define output-directory (string-append project-root "/output"))
 (define generic-output-directory
   (string-append project-root "/generic-output"))

@@ -25,6 +25,7 @@
       "/tmp/grove-linked-notes"))
 
 (define source-directory (string-append examples-directory "/source"))
+(define module-directory (string-append examples-directory "/modules"))
 (define notes-css-path (string-append examples-directory "/style.css"))
 (define read-document (make-scribble-document-reader))
 
@@ -56,7 +57,7 @@
     #:source-directory source-directory
     #:extra-sources (list notes-css-path)
     #:prepare
-    (make-scribble-module-setup (string-append source-directory "/modules"))
+    (make-scribble-module-setup module-directory)
     #:read-page (make-forester-page-reader read-document)
     #:analyze make-forest
     #:renderers

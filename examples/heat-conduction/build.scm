@@ -21,6 +21,7 @@
 
 (define example-directory (dirname (current-filename)))
 (define source-directory (string-append example-directory "/source"))
+(define module-directory (string-append example-directory "/modules"))
 (define stylesheet-path (string-append example-directory "/style.css"))
 (define output-directory
   (or (and (pair? (cdr (command-line))) (cadr (command-line)))
@@ -46,8 +47,7 @@
     #:description "A linked, worked derivation of the heat equation."
     #:source-directory source-directory
     #:extra-sources (list stylesheet-path)
-    #:prepare (make-scribble-module-setup
-                (string-append source-directory "/modules"))
+    #:prepare (make-scribble-module-setup module-directory)
     #:read-page (make-forester-page-reader read-document)
     #:analyze make-forest
     #:renderers
