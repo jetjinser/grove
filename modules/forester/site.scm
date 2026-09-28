@@ -4,8 +4,8 @@
 
 (define-module (forester site)
   #:use-module (grove ir)
-  #:use-module (grove relation)
   #:use-module (grove site)
+  #:use-module (forester relations)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
@@ -142,12 +142,12 @@
   (label forest-heading-label))
 
 (define-record-type <forest>
-  (%make-forest site reference-index heading-index page-reference-relation)
+  (%make-forest site reference-index heading-index reference-relation)
   forest?
   (site forest-site)
   (reference-index forest-reference-index)
   (heading-index forest-heading-index)
-  (page-reference-relation forest-page-reference-relation))
+  (reference-relation forest-reference-relation))
 
 (define (make-forest site)
   (unless (site? site)
@@ -217,17 +217,21 @@
                      elements
                      (iota (length elements) 1)))))
              pages))
-         (page-reference-relation
-           (make-relation
+         (reference-relation
+           (make-forest-reference-relation
              (append-map
                (lambda (entry)
                  (map (lambda (reference)
-                        (list (forest-reference-source-page-id reference)
-                              (forest-reference-target-page-id reference)))
+                        (list
+                          (forest-reference-source-page-id reference)
+                          (forest-reference-source-id reference)
+                          (forest-reference-target-page-id reference)
+                          (forest-reference-target-fragment reference)
+                          (forest-reference-label reference)))
                       (cdr entry)))
                reference-index))))
     (%make-forest site reference-index heading-index
-                  page-reference-relation)))
+                  reference-relation)))
 
 (define (forest-heading-ids forest id)
   (map forest-heading-id (forest-headings forest id)))
@@ -249,7 +253,13 @@
   (let ((entry (assoc id (forest-reference-index forest))))
     (unless entry
       (error "unknown forest page" id))
-    (cdr entry)))
+    (let ((reference-ids
+            (forest-outgoing-reference-ids
+              (forest-reference-relation forest) id)))
+      (filter (lambda (reference)
+                (member (forest-reference-source-id reference)
+                        reference-ids equal?))
+              (cdr entry)))))
 
 (define* (forest-incoming-references forest id #:optional fragment)
   (unless (assoc id (forest-heading-index forest))
@@ -257,21 +267,19 @@
   (when (and fragment
              (not (member fragment (forest-heading-ids forest id) string=?)))
     (error "unknown forest heading fragment" id fragment))
-  (filter (lambda (reference)
-            (and (equal? id
-                         (forest-reference-target-page-id reference))
-                 (or (not fragment)
-                     (equal? fragment
-                             (forest-reference-target-fragment reference)))))
-          (append-map cdr (forest-reference-index forest))))
+  (let* ((keys (forest-incoming-reference-keys
+                 (forest-reference-relation forest) id fragment))
+         (key? (lambda (reference)
+                 (member (list (forest-reference-source-page-id reference)
+                               (forest-reference-source-id reference))
+                         keys equal?))))
+    (filter key? (append-map cdr (forest-reference-index forest)))))
 
 (define (forest-backlinks forest id)
   (unless (assoc id (forest-heading-index forest))
     (error "unknown forest page" id))
   (let ((source-ids
-          (run* (source-id)
-            (relationo (forest-page-reference-relation forest)
-                      source-id id))))
+          (forest-backlink-page-ids (forest-reference-relation forest) id)))
     (filter (lambda (page) (member (site-page-id page) source-ids equal?))
             (site-pages (forest-site forest)))))
 
@@ -282,46 +290,19 @@
         (error "unknown forest page" id)))
     (list left-id right-id))
   (let ((source-ids
-          (run* (source-id)
-            (relationo (forest-page-reference-relation forest)
-                      source-id left-id)
-            (relationo (forest-page-reference-relation forest)
-                      source-id right-id))))
+          (forest-common-backlink-page-ids
+            (forest-reference-relation forest) left-id right-id)))
     (filter (lambda (page) (member (site-page-id page) source-ids equal?))
             (site-pages (forest-site forest)))))
-
-(define (not-membero value values)
-  (conde
-    ((== '() values))
-    ((fresh (head tail)
-       (== `(,head . ,tail) values)
-       (=/= value head)
-       (not-membero value tail)))))
-
-(define (forest-reachableo relation source target)
-  (forest-walko relation source target (list source)))
-
-(define (forest-walko relation source target seen)
-  (conde
-    ((relationo relation source target)
-     (not-membero target seen))
-    ((fresh (middle)
-       (relationo relation source middle)
-       (not-membero middle seen)
-       (forest-walko relation middle target (cons middle seen))))))
 
 (define (forest-reachable-pages forest id)
   (unless (assoc id (forest-heading-index forest))
     (error "unknown forest page" id))
-  (let ((relation (forest-page-reference-relation forest)))
-    (let ((reachable-ids
-            (delete-duplicates
-              (run* (target-id)
-                (forest-reachableo relation id target-id))
-              equal?)))
-      (filter (lambda (page)
-                (member (site-page-id page) reachable-ids equal?))
-              (site-pages (forest-site forest))))))
+  (let ((reachable-ids
+          (forest-reachable-page-ids (forest-reference-relation forest) id)))
+    (filter (lambda (page)
+              (member (site-page-id page) reachable-ids equal?))
+            (site-pages (forest-site forest)))))
 
 (define (forest-source-paths forest)
   (let ((site (forest-site forest)))

@@ -29,7 +29,8 @@ The public construction and query forms are intended to be:
 (define references
   (make-relation
     '(("intro" "algebra" #f)
-      ("limits" "algebra" "continuity"))))
+      ("limits" "algebra" "continuity"))
+    #:arity 3))
 
 (run* (source fragment)
   (relationo references source "algebra" fragment))
@@ -59,6 +60,13 @@ Grove supplies the relation value, relation goal, and miniKanren query forms.
 Domain libraries own their fact schemas, named predicates, and recursive
 rules. They receive relation values explicitly; Grove does not keep an
 implicit global fact database or import domain-specific relation modules.
+
+The Forester adapter lives in `(forester relations)`, independently of
+`(forester site)`. It stores each reference occurrence as a five-column row:
+`(source-page-id local-reference-id target-page-id fragment label)`. Its
+exports provide incoming and outgoing reference queries, backlinks, common
+backlinks, and transitive reachability. The site layer maps those query results
+back to page and reference records and preserves site ordering.
 
 Rules are ordinary Guile module definitions built from miniKanren goals. A
 library can export its own relation queries without changing Grove. Scheme
