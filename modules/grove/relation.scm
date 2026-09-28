@@ -75,7 +75,9 @@
   ((@@ (faster-minikanren mk-guile) project) (source target)
     (cond
       ((and (ground-term? source) (ground-term? target))
-       (if (member (cons source target) (relation-facts relation) equal?)
+       (if (member target
+                   (indexed-values (relation-by-source relation) source)
+                   equal?)
            succeed
            fail))
       ((ground-term? source)

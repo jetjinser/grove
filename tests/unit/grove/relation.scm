@@ -62,6 +62,20 @@
       (relationo links middle target)
       (== target 'delta))))
 
+(let ((references
+        (make-relation
+          '((first . left)
+            (first . right)
+            (second . left)
+            (second . right)
+            (third . left)
+            (unrelated . elsewhere)))))
+  (test-equal "a shared logic variable joins two indexed relation lookups"
+    '(first second)
+    (run* (source)
+      (relationo references source 'left)
+      (relationo references source 'right))))
+
 (let ((structured
         (make-relation
           (list (cons '(tag alice) 'topic)

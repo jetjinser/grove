@@ -14,6 +14,7 @@
             forest-site
             forest-links
             forest-backlinks
+            forest-common-backlinks
             forest-reachable-pages
             forest-page-id-from-link
             forest-fragment-from-link
@@ -271,6 +272,21 @@
           (run* (source-id)
             (relationo (forest-page-reference-relation forest)
                       source-id id))))
+    (filter (lambda (page) (member (site-page-id page) source-ids equal?))
+            (site-pages (forest-site forest)))))
+
+(define (forest-common-backlinks forest left-id right-id)
+  (for-each
+    (lambda (id)
+      (unless (assoc id (forest-heading-index forest))
+        (error "unknown forest page" id)))
+    (list left-id right-id))
+  (let ((source-ids
+          (run* (source-id)
+            (relationo (forest-page-reference-relation forest)
+                      source-id left-id)
+            (relationo (forest-page-reference-relation forest)
+                      source-id right-id))))
     (filter (lambda (page) (member (site-page-id page) source-ids equal?))
             (site-pages (forest-site forest)))))
 

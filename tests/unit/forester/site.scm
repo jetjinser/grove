@@ -65,6 +65,16 @@
               (member (site-page-id page) source-ids equal?))
             (site-pages (forest-site forest)))))
 
+(define (common-backlinks-by-incoming-references forest left-id right-id)
+  (let ((left (map site-page-id
+                   (backlinks-by-incoming-references forest left-id)))
+        (right (map site-page-id
+                    (backlinks-by-incoming-references forest right-id))))
+    (filter (lambda (page)
+              (and (member (site-page-id page) left equal?)
+                   (member (site-page-id page) right equal?)))
+            (site-pages (forest-site forest)))))
+
 (test-begin "forester site")
 
 (let* ((destination (page-with-links "destination" '()))
@@ -84,6 +94,29 @@
   (test-equal "incoming-reference queries still preserve each link occurrence"
     3
     (length (forest-incoming-references forest "destination"))))
+
+(let* ((left (page-with-links "left" '()))
+       (right (page-with-links "right" '()))
+       (shared-late (page-with-links "shared-late" '("left" "right")))
+       (left-only (page-with-links "left-only" '("left")))
+       (shared-early (page-with-links "shared-early"
+                                      '("left" "left" "right")))
+       (right-only (page-with-links "right-only" '("right")))
+       (forest
+         (make-forest
+           (make-site
+             (list left shared-late left-only right shared-early right-only))))
+       (common (forest-common-backlinks forest "left" "right")))
+  (test-equal "relational joins find pages linking to both targets in site order"
+    '("shared-late" "shared-early")
+    (map site-page-id common))
+  (test-equal "common backlinks match the incoming-reference intersection"
+    (map site-page-id
+         (common-backlinks-by-incoming-references forest "left" "right"))
+    (map site-page-id common))
+  (test-equal "joining a target to itself gives its unique backlink pages"
+    (map site-page-id (forest-backlinks forest "left"))
+    (map site-page-id (forest-common-backlinks forest "left" "left"))))
 
 (define (bfs-reachable-page-ids forest source-id)
   (let visit ((pending (list source-id)) (visited '()))
