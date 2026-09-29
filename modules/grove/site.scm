@@ -43,8 +43,13 @@
   (unless (and (list? metadata)
                (every (lambda (entry)
                         (and (pair? entry) (symbol? (car entry))))
-                      metadata))
-    (error "site page metadata must be an alist keyed by symbols" metadata))
+                      metadata)
+               (let loop ((entries metadata) (keys '()))
+                 (or (null? entries)
+                     (and (not (memq (caar entries) keys))
+                          (loop (cdr entries)
+                                (cons (caar entries) keys))))))
+    (error "site page metadata must have unique symbol keys" metadata))
   (%make-site-page id title document source metadata))
 
 (define-record-type <site>

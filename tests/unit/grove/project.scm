@@ -42,6 +42,9 @@
   (make-site-page "page" #f (make-content-document '())))
 (test-error "site page source paths cannot be empty" #t
   (make-site-page "page" "Page" (make-content-document '()) ""))
+(test-error "site page metadata keys are unique" #t
+  (make-site-page "page" "Page" (make-content-document '())
+    #:metadata '((summary . "first") (summary . "second"))))
 
 (dynamic-wind
   (lambda ()

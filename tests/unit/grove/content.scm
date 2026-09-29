@@ -10,6 +10,27 @@
 
 (test-begin "grove content")
 
+(test-error "content text values are strings" #t
+  (make-content-text 42))
+(test-error "content layout kinds are symbols" #t
+  (make-content-layout "newline" "\n"))
+(test-error "content layout raw values are strings" #t
+  (make-content-layout 'newline 10))
+(test-error "element kinds are symbols" #t
+  (make-content-element "paragraph" '()))
+(test-error "content elements reject non-content children" #t
+  (make-content-element 'paragraph '(42)))
+(test-error "content documents reject non-content children" #t
+  (make-content-document '(42)))
+(test-error "content elements reject nested documents" #t
+  (make-content-element 'paragraph
+    (list (make-content-document '("nested")))))
+(test-error "element property keys are symbols" #t
+  (make-content-element 'paragraph '() #:properties '(("role" . "status"))))
+(test-error "element property keys are unique" #t
+  (make-content-element 'paragraph '()
+    #:properties '((role . "status") (role . "note"))))
+
 (let* ((notice
          (make-content-element 'notice '("Hello")
            #:properties '((role . "status"))))
@@ -29,6 +50,13 @@
                      (string-append
                        (symbol->string (content-element-kind element))
                        ": " body)))))))
+
+(let* ((paragraph (make-content-element 'paragraph '("Nested.")))
+       (inner-document (make-content-document (list paragraph)))
+       (document (make-content-document (list inner-document))))
+  (test-equal "document sequences flatten nested documents"
+    (list paragraph)
+    (content-document-children document)))
 
 (let* ((document
          (make-content-document
