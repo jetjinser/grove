@@ -337,36 +337,48 @@ text; `@published` and `@updated` use `YYYY-MM-DD` dates:
 @paragraph{...}
 ```
 
-The page reader stores the summary and dates in the Grove page metadata alist.
-It keeps `@tag` and `@taxon` as IR elements in the page document; they remain
-queryable there but are omitted from rendered body text and HTML. A page can
-have one taxon and any number of tags. During analysis, `(forester site)`
-indexes content elements from the page IR in `(content-node-relation forest)`.
-`(forester relations)` provides the `nodeo`, `plain-text-paragrapho`,
-`descendanto`, `math-nodeo`, `shorter-than-o`, `contains-texto`, and
+The page reader extracts the title, summary, and dates into the Grove page
+record. It keeps `@tag` and `@taxon` as IR elements in the page document;
+they remain queryable there but are omitted from rendered body text and HTML.
+A page can have one taxon and any number of tags. During analysis,
+`(forester site)` indexes content elements from the page IR in
+`(content-node-relation forest)` and page titles and metadata in
+`(page-relation forest)`. `(forester relations)` provides `nodeo`,
+`pageo`, and `page-metadatao`, as well as `plain-text-paragrapho`,
+`descendanto`, `math-nodeo`, `shorter-than-o`, `contains-texto`,
 `math-containing-paragrapho`, and `topic-membero` goals. Paragraph text is the
 recursive concatenation of its text children; its length counts Unicode
 characters. A plain-text paragraph has no nested content elements. For
-example, a project can query short paragraphs containing a phrase, then
-resolve each result with `(content-node forest node-id)`:
+example, a project can join page metadata, a tag, and paragraph constraints,
+then resolve each result with `(content-node forest node-id)`:
 
 ```scheme
-(query (node-id)
-  (nodeo (content-node-relation forest)
-    (node-id node-id)
-    (page-id "algebra")
-    (kind 'paragraph))
-  (shorter-than-o (content-node-relation forest) node-id 120)
-  (contains-texto (content-node-relation forest) node-id "范畴论"))
+(let ((nodes (content-node-relation forest))
+      (page-data (page-relation forest)))
+  (query (node-id)
+    (exists (page-id label summary)
+      (pageo page-data (page-id page-id))
+      (page-metadatao page-data page-id 'summary summary)
+      (topic-membero nodes "algebra" page-id label)
+      (nodeo nodes
+        (node-id node-id)
+        (page-id page-id)
+        (kind 'paragraph)
+        (text _))
+      (shorter-than-o nodes node-id 120)
+      (contains-texto nodes node-id "范畴论"))))
 ```
 
-Node IDs identify elements within one Forest snapshot. A project can use query
-results to construct its own pages or renderer output. Grove does not impose
-topic pages or navigation. IDs
-use letters, digits, and hyphens, start and end with a letter or digit, and a
-shared ID must use the same label on every page. RSS uses the summary instead
-of the whole page when present. It emits `updated`, or `published` when no
-updated date is supplied, as an RFC 822
+Each content element receives a dense non-negative integer ID in preorder
+across the Forest's ordered pages. Text and layout leaves have no IDs, though
+they contribute to ancestor text; child positions count all child slots.
+`content-node` resolves an ID within that Forest, and IDs from another Forest
+or a later rebuild have no identity guarantee. A project can use query results
+to construct its own pages or renderer output. Grove does not impose topic
+pages or navigation. Topic IDs use letters, digits, and hyphens, start and end
+with a letter or digit, and a shared ID must use the same label on every page.
+RSS uses the summary instead of the whole page when present. It emits
+`updated`, or `published` when no updated date is supplied, as an RFC 822
 `pubDate` at midnight UTC. Sites that do not need metadata can continue to
 provide only a title and body.
 

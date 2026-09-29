@@ -14,6 +14,7 @@
             make-forest
             site
             pages
+            page-relation
             content-node-relation
             content-node
             topic-pages
@@ -296,7 +297,8 @@
 
 (define-record-type <forest>
   (%make-forest site pages reference-index heading-index reference-relation
-                composition content-node-relation content-node-index)
+                composition page-relation content-node-relation
+                content-node-index)
   forest?
   (site site)
   (pages pages)
@@ -304,6 +306,7 @@
   (heading-index heading-index)
   (reference-relation reference-relation)
   (composition composition)
+  (page-relation page-relation)
   (content-node-relation content-node-relation)
   (content-node-index content-node-index))
 
@@ -313,12 +316,6 @@
     (filter (lambda (page)
               (member (site-page-id page) page-ids string=?))
             (pages forest))))
-
-(define (indexed-elements children)
-  (filter-map
-    (lambda (child position)
-      (and (content-element? child) (cons position child)))
-    children (iota (length children))))
 
 (define (validate-topic-facts! facts)
   (let ((topics
@@ -348,42 +345,55 @@
 (define (content-node-facts pages)
   (let ((index '())
         (next-id 0))
+    ;; Each visit returns its preorder facts alongside its accumulated text.
+    ;; Reusing child text avoids recursively flattening every subtree again.
     (letrec
       ((visit
          (lambda (page content parent-id position)
            (if (not (content-element? content))
-               '()
+               (cons '() (content->plain-text content))
                (let* ((id next-id)
                       (kind (content-element-kind content))
                       (properties (content-element-properties content))
-                      (text (content->plain-text content))
-                      (children
-                        (if (eq? kind 'subtree)
-                            '()
-                            (indexed-elements
-                              (content-element-children content)))))
+                      (children (content-element-children content)))
                  (set! next-id (1+ next-id))
                  (set! index (cons (cons id content) index))
-                 (cons
-                   (list id (site-page-id page) parent-id kind position
-                         properties text (string-length text)
-                         (element-plain-text? content))
-                   (append-map
-                     (lambda (entry)
-                       (visit page (cdr entry) id (car entry)))
-                     children)))))))
+                 (let* ((child-results
+                          (if (eq? kind 'subtree)
+                              '()
+                              (map (lambda (child child-position)
+                                     (visit page child id child-position))
+                                   children
+                                   (iota (length children)))))
+                        (text (if (eq? kind 'subtree)
+                                  (content->plain-text content)
+                                  (string-concatenate
+                                    (map cdr child-results)))))
+                   (cons (cons
+                           (list id (site-page-id page) parent-id kind position
+                                 properties text (string-length text)
+                                 (element-plain-text? content))
+                           (append-map car child-results))
+                         text)))))))
       (let ((facts
               (append-map
                 (lambda (page)
-                  (append-map
-                    (lambda (entry)
-                      (visit page (cdr entry) #f (car entry)))
-                    (indexed-elements
-                      (content-document-children
-                        (site-page-document page)))))
-                pages)))
+                  (let ((children
+                          (content-document-children
+                            (site-page-document page))))
+                    (append-map
+                      car
+                      (map (lambda (child position)
+                             (visit page child #f position))
+                           children
+                           (iota (length children))))))
+        pages)))
         (validate-topic-facts! facts)
-        (values (make-content-node-relation facts) index)))))
+        (let ((node-index (make-vector next-id #f)))
+          (for-each (lambda (entry)
+                      (vector-set! node-index (car entry) (cdr entry)))
+                    index)
+          (values (make-content-node-relation facts) node-index))))))
 
 (define (element-plain-text? element)
   (and (content-element? element)
@@ -391,8 +401,12 @@
               (content-element-children element))))
 
 (define (content-node forest id)
-  (let ((entry (assoc id (content-node-index forest))))
-    (or (and entry (cdr entry))
+  (let ((index (content-node-index forest)))
+    (if (and (integer? id)
+             (exact? id)
+             (>= id 0)
+             (< id (vector-length index)))
+        (vector-ref index id)
         (error "unknown content node" id))))
 
 (define (make-forest site)
@@ -523,6 +537,13 @@
                           (reference-label reference)))
                       (cdr entry)))
                reference-index)))
+         (page-relation
+           (make-page-relation
+             (map (lambda (page)
+                    (list (site-page-id page)
+                          (site-page-title page)
+                          (site-page-metadata page)))
+                  pages)))
          (content-node-state
            (call-with-values
              (lambda () (content-node-facts pages))
@@ -541,7 +562,7 @@
              (append-map cdr transclusion-index)))
          (_ (validate-composition-cycles! pages composition)))
     (%make-forest site pages reference-index heading-index
-                  reference-relation composition
+                  reference-relation composition page-relation
                   (car content-node-state)
                   (cadr content-node-state))))
 

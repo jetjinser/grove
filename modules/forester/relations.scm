@@ -12,6 +12,9 @@
             backlink-page-ids
             common-backlink-page-ids
             reachable-page-ids
+            make-page-relation
+            pageo
+            page-metadatao
             make-content-node-relation
             nodeo
             node-propertyo
@@ -29,6 +32,10 @@
 ;; Rows are (source-page-id local-reference-id target-page-id fragment label).
 (define-relation-schema make-reference-relation referenceo
   (source-page-id reference-id target-page-id fragment label))
+
+;; Rows are (page-id title metadata).
+(define-relation-schema make-page-relation pageo
+  (page-id title metadata))
 
 ;; Rows are (node-id page-id parent-id kind position properties text
 ;; character-count plain-text?).
@@ -51,6 +58,14 @@
            (node-id node-id)
            (properties properties))
     (list-membero entry properties)
+    (== `(,key . ,value) entry)))
+
+(define-relation (page-metadatao relation page-id key value)
+  (exists (metadata entry)
+    (pageo relation
+           (page-id page-id)
+           (metadata metadata))
+    (list-membero entry metadata)
     (== `(,key . ,value) entry)))
 
 (define-relation (paragrapho relation node-id)

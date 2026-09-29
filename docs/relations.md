@@ -16,6 +16,9 @@ proper Scheme list containing one or more terms, and every row in one relation
 has the same arity. A term can be an atomic Scheme value or a pair tree of
 terms. Vectors are reserved by faster-minikanren for logic variables and are
 not valid relation data. A relation cannot contain a live logic variable.
+Fact rows and pair terms are ordinary Scheme data; callers must treat them as
+read-only after relation construction, including values returned by
+`relation-facts` and query answers.
 
 Base facts have set semantics: structurally equal rows occur once. The
 constructor retains the first occurrence order, and `relation-facts` exposes
@@ -112,6 +115,52 @@ row: `(source-page-id local-reference-id target-page-id fragment label)`. Its
 exports provide incoming and outgoing reference queries, backlinks, common
 backlinks, and transitive reachability. The site layer maps those query
 results back to page and reference records and preserves site ordering.
+
+## Forester content and page queries
+
+`(forester site)` exposes two immutable relation snapshots on a Forest.
+`(content-node-relation forest)` stores one row for each content element:
+`(node-id page-id parent-id kind position properties text character-count plain-text?)`.
+`(page-relation forest)` stores one row per page:
+`(page-id title metadata)`. The `nodeo` and `pageo` goals query those rows;
+`node-propertyo` and `page-metadatao` query the corresponding alists.
+
+Only content elements receive node IDs. IDs are dense non-negative integers,
+assigned in preorder across pages in Forest order. They resolve through
+`(content-node forest id)` only for that Forest snapshot; another Forest or a
+later analysis has no ID stability guarantee. The `position` column is the
+child slot in the original content list, so text and layout leaves can create
+gaps between element positions even though leaves have no rows or IDs.
+
+The `text` column is the concatenation of descendant text and layout leaves,
+without renderer-specific formatting. `character-count` is its Guile string
+length. `plain-text?` means that the element has no child content elements;
+text and layout leaves are allowed. Thus `plain-text-paragrapho` selects
+paragraphs without nested semantic elements, while `paragrapho` also includes
+paragraphs containing links, math, or other inline elements. `contains-texto`
+performs a case-sensitive substring search over the concatenated text.
+
+Page title and metadata are a separate relation because the page reader
+extracts `@title`, `@summary`, `@published`, and `@updated` into the Grove
+page record. Tags and taxa stay in the content IR and are queried with
+`topic-membero`. Page facts and content facts can be joined through their
+shared page ID:
+
+```scheme
+(let ((nodes (content-node-relation forest))
+      (page-data (page-relation forest)))
+  (query (node-id)
+    (exists (page-id label summary)
+      (pageo page-data (page-id page-id))
+      (page-metadatao page-data page-id 'summary summary)
+      (topic-membero nodes "algebra" page-id label)
+      (nodeo nodes
+        (node-id node-id)
+        (page-id page-id)
+        (kind 'paragraph))
+      (shorter-than-o nodes node-id 120)
+      (contains-texto nodes node-id "范畴论"))))
+```
 
 Forester tree composition has a separate semantic interface in
 `(forester composition)`. That module accepts typed subtree-definition and

@@ -240,19 +240,36 @@
             '("algebra")
             (topic-page-ids (content-node-relation forest) "algebra" 'tag))
           (let* ((nodes (content-node-relation forest))
+                 (page-data (page-relation forest))
                  (paragraph-ids
                    (query (node-id)
                      (nodeo nodes
                        (node-id node-id)
                        (page-id "algebra")
                        (kind 'paragraph)))))
-            (test-equal "content queries find short paragraphs by text"
-              '("范畴论 is useful.")
-              (query (text)
-                (exists (node-id)
+            (test-equal "page metadata queries compose with IR queries"
+              '(("Algebra" "A short algebra note." "范畴论 is useful."))
+              (query (title summary text)
+                (exists (page-id label node-id)
+                  (pageo page-data
+                    (page-id page-id)
+                    (title title))
+                  (page-metadatao page-data page-id 'summary summary)
+                  (topic-membero nodes "algebra" page-id label)
                   (nodeo nodes
                     (node-id node-id)
-                    (page-id "algebra")
+                    (page-id page-id)
+                    (kind 'paragraph)
+                    (text text))
+                  (contains-texto nodes node-id "范畴论"))))
+            (test-equal "content queries combine topic and paragraph constraints"
+              '("范畴论 is useful.")
+              (query (text)
+                (exists (page-id label node-id)
+                  (topic-membero nodes "algebra" page-id label)
+                  (nodeo nodes
+                    (node-id node-id)
+                    (page-id page-id)
                     (kind 'paragraph)
                     (text text))
                   (shorter-than-o nodes node-id 120)
@@ -267,11 +284,54 @@
                     (text text))
                   (plain-text-paragrapho nodes node-id)
                   (contains-texto nodes node-id "范畴论"))))
+            (test-equal "node text and character counts include nested content"
+              '(("See limits. x^2+y^2=z^2" 23))
+              (query (text character-count)
+                (exists (node-id)
+                  (nodeo nodes
+                    (node-id node-id)
+                    (page-id "algebra")
+                    (kind 'paragraph)
+                    (text text)
+                    (character-count character-count))
+                  (contains-texto nodes node-id "See"))))
+            (test-equal "node property queries select display math"
+              '(#t)
+              (query (display?)
+                (exists (node-id)
+                  (nodeo nodes
+                    (node-id node-id)
+                    (page-id "algebra")
+                    (kind 'math))
+                  (node-propertyo nodes node-id 'display? display?)
+                  (== display? #t))))
+            (test-equal "character counts use Unicode string length"
+              '(14)
+              (query (character-count)
+                (exists (node-id text)
+                  (nodeo nodes
+                    (node-id node-id)
+                    (page-id "algebra")
+                    (kind 'paragraph)
+                    (text text)
+                    (character-count character-count))
+                  (contains-texto nodes node-id "范畴论"))))
+            (test-assert "content node IDs are dense in traversal order"
+              (let ((ids
+                      (query (node-id)
+                        (nodeo nodes
+                          (node-id node-id)
+                          (page-id "algebra")))))
+                (equal? ids (iota (length ids)))))
             (test-assert "content node IDs resolve back to IR elements"
               (and (pair? paragraph-ids)
                    (eq? 'paragraph
                      (content-element-kind
                        (content-node forest (car paragraph-ids))))))
+            (test-assert "unknown content node IDs are rejected"
+              (exception-contains?
+                (lambda () (content-node forest -1))
+                "unknown content node"))
             (test-assert "paragraph and math goals compose through descendants"
               (pair? (query (node-id)
                        (exists (math-id)
