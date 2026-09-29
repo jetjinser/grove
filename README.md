@@ -10,24 +10,27 @@ reader, an optional analyzer, and independent renderers. The current example
 uses the Scribble-inspired `.grv` language and Forester's bidirectional links
 to build a notes site.
 
-## Try the example
+## Examples
 
-The examples are grouped by what they demonstrate:
+Each example demonstrates a different boundary in Grove. `linked-notes` is the
+reference Forester integration; `catalog` and `inventory` show two distinct
+uses of the generic project API; the showcases reuse Forester to focus on
+authored material rather than repeat another API example.
 
-- [`linked-notes`](examples/linked-notes/build.scm) is the main Forester example,
-  covering linked pages, composition, and the site renderers.
-- [`catalog`](examples/catalog/build.scm) uses Grove's generic project API with
-  a project-owned data model and HTML/text outputs.
-- [`inventory`](examples/inventory/build.scm) uses the same generic API for
-  CSV input and CSV/Scheme outputs, without Grove's content IR or HTML.
-- [`showcases/`](examples/showcases/) contains larger subject-matter examples:
-  category theory and heat conduction. They reuse the Forester pipeline to
-  demonstrate authored content rather than introduce separate project APIs.
-  Their shared build setup is in [`examples/common/`](examples/common/);
-  `linked-notes` keeps the full setup inline as the reference configuration.
+| Example | Demonstrates | Start here when |
+| --- | --- | --- |
+| [`linked-notes`](examples/linked-notes/build.scm) | Forester links, shared Scheme modules, HTML/text/RSS/sitemap/graph renderers, and cache configuration | You want to build a linked notes site |
+| [`catalog`](examples/catalog/build.scm) | A project-owned model rendered through Grove's content IR to HTML and text | You want a generic Grove project with document output |
+| [`inventory`](examples/inventory/build.scm) | CSV input and CSV/Scheme artifacts without Grove's content IR or HTML | Your inputs and outputs are structured data |
+| [`showcases/forest-category`](examples/showcases/forest-category/build.scm) | A small cross-linked category theory forest | You want an authored-content example |
+| [`showcases/heat-conduction`](examples/showcases/heat-conduction/build.scm) | A longer linked derivation using the same showcase runner | You want a larger content sample |
 
-Start with `linked-notes`; use `catalog` or `inventory` to see projects that do
-not use Forester. The showcases are optional.
+The two showcases share their runner in
+[`examples/common/`](examples/common/). `linked-notes` keeps a separate,
+complete configuration as the reference integration. These examples are
+functional demonstrations, not performance benchmarks.
+
+## Build an example
 
 Enter the development environment from the repository root:
 

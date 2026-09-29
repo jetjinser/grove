@@ -163,6 +163,11 @@ and other project-level inputs. These are caller-managed version keys, not hashe
 Scheme procedures. Bump them when reader, analyzer, or renderer code or
 configuration changes. File inputs declared with `#:extra-sources` are
 fingerprinted automatically; cacheable renderers must not rely on side effects.
+The keys are an invalidation contract: if code or configuration changes and a
+key does not, Grove cannot detect that change and may reuse stale artifacts.
+Use a project key for reader, analyzer, and project behavior, and a renderer
+key for that renderer's implementation and options. Do not duplicate file
+contents in a key when those files are already declared as sources.
 Grove uses SHA-256 fingerprints for source files and artifact contents. A build
 state from another format is discarded, so the next build renders the outputs
 again.
