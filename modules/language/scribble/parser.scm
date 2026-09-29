@@ -79,10 +79,15 @@
   (let loop ([ls '()])
     (let ([ch (read-char in)])
       (cond
-        [(or (eof-object? ch) (eqv? ch terminal))
+        [(eof-object? ch)
+         (error "unterminated escaped sequence")]
+        [(eqv? ch terminal)
          (list->string (reverse ls))]
         [(eqv? ch #\\)
-         (loop (cons (read-char in) ls))]
+         (let ((escaped (read-char in)))
+           (when (eof-object? escaped)
+             (error "dangling escape at end of escaped sequence"))
+           (loop (cons escaped ls)))]
         [else (loop (cons ch ls))]))))
 
 (define (read-symbol in ch)
@@ -121,7 +126,7 @@
         [(#\') (list 'quote (scrib-read in))]
         [(#\`) (list 'quasiquote (scrib-read in))]
         [(#\,) (cond [(eqv? #\@ (peek-char in))
-                      (read-char)
+                      (read-char in)
                       (list 'unquote-splicing (scrib-read in))]
                      [else
                       (list 'unquote (scrib-read in))])]

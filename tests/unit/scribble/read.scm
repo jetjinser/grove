@@ -123,6 +123,16 @@
 (test-read/error "too many )'s"
   ")")
 
+(test-read "unquote splicing reads from its input port"
+  '(unquote-splicing values)
+  ",@values")
+
+(test-read/error "unterminated string literal"
+  "\"text")
+
+(test-read/error "dangling escape in string literal"
+  "\"text\\")
+
 (let* ((env (default-environment scheme))
        (reader-fluid (module-ref env 'current-reader)))
   (fluid-set! reader-fluid scribble-read)

@@ -23,6 +23,8 @@ The examples are grouped by what they demonstrate:
 - [`showcases/`](examples/showcases/) contains larger subject-matter examples:
   category theory and heat conduction. They reuse the Forester pipeline to
   demonstrate authored content rather than introduce separate project APIs.
+  Their shared build setup is in [`examples/common/`](examples/common/);
+  `linked-notes` keeps the full setup inline as the reference configuration.
 
 Start with `linked-notes`; use `catalog` or `inventory` to see projects that do
 not use Forester. The showcases are optional.

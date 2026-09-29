@@ -19,7 +19,6 @@
     "modules/grove/project.scm"
     "modules/grove/project/site.scm"
     "modules/grove/site.scm"
-    "modules/grove/site/build.scm"
     "modules/grove/input/scribble.scm"
     "modules/grove/render/html.scm"
     "modules/grove/render/html/routes.scm"

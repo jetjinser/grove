@@ -36,6 +36,13 @@
 
 (test-begin "grove project")
 
+(test-error "site pages require a non-empty string ID" #t
+  (make-site-page "" "Page" (make-content-document '())))
+(test-error "site pages require a non-empty string title" #t
+  (make-site-page "page" #f (make-content-document '())))
+(test-error "site page source paths cannot be empty" #t
+  (make-site-page "page" "Page" (make-content-document '()) ""))
+
 (dynamic-wind
   (lambda ()
     (mkdir project-root)

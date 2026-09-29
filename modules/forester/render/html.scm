@@ -5,7 +5,6 @@
 (define-module (forester render html)
   #:use-module (grove build)
   #:use-module (forester site)
-  #:use-module ((grove output) #:select (artifact-path?))
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove render html)
