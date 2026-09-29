@@ -10,37 +10,37 @@
   #:export (grv-modules forester-modules))
 
 (define +grv-sources+
-  '("modules/grove/build.scm"
-    "modules/grove/build/state.scm"
-    "modules/grove/collect.scm"
-    "modules/grove/ir.scm"
-    "modules/grove/relation.scm"
-    "modules/grove/output.scm"
-    "modules/grove/project.scm"
-    "modules/grove/project/site.scm"
-    "modules/grove/site.scm"
-    "modules/grove/input/scribble.scm"
-    "modules/grove/render/html.scm"
-    "modules/grove/render/html/routes.scm"
-    "modules/grove/render/text.scm"
-    "modules/grove/style/html.scm"
-    "modules/language/scribble/commands.scm"
-    "modules/language/scribble/parser.scm"
-    "modules/language/scribble/spec.scm"))
+  '("grove/build.scm"
+    "grove/build/state.scm"
+    "grove/collect.scm"
+    "grove/ir.scm"
+    "grove/relation.scm"
+    "grove/output.scm"
+    "grove/project.scm"
+    "grove/project/site.scm"
+    "grove/site.scm"
+    "grove/input/scribble.scm"
+    "grove/render/html.scm"
+    "grove/render/html/routes.scm"
+    "grove/render/text.scm"
+    "grove/style/html.scm"
+    "language/scribble/commands.scm"
+    "language/scribble/parser.scm"
+    "language/scribble/spec.scm"))
 
 (define +forester-sources+
-  '("modules/forester/commands.scm"
-    "modules/forester/private/date.scm"
-    "modules/forester/private/web.scm"
-    "modules/forester/site.scm"
-    "modules/forester/style/html.scm"
-    "modules/forester/input/scribble.scm"
-    "modules/forester/render/html.scm"
-    "modules/forester/render/graph.scm"
-    "modules/forester/render/rss.scm"
-    "modules/forester/render/sitemap.scm"
-    "modules/forester/render/text.scm"
-    "modules/forester/render/text/routes.scm"))
+  '("forester/commands.scm"
+    "forester/private/date.scm"
+    "forester/private/web.scm"
+    "forester/site.scm"
+    "forester/style/html.scm"
+    "forester/input/scribble.scm"
+    "forester/render/html.scm"
+    "forester/render/graph.scm"
+    "forester/render/rss.scm"
+    "forester/render/sitemap.scm"
+    "forester/render/text.scm"
+    "forester/render/text/routes.scm"))
 
 (define grv-modules
   (map
