@@ -18,7 +18,7 @@ cross-reference pattern.
 Build it from the Grove repository root:
 
 ```sh
-guile -L modules examples/forest-category/build.scm
+guile -L modules examples/showcases/forest-category/build.scm
 ```
 
 Outputs go to `/tmp/grove-forest-category`. Pass a different directory as the

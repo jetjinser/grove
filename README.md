@@ -12,6 +12,21 @@ to build a notes site.
 
 ## Try the example
 
+The examples are grouped by what they demonstrate:
+
+- [`linked-notes`](examples/linked-notes/build.scm) is the main Forester example,
+  covering linked pages, composition, and the site renderers.
+- [`catalog`](examples/catalog/build.scm) uses Grove's generic project API with
+  a project-owned data model and HTML/text outputs.
+- [`inventory`](examples/inventory/build.scm) uses the same generic API for
+  CSV input and CSV/Scheme outputs, without Grove's content IR or HTML.
+- [`showcases/`](examples/showcases/) contains larger subject-matter examples:
+  category theory and heat conduction. They reuse the Forester pipeline to
+  demonstrate authored content rather than introduce separate project APIs.
+
+Start with `linked-notes`; use `catalog` or `inventory` to see projects that do
+not use Forester. The showcases are optional.
+
 Enter the development environment from the repository root:
 
 ```sh
