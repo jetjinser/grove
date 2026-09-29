@@ -25,14 +25,12 @@
                         (if (null? label) (list target) label)
                         #:properties `((target . ,target))))
 
-(define (subtree . arguments)
-  (let* ((named? (and (pair? arguments) (eq? (car arguments) #:id)))
-         (id (and named? (pair? (cdr arguments)) (cadr arguments)))
-         (body (if named? (cddr arguments) arguments)))
-    (when (and (pair? arguments) (keyword? (car arguments)) (not named?))
-      (error "unknown Forester subtree option" (car arguments)))
-    (when (and named? (null? (cdr arguments)))
-      (error "Forester subtree #:id requires an ID"))
+(define subtree-id-unspecified (list 'subtree-id-unspecified))
+
+(define* (subtree #:key (id subtree-id-unspecified) . arguments)
+  (let* ((named? (not (eq? id subtree-id-unspecified)))
+         ;; Guile's rest argument contains keyword arguments as well.
+         (body (if named? (drop arguments 2) arguments)))
     (when (and named?
                (not (and (string? id)
                          (not (string-null? id))
