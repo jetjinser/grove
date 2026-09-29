@@ -4,6 +4,8 @@
 
 (define-module (tests unit grove output)
   #:use-module (ice-9 textual-ports)
+  #:use-module (ice-9 binary-ports)
+  #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-64)
   #:use-module (grove output))
 
@@ -13,6 +15,7 @@
 (define obsolete-path (string-append output-directory "/obsolete.html"))
 (define unmanaged-path (string-append output-directory "/user.txt"))
 (define manifest-path (string-append output-directory "/.grove-artifacts"))
+(define binary-path (string-append output-directory "/images/pixel.bin"))
 
 (test-begin "grove output")
 
@@ -50,6 +53,18 @@
     (test-equal "artifact writer refreshes current artifact contents"
       "updated content"
       (call-with-input-file output-path get-string-all))
+    (let ((bytes (u8-list->bytevector '(0 255 1 128))))
+      (write-artifacts output-directory
+        (list (make-byte-artifact "images/pixel.bin" bytes)))
+      (test-assert "artifact writer preserves binary artifact bytes"
+        (let ((port (open-file binary-path "rb")))
+          (dynamic-wind
+            (lambda () #t)
+            (lambda () (bytevector=? bytes (get-bytevector-all port)))
+            (lambda () (close-port port)))))
+      (write-artifacts output-directory '())
+      (test-assert "artifact writer removes stale binary artifacts"
+        (not (file-exists? binary-path))))
     (write-artifacts output-directory '())
     (test-assert "empty builds remove previously generated artifacts"
       (not (file-exists? output-path)))
@@ -73,12 +88,16 @@
         (when (file-exists? path)
           (delete-file path)))
       (list obsolete-path unmanaged-path manifest-path
+            binary-path
             (string-append output-directory "/.grove-artifacts.tmp")
             (string-append output-directory "/.grove-build-state")
             (string-append output-directory "/.grove-build-state.tmp")))
     (let ((nested (string-append output-directory "/nested")))
       (when (file-exists? nested)
         (rmdir nested)))
+    (let ((images (string-append output-directory "/images")))
+      (when (file-exists? images)
+        (rmdir images)))
     (when (file-exists? output-directory)
       (rmdir output-directory))))
 

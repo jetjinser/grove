@@ -1,0 +1,7 @@
+<!-- SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu> -->
+<!-- SPDX-License-Identifier: CC0-1.0 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 100" role="img" aria-labelledby="title">
+  <title id="title">An algebraic identity</title>
+  <rect x="1" y="1" width="318" height="98" rx="12" fill="none" stroke="currentColor" stroke-width="2" />
+  <text x="160" y="62" text-anchor="middle" font-family="sans-serif" font-size="32">(a + b)² = a² + 2ab + b²</text>
+</svg>

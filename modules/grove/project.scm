@@ -7,6 +7,7 @@
   #:use-module (grove build state)
   #:use-module (grove collect)
   #:use-module (grove output)
+  #:use-module (ice-9 binary-ports)
   #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
@@ -216,12 +217,20 @@
                       (not (file-is-directory? path))
                       (catch #t
                         (lambda ()
-                          (call-with-input-file path get-string-all))
+                          (if (eq? (list-ref entry 4) 'bytes)
+                              (let ((port (open-file path "rb")))
+                                (dynamic-wind
+                                  (lambda () #t)
+                                  (lambda () (get-bytevector-all port))
+                                  (lambda () (close-port port))))
+                              (call-with-input-file path get-string-all)))
                         (lambda args #f)))))
           (if (and content
                    (equal? (content-fingerprint content) (cadr entry)))
               (loop (cdr entries)
-                    (cons (make-artifact (car entry) content (caddr entry))
+                    (cons ((if (eq? (list-ref entry 4) 'bytes)
+                               make-byte-artifact make-artifact)
+                           (car entry) content (caddr entry))
                           artifacts))
               #f)))))
 
@@ -338,8 +347,15 @@
                 source-paths))
          (current-sources
            (map (lambda (path) (list path (file-fingerprint path)))
-                (delete-duplicates
+             (delete-duplicates
                   (append prepared-sources source-paths
+                          (append-map
+                            (lambda (renderer)
+                              (if (and (cached-renderer? renderer)
+                                       (cached-renderer-inputs renderer))
+                                  ((cached-renderer-inputs renderer))
+                                  '()))
+                            (project-renderers project))
                           (project-extra-sources project))
                   string=?)))
          (context

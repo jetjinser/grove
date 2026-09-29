@@ -36,7 +36,15 @@
   (let ((heading-ids (forest-heading-ids forest (site-page-id page)))
         (references (forest-outgoing-references
                       forest (site-page-id page))))
-    `((link . ,(lambda (element children)
+    `((image . ,(lambda (element children)
+                 (let* ((source (content-element-property element 'source))
+                        (url (if (or (external-url? source)
+                                     (string-prefix? "/" source))
+                                 source
+                                 (html-asset-url routes source)))
+                        (alt (content-verbatim-string children)))
+                   `(img (@ (src ,url) (alt ,alt))))))
+      (link . ,(lambda (element children)
                  (when (null? references)
                    (error "Forester link rendering exceeded its index"
                           (site-page-id page)))

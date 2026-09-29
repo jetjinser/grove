@@ -5,6 +5,7 @@
 (define-module (tests unit grove state)
   #:use-module (ice-9 ftw)
   #:use-module (ice-9 textual-ports)
+  #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-64)
   #:use-module (grove build state)
@@ -36,16 +37,20 @@
     (test-assert "content fingerprints detect different content"
       (not (equal? (content-fingerprint "first")
                    (content-fingerprint "other"))))
+    (test-assert "content fingerprints accept binary artifact bytes"
+      (equal? (content-fingerprint (u8-list->bytevector '(0 255 1)))
+              (content-fingerprint (u8-list->bytevector '(0 255 1)))))
     (let* ((sources (list (list input-path (file-fingerprint input-path))))
            (artifacts
              (list (make-artifact "page.html" "rendered"
                                   (list input-path))))
-           (state (list 'grove-build-state-v4
+           (state (list 'grove-build-state-v5
                         sources
                         (list (list "page.html"
                                     (content-fingerprint "rendered")
                                     (list input-path)
-                                    0))
+                                    0
+                                    'text))
                         "test-project-renderers-v1")))
       (write-build-state state-path temp-path sources artifacts
                          '(("page.html" . 0))

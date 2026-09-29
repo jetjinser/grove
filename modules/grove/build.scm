@@ -11,24 +11,28 @@
             cached-renderer-cache-key
             cached-renderer-procedure
             cached-renderer-render-changed
+            cached-renderer-inputs
             make-cached-renderer
             renderer-cache-keys))
 
 (define-record-type <cached-renderer>
-  (%make-cached-renderer cache-key procedure render-changed)
+  (%make-cached-renderer cache-key procedure render-changed inputs)
   cached-renderer?
   (cache-key cached-renderer-cache-key)
   (procedure cached-renderer-procedure)
-  (render-changed cached-renderer-render-changed))
+  (render-changed cached-renderer-render-changed)
+  (inputs cached-renderer-inputs))
 
-(define* (make-cached-renderer procedure #:key cache-key render-changed)
+(define* (make-cached-renderer procedure #:key cache-key render-changed inputs)
   (unless (procedure? procedure)
     (error "cached renderer requires a procedure" procedure))
   (unless (and (string? cache-key) (not (string-null? cache-key)))
     (error "cached renderer requires a non-empty cache key" cache-key))
   (unless (or (not render-changed) (procedure? render-changed))
     (error "incremental renderer must be a procedure or #f" render-changed))
-  (%make-cached-renderer cache-key procedure render-changed))
+  (unless (or (not inputs) (procedure? inputs))
+    (error "renderer input collector must be a procedure or #f" inputs))
+  (%make-cached-renderer cache-key procedure render-changed inputs))
 
 (define (renderer-cache-keys renderers)
   (and (every cached-renderer? renderers)

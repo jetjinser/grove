@@ -20,7 +20,13 @@
 (define (page-content-handlers forest routes page)
   (let ((references (forest-outgoing-references forest (site-page-id page)))
         (headings (forest-headings forest (site-page-id page))))
-    `((link . ,(lambda (_ body)
+    `((image . ,(lambda (element body)
+                 (if (string-null? (string-trim-both body))
+                     (string-append "[image: "
+                                    (content-element-property element 'source)
+                                    "]")
+                     body)))
+      (link . ,(lambda (_ body)
                  (when (null? references)
                    (error "Forester link rendering exceeded its index"
                           (site-page-id page)))

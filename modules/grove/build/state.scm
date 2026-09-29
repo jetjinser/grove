@@ -30,9 +30,10 @@
       (iota (bytevector-length digest))))))
 
 (define (content-fingerprint content)
-  (unless (string? content)
-    (error "content fingerprint requires a string" content))
-  (fingerprint-bytes (string->utf8 content)))
+  (cond
+   ((string? content) (fingerprint-bytes (string->utf8 content)))
+   ((bytevector? content) (fingerprint-bytes content))
+   (else (error "content fingerprint requires text or bytes" content))))
 
 (define (file-fingerprint path)
   (let ((port (open-file path "rb")))
@@ -64,18 +65,19 @@
 
 (define (valid-output-entry? entry)
   (and (list? entry)
-       (= (length entry) 4)
+       (= (length entry) 5)
        (artifact-path? (car entry))
        (valid-fingerprint? (cadr entry))
        (or (not (caddr entry))
            (and (list? (caddr entry)) (every string? (caddr entry))))
        (or (not (cadddr entry))
-           (and (integer? (cadddr entry)) (>= (cadddr entry) 0)))))
+           (and (integer? (cadddr entry)) (>= (cadddr entry) 0)))
+       (memq (list-ref entry 4) '(text bytes))))
 
 (define (valid-build-state? state)
   (and (list? state)
        (= (length state) 4)
-       (eq? (car state) 'grove-build-state-v4)
+       (eq? (car state) 'grove-build-state-v5)
        (list? (cadr state))
        (every valid-source-entry? (cadr state))
        (distinct-paths? (cadr state) 0)
@@ -96,13 +98,15 @@
 
 (define (write-build-state path temp-path sources artifacts owners cache-key)
   (let ((state
-          (list 'grove-build-state-v4
+          (list 'grove-build-state-v5
                 sources
                 (map (lambda (artifact)
                        (list (artifact-path artifact)
                              (content-fingerprint (artifact-content artifact))
                              (artifact-sources artifact)
-                             (cdr (assoc (artifact-path artifact) owners))))
+                             (cdr (assoc (artifact-path artifact) owners))
+                             (if (string? (artifact-content artifact))
+                                 'text 'bytes)))
                      artifacts)
                 cache-key)))
     (unless (valid-build-state? state)

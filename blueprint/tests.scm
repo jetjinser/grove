@@ -30,6 +30,7 @@
     "unit/grove/relation.scm"
     "unit/grove/relation-dsl.scm"
     "unit/grove/output.scm"
+    "unit/grove/static.scm"
     "unit/grove/project.scm"
     "unit/grove/platform.scm"
     "unit/forester/project.scm"

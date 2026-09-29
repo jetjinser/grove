@@ -37,7 +37,7 @@
     "algebra"
     "Algebra & limits"
     (evaluate-document
-      "@paragraph{The @link[\"limits\"]{limits} are useful. @math{x^2+y^2=z^2}}\n@display-math{a^2+b^2=c^2}")
+      "@paragraph{The @link[\"limits\"]{limits} are useful. @math{x^2+y^2=z^2}}\n@display-math{a^2+b^2=c^2}\n@paragraph{@image[\"images/algebra.svg\"]{An algebra diagram.}}")
     #:metadata '((summary . "Algebra notes and mathematical ideas."))))
 
 (define limits
@@ -192,6 +192,15 @@
     (string-contains algebra-html "\\(x^2+y^2=z^2\\)"))
   (test-assert "display math keeps TeX delimiters"
     (string-contains algebra-html "\\[a^2+b^2=c^2\\]"))
+  (test-assert "images use route-aware URLs and alternative text"
+    (string-contains algebra-html
+                     "<img src=\"/images/algebra.svg\" alt=\"An algebra diagram.\" />"))
+  (test-assert "plain text retains image alternative text"
+    (string-contains
+      (assoc-ref (forest->text
+                   (make-forest (make-site (list algebra limits))))
+                 "algebra")
+      "An algebra diagram."))
   (test-assert "HTML loads MathJax"
     (string-contains algebra-html "mathjax@4/tex-chtml.js"))
   (test-assert "HTML defers MathJax until the document is ready"

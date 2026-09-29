@@ -19,4 +19,9 @@
     #:cache-key "renderer-v1"
     #:render-changed #t))
 
+(test-error "renderer input collectors must be procedures" #t
+  (make-cached-renderer (lambda (site) '())
+    #:cache-key "renderer-v1"
+    #:inputs '()))
+
 (test-end "grove build")

@@ -8,6 +8,7 @@
 @published{2026-09-27}
 @updated{2026-09-27}
 @paragraph{The @link["math-0002"]{limits} are useful. @math{x^2+y^2=z^2}}
+@paragraph{@image["images/algebra.svg"]{A simple diagram of an algebraic identity.}}
 @display-math{a^2+b^2=c^2}
 @heading{A few examples}
 @itemize{

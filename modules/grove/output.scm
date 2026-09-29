@@ -4,13 +4,16 @@
 
 (define-module (grove output)
   #:use-module (ice-9 ftw)
+  #:use-module (ice-9 binary-ports)
   #:use-module (ice-9 textual-ports)
+  #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
   #:export (artifact?
             artifact-path?
             make-artifact
+            make-byte-artifact
             artifact-path
             artifact-content
             artifact-sources
@@ -32,24 +35,33 @@
                      (not (member part '("." "..")))))
               (string-split path #\/))))
 
-(define* (make-artifact path content #:optional (sources #f))
+(define (make-artifact* path content sources)
   (unless (artifact-path? path)
     (error "artifact requires a relative path" path))
-  (unless (string? content)
-    (error "artifact requires text content" content))
   (unless (or (not sources)
               (and (list? sources) (every string? sources)))
     (error "artifact sources must be #f or a list of paths" sources))
   (%make-artifact path content
                   (and sources (delete-duplicates sources string=?))))
 
+(define* (make-artifact path content #:optional (sources #f))
+  (unless (string? content)
+    (error "artifact requires text content" content))
+  (make-artifact* path content sources))
+
+(define* (make-byte-artifact path content #:optional (sources #f))
+  (unless (bytevector? content)
+    (error "byte artifact requires a bytevector" content))
+  (make-artifact* path content sources))
+
 (define (prefix-artifacts prefix artifacts)
   (unless (artifact-path? prefix)
     (error "artifact prefix requires a relative path" prefix))
   (map (lambda (artifact)
-         (make-artifact (string-append prefix "/" (artifact-path artifact))
-                        (artifact-content artifact)
-                        (artifact-sources artifact)))
+         ((if (string? (artifact-content artifact)) make-artifact
+              make-byte-artifact)
+          (string-append prefix "/" (artifact-path artifact))
+          (artifact-content artifact) (artifact-sources artifact)))
        artifacts))
 
 (define (ensure-directory directory)
@@ -102,9 +114,15 @@
        (not (file-is-directory? path))
        (catch #t
          (lambda ()
-           (call-with-input-file path
-             (lambda (port)
-               (string=? content (get-string-all port)))))
+           (if (string? content)
+               (call-with-input-file path
+                 (lambda (port)
+                   (string=? content (get-string-all port))))
+               (let ((port (open-file path "rb")))
+                 (dynamic-wind
+                   (lambda () #t)
+                   (lambda () (bytevector=? content (get-bytevector-all port)))
+                   (lambda () (close-port port))))))
          (lambda args #f))))
 
 (define (write-artifacts directory artifacts)
@@ -124,9 +142,16 @@
         (let ((path (string-append directory "/" (artifact-path artifact))))
           (ensure-directory (dirname path))
           (unless (artifact-content-current? path (artifact-content artifact))
-            (call-with-output-file path
-              (lambda (port)
-                (display (artifact-content artifact) port))))))
+            (if (string? (artifact-content artifact))
+                (call-with-output-file path
+                  (lambda (port)
+                    (display (artifact-content artifact) port)))
+                (let ((port (open-file path "wb")))
+                  (dynamic-wind
+                    (lambda () #t)
+                    (lambda ()
+                      (put-bytevector port (artifact-content artifact)))
+                    (lambda () (close-port port))))))))
       artifacts)
     (for-each
       (lambda (stale-path)

@@ -9,6 +9,7 @@
              (forester render html)
              (forester render rss)
              (forester render sitemap)
+             (grove render static)
              (forester render text)
              (forester render text routes)
              (forester site)
@@ -79,7 +80,9 @@
             #:cache-key "linked-notes-sitemap-v2")
           (make-forester-graph-renderer
             #:path "forest-graph.scm"
-            #:cache-key "linked-notes-graph-v1"))
+            #:cache-key "linked-notes-graph-v1")
+          (make-static-assets-renderer
+            #:source-directory (string-append examples-directory "/static")))
     #:output-directory output-directory
     #:cache-key "linked-notes-project-v2"))
 

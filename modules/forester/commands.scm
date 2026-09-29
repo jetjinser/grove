@@ -6,7 +6,7 @@
   #:use-module (grove ir)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (title link subtree transclude summary published updated))
+  #:export (title link image subtree transclude summary published updated))
 
 (define (title . body)
   (make-content-element 'title body))
@@ -24,6 +24,12 @@
   (make-content-element 'link
                         (if (null? label) (list target) label)
                         #:properties `((target . ,target))))
+
+(define* (image source . alternative-text)
+  (unless (and (string? source) (not (string-null? source)))
+    (error "Forester image source must be a non-empty string" source))
+  (make-content-element 'image alternative-text
+                        #:properties `((source . ,source))))
 
 (define subtree-id-unspecified (list 'subtree-id-unspecified))
 
