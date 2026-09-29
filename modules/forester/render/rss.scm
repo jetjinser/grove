@@ -77,7 +77,7 @@
 
 (define* (render-rss forest #:key site-url
                             (feed-path "feed.xml")
-                            (routes (make-html-routes)))
+                            (routes (make-html-routes #:home-page "index")))
   (unless (forest? forest)
     (error "Forester RSS renderer requires a forest" forest))
   (unless (web-url? site-url)
@@ -128,7 +128,7 @@
 
 (define* (make-rss-renderer #:key site-url
                                      (feed-path "feed.xml")
-                                     (routes (make-html-routes))
+                                     (routes (make-html-routes #:home-page "index"))
                                      (cache-key #f))
   (let ((render (lambda (forest)
                   (render-rss forest

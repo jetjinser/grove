@@ -77,7 +77,16 @@
                    (member (site-page-id page) right equal?)))
             (site-pages (site forest)))))
 
+(define (render-test-html forest . options)
+  (let ((routes
+          (make-html-routes
+            #:home-page (site-page-id (car (pages forest))))))
+    (apply site->html forest #:routes routes options)))
+
 (test-begin "forester site")
+
+(test-error "HTML routes require an explicit home page ID" #t
+  (make-html-routes))
 
 (let* ((destination (page-with-links "destination" '()))
        (source (page-with-links "source" '("destination" "destination")))
@@ -176,7 +185,7 @@
     (and (content-element? math-node)
          (eq? (content-element-kind math-node) 'math))))
 
-(let* ((rendered (site->html (make-forest (make-site (list algebra limits)))))
+(let* ((rendered (render-test-html (make-forest (make-site (list algebra limits)))))
        (algebra-html (assoc-ref rendered "algebra"))
        (limits-html (assoc-ref rendered "limits")))
   (test-assert "at-exp link resolves to a page"
@@ -234,7 +243,7 @@
        (target (make-site-page "target" "Target" target-document))
        (source (make-site-page "source" "Source" source-document))
        (forest (make-forest (make-site (list target source))))
-       (html (site->html forest))
+       (html (render-test-html forest))
        (text (site->text forest))
        (target-html (assoc-ref html "target"))
        (target-text (assoc-ref text "target"))
@@ -318,10 +327,12 @@
        (artifacts
          (render-model
            forest
-           (list (make-html-renderer)
+           (list (make-html-renderer
+                   #:routes (make-html-routes #:home-page "algebra"))
                  (make-rss-renderer
                    #:site-url "https://notes.example/"
                    #:routes (make-html-routes
+                              #:home-page "algebra"
                               #:page-path
                               (lambda (id)
                                 (string-append "notes/" id ".html"))))
@@ -357,8 +368,8 @@
          (member "feed.xml" paths)
          (member "text/index.txt" paths)
          (member "text/algebra.txt" paths)))
-  (test-assert "HTML artifacts link the external Forester stylesheet"
-    (and (string-contains index-html "href=\"/forester.css\"")
+  (test-assert "HTML pages link the external Forester stylesheet"
+    (and (string-contains algebra-html "href=\"/forester.css\"")
          (string-contains
            (artifact-content
              (find (lambda (artifact)
@@ -371,6 +382,7 @@
            (styled-artifacts
              (render-html
                forest
+               #:routes (make-html-routes #:home-page "algebra")
                #:style (make-html-style #:stylesheets (list custom))))
            (stylesheet-paths (map artifact-path (take styled-artifacts 2)))
            (styled-index
@@ -378,8 +390,13 @@
                (find (lambda (artifact)
                        (string=? (artifact-path artifact) "index.html"))
                      styled-artifacts)))
-           (base-position (string-contains styled-index "forester.css"))
-           (custom-position (string-contains styled-index "custom.css")))
+           (styled-algebra
+             (artifact-content
+               (find (lambda (artifact)
+                       (string=? (artifact-path artifact) "algebra.html"))
+                     styled-artifacts)))
+           (base-position (string-contains styled-algebra "forester.css"))
+           (custom-position (string-contains styled-algebra "custom.css")))
       (and (equal? stylesheet-paths '("forester.css" "custom.css"))
            base-position
            custom-position
@@ -391,9 +408,8 @@
          (string-contains feed "&amp;")
          (string-contains feed
            "<description>Connected notes on math.</description>")))
-  (test-assert "HTML index includes the site description"
-    (string-contains index-html
-      "<meta name=\"description\" content=\"Connected notes on math.\""))
+  (test-assert "HTML index redirects to the configured home page"
+    (string-contains index-html "content=\"0;url=/algebra.html\""))
   (test-assert "HTML pages prefer their own summary"
     (string-contains algebra-html
       "<meta name=\"description\" content=\"Algebra notes and mathematical ideas.\""))
@@ -408,7 +424,21 @@
   (test-assert "text renderer produces independent text artifacts"
     (string-contains algebra-text "are useful")))
 
-(let* ((html (site->html (make-forest (make-site (list algebra limits)))))
+(let* ((forest (make-forest (make-site (list algebra limits))))
+       (routes (make-html-routes #:home-page "algebra"))
+       (artifacts (render-html forest #:routes routes))
+       (index (artifact-content
+                (find (lambda (artifact)
+                        (string=? (artifact-path artifact) "index.html"))
+                      artifacts))))
+  (test-assert "configured HTML home page replaces the generated page list"
+    (and (string-contains index "http-equiv=\"refresh\"")
+         (string-contains index "content=\"0;url=/algebra.html\"")
+         (not (string-contains index "href=\"/limits.html\""))))
+  (test-error "configured HTML home page must exist" #t
+    (render-html forest #:routes (make-html-routes #:home-page "missing"))))
+
+(let* ((html (render-test-html (make-forest (make-site (list algebra limits)))))
        (limits-html (assoc-ref html "limits")))
   (test-assert "pages without mathematics do not load MathJax"
     (not (string-contains limits-html "mathjax"))))
@@ -416,6 +446,7 @@
 (let* ((forest (make-forest (make-site (list algebra limits))))
        (html (site->html forest
                #:routes (make-html-routes
+                          #:home-page "algebra"
                           #:page-path
                           (lambda (id)
                             (string-append "notes/" id ".html")))
@@ -425,7 +456,7 @@
     (string-contains algebra-html "src=\"/assets/mathjax.js\"")))
 
 (let* ((forest (make-forest (make-site (list algebra limits))))
-       (html (site->html forest #:mathjax-src #f)))
+       (html (render-test-html forest #:mathjax-src #f)))
   (test-assert "projects can disable browser-side math rendering"
     (not (string-contains (assoc-ref html "algebra") "mathjax"))))
 
@@ -435,7 +466,7 @@
            (evaluate-document
              "@subtree{@title{Inline section}@paragraph{Owned text. @link[\"root\"]{Home}.}}")))
        (forest (make-forest (make-site (list root))))
-       (html (site->html forest #:mathjax-src #f))
+       (html (render-test-html forest #:mathjax-src #f))
        (text (site->text forest))
        (rss (artifact-content
               (car (render-rss forest
@@ -480,8 +511,9 @@
          (string-contains (assoc-ref html "root") "node.open = true")
          (not (string-contains (assoc-ref html "root") "&quot;"))
          (string-contains (assoc-ref html "root") "target.scrollIntoView()")))
-  (test-assert "HTML index lists file-backed trees but omits inline subtrees"
-    (and (string-contains (assoc-ref html "index") "Root")
+  (test-assert "HTML index redirects to the configured home tree"
+    (and (string-contains (assoc-ref html "index")
+                          "content=\"0;url=/root.html\"")
          (not (string-contains (assoc-ref html "index") "Inline section"))))
   (test-assert "subtrees receive standalone HTML routes"
     (string-contains (assoc-ref html "unstable-0") "Owned text."))
@@ -516,7 +548,7 @@
            (evaluate-document
              "@subtree{@title{Outer} @subtree{@title{Nested}}} @subtree{@title{Sibling}}")))
        (forest (make-forest (make-site (list root))))
-       (nested-html (assoc-ref (site->html forest #:mathjax-src #f)
+       (nested-html (assoc-ref (render-test-html forest #:mathjax-src #f)
                                "numbering"))
        (make-pages
          (lambda () (map site-page-id
@@ -545,7 +577,7 @@
            (evaluate-document
              "@subtree[#:id \"stable-piece\"]{@title{Named piece} @paragraph{Reusable.}} @transclude[\"stable-piece\"]")))
        (forest (make-forest (make-site (list root))))
-       (html (site->html forest #:mathjax-src #f))
+       (html (render-test-html forest #:mathjax-src #f))
        (changed-root
          (make-site-page
            "root" "Root"
@@ -606,7 +638,7 @@
              "Before. @transclude[\"reusable\"] After.")
            "plants/host.plant"))
        (forest (make-forest (make-site (list host target destination))))
-       (html (site->html forest #:mathjax-src #f))
+       (html (render-test-html forest #:mathjax-src #f))
        (text (site->text forest))
        (transclusions (outgoing-transclusions forest "host")))
   (test-equal "transclusions are indexed as a distinct tree relation"
@@ -662,7 +694,7 @@
            (evaluate-document "@transclude[\"unstable-0\"]")
            "plants/host.plant"))
        (forest (make-forest (make-site (list source host))))
-       (host-html (assoc-ref (site->html forest #:mathjax-src #f) "host")))
+       (host-html (assoc-ref (render-test-html forest #:mathjax-src #f) "host")))
   (test-assert "transclusions display generated IDs in local-ID form"
     (and (string-contains host-html "data-tree-id=\"unstable-0\"")
          (string-contains host-html "href=\"/unstable-0.html\"")
@@ -677,7 +709,7 @@
            "repeat-host" "Repeated host"
            (evaluate-document
              "@transclude[\"repeat-target\"] @transclude[\"repeat-target\"]")))
-       (html (assoc-ref (site->html
+       (html (assoc-ref (render-test-html
                           (make-forest (make-site (list host target)))
                           #:mathjax-src #f)
                         "repeat-host")))
@@ -797,6 +829,7 @@
 (let* ((forest (make-forest (make-site (list algebra limits)
                                        #:title "Linked Notes")))
        (routes (make-html-routes
+                 #:home-page "algebra"
                  #:page-path
                  (lambda (id) (string-append "notes/" id ".html"))
                  #:url-prefix "/published/"))
@@ -856,6 +889,7 @@
                 #:sitemap-path "meta/sitemap.xml"
                 #:routes
                 (make-html-routes
+                  #:home-page "a&b"
                   #:page-path
                   (lambda (id) (string-append "notes/" id ".html"))
                   #:index-path "home/index.html"))))

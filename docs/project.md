@@ -41,9 +41,9 @@ analyzer and renderer library:
              (grove style html))
 
 (define read-document (make-scribble-document-reader))
-(define source-directory "source")
+(define source-directory "plants")
 (define style (make-html-style))
-(define routes (make-html-routes))
+(define routes (make-html-routes #:home-page "index"))
 
 (define project
   (make-site-project
@@ -63,6 +63,11 @@ analyzer and renderer library:
 
 (build-project project)
 ```
+
+`#:home-page` is required and selects the authored page ID for the site home.
+With `(make-html-routes #:home-page "index")`, provide `plants/index.plant`;
+the renderer writes `index.html` as a redirect to that page. Grove never
+generates a page-list landing page.
 
 ## Component contracts
 

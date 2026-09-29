@@ -266,29 +266,30 @@
        ,@body
        (script ,fragment-reveal-script))))
 
-(define* (index-html forest style routes mathjax-src
-                     #:optional (inline-stylesheets? #f))
-  (let ((site (site forest)))
+(define (index-redirect-html routes page)
+  (let ((url (html-page-url routes (site-page-id page))))
     (sxml->html
-      (html-document
-        (site-title site)
-        #f
-        (site-description site)
-        (list
-          `(main
-             (nav (@ (aria-label "Pages"))
-                  (ul
-                    ,@(map (lambda (page)
-                             `(li (a (@ (href ,(html-page-url
-                                                   routes (site-page-id page))))
-                                     ,(site-page-title page))))
-                           (site-pages site))))))
-        #f
-        #f
-        style
-        routes
-        mathjax-src
-        inline-stylesheets?))))
+      `(html
+         (head
+           (meta (@ (charset "utf-8")))
+           (meta (@ (http-equiv "refresh")
+                    (content ,(string-append "0;url=" url))))
+           (link (@ (rel "canonical") (href ,url))))
+         (body
+           (p "Redirecting to "
+              (a (@ (href ,url)) ,(site-page-title page))
+              "."))))))
+
+(define (index-content forest routes)
+  (let* ((home-id (html-home-page routes))
+         (home (find-page forest home-id)))
+    (unless home
+      (error "configured HTML home page was not found" home-id))
+    (when (string=? (html-index-path routes)
+                    (html-page-path routes home-id))
+      (error "HTML home page route conflicts with the index path"
+             home-id (html-index-path routes)))
+    (index-redirect-html routes home)))
 
 (define* (page-html forest page style routes mathjax-src
                     #:optional (inline-stylesheets? #f))
@@ -333,7 +334,7 @@
            (make-artifact index-path
                           (if (artifact-current? index-current old-index changed)
                               (artifact-content old-index)
-                              (index-html forest style routes mathjax-src))
+                              (index-content forest routes))
                           index-sources))
          (page-artifacts
            (map (lambda (page)
@@ -368,7 +369,7 @@
 
 (define* (site->html forest #:key
                        (style (make-html-style))
-                       (routes (make-html-routes))
+                       routes
                        (mathjax-src default-mathjax-src))
   (set! style (forester:make-html-style #:style style))
   (check-html-input forest style routes mathjax-src)
@@ -376,7 +377,7 @@
     (when (member "index" (map site-page-id (pages forest)))
       (error "HTML alist key conflicts with forest page" "index"))
     (cons
-      (cons "index" (index-html forest style routes mathjax-src #t))
+      (cons "index" (index-content forest routes))
       (map (lambda (page)
              (cons (site-page-id page)
                    (page-html forest page style routes mathjax-src #t)))
@@ -384,7 +385,7 @@
 
 (define* (render-html forest #:key
                              (style (make-html-style))
-                             (routes (make-html-routes))
+                             routes
                              (mathjax-src default-mathjax-src))
   (set! style (forester:make-html-style #:style style))
   (check-html-input forest style routes mathjax-src)
@@ -392,7 +393,7 @@
     (html-style-artifacts style)
     (cons
       (make-artifact (html-index-path routes)
-                     (index-html forest style routes mathjax-src)
+                     (index-content forest routes)
                      (source-paths forest))
       (map (lambda (page)
              (make-artifact
@@ -403,7 +404,7 @@
 
 (define* (make-html-renderer #:key
                                       (style (make-html-style))
-                                      (routes (make-html-routes))
+                                      routes
                                       (mathjax-src default-mathjax-src)
                                       (cache-key #f))
   (let* ((style (forester:make-html-style #:style style))
@@ -415,7 +416,8 @@
     (if cache-key
         (make-cached-renderer
           render
-          #:cache-key (string-append "forester-html-v12:" cache-key)
+          #:cache-key (string-append "forester-html-v13:" cache-key ":home="
+                                     (html-home-page routes))
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
             (render-html-changed forest style routes mathjax-src

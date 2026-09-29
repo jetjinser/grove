@@ -41,6 +41,7 @@
 
 (define notes-routes
   (make-html-routes
+    #:home-page "math-0001"
     #:page-path
     (lambda (id)
       (string-append id ".html"))))

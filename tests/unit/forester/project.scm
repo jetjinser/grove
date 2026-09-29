@@ -99,6 +99,7 @@
                (list (make-html-renderer
                        #:routes
                        (make-html-routes
+                         #:home-page "algebra"
                          #:page-path
                          (lambda (id)
                            (string-append "notes/" id ".html"))))
@@ -106,6 +107,7 @@
                        #:site-url "https://notes.example"
                        #:routes
                        (make-html-routes
+                         #:home-page "algebra"
                          #:page-path
                          (lambda (id)
                            (string-append "notes/" id ".html"))))
@@ -113,6 +115,7 @@
                        #:site-url "https://notes.example"
                        #:routes
                        (make-html-routes
+                         #:home-page "algebra"
                          #:page-path
                          (lambda (id)
                            (string-append "notes/" id ".html"))))
@@ -408,6 +411,7 @@
                  (list (make-html-renderer
                         #:routes
                          (make-html-routes
+                           #:home-page "algebra"
                            #:page-path
                            (lambda (id)
                              (string-append "notes/" id ".html")))

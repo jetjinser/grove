@@ -24,7 +24,7 @@
 
 (define* (render-sitemap forest #:key site-url
                                 (sitemap-path "sitemap.xml")
-                                (routes (make-html-routes)))
+                                (routes (make-html-routes #:home-page "index")))
   (unless (forest? forest)
     (error "Forester sitemap renderer requires a forest" forest))
   (unless (web-url? site-url)
@@ -66,7 +66,7 @@
 
 (define* (make-sitemap-renderer #:key site-url
                                          (sitemap-path "sitemap.xml")
-                                         (routes (make-html-routes))
+                                         (routes (make-html-routes #:home-page "index"))
                                          (cache-key #f))
   (let ((render (lambda (forest)
                   (render-sitemap forest

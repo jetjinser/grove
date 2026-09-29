@@ -18,7 +18,7 @@
              (grove style html))
 
 (define* (build-forester-showcase directory
-                                  #:key title description site-url
+                                  #:key title description site-url home-page
                                   output-directory cache-key)
   (let* ((source-directory (string-append directory "/plants"))
          (module-directory (string-append directory "/modules"))
@@ -29,7 +29,7 @@
              #:stylesheets
              (list (make-artifact "style.css" stylesheet
                                   (list stylesheet-path)))))
-         (routes (make-html-routes))
+         (routes (make-html-routes #:home-page home-page))
          (project
            (make-site-project
              #:title title
