@@ -7,6 +7,7 @@
   #:use-module (grove relation dsl))
 
 (define-relation-schema make-edge-relation edgeo (source target))
+(define-relation-schema make-value-relation valueo (value))
 
 (define-relation (common-sourceo edges left right source)
   (exists (left-target right-target)
@@ -22,6 +23,14 @@
           (edgeo edges (source source) (target target))))
     ((all (== target 'right)
           (edgeo edges (source source) (target target))))))
+
+(define-relation (long-stringo values value)
+  (stringo value)
+  (valueo values (value value))
+  (project (value)
+    (if (> (string-length value) 3)
+        succeed
+        fail)))
 
 (test-begin "grove relation DSL")
 
@@ -41,7 +50,11 @@
   (test-equal "either branches preserve miniKanren answer order"
     '(left right)
     (query (target)
-      (either-targeto edges 'first target))))
+      (either-targeto edges 'first target)))
+  (test-equal "project runs host-language checks on ground terms"
+    '("longer")
+    (query (value)
+      (long-stringo (make-value-relation '(("few") ("longer"))) value))))
 
 (let ((edges
         (make-edge-relation

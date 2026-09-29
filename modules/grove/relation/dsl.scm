@@ -28,6 +28,7 @@
             exists
             all
             either
+            project
             query))
 
 (define (syntax-list-elements form)
@@ -183,6 +184,11 @@
   (syntax-rules ()
     ((_ (goal ...) ...)
      (conde (goal ...) ...))))
+
+(define-syntax project
+  (syntax-rules ()
+    ((_ (term ...) body ...)
+     ((@@ (faster-minikanren mk-guile) project) (term ...) body ...))))
 
 (define-syntax query
   (syntax-rules ()
