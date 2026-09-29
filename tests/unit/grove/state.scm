@@ -44,7 +44,7 @@
            (artifacts
              (list (make-artifact "page.html" "rendered"
                                   (list input-path))))
-           (state (list 'grove-build-state-v5
+           (state (list 'grove-build-state
                         sources
                         (list (list "page.html"
                                     (content-fingerprint "rendered")
@@ -66,8 +66,8 @@
         (not (equal? (cadar sources)
                      (file-fingerprint input-path))))
       (write-test-file state-path
-        "(grove-build-state-v3 () () #f)")
-      (test-equal "older build states are discarded"
+        "(grove-build-state-v4 () () #f)")
+      (test-equal "previous versioned build states are discarded"
         #f
         (read-build-state state-path))
       (write-test-file state-path "(grove-build-state-v9 () () #f)")

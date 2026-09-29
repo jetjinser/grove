@@ -77,7 +77,7 @@
 (define (valid-build-state? state)
   (and (list? state)
        (= (length state) 4)
-       (eq? (car state) 'grove-build-state-v5)
+       (eq? (car state) 'grove-build-state)
        (list? (cadr state))
        (every valid-source-entry? (cadr state))
        (distinct-paths? (cadr state) 0)
@@ -98,7 +98,7 @@
 
 (define (write-build-state path temp-path sources artifacts owners cache-key)
   (let ((state
-          (list 'grove-build-state-v5
+          (list 'grove-build-state
                 sources
                 (map (lambda (artifact)
                        (list (artifact-path artifact)
