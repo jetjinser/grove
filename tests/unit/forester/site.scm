@@ -530,6 +530,56 @@
     (< (string-contains nested-html "Outer")
        (string-contains nested-html "Nested"))))
 
+(let* ((root
+         (make-site-page
+           "root" "Root"
+           (evaluate-document
+             "@subtree[#:id \"stable-piece\"]{@title{Named piece} @paragraph{Reusable.}} @transclude[\"stable-piece\"]")))
+       (forest (make-forest (make-site (list root))))
+       (html (forest->html forest #:mathjax-src #f))
+       (changed-root
+         (make-site-page
+           "root" "Root"
+           (evaluate-document
+             "@subtree{@title{Earlier anonymous piece}} @subtree[#:id \"stable-piece\"]{@title{Named piece} @paragraph{Reusable.}} @transclude[\"stable-piece\"]")))
+       (changed-forest (make-forest (make-site (list changed-root)))))
+  (test-assert "subtrees can use an author-chosen address"
+    (forest-page forest "stable-piece"))
+  (test-assert "named subtrees receive a standalone HTML route"
+    (string-contains (assoc-ref html "stable-piece") "Reusable."))
+  (test-equal "explicit subtree addresses are included in composition data"
+    '("stable-piece")
+    (map forest-transclusion-target-tree-id
+         (forest-outgoing-transclusions forest "root")))
+  (test-assert "explicit subtree addresses survive insertion of anonymous trees"
+    (forest-page changed-forest "stable-piece"))
+  (test-equal "anonymous subtree IDs remain generated around named trees"
+    '("root" "unstable-0" "stable-piece")
+    (map site-page-id (forest-pages changed-forest))))
+
+(test-error "explicit subtree IDs cannot collide with file page IDs" #t
+  (make-forest
+    (make-site
+      (list (make-site-page "stable-piece" "File page"
+                            (make-content-document '()))
+            (make-site-page
+              "root" "Root"
+              (evaluate-document
+                "@subtree[#:id \"stable-piece\"]{@title{Inline}}"))))))
+
+(test-error "explicit subtree IDs cannot collide with other subtree IDs" #t
+  (make-forest
+    (make-site
+      (list
+        (make-site-page
+          "root" "Root"
+          (evaluate-document
+            "@subtree[#:id \"shared\"]{@title{First}} @subtree[#:id \"shared\"]{@title{Second}}"))))))
+
+(test-error "explicit subtree IDs reject the fragment separator" #t
+  (evaluate-document
+    "@subtree[#:id \"part#section\"]{@title{Invalid}}"))
+
 (let* ((target
          (make-site-page
            "reusable" "Reusable note"

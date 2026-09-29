@@ -169,11 +169,15 @@
       (cond
         ((content-element? content)
          (let* ((subtree? (eq? (content-element-kind content) 'subtree))
+                (explicit-id
+                  (and subtree?
+                       (content-element-property content 'tree-id)))
                 (id (and subtree?
+                         (or explicit-id
                          (begin
                            (let ((id next-id))
                              (set! next-id (1+ next-id))
-                             (format #f "unstable-~d" id)))))
+                             (format #f "unstable-~d" id))))))
                 (children (map transform (content-element-children content)))
                 (properties
                   (filter (lambda (entry) (not (eq? (car entry) 'tree-id)))

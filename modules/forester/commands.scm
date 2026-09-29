@@ -25,23 +25,38 @@
                         (if (null? label) (list target) label)
                         #:properties `((target . ,target))))
 
-(define (subtree . body)
-  (let ((titles (filter (lambda (element)
-                          (and (content-element? element)
-                               (eq? (content-element-kind element) 'title)))
-                        body)))
-    (unless (= (length titles) 1)
-      (error "Forester subtree requires exactly one direct @title"
-             (length titles)))
-    (let* ((title-element (car titles))
-           (title-content (content-element-children title-element))
-           (title-text (string-trim-both (content-verbatim-string title-content))))
-      (when (string-null? title-text)
-        (error "Forester subtree title cannot be empty"))
-      (make-content-element
-        'subtree
-        (remove (lambda (element) (eq? element title-element)) body)
-        #:properties `((title . ,title-text))))))
+(define (subtree . arguments)
+  (let* ((named? (and (pair? arguments) (eq? (car arguments) #:id)))
+         (id (and named? (pair? (cdr arguments)) (cadr arguments)))
+         (body (if named? (cddr arguments) arguments)))
+    (when (and (pair? arguments) (keyword? (car arguments)) (not named?))
+      (error "unknown Forester subtree option" (car arguments)))
+    (when (and named? (null? (cdr arguments)))
+      (error "Forester subtree #:id requires an ID"))
+    (when (and named?
+               (not (and (string? id)
+                         (not (string-null? id))
+                         (not (string-index id #\#)))))
+      (error "Forester subtree ID must be a non-empty string without #" id))
+    (let ((titles (filter (lambda (element)
+                            (and (content-element? element)
+                                 (eq? (content-element-kind element) 'title)))
+                          body)))
+      (unless (= (length titles) 1)
+        (error "Forester subtree requires exactly one direct @title"
+               (length titles)))
+      (let* ((title-element (car titles))
+             (title-content (content-element-children title-element))
+             (title-text (string-trim-both
+                           (content-verbatim-string title-content))))
+        (when (string-null? title-text)
+          (error "Forester subtree title cannot be empty"))
+        (make-content-element
+          'subtree
+          (remove (lambda (element) (eq? element title-element)) body)
+          #:properties
+          (append `((title . ,title-text))
+                  (if named? `((tree-id . ,id)) '())))))))
 
 (define (transclude id)
   (unless (and (string? id) (not (string-null? id)))

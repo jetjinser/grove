@@ -277,21 +277,21 @@ Pages with headings get an automatically generated table of contents in HTML
 and plain text. Plain-text headings carry matching `[#id]` markers, while
 fragment links retain their `#id` in the output path.
 
-An inline addressable tree is declared with `@subtree{...}` and must contain
-one direct `@title{...}`. Forester assigns internal IDs such as
-`unstable-0` in traversal order; these are deliberately unstable and are
-not durable page names. The subtree remains visible at its definition site and
-also receives its own HTML, text, and sitemap entry. Its ID shares the same
-namespace as file-backed page IDs, so collisions are errors. Links inside the
-subtree belong to its own ID and are validated and rendered using that tree's
-reference index. `@transclude["tree-id"]` embeds another tree's content
-at its call site. Transclusions form a relation distinct from ordinary links,
-and unresolved targets fail during forest analysis. HTML and plain-text
-renderers expand the target content while keeping its standalone tree page.
-Nested subtree and transclusion composition is supported; a cycle across either
-kind of edge fails during forest analysis. Host artifacts declare the source
-files of all composed trees as dependencies, and repeated transclusions receive
-separate HTML anchor prefixes.
+An inline tree is declared with `@subtree{...}` and must contain one direct
+`@title{...}`. Use `@subtree[#:id "stable-name"]{...}` to assign a durable ID;
+without `#:id`, Forester assigns an `unstable-N` ID in traversal order. IDs
+share the namespace with file-backed page IDs and other subtrees, so collisions
+are errors. The subtree remains visible at its definition site and also
+receives its own HTML, text, and sitemap entry. Links inside the subtree belong
+to its own ID and are validated and rendered using that tree's reference index.
+`@transclude["tree-id"]` embeds another tree's content at its call site.
+Transclusions form a relation distinct from ordinary links, and unresolved
+targets fail during forest analysis. HTML and plain-text renderers expand the
+target content while keeping its standalone tree page. Nested subtree and
+transclusion composition is supported; a cycle across either kind of edge
+fails during forest analysis. Host artifacts declare the source files of all
+composed trees as dependencies, and repeated transclusions receive separate
+HTML anchor prefixes.
 
 See [Forester subtrees and transclusion](forester-composition.md) for the
 numbering rules, link behavior, and a complete runnable example.

@@ -12,14 +12,15 @@ separate page as well.
 
 ## Declare an inline tree
 
-Use `@subtree{...}` with exactly one direct title:
+Use `@subtree{...}` with exactly one direct title. Give a subtree a durable
+address with the `#:id` option:
 
 ```scheme
 @use-modules[(my-site commands)]
 
 @title{A reusable calculation}
 
-@subtree{
+@subtree[#:id "difference-of-squares"]{
   @title{Difference of squares}
   @heading{Identity}
   @display-math{a^2-b^2=(a-b)(a+b)}
@@ -32,18 +33,26 @@ routes. Its title becomes the standalone page title; the direct `@title` is
 removed from the body. Headings and links in its body belong to the subtree's
 tree, including when that body is rendered inside another tree.
 
-## Generated IDs
+## Subtree IDs
 
-The analyzer assigns IDs in source-page order and document preorder, counting
-from `unstable-0` for each forest analysis. An outer subtree is numbered
-before subtrees nested inside it; siblings follow their content order. The
-number is deterministic for the same ordered inputs, but adding or moving a
-subtree can change later numbers.
+An explicitly named subtree keeps its ID across source edits:
 
-These IDs are internal and intentionally unstable. Treat them as build-time
-addresses for composition, not durable names: do not publish them as
-bookmarks, external links, or user-facing identifiers. File-backed tree IDs
-remain the appropriate choice for stable references.
+```scheme
+@subtree[#:id "difference-of-squares"]{
+  @title{Difference of squares}
+  @paragraph{A reusable identity.}
+}
+```
+
+Use that ID in `@transclude["difference-of-squares"]` and in links. IDs share
+the same namespace as file-backed page IDs and other subtrees; duplicates are
+errors. IDs cannot contain `#`, which separates page IDs from heading
+fragments in links.
+
+Subtrees without `#:id` keep their automatically assigned `unstable-N` IDs.
+The analyzer numbers them in source-page order and document preorder, skipping
+named subtrees. Adding or moving an unnamed subtree can change later generated
+IDs, so use explicit IDs for references that should survive source edits.
 
 ## Embed a tree
 
@@ -58,10 +67,8 @@ remain the appropriate choice for stable references.
 @transclude["unstable-0"]
 ```
 
-This example assumes the desired subtree received `unstable-0` in the
-current source order. If the order changes, update the internal transclusion
-target accordingly. The target still has a standalone page. Unresolved targets
-and cycles across subtree/transclusion composition fail during analysis.
+The target still has a standalone page. Unresolved targets and cycles across
+subtree/transclusion composition fail during analysis.
 
 ## Links inside embedded content
 
