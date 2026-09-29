@@ -16,7 +16,7 @@
     "target" "Target"
     (make-content-document
       (list (make-content-element 'heading '("Overview"))))
-    "/notes/target.grv"))
+    "/notes/target.plant"))
 
 (define source
   (make-site-page
@@ -27,7 +27,7 @@
               (list (make-content-element
                       'link '("the overview")
                       #:properties '((target . "target#overview")))))))
-    "/notes/source.grv"))
+    "/notes/source.plant"))
 
 (define forest
   (make-forest
@@ -60,7 +60,7 @@
   (test-equal "graph artifact uses its configured path"
     "data/graph.scm" (artifact-path artifact))
   (test-equal "graph artifact tracks every forest source"
-    '("/notes/modules/links.scm" "/notes/source.grv" "/notes/target.grv")
+    '("/notes/modules/links.scm" "/notes/source.plant" "/notes/target.plant")
     (artifact-sources artifact)))
 
 (test-error "graph renderer rejects absolute output paths" #t

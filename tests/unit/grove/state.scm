@@ -13,7 +13,7 @@
 
 (define state-directory
   (format #f "/tmp/grove-state-test-~a" (getpid)))
-(define input-path (string-append state-directory "/source.grv"))
+(define input-path (string-append state-directory "/source.plant"))
 (define state-path (string-append state-directory "/state"))
 (define temp-path (string-append state-directory "/state.tmp"))
 

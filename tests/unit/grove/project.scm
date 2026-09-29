@@ -52,9 +52,9 @@
     (mkdir source-directory)
     (mkdir module-directory)
     (write-test-file external-source-path "body { color: black; }")
-    (write-test-file (string-append module-directory "/shared.grv") "module")
-    (write-test-file (string-append source-directory "/first.grv") "first")
-    (write-test-file (string-append source-directory "/second.grv") "second")
+    (write-test-file (string-append module-directory "/shared.plant") "module")
+    (write-test-file (string-append source-directory "/first.plant") "first")
+    (write-test-file (string-append source-directory "/second.plant") "second")
     (write-test-file (string-append source-directory "/ignore.txt") "ignored"))
   (lambda ()
     (let* ((generic-events '())
@@ -63,11 +63,11 @@
                #:collect-sources
                (lambda ()
                  (set! generic-events (append generic-events '(collect)))
-                 (list (string-append source-directory "/first.grv")))
+                 (list (string-append source-directory "/first.plant")))
                #:prepare
                (lambda ()
                  (set! generic-events (append generic-events '(prepare)))
-                 (list (string-append module-directory "/shared.grv")))
+                 (list (string-append module-directory "/shared.plant")))
                #:extra-sources (list external-source-path)
                #:read-source
                (lambda (path)
@@ -87,14 +87,14 @@
                            "summary.csv"
                            (format #f "items,~a\n"
                                    (length (cadr model)))
-                           (list (string-append source-directory "/first.grv")))))
+                           (list (string-append source-directory "/first.plant")))))
                  (lambda (model)
                    (set! generic-events (append generic-events '(render-data)))
                    (list (make-artifact
                            "inventory.scm"
                            (call-with-output-string
                              (lambda (port) (write model port) (newline port)))
-                           (list (string-append module-directory "/shared.grv")
+                           (list (string-append module-directory "/shared.plant")
                                  external-source-path)))))
                #:output-directory generic-output-directory))
            (generic-report (build-project/report generic-project)))
@@ -107,8 +107,8 @@
           (string-append generic-output-directory "/summary.csv")
           get-string-all))
       (test-equal "generic project tracks prepared, collected and extra files"
-        (list (string-append module-directory "/shared.grv")
-              (string-append source-directory "/first.grv")
+        (list (string-append module-directory "/shared.plant")
+              (string-append source-directory "/first.plant")
               external-source-path)
         (build-report-added-sources generic-report)))
     (let ((events '())
@@ -122,14 +122,14 @@
                  #:prepare
                  (lambda ()
                    (let ((paths (list (string-append module-directory
-                                                     "/shared.grv"))))
+                                                     "/shared.plant"))))
                    (set! events
                      (append events
                        (list (list 'prepare (map basename paths)))))
                    paths))
                  #:read-page
                  (lambda (path)
-                   (let ((id (string-drop-right (basename path) 4)))
+                   (let ((id (string-drop-right (basename path) (string-length ".plant"))))
                      (set! events (append events (list (list 'read id))))
                      (make-site-page id id (make-content-document '()) path)))
                  #:analyze
@@ -160,7 +160,7 @@
              (report (build-project/report project))
              (artifacts (build-report-artifacts report)))
         (test-equal "project phases run modules, readers, analysis, renderers"
-          '((prepare ("shared.grv"))
+          '((prepare ("shared.plant"))
             (read "first")
             (read "second")
             analyze
@@ -182,9 +182,9 @@
           "2"
           (call-with-input-file output-path get-string-all))
         (test-equal "first build reports every input as added"
-          (list (string-append module-directory "/shared.grv")
-                (string-append source-directory "/first.grv")
-                (string-append source-directory "/second.grv"))
+          (list (string-append module-directory "/shared.plant")
+                (string-append source-directory "/first.plant")
+                (string-append source-directory "/second.plant"))
           (build-report-added-sources report))
         (test-equal "first build reports its output as affected"
           '("text/summary.txt" "pages/first.txt" "pages/second.txt"
@@ -199,20 +199,20 @@
           (test-equal "unknown renderer dependencies remain conservatively affected"
             '("opaque.txt")
             (build-report-affected-artifacts unchanged)))
-        (write-test-file (string-append source-directory "/first.grv")
+        (write-test-file (string-append source-directory "/first.plant")
                          "first modified")
-        (delete-file (string-append source-directory "/second.grv"))
-        (write-test-file (string-append source-directory "/third.grv")
+        (delete-file (string-append source-directory "/second.plant"))
+        (write-test-file (string-append source-directory "/third.plant")
                          "third")
         (let ((changed (build-project/report project)))
           (test-equal "build report detects added inputs"
-            (list (string-append source-directory "/third.grv"))
+            (list (string-append source-directory "/third.plant"))
             (build-report-added-sources changed))
           (test-equal "build report detects modified inputs"
-            (list (string-append source-directory "/first.grv"))
+            (list (string-append source-directory "/first.plant"))
             (build-report-modified-sources changed))
           (test-equal "build report detects removed inputs"
-            (list (string-append source-directory "/second.grv"))
+            (list (string-append source-directory "/second.plant"))
             (build-report-removed-sources changed))
           (test-equal "input changes affect declared dependents and unknown outputs"
             '("text/summary.txt" "pages/first.txt" "pages/third.txt"
@@ -242,7 +242,7 @@
                    #:read-page
                    (lambda (path)
                      (set! reader-count (+ reader-count 1))
-                     (let ((id (string-drop-right (basename path) 4)))
+                     (let ((id (string-drop-right (basename path) (string-length ".plant"))))
                        (make-site-page id id (make-content-document '()) path)))
                    #:analyze
                    (lambda (site)
@@ -291,13 +291,13 @@
               (call-with-input-file cache-output-path get-string-all))
             (test-assert "modified cached output reports rendering"
               (build-report-rendered? tampered-output)))
-          (write-test-file (string-append source-directory "/first.grv")
+          (write-test-file (string-append source-directory "/first.plant")
                            "cache source changed")
           (let ((changed-source (build-project/report cached-project)))
             (test-equal "changed source inputs invalidate renderer output"
               4 render-count)
             (test-equal "cached build report includes changed source paths"
-              (list (string-append source-directory "/first.grv"))
+              (list (string-append source-directory "/first.plant"))
               (build-report-modified-sources changed-source)))
           (write-test-file external-source-path "body { color: rebeccapurple; }")
           (let ((changed-external (build-project/report cached-project)))
@@ -318,7 +318,7 @@
                      #:extra-sources (list external-source-path)
                      #:read-page
                      (lambda (path)
-                       (let ((id (string-drop-right (basename path) 4)))
+                       (let ((id (string-drop-right (basename path) (string-length ".plant"))))
                          (make-site-page id id (make-content-document '()) path)))
                      #:analyze
                      (lambda (site)
@@ -339,7 +339,7 @@
                        #:extra-sources (list external-source-path)
                        #:read-page
                        (lambda (path)
-                         (let ((id (string-drop-right (basename path) 4)))
+                         (let ((id (string-drop-right (basename path) (string-length ".plant"))))
                            (make-site-page id id (make-content-document '())
                                            path)))
                        #:analyze
@@ -409,7 +409,7 @@
                    #:source-directory source-directory
                    #:read-page
                    (lambda (path)
-                     (let ((id (string-drop-right (basename path) 4)))
+                     (let ((id (string-drop-right (basename path) (string-length ".plant"))))
                        (make-site-page id id (make-content-document '()) path)))
                    #:renderers (list incremental-renderer)
                    #:output-directory incremental-output-directory
@@ -417,9 +417,9 @@
           (build-project/report incremental-project)
           (test-equal "incremental renderer performs initial full render"
             1 full-count)
-          (write-test-file (string-append source-directory "/first.grv")
+          (write-test-file (string-append source-directory "/first.plant")
                            "incremental first")
-          (delete-file (string-append source-directory "/third.grv"))
+          (delete-file (string-append source-directory "/third.plant"))
           (let ((partial (build-project/report incremental-project)))
             (test-equal "source changes use opted-in partial rendering"
               1 partial-count)
@@ -434,7 +434,7 @@
               (not (file-exists?
                     (string-append incremental-output-directory
                                    "/pages/third.txt")))))
-          (write-test-file (string-append source-directory "/fourth.grv")
+          (write-test-file (string-append source-directory "/fourth.plant")
                            "new page")
           (let ((added-page (build-project/report incremental-project)))
             (test-equal "new inputs also use partial rendering"
@@ -496,11 +496,11 @@
     (for-each (lambda (path)
                 (when (file-exists? path)
                   (delete-file path)))
-      (list (string-append module-directory "/shared.grv")
-            (string-append source-directory "/first.grv")
-            (string-append source-directory "/second.grv")
-            (string-append source-directory "/third.grv")
-            (string-append source-directory "/fourth.grv")
+      (list (string-append module-directory "/shared.plant")
+            (string-append source-directory "/first.plant")
+            (string-append source-directory "/second.plant")
+            (string-append source-directory "/third.plant")
+            (string-append source-directory "/fourth.plant")
             (string-append source-directory "/ignore.txt")))
     (when (file-exists? external-source-path)
       (delete-file external-source-path))

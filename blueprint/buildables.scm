@@ -7,9 +7,9 @@
   #:use-module (blue stencils guile)
   #:use-module (blue stencils template-file)
   #:use-module (blue stencils texinfo)
-  #:export (grv-modules forester-modules))
+  #:export (grove-modules forester-modules))
 
-(define +grv-sources+
+(define +grove-sources+
   '("grove/build.scm"
     "grove/build/state.scm"
     "grove/collect.scm"
@@ -47,7 +47,7 @@
     "forester/render/text/routes.scm"
     "forester/relations.scm"))
 
-(define grv-modules
+(define grove-modules
   (map
     (λ (source)
       (guile-module
@@ -56,7 +56,7 @@
         (load-path #%~(list #%?srcdir))
         (optimizations
           '(#:seal-private-binddings? #t))))
-    +grv-sources+))
+    +grove-sources+))
 
 (define forester-modules
   (map

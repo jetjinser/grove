@@ -14,7 +14,7 @@
             make-scribble-document-reader))
 
 (define (scribble-source-file? filename)
-  (string-suffix? ".grv" filename))
+  (string-suffix? ".plant" filename))
 
 (define* (load-scribble-modules! paths
                                 #:key

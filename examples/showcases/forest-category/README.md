@@ -8,7 +8,7 @@ SPDX-License-Identifier: CC0-1.0
 This example adapts the `cat-0001.tree` and `cat-0002.tree` notes from
 [`~/vie/writing/forest`](~/vie/writing/forest). That repository's `REUSE.md`
 places everything under `trees/` under CC0-1.0. The text here is abridged and
-adapted into Grove's `.grv` syntax; spelling and phrasing have been cleaned up.
+adapted into Grove's `.plant` syntax; spelling and phrasing have been cleaned up.
 
 The category page defines the composition axioms as an addressable subtree.
 The remarks page links back to the definition and transcludes those axioms.

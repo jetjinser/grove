@@ -19,7 +19,7 @@
   #:use-module (ice-9 string-fun)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-26)
-  #:export (grv-tests))
+  #:export (grove-tests))
 
 (define +test-resources+
   '("unit/scribble/read.scm"
@@ -39,17 +39,17 @@
     "unit/forester/graph.scm"))
 
 (define test-environment
-  #%~(list (format #f "GRV_SRCDIR=~a" #%?srcdir)))
+  #%~(list (format #f "GROVE_SRCDIR=~a" #%?srcdir)))
 
 (define test-options
   #%~(list
        #:load-path (list #%?srcdir)
        #:load-compiled-path (list #%?builddir)
-       #:enable-coverage? (->bool (getenv "GRV_TESTS_ENABLE_COVERAGE"))
-       #:time-limit (or (and=> (getenv "GRV_TESTS_TIME_LIMIT") string->number)
+       #:enable-coverage? (->bool (getenv "GROVE_TESTS_ENABLE_COVERAGE"))
+       #:time-limit (or (and=> (getenv "GROVE_TESTS_TIME_LIMIT") string->number)
                         20)))
 
-(define grv-tests
+(define grove-tests
   (map
     (λ (script-name)
       (guile-test-suite

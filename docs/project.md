@@ -110,17 +110,17 @@ The default collector selects non-hidden regular files recursively below the
 configured directory, in sorted order. Supply `#:source-filter` to restrict
 them, or `#:collect-sources` to provide an ordered path list. Keep shared
 Scribble module sources outside a recursively collected page directory, then
-load them with `make-scribble-module-setup`; their `.grv` files use Guile's
+load them with `make-scribble-module-setup`; their `.plant` files use Guile's
 ordinary `define-module` form. The generic project does not interpret module
 syntax. With no analyzer, renderers receive the `project-context` directly.
 
 ## Forester source paths and page IDs
 
 `make-page-reader` derives a page ID from the source file's basename,
-without its `.grv` extension. Directories organize the source tree but do not
+without its `.plant` extension. Directories organize the source tree but do not
 become part of the ID or page link. A prefix-and-sequence name such as
 `math-0002` gives trees a globally unique, flat namespace; the source could be
-`source/analysis/math-0002.grv` while the configured HTML route publishes it
+`plants/analysis/math-0002.plant` while the configured HTML route publishes it
 at `/math-0002.html`. Two files with the same basename produce a duplicate
 page ID error that lists their source paths.
 

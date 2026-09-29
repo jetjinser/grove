@@ -25,7 +25,7 @@
   (or (and (pair? (cdr (command-line))) (cadr (command-line)))
       "/tmp/grove-linked-notes"))
 
-(define source-directory (string-append examples-directory "/source"))
+(define source-directory (string-append examples-directory "/plants"))
 (define module-directory (string-append examples-directory "/modules"))
 (define notes-css-path (string-append examples-directory "/style.css"))
 (define read-document (make-scribble-document-reader))

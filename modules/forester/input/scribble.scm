@@ -88,8 +88,8 @@
          (updated (date-metadata metadata-nodes 'updated path))
          (tags (topic-metadata metadata-nodes 'tag path))
          (taxon (taxon-metadata metadata-nodes path)))
-    (unless (string-suffix? ".grv" filename)
-      (error (format #f "Forester page source must end in .grv: ~a" path)))
+    (unless (string-suffix? ".plant" filename)
+      (error (format #f "Forester page source must end in .plant: ~a" path)))
     (unless (= (length titles) 1)
       (error (format #f
                      "Forester page ~a requires exactly one top-level @title (found ~a)"
@@ -102,7 +102,7 @@
       (make-site-page
         ;; Forester addresses trees by filename; directories only organize
         ;; the source tree and must not leak into page IDs or links.
-        (string-drop-right filename (string-length ".grv"))
+        (string-drop-right filename (string-length ".plant"))
         title
         (make-content-document
           (remove (lambda (child)
@@ -118,6 +118,6 @@
                            (cons 'updated updated)))))))
 
 (define (make-page-reader read-document)
-  "Return a reader whose page IDs are source basenames without `.grv'."
+  "Return a reader whose page IDs are source basenames without `.plant'."
   (lambda (path)
     (page-from-document path (read-document path))))

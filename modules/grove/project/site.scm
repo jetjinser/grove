@@ -14,7 +14,7 @@
                             (description #f)
                             (source-directory #f)
                             (source-filter (lambda (path)
-                                             (string-suffix? ".grv" path)))
+                                             (string-suffix? ".plant" path)))
                             (collect-sources #f)
                             (prepare (lambda () '()))
                             (extra-sources '())

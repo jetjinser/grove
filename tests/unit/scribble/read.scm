@@ -30,7 +30,7 @@
 
 (define (call-with-temporary-source input proc)
   (let ((path
-          (format #f "/tmp/grove-scribble-~a-~a.grv"
+          (format #f "/tmp/grove-scribble-~a-~a.plant"
                   (getpid)
                   temporary-source-index)))
     (set! temporary-source-index (+ temporary-source-index 1))
@@ -223,15 +223,15 @@
       (lambda ()
         (scribble-evaluate-document
           (open-input-string "@title{unterminated\n") env
-          "notes/broken.grv"))
-      "notes/broken.grv:2:1"))
+          "notes/broken.plant"))
+      "notes/broken.plant:2:1"))
   (test-assert "evaluation errors report source file and form number"
     (exception-contains?
       (lambda ()
         (scribble-evaluate-document
           (open-input-string "@undefined-command{}") env
-          "notes/eval-error.grv"))
-      "notes/eval-error.grv at top-level form 1")))
+          "notes/eval-error.plant"))
+      "notes/eval-error.plant at top-level form 1")))
 
 (let ((read-document (make-scribble-document-reader)))
   (call-with-temporary-source

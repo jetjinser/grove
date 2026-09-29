@@ -7,7 +7,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 Grove is a Guile-based content platform. Its project pipeline composes a
 reader, an optional analyzer, and independent renderers. The current example
-uses the Scribble-inspired `.grv` language and Forester's bidirectional links
+uses the Scribble-inspired `.plant` language and Forester's bidirectional links
 to build a notes site.
 
 ## Examples
@@ -51,9 +51,9 @@ another location.
 
 The example shows the main project pieces:
 
-- `.grv` pages are Guile Scheme sources with at-exp document syntax.
-- `source/modules/commands.grv` defines shared Scheme commands loaded before
-  pages are read.
+- `.plant` pages are Guile Scheme sources with at-exp document syntax.
+- `examples/linked-notes/modules/commands.plant` defines shared Scheme commands
+  loaded before pages are read.
 - Forester turns page links into forward and reverse links.
 - HTML, plain-text, RSS, sitemap, and Scheme graph renderers write separate
   targets.

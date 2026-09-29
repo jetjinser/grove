@@ -12,7 +12,7 @@ one-way: Forester uses Grove interfaces; Grove does not import Forester.
 | Grove owns | Forester owns |
 | --- | --- |
 | File collection, model-independent project phases, source tracking, artifact writing, and renderer caching. | The forest model, page-link analysis, backlink lookup, and unresolved-link errors. |
-| Generic content, optional site/page records, artifact, renderer, and project contracts. | Forester commands and the `.grv` page metadata convention. |
+| Generic content, optional site/page records, artifact, renderer, and project contracts. | Forester commands and the `.plant` page metadata convention. |
 | Scribble input support plus generic HTML, text, and style helpers. | HTML, text, RSS, and sitemap output for a Forester forest. |
 
 The generic `(grove project)` reader may return any Scheme value. Grove pairs
@@ -36,7 +36,7 @@ such as loading shared Guile modules. The Grove core does not decide how those
 paths are interpreted.
 
 The source tree and Blueprint configuration keep Grove and Forester in
-separate module groups (`grv-modules` and `forester-modules`), but the current
+separate module groups (`grove-modules` and `forester-modules`), but the current
 install command installs both groups from this repository. The catalog consumer
 was copied outside the repository and run with a temporary Guile load path
 containing only Grove modules; its actual imports do not require Forester. This

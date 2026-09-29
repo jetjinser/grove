@@ -54,10 +54,10 @@
     (mkdir module-directory)
     (mkdir mathematics-directory)
     (write-test-file
-      (string-append module-directory "/commands.grv")
+      (string-append module-directory "/commands.plant")
       "@(define-module (tests unit forester linked commands)\n  #:use-module (forester commands)\n  #:re-export (link tag taxon title summary published updated))")
     (write-test-file
-      (string-append source-directory "/algebra.grv")
+      (string-append source-directory "/algebra.plant")
       (string-append
         "@use-modules[(tests unit forester linked commands)]\n"
         "@title{Algebra}\n"
@@ -71,7 +71,7 @@
         "@math{x^2+y^2=z^2}}\n"
         "@paragraph{范畴论 is useful.}\n@display-math{a^2+b^2=c^2}"))
     (write-test-file
-      (string-append mathematics-directory "/limits.grv")
+      (string-append mathematics-directory "/limits.plant")
       (string-append
         "@use-modules[(tests unit forester linked commands)]\n"
         "@title{Limits}\n"
@@ -80,10 +80,10 @@
         "@paragraph{See @link[\"algebra\"]{algebra}. "
         "Read @link[\"algebra#quadratic-equations\"]{about quadratics}.}"))
     (write-test-file
-      (string-append source-directory "/unlinked.grv")
+      (string-append source-directory "/unlinked.plant")
       "@use-modules[(tests unit forester linked commands)]\n@title{Unlinked}\n@paragraph{Standalone.}")
     (write-test-file
-      (string-append source-directory "/orphan.grv")
+      (string-append source-directory "/orphan.plant")
       "@use-modules[(tests unit forester linked commands)]\n@title{Orphan}\n@paragraph{Unreferenced.}"))
   (lambda ()
     (let* ((project
@@ -139,8 +139,8 @@
           (lambda ()
             ((make-page-reader
                (lambda (path) (make-content-document '())))
-             (string-append source-directory "/no-title.grv")))
-          (string-append source-directory "/no-title.grv")))
+             (string-append source-directory "/no-title.plant")))
+          (string-append source-directory "/no-title.plant")))
       (test-assert "page reader rejects impossible calendar dates"
         (exception-contains?
           (lambda ()
@@ -151,18 +151,18 @@
                      (make-content-element 'title '("Invalid date"))
                      (make-content-element
                        'published '("2026-02-31"))))))
-             (string-append source-directory "/invalid-date.grv")))
+             (string-append source-directory "/invalid-date.plant")))
           "must use YYYY-MM-DD"))
       (let* ((expected-sources
-               (list (string-append module-directory "/commands.grv")
-                     (string-append source-directory "/algebra.grv")
-                     (string-append mathematics-directory "/limits.grv")
-                     (string-append source-directory "/unlinked.grv")
-                     (string-append source-directory "/orphan.grv")))
+               (list (string-append module-directory "/commands.plant")
+                     (string-append source-directory "/algebra.plant")
+                     (string-append mathematics-directory "/limits.plant")
+                     (string-append source-directory "/unlinked.plant")
+                     (string-append source-directory "/orphan.plant")))
              (expected-algebra-html-sources
-               (list (string-append module-directory "/commands.grv")
-                     (string-append source-directory "/algebra.grv")
-                     (string-append mathematics-directory "/limits.grv")))
+               (list (string-append module-directory "/commands.plant")
+                     (string-append source-directory "/algebra.plant")
+                     (string-append mathematics-directory "/limits.plant")))
              (algebra-html-artifact
                (find (lambda (artifact)
                        (string=? (artifact-path artifact)
@@ -174,23 +174,23 @@
                                  "text/algebra.txt"))
                      artifacts)))
         (test-equal "page reader retains source paths"
-          (string-append source-directory "/algebra.grv")
+          (string-append source-directory "/algebra.plant")
           (site-page-source
             ((make-page-reader
              (make-scribble-document-reader))
-             (string-append source-directory "/algebra.grv"))))
+             (string-append source-directory "/algebra.plant"))))
         (test-equal "nested source directories do not become page IDs"
           "limits"
           (site-page-id
             ((make-page-reader
              (make-scribble-document-reader))
-             (string-append mathematics-directory "/limits.grv"))))
+             (string-append mathematics-directory "/limits.plant"))))
         (test-equal "nested source paths remain available for diagnostics"
-          (string-append mathematics-directory "/limits.grv")
+          (string-append mathematics-directory "/limits.plant")
           (site-page-source
             ((make-page-reader
              (make-scribble-document-reader))
-             (string-append mathematics-directory "/limits.grv"))))
+             (string-append mathematics-directory "/limits.plant"))))
         (test-equal "HTML page artifacts depend on their backlinks"
           expected-algebra-html-sources
           (artifact-sources algebra-html-artifact))
@@ -200,7 +200,7 @@
         (let ((algebra-page
                 ((make-page-reader
                    (make-scribble-document-reader))
-                 (string-append source-directory "/algebra.grv"))))
+                 (string-append source-directory "/algebra.plant"))))
       (test-equal "page reader keeps only non-topic metadata in metadata"
             '((summary . "A short algebra note.")
               (published . "2026-09-27")
@@ -222,9 +222,9 @@
                  (make-forest
                    (make-site
                      (list
-                       (read-page (string-append source-directory "/algebra.grv"))
+                       (read-page (string-append source-directory "/algebra.plant"))
                        (read-page
-                         (string-append mathematics-directory "/limits.grv")))))))
+                         (string-append mathematics-directory "/limits.plant")))))))
           (test-equal "miniKanren queries topic membership and labels"
             '(("algebra" "Mathematics") ("limits" "Mathematics"))
             (query (page-id label)
@@ -379,7 +379,7 @@
       (test-assert "HTML project emits stable heading anchors"
         (string-contains algebra-html
           "<h2 id=\"quadratic-equations\">Quadratic equations</h2>"))
-      (test-assert "real .grv fragment links resolve through configured routes"
+      (test-assert "real .plant fragment links resolve through configured routes"
         (string-contains limits-html
           "href=\"/notes/algebra.html#quadratic-equations\">about quadratics</a>"))
       (test-assert "HTML project output contains reverse links"
@@ -421,7 +421,7 @@
         (test-assert "cached Forester HTML renderer performs initial render"
           (build-report-rendered? first))
         (write-test-file
-          (string-append source-directory "/unlinked.grv")
+          (string-append source-directory "/unlinked.plant")
           "@use-modules[(tests unit forester linked commands)]\n@title{Unlinked}\n@paragraph{Changed standalone page.}")
         (let ((updated (build-project/report incremental-project)))
           (test-equal "unrelated pages are omitted from affected HTML outputs"
@@ -434,7 +434,7 @@
                 (string-append cache-output-directory "/notes/limits.html"))
               "Algebra")))
         (write-test-file
-          (string-append source-directory "/algebra.grv")
+          (string-append source-directory "/algebra.plant")
           (string-append
             "@use-modules[(tests unit forester linked commands)]\n"
             "@title{Algebra}\n"
@@ -444,7 +444,7 @@
             "@display-math{a^2+b^2=c^2}\n"
             "@paragraph{Also @link[\"unlinked\"]{unlinked}.}"))
         (write-test-file
-          (string-append mathematics-directory "/limits.grv")
+          (string-append mathematics-directory "/limits.plant")
           (string-append
             "@use-modules[(tests unit forester linked commands)]\n"
             "@title{Limits}\n"
@@ -478,7 +478,7 @@
                 (string-append cache-output-directory "/notes/limits.html"))
               "href=\"/notes/algebra.html#polynomial-equations\">about polynomials</a>")))
         (write-test-file
-          (string-append module-directory "/commands.grv")
+          (string-append module-directory "/commands.plant")
           (string-append
             "(define-module (tests unit forester linked commands)\n"
             "  #:use-module (forester commands)\n"
@@ -486,7 +486,7 @@
             ";; changed module source\n"))
         (let ((changed-module (build-project/report incremental-project)))
           (test-equal "shared module changes are tracked as build inputs"
-            (list (string-append module-directory "/commands.grv"))
+            (list (string-append module-directory "/commands.plant"))
             (build-report-modified-sources changed-module))
           (test-equal "shared module changes affect all rendered pages"
             '("index.html" "notes/algebra.html" "notes/limits.html"
@@ -494,7 +494,7 @@
               "text/algebra.txt" "text/limits.txt" "text/orphan.txt"
               "text/unlinked.txt")
             (build-report-affected-artifacts changed-module)))
-        (delete-file (string-append source-directory "/orphan.grv"))
+        (delete-file (string-append source-directory "/orphan.plant"))
         (let ((removed-page (build-project/report incremental-project)))
           (test-equal "removing a page affects indexes and its own outputs"
             '("index.html" "text/index.txt" "notes/orphan.html"
@@ -508,7 +508,7 @@
                        (string-append cache-output-directory
                                       "/text/orphan.txt"))))))
       (write-test-file
-        (string-append source-directory "/broken.grv")
+        (string-append source-directory "/broken.plant")
         (string-append
           "@use-modules[(tests unit forester linked commands)]\n"
           "@title{Broken}\n@link[\"missing\"]{missing}"))
@@ -516,8 +516,8 @@
         #t
         (build-project project)))))
   (lambda ()
-    (when (file-exists? (string-append mathematics-directory "/limits.grv"))
-      (delete-file (string-append mathematics-directory "/limits.grv")))
+    (when (file-exists? (string-append mathematics-directory "/limits.plant"))
+      (delete-file (string-append mathematics-directory "/limits.plant")))
     (for-each
       (lambda (path)
         (when (file-exists? path)
@@ -554,12 +554,12 @@
             (string-append cache-output-directory "/.grove-artifacts.tmp")
             (string-append cache-output-directory "/.grove-build-state")
             (string-append cache-output-directory "/.grove-build-state.tmp")
-            (string-append module-directory "/commands.grv")
-            (string-append source-directory "/algebra.grv")
-            (string-append mathematics-directory "/limits.grv")
-            (string-append source-directory "/unlinked.grv")
-            (string-append source-directory "/orphan.grv")
-            (string-append source-directory "/broken.grv")))
+            (string-append module-directory "/commands.plant")
+            (string-append source-directory "/algebra.plant")
+            (string-append mathematics-directory "/limits.plant")
+            (string-append source-directory "/unlinked.plant")
+            (string-append source-directory "/orphan.plant")
+            (string-append source-directory "/broken.plant")))
     (for-each
       (lambda (path)
         (when (file-exists? path)
@@ -571,7 +571,7 @@
             cache-output-directory
             output-directory
             module-directory
-            (string-append mathematics-directory "/limits.grv")
+            (string-append mathematics-directory "/limits.plant")
             mathematics-directory
             source-directory
             project-root))))

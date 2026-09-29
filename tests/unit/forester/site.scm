@@ -594,7 +594,7 @@
            "reusable" "Reusable note"
            (evaluate-document
              "@heading{Included section} @paragraph{Shared content. @link[\"destination\"]{Follow destination.}}")
-           "trees/reusable.grv"))
+           "plants/reusable.plant"))
        (destination
          (make-site-page
            "destination" "Destination"
@@ -604,7 +604,7 @@
            "host" "Host"
            (evaluate-document
              "Before. @transclude[\"reusable\"] After.")
-           "trees/host.grv"))
+           "plants/host.plant"))
        (forest (make-forest (make-site (list host target destination))))
        (html (site->html forest #:mathjax-src #f))
        (text (site->text forest))
@@ -638,7 +638,7 @@
     (and (string-contains (assoc-ref text "host") "Reusable note")
          (string-contains (assoc-ref text "host") "Shared content.")))
   (test-assert "host artifacts depend on transcluded tree sources"
-    (member "trees/reusable.grv"
+    (member "plants/reusable.plant"
             (page-source-paths forest host)
             string=?))
   (test-equal "links in transcluded content remain owned by the source tree"
@@ -655,12 +655,12 @@
          (make-site-page
            "source" "Source"
            (evaluate-document "@subtree{@title{Inline section}}")
-           "trees/source.grv"))
+           "plants/source.plant"))
        (host
          (make-site-page
            "host" "Host"
            (evaluate-document "@transclude[\"unstable-0\"]")
-           "trees/host.grv"))
+           "plants/host.plant"))
        (forest (make-forest (make-site (list source host))))
        (host-html (assoc-ref (site->html forest #:mathjax-src #f) "host")))
   (test-assert "transclusions display generated IDs in local-ID form"
@@ -701,13 +701,13 @@
                         "cycle-root" "Cycle root"
                         (evaluate-document
                           "@subtree{@title{Child} @transclude[\"cycle-root\"]}")
-                        "notes/cycle.grv"))))
+                        "notes/cycle.plant"))))
             #f)
           (lambda (key . args) (format #f "~s" (cons key args))))))
   (test-assert "cycle diagnostic reports the full tree path and source"
     (and (string-contains message "cyclic Forester tree composition")
-         (string-contains message "cycle-root (notes/cycle.grv)")
-         (string-contains message "unstable-0 (notes/cycle.grv)"))))
+         (string-contains message "cycle-root (notes/cycle.plant)")
+         (string-contains message "unstable-0 (notes/cycle.plant)"))))
 
 (let ((message
         (catch #t
@@ -717,12 +717,12 @@
                 (list (make-site-page
                         "host" "Host"
                         (evaluate-document "@transclude[\"missing\"]")
-                        "notes/host.grv"))))
+                        "notes/host.plant"))))
             #f)
           (lambda (key . args) (format #f "~s" (cons key args))))))
   (test-assert "unresolved transclusion diagnostic identifies tree, source, occurrence, target"
     (and (string-contains message "host")
-         (string-contains message "notes/host.grv")
+         (string-contains message "notes/host.plant")
          (string-contains message "transclude-1")
          (string-contains message "missing"))))
 
@@ -741,11 +741,11 @@
                         "broken" "Broken"
                         (evaluate-document
                           "@paragraph{@link[\"missing\"]{nowhere}}")
-                        "notes/broken.grv"))))
+                        "notes/broken.plant"))))
             #f)
           (lambda (key . args) (format #f "~s" (cons key args))))))
   (test-assert "unresolved-link errors identify source page and target"
-    (and (string-contains message "notes/broken.grv")
+    (and (string-contains message "notes/broken.plant")
          (string-contains message "broken")
          (string-contains message "missing"))))
 
@@ -760,16 +760,16 @@
             (make-site
               (list (make-site-page
                       "same" "First" (evaluate-document "first")
-                      "trees/math/cat-0001.grv")
+                      "plants/math/cat-0001.plant")
                     (make-site-page
                       "same" "Second" (evaluate-document "second")
-                      "trees/logic/cat-0001.grv")))
+                      "plants/logic/cat-0001.plant")))
             #f)
           (lambda (key . args) (format #f "~s" (cons key args))))))
   (test-assert "duplicate page id errors identify every source path"
     (and (string-contains message "cat-0001")
-         (string-contains message "trees/math/cat-0001.grv")
-         (string-contains message "trees/logic/cat-0001.grv"))))
+         (string-contains message "plants/math/cat-0001.plant")
+         (string-contains message "plants/logic/cat-0001.plant"))))
 
 (let* ((page
          (make-site-page
@@ -843,12 +843,12 @@
            (make-site
              (list (make-site-page
                      "a&b" "A and B" (make-content-document '())
-                     "notes/a&b.grv"
+                     "notes/a&b.plant"
                      #:metadata '((updated . "2026-09-27")))
                    (make-site-page
                      "plain" "Plain" (make-content-document '())
-                     "notes/plain.grv"))
-             #:sources '("notes/a&b.grv" "notes/plain.grv"))))
+                     "notes/plain.plant"))
+             #:sources '("notes/a&b.plant" "notes/plain.plant"))))
        (artifact
          (car (render-sitemap
                 forest
@@ -864,7 +864,7 @@
     "meta/sitemap.xml"
     (artifact-path artifact))
   (test-equal "sitemap depends on every site source"
-    '("notes/a&b.grv" "notes/plain.grv")
+    '("notes/a&b.plant" "notes/plain.plant")
     (artifact-sources artifact))
   (test-assert "sitemap includes the index and routed page URLs"
     (and (string-contains
@@ -902,9 +902,9 @@
                                'link '("Beta")
                                #:properties '((target . "beta")))
                              "."))))
-                 "alpha.grv")
+                 "alpha.plant")
                (make-site-page "beta" "Beta" (make-content-document '())
-                               "beta.grv")))))
+                               "beta.plant")))))
        (routes
          (make-text-routes
            #:index-path "index.txt"

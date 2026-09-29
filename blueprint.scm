@@ -48,8 +48,8 @@
 (blueprint
   (configuration grove-configuration)
   (buildables
-    (append grv-modules forester-modules))
+    (append grove-modules forester-modules))
   (commands
     (list install-command
           parse-command))
-  (testables grv-tests))
+  (testables grove-tests))

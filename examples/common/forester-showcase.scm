@@ -20,7 +20,7 @@
 (define* (build-forester-showcase directory
                                   #:key title description site-url
                                   output-directory cache-key)
-  (let* ((source-directory (string-append directory "/source"))
+  (let* ((source-directory (string-append directory "/plants"))
          (module-directory (string-append directory "/modules"))
          (stylesheet-path (string-append directory "/style.css"))
          (stylesheet (call-with-input-file stylesheet-path get-string-all))
