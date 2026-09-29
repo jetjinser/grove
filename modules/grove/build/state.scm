@@ -10,6 +10,16 @@
   #:use-module (srfi srfi-1)
   #:export (build-state-name
             build-state-temp-name
+            build-state-sources
+            build-state-artifacts
+            build-state-cache-key
+            build-state-source-path
+            build-state-source-fingerprint
+            build-state-artifact-path
+            build-state-artifact-fingerprint
+            build-state-artifact-sources
+            build-state-artifact-renderer
+            build-state-artifact-kind
             content-fingerprint
             file-fingerprint
             read-build-state
@@ -17,6 +27,18 @@
 
 (define build-state-name ".grove-build-state")
 (define build-state-temp-name ".grove-build-state.tmp")
+
+;; Keep the on-disk S-expression layout behind named accessors.
+(define (build-state-sources state) (list-ref state 1))
+(define (build-state-artifacts state) (list-ref state 2))
+(define (build-state-cache-key state) (list-ref state 3))
+(define (build-state-source-path entry) (list-ref entry 0))
+(define (build-state-source-fingerprint entry) (list-ref entry 1))
+(define (build-state-artifact-path entry) (list-ref entry 0))
+(define (build-state-artifact-fingerprint entry) (list-ref entry 1))
+(define (build-state-artifact-sources entry) (list-ref entry 2))
+(define (build-state-artifact-renderer entry) (list-ref entry 3))
+(define (build-state-artifact-kind entry) (list-ref entry 4))
 
 (define (fingerprint-bytes bytes)
   (let ((digest (sha256 bytes))
@@ -43,15 +65,15 @@
         (fingerprint-bytes (get-bytevector-all port)))
       (lambda () (close-port port)))))
 
-(define (distinct-paths? entries path-index)
-  (let ((paths (map (lambda (entry) (list-ref entry path-index)) entries)))
+(define (distinct-paths? entries path-of)
+  (let ((paths (map path-of entries)))
     (= (length paths) (length (delete-duplicates paths string=?)))))
 
 (define (valid-source-entry? entry)
   (and (list? entry)
        (= (length entry) 2)
-       (string? (car entry))
-       (valid-fingerprint? (cadr entry))))
+       (string? (build-state-source-path entry))
+       (valid-fingerprint? (build-state-source-fingerprint entry))))
 
 (define (valid-fingerprint? value)
   (and (string? value)
@@ -66,25 +88,30 @@
 (define (valid-output-entry? entry)
   (and (list? entry)
        (= (length entry) 5)
-       (artifact-path? (car entry))
-       (valid-fingerprint? (cadr entry))
-       (or (not (caddr entry))
-           (and (list? (caddr entry)) (every string? (caddr entry))))
-       (or (not (cadddr entry))
-           (and (integer? (cadddr entry)) (>= (cadddr entry) 0)))
-       (memq (list-ref entry 4) '(text bytes))))
+       (artifact-path? (build-state-artifact-path entry))
+       (valid-fingerprint? (build-state-artifact-fingerprint entry))
+       (or (not (build-state-artifact-sources entry))
+           (and (list? (build-state-artifact-sources entry))
+                (every string? (build-state-artifact-sources entry))))
+       (or (not (build-state-artifact-renderer entry))
+           (and (integer? (build-state-artifact-renderer entry))
+                (>= (build-state-artifact-renderer entry) 0)))
+       (memq (build-state-artifact-kind entry) '(text bytes))))
 
 (define (valid-build-state? state)
   (and (list? state)
        (= (length state) 4)
        (eq? (car state) 'grove-build-state)
-       (list? (cadr state))
-       (every valid-source-entry? (cadr state))
-       (distinct-paths? (cadr state) 0)
-       (list? (caddr state))
-       (every valid-output-entry? (caddr state))
-       (distinct-paths? (caddr state) 0)
-       (or (not (cadddr state)) (string? (cadddr state)))))
+       (list? (build-state-sources state))
+       (every valid-source-entry? (build-state-sources state))
+       (distinct-paths? (build-state-sources state)
+                        build-state-source-path)
+       (list? (build-state-artifacts state))
+       (every valid-output-entry? (build-state-artifacts state))
+       (distinct-paths? (build-state-artifacts state)
+                        build-state-artifact-path)
+       (or (not (build-state-cache-key state))
+           (string? (build-state-cache-key state)))))
 
 (define (read-build-state path)
   (if (not (file-exists? path))

@@ -151,29 +151,41 @@
     paths))
 
 (define (source-paths entries)
-  (map car entries))
+  (map build-state-source-path entries))
 
 (define (paths-intersect? paths candidates)
   (any (lambda (path) (member path candidates string=?)) paths))
 
-(define (state-entry-by-path entries path)
-  (find (lambda (entry) (string=? (car entry) path)) entries))
+(define (source-entry-by-path entries path)
+  (find (lambda (entry)
+          (string=? (build-state-source-path entry) path))
+        entries))
+
+(define (artifact-entry-by-path entries path)
+  (find (lambda (entry)
+          (string=? (build-state-artifact-path entry) path))
+        entries))
 
 (define (changed-sources old-sources current-sources)
   (let ((added
           (filter (lambda (entry)
-                    (not (state-entry-by-path old-sources (car entry))))
+                    (not (source-entry-by-path
+                           old-sources (build-state-source-path entry))))
                   current-sources))
         (modified
           (filter (lambda (entry)
                     (let ((previous
-                            (state-entry-by-path old-sources (car entry))))
+                            (source-entry-by-path
+                              old-sources (build-state-source-path entry))))
                       (and previous
-                           (not (equal? (cadr previous) (cadr entry))))))
+                           (not (equal? (build-state-source-fingerprint previous)
+                                        (build-state-source-fingerprint
+                                          entry))))))
                   current-sources))
         (removed
           (filter (lambda (entry)
-                    (not (state-entry-by-path current-sources (car entry))))
+                    (not (source-entry-by-path
+                           current-sources (build-state-source-path entry))))
                   old-sources)))
     (values (source-paths added)
             (source-paths modified)
@@ -181,11 +193,11 @@
 
 (define (artifact-affected? artifact previous changed)
   (let* ((path (artifact-path artifact))
-         (old (state-entry-by-path previous path))
+         (old (artifact-entry-by-path previous path))
          (sources (artifact-sources artifact))
-         (old-sources (and old (caddr old))))
+         (old-sources (and old (build-state-artifact-sources old))))
     (or (not old)
-        (not (equal? (cadr old)
+        (not (equal? (build-state-artifact-fingerprint old)
                      (content-fingerprint (artifact-content artifact))))
         (not (equal? sources old-sources))
         (not sources)
@@ -199,10 +211,11 @@
          (filter (lambda (artifact)
                    (artifact-affected? artifact previous changed))
                  artifacts))
-    (map car
+    (map build-state-artifact-path
          (filter (lambda (entry)
                    (not (find (lambda (artifact)
-                                (string=? (artifact-path artifact) (car entry)))
+                                (string=? (artifact-path artifact)
+                                          (build-state-artifact-path entry)))
                               artifacts)))
                  previous))))
 
@@ -211,13 +224,14 @@
     (if (null? entries)
         (reverse artifacts)
         (let* ((entry (car entries))
-               (path (string-append directory "/" (car entry)))
+               (path (string-append directory "/"
+                                    (build-state-artifact-path entry)))
                (content
                  (and (file-exists? path)
                       (not (file-is-directory? path))
                       (catch #t
                         (lambda ()
-                          (if (eq? (list-ref entry 4) 'bytes)
+                          (if (eq? (build-state-artifact-kind entry) 'bytes)
                               (let ((port (open-file path "rb")))
                                 (dynamic-wind
                                   (lambda () #t)
@@ -226,11 +240,13 @@
                               (call-with-input-file path get-string-all)))
                         (lambda args #f)))))
           (if (and content
-                   (equal? (content-fingerprint content) (cadr entry)))
+                   (equal? (content-fingerprint content)
+                           (build-state-artifact-fingerprint entry)))
               (loop (cdr entries)
-                    (cons ((if (eq? (list-ref entry 4) 'bytes)
+                    (cons ((if (eq? (build-state-artifact-kind entry) 'bytes)
                                make-byte-artifact make-artifact)
-                           (car entry) content (caddr entry))
+                           (build-state-artifact-path entry) content
+                           (build-state-artifact-sources entry))
                           artifacts))
               #f)))))
 
@@ -271,11 +287,12 @@
         (let* ((renderer (car renderers))
                (old-entries
                  (filter (lambda (entry)
-                           (equal? (cadddr entry) index))
+                           (equal? (build-state-artifact-renderer entry)
+                                   index))
                          previous-entries))
                (old-artifacts
                  (filter (lambda (artifact)
-                           (and (state-entry-by-path
+                           (and (artifact-entry-by-path
                                   old-entries (artifact-path artifact))
                                 #t))
                          cached-artifacts))
@@ -284,16 +301,18 @@
                       (cached-renderer-render-changed renderer)))
                (partial? (and changed-proc
                               (every (lambda (entry)
-                                       (integer? (cadddr entry)))
+                                       (integer?
+                                         (build-state-artifact-renderer entry)))
                                      old-entries)))
                (dirty-entries
                  (filter (lambda (entry)
                            (or (any (lambda (path)
-                                      (not (state-entry-by-path
+                                       (not (source-entry-by-path
                                              previous-sources path)))
                                     changed)
-                               (not (caddr entry))
-                               (paths-intersect? (caddr entry) changed)))
+                               (not (build-state-artifact-sources entry))
+                               (paths-intersect?
+                                 (build-state-artifact-sources entry) changed)))
                          old-entries))
                (dirty-paths (map car dirty-entries))
                (generated
@@ -335,9 +354,12 @@
            (string-append (project-output-directory project) "/"
                           build-state-temp-name))
          (previous-state (read-build-state state-path))
-         (previous-sources (if previous-state (cadr previous-state) '()))
-         (previous-artifacts (if previous-state (caddr previous-state) '()))
-         (previous-cache-key (and previous-state (cadddr previous-state)))
+         (previous-sources (if previous-state
+                               (build-state-sources previous-state) '()))
+         (previous-artifacts (if previous-state
+                                 (build-state-artifacts previous-state) '()))
+         (previous-cache-key (and previous-state
+                                  (build-state-cache-key previous-state)))
          (inputs
            (map (lambda (path)
                   (make-project-input
@@ -382,7 +404,8 @@
              (cache-hit?
               (list cache-ready?
                     (map (lambda (entry)
-                           (cons (car entry) (cadddr entry)))
+                           (cons (build-state-artifact-path entry)
+                                 (build-state-artifact-renderer entry)))
                          previous-artifacts)
                     '()))
              (cache-ready?
@@ -408,7 +431,8 @@
                                      (not (find
                                             (lambda (artifact)
                                               (string=? (artifact-path artifact)
-                                                        (car entry)))
+                                                        (build-state-artifact-path
+                                                          entry)))
                                             artifacts)))
                                    previous-artifacts))))
              (else
