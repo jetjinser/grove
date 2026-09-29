@@ -61,32 +61,13 @@
         (not (equal? (cadar sources)
                      (file-fingerprint input-path))))
       (write-test-file state-path
-        (call-with-output-string
-          (lambda (port)
-            (write (list 'grove-build-state-v1
-                         (list (list input-path 1234))
-                         (list (list "page.html" 5678 (list input-path))))
-                   port))))
-      (test-equal "previous build-state versions remain readable"
+        "(grove-build-state-v3 () () #f)")
+      (test-equal "older build states are discarded"
         #f
-        (cadddr (read-build-state state-path)))
-      (write-test-file state-path
-        (call-with-output-string
-          (lambda (port)
-            (write (list 'grove-build-state-v3
-                         (list (list input-path 1234))
-                         (list (list "page.html" 5678 (list input-path) 0))
-                         "legacy-renderers-v3")
-                   port))))
-      (let ((migrated (read-build-state state-path)))
-        (test-equal "version 3 build states migrate to version 4"
-          'grove-build-state-v4
-          (car migrated))
-        (test-equal "build-state migration preserves renderer keys"
-          "legacy-renderers-v3"
-          (cadddr migrated)))
+        (read-build-state state-path))
       (write-test-file state-path "(grove-build-state-v9 () () #f)")
-      (test-error "invalid build-state versions are rejected" #t
+      (test-equal "unknown build-state versions are discarded"
+        #f
         (read-build-state state-path))))
   (lambda ()
     (for-each

@@ -163,9 +163,9 @@ and other project-level inputs. These are caller-managed version keys, not hashe
 Scheme procedures. Bump them when reader, analyzer, or renderer code or
 configuration changes. File inputs declared with `#:extra-sources` are
 fingerprinted automatically; cacheable renderers must not rely on side effects.
-Grove uses SHA-256 fingerprints for source files and artifact contents. Older
-build-state files remain readable, but their legacy fingerprints cause a cache
-miss when compared with current SHA-256 values.
+Grove uses SHA-256 fingerprints for source files and artifact contents. A build
+state from another format is discarded, so the next build renders the outputs
+again.
 Grove reuses outputs only when source fingerprints and both keys match and the
 saved output files still match their recorded contents. Each build still runs
 the preparation hook, reads every source, and runs the analyzer over the full

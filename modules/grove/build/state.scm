@@ -18,8 +18,6 @@
 (define build-state-name ".grove-build-state")
 (define build-state-temp-name ".grove-build-state.tmp")
 
-(define legacy-fingerprint-mask (- (expt 2 128) 1))
-
 (define (fingerprint-bytes bytes)
   (let ((digest (sha256 bytes))
         (digits "0123456789abcdef"))
@@ -74,25 +72,6 @@
        (or (not (cadddr entry))
            (and (integer? (cadddr entry)) (>= (cadddr entry) 0)))))
 
-(define (valid-legacy-source-entry? entry)
-  (and (list? entry)
-       (= (length entry) 2)
-       (string? (car entry))
-       (integer? (cadr entry))
-       (<= 0 (cadr entry) legacy-fingerprint-mask)))
-
-(define (valid-legacy-output-entry? entry owner?)
-  (and (list? entry)
-       (= (length entry) (if owner? 4 3))
-       (artifact-path? (car entry))
-       (integer? (cadr entry))
-       (<= 0 (cadr entry) legacy-fingerprint-mask)
-       (or (not (caddr entry))
-           (and (list? (caddr entry)) (every string? (caddr entry))))
-       (or (not owner?)
-           (not (cadddr entry))
-           (and (integer? (cadddr entry)) (>= (cadddr entry) 0)))))
-
 (define (valid-build-state? state)
   (and (list? state)
        (= (length state) 4)
@@ -111,41 +90,9 @@
       (call-with-input-file path
         (lambda (port)
           (let ((state (read port)))
-            (unless (and (or (valid-build-state? state)
-                             (valid-legacy-build-state? state))
-                         (eof-object? (read port)))
-              (error "invalid Grove build state" path state))
-            (normalize-build-state state))))))
-
-(define (valid-legacy-build-state? state)
-  (and (list? state)
-       (or (and (= (length state) 3)
-                (eq? (car state) 'grove-build-state-v1))
-           (and (= (length state) 4)
-                (memq (car state)
-                      '(grove-build-state-v2 grove-build-state-v3))))
-       (list? (cadr state))
-       (every valid-legacy-source-entry? (cadr state))
-       (distinct-paths? (cadr state) 0)
-       (list? (caddr state))
-       (every (lambda (entry)
-                (valid-legacy-output-entry?
-                  entry (eq? (car state) 'grove-build-state-v3)))
-              (caddr state))
-       (distinct-paths? (caddr state) 0)
-       (or (= (length state) 3)
-           (not (cadddr state))
-           (string? (cadddr state)))))
-
-(define (normalize-build-state state)
-  (list 'grove-build-state-v4
-        (cadr state)
-        (map (lambda (entry)
-               (if (= (length entry) 4)
-                   entry
-                   (append entry (list #f))))
-             (caddr state))
-        (and (= (length state) 4) (cadddr state))))
+            (and (valid-build-state? state)
+                 (eof-object? (read port))
+                 state))))))
 
 (define (write-build-state path temp-path sources artifacts owners cache-key)
   (let ((state
