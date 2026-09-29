@@ -4,9 +4,9 @@
 
 (define-module (forester style html)
   #:use-module (grove output)
-  #:use-module (grove style html)
+  #:use-module ((grove style html) #:prefix grove:)
   #:use-module (srfi srfi-1)
-  #:export (make-forester-html-style))
+  #:export (make-html-style))
 
 (define forester-stylesheet
   (make-artifact
@@ -15,16 +15,16 @@
     (list "modules/forester/style/html.scm")))
 
 (define (forester-base-html-style)
-  (make-html-style #:stylesheets (list forester-stylesheet)))
+  (grove:make-html-style #:stylesheets (list forester-stylesheet)))
 
 (define (forester-stylesheet-present? style)
   (any (lambda (artifact)
          (string=? (artifact-path artifact) "forester.css"))
-       (html-style-stylesheets style)))
+       (grove:html-style-stylesheets style)))
 
-(define* (make-forester-html-style #:key (style (make-html-style)))
-  (unless (html-style? style)
+(define* (make-html-style #:key (style (grove:make-html-style)))
+  (unless (grove:html-style? style)
     (error "Forester HTML style requires an HTML style" style))
   (if (forester-stylesheet-present? style)
       style
-      (compose-html-styles (forester-base-html-style) style)))
+      (grove:compose-html-styles (forester-base-html-style) style)))

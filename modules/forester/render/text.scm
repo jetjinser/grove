@@ -13,13 +13,13 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-14)
-  #:export (forest->text
-            render-forest-text
-            make-forester-text-renderer))
+  #:export (site->text
+            render-text
+            make-text-renderer))
 
 (define (page-content-handlers forest routes page)
-  (let ((references (forest-outgoing-references forest (site-page-id page)))
-        (headings (forest-headings forest (site-page-id page))))
+  (let ((references (outgoing-references forest (site-page-id page)))
+        (headings (headings forest (site-page-id page))))
     `((image . ,(lambda (element body)
                  (if (string-null? (string-trim-both body))
                      (string-append "[image: "
@@ -36,20 +36,20 @@
                             (text-page-path routes (site-page-id page))
                             (text-page-path
                               routes
-                              (forest-reference-target-page-id reference))))
+                              (reference-target-page-id reference))))
                         (fragment
-                          (forest-reference-target-fragment reference)))
+                          (reference-target-fragment reference)))
                    (set! references (cdr references))
                    (string-append body " [" path
                                   (if fragment (string-append "#" fragment) "")
                                   "] [#"
-                                  (forest-reference-source-id reference) "]"))))
+                                  (reference-source-id reference) "]"))))
       (heading . ,(lambda (_ body)
                     (when (null? headings)
                       (error "Forester heading rendering exceeded its index"
                              (site-page-id page)))
                     (let* ((heading-record (car headings))
-                           (id (forest-heading-id heading-record)))
+                           (id (heading-id heading-record)))
                       (set! headings (cdr headings))
                       (string-append body "\n"
                                      (make-string (string-length body) #\=)
@@ -62,13 +62,13 @@
     #:lazy-handlers
     (list (cons 'subtree (lambda (element _render)
                     (let* ((id (content-element-property element 'tree-id))
-                           (target (forest-page forest id)))
+                           (target (find-page forest id)))
                       (string-append
                         (heading (site-page-title target))
                         (subtree-content-text forest routes target)))))
           (cons 'transclude (lambda (element _render)
                        (let* ((id (content-element-property element 'target))
-                              (target (forest-page forest id)))
+                              (target (find-page forest id)))
                          (string-append
                            (heading (site-page-title target))
                            (subtree-content-text forest routes target))))))))
@@ -83,7 +83,7 @@
                         (text-page-path routes (site-page-id page))) ")"))
 
 (define (table-of-contents-text forest page)
-  (let ((headings (forest-headings forest (site-page-id page))))
+  (let ((headings (headings forest (site-page-id page))))
     (if (null? headings)
         ""
         (string-append
@@ -91,29 +91,29 @@
           (string-concatenate
             (map (lambda (heading-record)
                    (string-append "- "
-                                  (forest-heading-label heading-record)
-                                  " [#" (forest-heading-id heading-record) "]\n"))
+                                  (heading-label heading-record)
+                                  " [#" (heading-id heading-record) "]\n"))
                  headings))
           "\n"))))
 
 (define (text-backlink-reference forest page-id routes reference)
-  (let* ((source-id (forest-reference-source-page-id reference))
+  (let* ((source-id (reference-source-page-id reference))
          (source (find (lambda (candidate)
                          (equal? source-id (site-page-id candidate)))
-                       (forest-pages forest)))
+                       (pages forest)))
          (path (text-relative-path (text-page-path routes page-id)
                                    (text-page-path routes source-id))))
     (string-append "  - " (site-page-title source) " [" path "#"
-                   (forest-reference-source-id reference) "]: "
-                   (forest-reference-label reference) "\n")))
+                   (reference-source-id reference) "]: "
+                   (reference-label reference) "\n")))
 
 (define (text-backlink-group forest page routes group)
   (let ((heading-record (car group))
         (references (cdr group)))
     (string-append
       (if heading-record
-          (string-append "- " (forest-heading-label heading-record)
-                         " [#" (forest-heading-id heading-record) "]:\n")
+          (string-append "- " (heading-label heading-record)
+                         " [#" (heading-id heading-record) "]:\n")
           "- This page:\n")
       (string-concatenate
         (map (lambda (reference)
@@ -123,19 +123,19 @@
 
 (define (linked-from-text forest page routes)
   (let* ((page-id (site-page-id page))
-         (incoming (forest-incoming-references forest page-id))
+         (incoming (incoming-references forest page-id))
          (page-references
            (filter (lambda (reference)
-                     (not (forest-reference-target-fragment reference)))
+                     (not (reference-target-fragment reference)))
                    incoming))
          (heading-groups
            (filter-map
              (lambda (heading-record)
-               (let* ((fragment (forest-heading-id heading-record))
+               (let* ((fragment (heading-id heading-record))
                       (references
-                        (forest-incoming-references forest page-id fragment)))
+                        (incoming-references forest page-id fragment)))
                  (and (pair? references) (cons heading-record references))))
-             (forest-headings forest page-id)))
+             (headings forest page-id)))
          (groups (append (if (null? page-references)
                              '()
                              (list (cons #f page-references)))
@@ -150,7 +150,7 @@
                  groups))))))
 
 (define (index->text forest routes)
-  (let* ((site (forest-site forest))
+  (let* ((site (site forest))
          (index-path (text-index-path routes)))
     (string-append
       (heading (site-title site))
@@ -177,11 +177,11 @@
       (linked-from-text forest page routes))))
 
 (define (check-text-routes forest routes)
-  (let* ((site (forest-site forest))
+  (let* ((site (site forest))
          (paths (cons (text-index-path routes)
                       (map (lambda (page)
                              (text-page-path routes (site-page-id page)))
-                           (forest-pages forest)))))
+                           (pages forest)))))
     (unless (= (length paths) (length (delete-duplicates paths string=?)))
       (error "text routes produce duplicate output paths" paths))))
 
@@ -202,11 +202,11 @@
                    (any (lambda (path) (member path sources string=?))
                         changed))))))
 
-(define (render-forest-text-changed forest prefix routes changed old-artifacts)
+(define (render-text-changed forest prefix routes changed old-artifacts)
   (check-text-routes forest routes)
-  (let* ((site (forest-site forest))
+  (let* ((site (site forest))
          (index-path (output-path prefix (text-index-path routes)))
-         (index-sources (forest-source-paths forest))
+         (index-sources (source-paths forest))
          (old-index (find-artifact old-artifacts index-path))
          (index-current (make-artifact index-path "" index-sources))
          (index-artifact
@@ -221,30 +221,30 @@
                                  prefix
                                  (text-page-path routes
                                                  (site-page-id page))))
-                         (sources (forest-page-source-paths forest page))
+                         (sources (page-source-paths forest page))
                          (old (find-artifact old-artifacts path))
                          (current (make-artifact path "" sources)))
                     (if (artifact-current? current old changed)
                         old
                         (make-artifact
                           path (page->text forest page routes) sources))))
-                (forest-pages forest))))
+                (pages forest))))
     (cons index-artifact page-artifacts)))
 
-(define* (forest->text forest #:key (routes (make-text-routes)))
+(define* (site->text forest #:key (routes (make-text-routes)))
   (unless (forest? forest)
     (error "Forester text renderer requires a forest" forest))
   (check-text-routes forest routes)
-  (let ((site (forest-site forest)))
+  (let ((site (site forest)))
     (cons (cons "index" (index->text forest routes))
           (map (lambda (page)
                  (cons (site-page-id page)
                        (page->text forest page routes)))
-               (forest-pages forest)))))
+               (pages forest)))))
 
-(define* (render-forest-text forest #:key (routes (make-text-routes)))
-  (let* ((site (forest-site forest))
-         (sources (forest-source-paths forest)))
+(define* (render-text forest #:key (routes (make-text-routes)))
+  (let* ((site (site forest))
+         (sources (source-paths forest)))
     (check-text-routes forest routes)
     (cons
       (make-artifact (text-index-path routes)
@@ -254,10 +254,10 @@
              (make-artifact
                (text-page-path routes (site-page-id page))
                (page->text forest page routes)
-               (forest-page-source-paths forest page)))
-           (forest-pages forest)))))
+               (page-source-paths forest page)))
+           (pages forest)))))
 
-(define* (make-forester-text-renderer #:key (prefix #f)
+(define* (make-text-renderer #:key (prefix #f)
                                       (routes (make-text-routes))
                                       (cache-key #f))
   (unless (or (not prefix) (artifact-path? prefix))
@@ -265,7 +265,7 @@
   (unless (text-routes? routes)
     (error "Forester text renderer requires text routes" routes))
   (let ((render (lambda (forest)
-                  (let ((artifacts (render-forest-text forest
+                  (let ((artifacts (render-text forest
                                                        #:routes routes)))
                     (if prefix
                         (prefix-artifacts prefix artifacts)
@@ -276,6 +276,6 @@
           #:cache-key (string-append "forester-text-v2:" cache-key)
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
-            (render-forest-text-changed forest prefix routes changed
+            (render-text-changed forest prefix routes changed
                                         old-artifacts)))
         render)))

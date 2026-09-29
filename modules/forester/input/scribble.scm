@@ -9,9 +9,9 @@
   #:use-module (grove site)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (make-forester-page-reader))
+  #:export (make-page-reader))
 
-(define metadata-kinds '(title summary published updated))
+(define metadata-kinds '(title summary published updated tag taxon))
 
 (define (metadata-element? child)
   (and (content-element? child)
@@ -48,6 +48,36 @@
                      kind path value)))
     value))
 
+(define (topic-metadata elements kind path)
+  (let ((topics
+          (map (lambda (element)
+                 (let* ((id (content-element-property element 'id))
+                        (label (string-trim-both
+                                 (content-verbatim-string
+                                   (content-element-children element)))))
+                   (unless (and (string? id) (not (string-null? id))
+                                (not (string-null? label)))
+                     (error (format #f "Forester ~a requires an ID and label in ~a"
+                                    kind path)))
+                   (cons id label)))
+               (elements-of-kind elements kind))))
+    (let ((duplicate (find (lambda (topic)
+                             (> (count (lambda (candidate)
+                                         (string=? (car topic) (car candidate)))
+                                       topics)
+                                1))
+                           topics)))
+      (when duplicate
+        (error (format #f "Forester page ~a repeats ~a ID ~a"
+                       path kind (car duplicate))))
+      topics)))
+
+(define (taxon-metadata elements path)
+  (let ((taxa (topic-metadata elements 'taxon path)))
+    (when (> (length taxa) 1)
+      (error (format #f "Forester page ~a has more than one taxon" path)))
+    (and (pair? taxa) (car taxa))))
+
 (define (page-from-document path document)
   (let* ((filename (basename path))
          (children (content-document-children document))
@@ -55,7 +85,9 @@
          (titles (elements-of-kind metadata-nodes 'title))
          (summary (one-metadata-value metadata-nodes 'summary path))
          (published (date-metadata metadata-nodes 'published path))
-         (updated (date-metadata metadata-nodes 'updated path)))
+         (updated (date-metadata metadata-nodes 'updated path))
+         (tags (topic-metadata metadata-nodes 'tag path))
+         (taxon (taxon-metadata metadata-nodes path)))
     (unless (string-suffix? ".grv" filename)
       (error (format #f "Forester page source must end in .grv: ~a" path)))
     (unless (= (length titles) 1)
@@ -79,9 +111,11 @@
         #:metadata (filter cdr
                      (list (cons 'summary summary)
                            (cons 'published published)
-                           (cons 'updated updated)))))))
+                           (cons 'updated updated)
+                           (cons 'tags (and (pair? tags) tags))
+                           (cons 'taxon taxon)))))))
 
-(define (make-forester-page-reader read-document)
+(define (make-page-reader read-document)
   "Return a reader whose page IDs are source basenames without `.grv'."
   (lambda (path)
     (page-from-document path (read-document path))))

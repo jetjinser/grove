@@ -4,63 +4,64 @@
 
 (define-module (forester render graph)
   #:use-module (forester site)
+  #:use-module ((forester composition) #:prefix composition:)
   #:use-module (grove build)
   #:use-module (grove output)
   #:use-module (grove site)
   #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-1)
-  #:export (forest->graph
-            render-forest-graph
-            make-forester-graph-renderer))
+  #:export (site->graph
+            render-graph
+            make-graph-renderer))
 
 (define (heading->graph heading)
-  `((id . ,(forest-heading-id heading))
-    (label . ,(forest-heading-label heading))))
+  `((id . ,(heading-id heading))
+    (label . ,(heading-label heading))))
 
 (define (page->graph forest page)
   `((id . ,(site-page-id page))
     (title . ,(site-page-title page))
     (headings . ,(map heading->graph
-                       (forest-headings forest (site-page-id page))))))
+                       (headings forest (site-page-id page))))))
 
 (define (reference->graph reference)
-  `((source-page . ,(forest-reference-source-page-id reference))
-    (source-id . ,(forest-reference-source-id reference))
-    (target-page . ,(forest-reference-target-page-id reference))
-    (target-fragment . ,(forest-reference-target-fragment reference))
-    (label . ,(forest-reference-label reference))))
+  `((source-page . ,(reference-source-page-id reference))
+    (source-id . ,(reference-source-id reference))
+    (target-page . ,(reference-target-page-id reference))
+    (target-fragment . ,(reference-target-fragment reference))
+    (label . ,(reference-label reference))))
 
 (define (transclusion->graph transclusion)
-  `((source-tree . ,(forest-transclusion-source-tree-id transclusion))
-    (source-id . ,(forest-transclusion-source-id transclusion))
-    (target-tree . ,(forest-transclusion-target-tree-id transclusion))))
+  `((source-tree . ,(composition:transclusion-source-tree-id transclusion))
+    (source-id . ,(composition:transclusion-source-id transclusion))
+    (target-tree . ,(composition:transclusion-target-tree-id transclusion))))
 
-(define (forest->graph forest)
+(define (site->graph forest)
   (unless (forest? forest)
     (error "Forester graph renderer requires a forest" forest))
-  (let ((pages (forest-pages forest)))
+  (let ((pages (pages forest)))
     `(forest-graph
        (pages ,(map (lambda (page) (page->graph forest page)) pages))
        (references
          ,(append-map
             (lambda (page)
               (map reference->graph
-                   (forest-outgoing-references forest (site-page-id page))))
+                   (outgoing-references forest (site-page-id page))))
             pages))
        (subtrees
          ,(map (lambda (definition)
                  `((parent-tree . ,(car definition))
                    (subtree . ,(cadr definition))))
-               (forest-subtree-definitions forest)))
+               (subtree-definitions forest)))
        (transclusions
          ,(append-map
             (lambda (page)
               (map transclusion->graph
-                   (forest-outgoing-transclusions forest
+                   (outgoing-transclusions forest
                                                   (site-page-id page))))
             pages)))))
 
-(define* (render-forest-graph forest #:key (path "forest-graph.scm"))
+(define* (render-graph forest #:key (path "forest-graph.scm"))
   (unless (forest? forest)
     (error "Forester graph renderer requires a forest" forest))
   (unless (artifact-path? path)
@@ -68,15 +69,15 @@
   (let ((content
           (call-with-output-string
             (lambda (port)
-              (write (forest->graph forest) port)
+              (write (site->graph forest) port)
               (newline port)))))
-    (list (make-artifact path content (forest-source-paths forest)))))
+    (list (make-artifact path content (source-paths forest)))))
 
-(define* (make-forester-graph-renderer #:key (path "forest-graph.scm")
+(define* (make-graph-renderer #:key (path "forest-graph.scm")
                                       (cache-key #f))
   (unless (artifact-path? path)
     (error "Forester graph path must be a relative artifact path" path))
-  (let ((render (lambda (forest) (render-forest-graph forest #:path path))))
+  (let ((render (lambda (forest) (render-graph forest #:path path))))
     (if cache-key
         (make-cached-renderer
           render

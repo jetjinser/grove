@@ -36,7 +36,7 @@
 
 (test-begin "forester graph")
 
-(let* ((graph (forest->graph forest))
+(let* ((graph (site->graph forest))
        (pages (cadr (assoc 'pages (cdr graph))))
        (references (cadr (assoc 'references (cdr graph)))))
   (test-equal "graph records page headings in site order"
@@ -52,11 +52,11 @@
        (label . "the overview")))
     references))
 
-(let* ((artifact (car (render-forest-graph forest #:path "data/graph.scm")))
+(let* ((artifact (car (render-graph forest #:path "data/graph.scm")))
        (serialized (artifact-content artifact))
        (round-trip (read (open-input-string serialized))))
   (test-equal "graph renderer writes a readable Scheme datum"
-    (forest->graph forest) round-trip)
+    (site->graph forest) round-trip)
   (test-equal "graph artifact uses its configured path"
     "data/graph.scm" (artifact-path artifact))
   (test-equal "graph artifact tracks every forest source"
@@ -64,10 +64,10 @@
     (artifact-sources artifact)))
 
 (test-error "graph renderer rejects absolute output paths" #t
-  (render-forest-graph forest #:path "/tmp/forest.scm"))
+  (render-graph forest #:path "/tmp/forest.scm"))
 
 (test-error "graph renderer rejects paths with parent traversal" #t
-  (make-forester-graph-renderer #:path "../forest.scm"))
+  (make-graph-renderer #:path "../forest.scm"))
 
 (let* ((root
          (make-site-page
@@ -84,7 +84,7 @@
            (make-content-document
              (list (make-content-element 'transclude '()
                      #:properties '((target . "unstable-0")))))))
-       (graph (forest->graph (make-forest (make-site (list root host)))))
+       (graph (site->graph (make-forest (make-site (list root host)))))
        (subtrees (cadr (assoc 'subtrees (cdr graph))))
        (transclusions (cadr (assoc 'transclusions (cdr graph)))))
   (test-equal "graph records containment and transclusion as distinct edges"

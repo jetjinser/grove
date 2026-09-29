@@ -13,7 +13,7 @@
   #:use-module (forester render sitemap)
   #:use-module (forester render text)
   #:use-module (forester render text routes)
-  #:use-module (forester style html)
+  #:use-module ((forester composition) #:prefix composition:)
   #:use-module (forester site)
   #:use-module (grove build)
   #:use-module (grove ir)
@@ -60,12 +60,12 @@
 (define (backlinks-by-incoming-references forest id)
   (let ((source-ids
           (delete-duplicates
-            (map forest-reference-source-page-id
-                 (forest-incoming-references forest id))
+            (map reference-source-page-id
+                 (incoming-references forest id))
             equal?)))
     (filter (lambda (page)
               (member (site-page-id page) source-ids equal?))
-            (site-pages (forest-site forest)))))
+            (site-pages (site forest)))))
 
 (define (common-backlinks-by-incoming-references forest left-id right-id)
   (let ((left (map site-page-id
@@ -75,7 +75,7 @@
     (filter (lambda (page)
               (and (member (site-page-id page) left equal?)
                    (member (site-page-id page) right equal?)))
-            (site-pages (forest-site forest)))))
+            (site-pages (site forest)))))
 
 (test-begin "forester site")
 
@@ -86,7 +86,7 @@
        (forest
          (make-forest
            (make-site (list destination source other-source unlinked))))
-       (backlinks (forest-backlinks forest "destination")))
+       (backlinks (backlinks forest "destination")))
   (test-equal "relation backlinks preserve the old page ordering and uniqueness"
     '("source" "other-source")
     (map site-page-id backlinks))
@@ -95,7 +95,7 @@
     (map site-page-id backlinks))
   (test-equal "incoming-reference queries still preserve each link occurrence"
     3
-    (length (forest-incoming-references forest "destination"))))
+    (length (incoming-references forest "destination"))))
 
 (let* ((left (page-with-links "left" '()))
        (right (page-with-links "right" '()))
@@ -108,7 +108,7 @@
          (make-forest
            (make-site
              (list left shared-late left-only right shared-early right-only))))
-       (common (forest-common-backlinks forest "left" "right")))
+       (common (common-backlinks forest "left" "right")))
   (test-equal "relational joins find pages linking to both targets in site order"
     '("shared-late" "shared-early")
     (map site-page-id common))
@@ -117,8 +117,8 @@
          (common-backlinks-by-incoming-references forest "left" "right"))
     (map site-page-id common))
   (test-equal "joining a target to itself gives its unique backlink pages"
-    (map site-page-id (forest-backlinks forest "left"))
-    (map site-page-id (forest-common-backlinks forest "left" "left"))))
+    (map site-page-id (backlinks forest "left"))
+    (map site-page-id (common-backlinks forest "left" "left"))))
 
 (define (bfs-reachable-page-ids forest source-id)
   (let visit ((pending (list source-id)) (visited '()))
@@ -127,15 +127,15 @@
              (filter (lambda (page)
                        (and (not (equal? (site-page-id page) source-id))
                             (member (site-page-id page) visited equal?)))
-                     (site-pages (forest-site forest))))
+                     (site-pages (site forest))))
         (let ((current (car pending)))
           (if (member current visited equal?)
               (visit (cdr pending) visited)
               (visit
                 (append
                   (cdr pending)
-                  (map forest-reference-target-page-id
-                       (forest-outgoing-references forest current)))
+                  (map reference-target-page-id
+                       (outgoing-references forest current)))
                 (cons current visited)))))))
 
 (let* ((isolated (page-with-links "isolated" '()))
@@ -146,23 +146,23 @@
        (forest (make-forest (make-site (list isolated hub left right merge)))))
   (test-equal "reachability includes the transitive closure once in site order"
     '("left" "right" "merge")
-    (map site-page-id (forest-reachable-pages forest "hub")))
+    (map site-page-id (reachable-pages forest "hub")))
   (test-equal "reachability excludes the source even when a cycle returns to it"
     '("hub" "left" "right")
-    (map site-page-id (forest-reachable-pages forest "merge")))
+    (map site-page-id (reachable-pages forest "merge")))
   (test-equal "isolated pages have no reachable pages"
     '()
-    (forest-reachable-pages forest "isolated"))
+    (reachable-pages forest "isolated"))
   (test-equal "relation reachability agrees with breadth-first traversal"
     (map (lambda (page)
            (cons (site-page-id page)
                  (bfs-reachable-page-ids forest (site-page-id page))))
-         (site-pages (forest-site forest)))
+         (site-pages (site forest)))
     (map (lambda (page)
            (cons (site-page-id page)
                  (map site-page-id
-                      (forest-reachable-pages forest (site-page-id page)))))
-         (site-pages (forest-site forest)))))
+                      (reachable-pages forest (site-page-id page)))))
+         (site-pages (site forest)))))
 
 (let* ((paragraph-node
          (car (content-document-children (site-page-document algebra))))
@@ -176,7 +176,7 @@
     (and (content-element? math-node)
          (eq? (content-element-kind math-node) 'math))))
 
-(let* ((rendered (forest->html (make-forest (make-site (list algebra limits)))))
+(let* ((rendered (site->html (make-forest (make-site (list algebra limits)))))
        (algebra-html (assoc-ref rendered "algebra"))
        (limits-html (assoc-ref rendered "limits")))
   (test-assert "at-exp link resolves to a page"
@@ -197,7 +197,7 @@
                      "<img src=\"/images/algebra.svg\" alt=\"An algebra diagram.\" />"))
   (test-assert "plain text retains image alternative text"
     (string-contains
-      (assoc-ref (forest->text
+      (assoc-ref (site->text
                    (make-forest (make-site (list algebra limits))))
                  "algebra")
       "An algebra diagram."))
@@ -234,19 +234,19 @@
        (target (make-site-page "target" "Target" target-document))
        (source (make-site-page "source" "Source" source-document))
        (forest (make-forest (make-site (list target source))))
-       (html (forest->html forest))
-       (text (forest->text forest))
+       (html (site->html forest))
+       (text (site->text forest))
        (target-html (assoc-ref html "target"))
        (target-text (assoc-ref text "target"))
        (source-html (assoc-ref html "source"))
        (source-text (assoc-ref text "source"))
-       (outgoing (forest-outgoing-references forest "source"))
+       (outgoing (outgoing-references forest "source"))
        (first-reference (car outgoing))
        (section-references
-         (forest-incoming-references forest "target" "overview-2")))
+         (incoming-references forest "target" "overview-2")))
   (test-equal "heading anchors slugify text and disambiguate duplicate IDs"
     '("overview" "overview-2" "about-trees" "section" "overview-2-2")
-    (forest-heading-ids forest "target"))
+    (heading-ids forest "target"))
   (test-assert "HTML headings emit their indexed anchor IDs"
     (and (string-contains target-html "<h2 id=\"overview\">Overview</h2>")
          (string-contains target-html
@@ -273,20 +273,20 @@
     (and (string-contains target-html "href=\"/source.html#ref-1\">Source</a>")
          (string-contains target-html "href=\"#overview-2\">Overview</a>")))
   (test-assert "Forest references preserve source, target, label and fragment"
-    (and (forest-reference? first-reference)
-         (string=? (forest-reference-source-page-id first-reference) "source")
-         (string=? (forest-reference-source-id first-reference) "ref-1")
-         (string=? (forest-reference-target-page-id first-reference) "target")
-         (string=? (forest-reference-target-fragment first-reference)
+    (and (reference? first-reference)
+         (string=? (reference-source-page-id first-reference) "source")
+         (string=? (reference-source-id first-reference) "ref-1")
+         (string=? (reference-target-page-id first-reference) "target")
+         (string=? (reference-target-fragment first-reference)
                    "overview-2")
-         (string=? (forest-reference-label first-reference)
+         (string=? (reference-label first-reference)
                    "second section")))
   (test-equal "incoming-reference queries can select one heading"
     '("second section")
-    (map forest-reference-label section-references))
+    (map reference-label section-references))
   (test-equal "legacy link queries retain page and fragment targets"
     '("target#overview-2" "target#about-trees")
-    (forest-links forest "source")))
+    (links forest "source")))
 
 (test-error "links to missing heading fragments fail forest analysis" #t
   (make-forest
@@ -318,15 +318,15 @@
        (artifacts
          (render-model
            forest
-           (list (make-forester-html-renderer)
-                 (make-forester-rss-renderer
+           (list (make-html-renderer)
+                 (make-rss-renderer
                    #:site-url "https://notes.example/"
                    #:routes (make-html-routes
                               #:page-path
                               (lambda (id)
                                 (string-append "notes/" id ".html"))))
                  (lambda (value)
-                   (prefix-artifacts "text" (render-forest-text value))))))
+                   (prefix-artifacts "text" (render-text value))))))
        (paths (map artifact-path artifacts))
        (limits-html (artifact-content
                       (find (lambda (artifact)
@@ -369,7 +369,7 @@
     (let* ((custom
              (make-artifact "custom.css" "body { color: black; }"))
            (styled-artifacts
-             (render-forest-html
+             (render-html
                forest
                #:style (make-html-style #:stylesheets (list custom))))
            (stylesheet-paths (map artifact-path (take styled-artifacts 2)))
@@ -408,13 +408,13 @@
   (test-assert "text renderer produces independent text artifacts"
     (string-contains algebra-text "are useful")))
 
-(let* ((html (forest->html (make-forest (make-site (list algebra limits)))))
+(let* ((html (site->html (make-forest (make-site (list algebra limits)))))
        (limits-html (assoc-ref html "limits")))
   (test-assert "pages without mathematics do not load MathJax"
     (not (string-contains limits-html "mathjax"))))
 
 (let* ((forest (make-forest (make-site (list algebra limits))))
-       (html (forest->html forest
+       (html (site->html forest
                #:routes (make-html-routes
                           #:page-path
                           (lambda (id)
@@ -425,7 +425,7 @@
     (string-contains algebra-html "src=\"/assets/mathjax.js\"")))
 
 (let* ((forest (make-forest (make-site (list algebra limits))))
-       (html (forest->html forest #:mathjax-src #f)))
+       (html (site->html forest #:mathjax-src #f)))
   (test-assert "projects can disable browser-side math rendering"
     (not (string-contains (assoc-ref html "algebra") "mathjax"))))
 
@@ -435,18 +435,18 @@
            (evaluate-document
              "@subtree{@title{Inline section}@paragraph{Owned text. @link[\"root\"]{Home}.}}")))
        (forest (make-forest (make-site (list root))))
-       (html (forest->html forest #:mathjax-src #f))
-       (text (forest->text forest))
+       (html (site->html forest #:mathjax-src #f))
+       (text (site->text forest))
        (rss (artifact-content
-              (car (render-forest-rss forest
+              (car (render-rss forest
                                       #:site-url "https://notes.example"))))
        (sitemap (artifact-content
-                  (car (render-forest-sitemap
+                  (car (render-sitemap
                          forest #:site-url "https://notes.example"))))
-       (inline (forest-page forest "unstable-0")))
+       (inline (find-page forest "unstable-0")))
   (test-equal "inline subtrees become independently addressable trees"
     '("root" "unstable-0")
-    (map site-page-id (forest-pages forest)))
+    (map site-page-id (pages forest)))
   (test-equal "subtree title is metadata, not body content"
     "Inline section"
     (site-page-title inline))
@@ -466,7 +466,7 @@
     (string-contains (assoc-ref html "root") "<details open=\"open\">"))
   (test-assert "inline tree title is a native disclosure control"
     (string-contains (assoc-ref html "root") "<summary>"))
-  (test-assert "forest->html embeds the Forester stylesheet"
+  (test-assert "site->html embeds the Forester stylesheet"
     (string-contains (assoc-ref html "root")
                      ".forest-tree-block:hover"))
   (test-assert "tree disclosure markers are hidden while summaries stay clickable"
@@ -497,8 +497,8 @@
          (not (string-contains rss "<title>Inline section</title>"))))
   (test-equal "references inside a subtree belong to that subtree"
     '("unstable-0")
-    (map forest-reference-source-page-id
-         (forest-incoming-references forest "root"))))
+    (map reference-source-page-id
+         (incoming-references forest "root"))))
 
 (test-error "generated subtree IDs cannot collide with file page IDs" #t
   (make-forest
@@ -516,17 +516,17 @@
            (evaluate-document
              "@subtree{@title{Outer} @subtree{@title{Nested}}} @subtree{@title{Sibling}}")))
        (forest (make-forest (make-site (list root))))
-       (nested-html (assoc-ref (forest->html forest #:mathjax-src #f)
+       (nested-html (assoc-ref (site->html forest #:mathjax-src #f)
                                "numbering"))
-       (make-forest-pages
+       (make-pages
          (lambda () (map site-page-id
-                         (forest-pages (make-forest (make-site (list root)))))))
+                         (pages (make-forest (make-site (list root)))))))
        (expected '("numbering" "unstable-0" "unstable-1"
                    "unstable-2")))
   (test-equal "subtree IDs use preorder and sibling source order"
-    expected (make-forest-pages))
+    expected (make-pages))
   (test-equal "subtree IDs reset deterministically for each analysis"
-    expected (make-forest-pages))
+    expected (make-pages))
   (test-equal "nested subtrees each render as an open disclosure"
     3
     (let loop ((start 0) (count 0))
@@ -545,7 +545,7 @@
            (evaluate-document
              "@subtree[#:id \"stable-piece\"]{@title{Named piece} @paragraph{Reusable.}} @transclude[\"stable-piece\"]")))
        (forest (make-forest (make-site (list root))))
-       (html (forest->html forest #:mathjax-src #f))
+       (html (site->html forest #:mathjax-src #f))
        (changed-root
          (make-site-page
            "root" "Root"
@@ -553,18 +553,18 @@
              "@subtree{@title{Earlier anonymous piece}} @subtree[#:id \"stable-piece\"]{@title{Named piece} @paragraph{Reusable.}} @transclude[\"stable-piece\"]")))
        (changed-forest (make-forest (make-site (list changed-root)))))
   (test-assert "subtrees can use an author-chosen address"
-    (forest-page forest "stable-piece"))
+    (find-page forest "stable-piece"))
   (test-assert "named subtrees receive a standalone HTML route"
     (string-contains (assoc-ref html "stable-piece") "Reusable."))
   (test-equal "explicit subtree addresses are included in composition data"
     '("stable-piece")
-    (map forest-transclusion-target-tree-id
-         (forest-outgoing-transclusions forest "root")))
+    (map composition:transclusion-target-tree-id
+         (outgoing-transclusions forest "root")))
   (test-assert "explicit subtree addresses survive insertion of anonymous trees"
-    (forest-page changed-forest "stable-piece"))
+    (find-page changed-forest "stable-piece"))
   (test-equal "anonymous subtree IDs remain generated around named trees"
     '("root" "unstable-0" "stable-piece")
-    (map site-page-id (forest-pages changed-forest))))
+    (map site-page-id (pages changed-forest))))
 
 (test-error "explicit subtree IDs cannot collide with file page IDs" #t
   (make-forest
@@ -606,24 +606,24 @@
              "Before. @transclude[\"reusable\"] After.")
            "trees/host.grv"))
        (forest (make-forest (make-site (list host target destination))))
-       (html (forest->html forest #:mathjax-src #f))
-       (text (forest->text forest))
-       (transclusions (forest-outgoing-transclusions forest "host")))
+       (html (site->html forest #:mathjax-src #f))
+       (text (site->text forest))
+       (transclusions (outgoing-transclusions forest "host")))
   (test-equal "transclusions are indexed as a distinct tree relation"
     '("reusable")
-    (map forest-transclusion-target-tree-id transclusions))
+       (map composition:transclusion-target-tree-id transclusions))
   (test-equal "transclusion records identify their source occurrence"
     '("transclude-1")
-    (map forest-transclusion-source-id transclusions))
+    (map composition:transclusion-source-id transclusions))
   (test-equal "incoming transclusions return every occurrence"
     1
-    (length (forest-incoming-transclusions forest "reusable")))
+    (length (incoming-transclusions forest "reusable")))
   (test-equal "incoming transclusions map to their host trees"
     '("host")
-    (map site-page-id (forest-transcluding-pages forest "reusable")))
+    (map site-page-id (transcluding-pages forest "reusable")))
   (test-equal "transclusions do not become ordinary link references"
     '()
-    (forest-outgoing-references forest "host"))
+    (outgoing-references forest "host"))
   (test-assert "HTML inserts the target content at the call site"
     (let ((host-html (assoc-ref html "host")))
       (and (string-contains host-html
@@ -639,12 +639,12 @@
          (string-contains (assoc-ref text "host") "Shared content.")))
   (test-assert "host artifacts depend on transcluded tree sources"
     (member "trees/reusable.grv"
-            (forest-page-source-paths forest host)
+            (page-source-paths forest host)
             string=?))
   (test-equal "links in transcluded content remain owned by the source tree"
     '("reusable")
-    (map forest-reference-source-page-id
-         (forest-incoming-references forest "destination")))
+    (map reference-source-page-id
+         (incoming-references forest "destination")))
   (test-assert "transcluded HTML links keep their resolved destination"
     (string-contains (assoc-ref html "host")
                      "href=\"/destination.html\""))
@@ -662,7 +662,7 @@
            (evaluate-document "@transclude[\"unstable-0\"]")
            "trees/host.grv"))
        (forest (make-forest (make-site (list source host))))
-       (host-html (assoc-ref (forest->html forest #:mathjax-src #f) "host")))
+       (host-html (assoc-ref (site->html forest #:mathjax-src #f) "host")))
   (test-assert "transclusions display generated IDs in local-ID form"
     (and (string-contains host-html "data-tree-id=\"unstable-0\"")
          (string-contains host-html "href=\"/unstable-0.html\"")
@@ -677,7 +677,7 @@
            "repeat-host" "Repeated host"
            (evaluate-document
              "@transclude[\"repeat-target\"] @transclude[\"repeat-target\"]")))
-       (html (assoc-ref (forest->html
+       (html (assoc-ref (site->html
                           (make-forest (make-site (list host target)))
                           #:mathjax-src #f)
                         "repeat-host")))
@@ -783,7 +783,7 @@
                (make-content-element 'code-block '("(display \"hi\")"))))))
        (feed
          (artifact-content
-           (car (render-forest-rss
+           (car (render-rss
                   (make-forest (make-site (list page)))
                   #:site-url "https://notes.example")))))
   (test-assert "RSS fallback descriptions omit text-target markup"
@@ -801,10 +801,10 @@
                  (lambda (id) (string-append "notes/" id ".html"))
                  #:url-prefix "/published/"))
        (feed (artifact-content
-               (car (render-forest-rss
+               (car (render-rss
                       forest #:site-url "https://notes.example" #:routes routes))))
        (sitemap (artifact-content
-                  (car (render-forest-sitemap
+                  (car (render-sitemap
                          forest #:site-url "https://notes.example"
                          #:routes routes)))))
   (test-assert "RSS absolute links include the HTML URL prefix"
@@ -827,7 +827,7 @@
                            #:metadata '((published . "2025-01-01")))))
        (feed
          (artifact-content
-           (car (render-forest-rss
+           (car (render-rss
                   (make-forest (make-site pages))
                   #:site-url "https://notes.example"))))
        (newer-position (string-contains feed "<title>Newer</title>"))
@@ -850,7 +850,7 @@
                      "notes/plain.grv"))
              #:sources '("notes/a&b.grv" "notes/plain.grv"))))
        (artifact
-         (car (render-forest-sitemap
+         (car (render-sitemap
                 forest
                 #:site-url "https://notes.example/"
                 #:sitemap-path "meta/sitemap.xml"
@@ -879,7 +879,7 @@
            content
            "<loc>https://notes.example/notes/plain.html</loc>\n    </url>")))
   (test-error "sitemap rejects invalid updated dates" #t
-    (render-forest-sitemap
+    (render-sitemap
       (make-forest
         (make-site
           (list (make-site-page
@@ -910,7 +910,7 @@
            #:index-path "index.txt"
            #:page-path
            (lambda (id) (string-append "notes/" id ".md"))))
-       (artifacts (render-forest-text forest #:routes routes))
+       (artifacts (render-text forest #:routes routes))
        (index (artifact-content (car artifacts)))
        (alpha (artifact-content (cadr artifacts))))
   (test-equal "text routes configure the index and page output paths"

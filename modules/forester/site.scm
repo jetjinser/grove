@@ -5,47 +5,44 @@
 (define-module (forester site)
   #:use-module (grove ir)
   #:use-module (grove site)
-  #:use-module (forester composition)
+  #:use-module ((forester composition) #:prefix composition:)
   #:use-module (forester relations)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
   #:export (forest?
             make-forest
-            forest-site
-            forest-pages
-            forest-page
-            forest-links
-            forest-backlinks
-            forest-common-backlinks
-            forest-reachable-pages
-            forest-page-id-from-link
-            forest-fragment-from-link
-            forest-heading-ids
-            forest-reference?
-            forest-reference-source-page-id
-            forest-reference-source-id
-            forest-reference-target-page-id
-            forest-reference-target-fragment
-            forest-reference-label
-            forest-heading?
-            forest-heading-id
-            forest-heading-label
-            forest-headings
-            forest-outgoing-references
-            forest-incoming-references
-            forest-subtree-definitions
-            forest-outgoing-transclusions
-            forest-incoming-transclusions
-            forest-transcluding-pages
-            forest-source-paths
-            forest-module-paths
-            forest-page-source-paths)
-  #:re-export (<forest-transclusion>
-               forest-transclusion?
-               forest-transclusion-source-tree-id
-               forest-transclusion-source-id
-               forest-transclusion-target-tree-id))
+            site
+            pages
+            topic-relation
+            topic-pages
+            find-page
+            links
+            backlinks
+            common-backlinks
+            reachable-pages
+            page-id-from-link
+            fragment-from-link
+            heading-ids
+            reference?
+            reference-source-page-id
+            reference-source-id
+            reference-target-page-id
+            reference-target-fragment
+            reference-label
+            heading?
+            heading-id
+            heading-label
+            headings
+            outgoing-references
+            incoming-references
+            subtree-definitions
+            outgoing-transclusions
+            incoming-transclusions
+            transcluding-pages
+            source-paths
+            module-paths
+            page-source-paths))
 
 (define (link-elements content)
   (cond
@@ -110,7 +107,7 @@
   (let ((edges
           (map (lambda (page)
                  (cons (site-page-id page)
-                       (forest-composition-target-ids
+                       (composition:target-ids
                          composition (site-page-id page))))
                pages)))
     (letrec ((visit
@@ -216,10 +213,10 @@
           (cons page-id fragment))
         (cons target #f))))
 
-(define (forest-page-id-from-link target)
+(define (page-id-from-link target)
   (car (split-link-target target)))
 
-(define (forest-fragment-from-link target)
+(define (fragment-from-link target)
   (cdr (split-link-target target)))
 
 (define (content->plain-text content)
@@ -280,32 +277,72 @@
                            candidate)))))
           (loop (cdr headings) (cons id used) (cons id result))))))
 
-(define-record-type <forest-reference>
-  (%make-forest-reference source-page-id source-id target-page-id
+(define-record-type <reference>
+  (%make-reference source-page-id source-id target-page-id
                           target-fragment label)
-  forest-reference?
-  (source-page-id forest-reference-source-page-id)
-  (source-id forest-reference-source-id)
-  (target-page-id forest-reference-target-page-id)
-  (target-fragment forest-reference-target-fragment)
-  (label forest-reference-label))
+  reference?
+  (source-page-id reference-source-page-id)
+  (source-id reference-source-id)
+  (target-page-id reference-target-page-id)
+  (target-fragment reference-target-fragment)
+  (label reference-label))
 
-(define-record-type <forest-heading>
-  (%make-forest-heading id label)
-  forest-heading?
-  (id forest-heading-id)
-  (label forest-heading-label))
+(define-record-type <heading>
+  (%make-heading id label)
+  heading?
+  (id heading-id)
+  (label heading-label))
 
 (define-record-type <forest>
   (%make-forest site pages reference-index heading-index reference-relation
-                composition)
+                composition topic-relation)
   forest?
-  (site forest-site)
-  (pages forest-pages)
-  (reference-index forest-reference-index)
-  (heading-index forest-heading-index)
-  (reference-relation forest-reference-relation)
-  (composition forest-composition))
+  (site site)
+  (pages pages)
+  (reference-index reference-index)
+  (heading-index heading-index)
+  (reference-relation reference-relation)
+  (composition composition)
+  (topic-relation topic-relation))
+
+(define (page-topics page)
+  (let ((taxon (assq-ref (site-page-metadata page) 'taxon)))
+    (append (if taxon (list (cons 'taxon taxon)) '())
+            (map (lambda (tag) (cons 'tag tag))
+                 (or (assq-ref (site-page-metadata page) 'tags) '())))))
+
+(define* (topic-pages forest topic-id #:optional kind)
+  (let ((page-ids
+          (topic-page-ids (topic-relation forest) topic-id kind)))
+    (filter (lambda (page)
+              (member (site-page-id page) page-ids string=?))
+            (pages forest))))
+
+(define (make-page-topic-rows pages)
+  (let ((rows
+          (append-map
+            (lambda (page)
+              (map (lambda (entry)
+                     (let ((kind (car entry))
+                           (id (cadr entry))
+                           (label (cddr entry)))
+                       (unless (and (string? id) (not (string-null? id))
+                                    (string? label) (not (string-null? label)))
+                         (error "invalid topic metadata on page"
+                                (site-page-id page) entry))
+                       (list kind id label (site-page-id page))))
+                   (page-topics page)))
+            pages)))
+    (for-each
+      (lambda (row)
+        (let ((same-id (find (lambda (candidate)
+                               (string=? (cadr candidate) (cadr row)))
+                             rows)))
+          (unless (string=? (caddr row) (caddr same-id))
+            (error "inconsistent labels for Forester topic"
+                   (cadr row) (caddr same-id) (caddr row)))))
+      rows)
+    (make-topic-relation rows)))
 
 (define (make-forest site)
   (unless (site? site)
@@ -326,7 +363,7 @@
                     (cons
                       (site-page-id page)
                       (map (lambda (element id)
-                             (%make-forest-heading
+                             (%make-heading
                                id (content->plain-text element)))
                            elements ids))))
                 pages))
@@ -345,8 +382,8 @@
                        (let* ((target
                                 (content-element-property element 'target))
                               (target-page-id
-                                (forest-page-id-from-link target))
-                              (fragment (forest-fragment-from-link target))
+                                (page-id-from-link target))
+                              (fragment (fragment-from-link target))
                               (target-page
                                 (find
                                   (lambda (page)
@@ -364,7 +401,7 @@
                          (when (and fragment
                                     (not (member
                                            fragment
-                                           (map forest-heading-id
+                                           (map heading-id
                                                 (cdr (assoc target-page-id
                                                             heading-index)))
                                            string=?)))
@@ -375,7 +412,7 @@
                                (or (site-page-source source-page)
                                    "<unknown source>")
                                target)))
-                         (%make-forest-reference
+                         (%make-reference
                            source-id
                            (format #f "ref-~a" index)
                            target-page-id
@@ -417,30 +454,31 @@
                              (format #f
                                "unresolved Forester transclusion ~a in tree ~a (~a): target ~a"
                                transclusion-id source-id source-path target-id)))
-                         (make-forest-transclusion
+                         (composition:make-transclusion
                            source-id transclusion-id target-id)))
                      elements
                      (iota (length elements) 1)))))
              pages))
          (reference-relation
-           (make-forest-reference-relation
+           (make-reference-relation
              (append-map
                (lambda (entry)
                  (map (lambda (reference)
                         (list
-                          (forest-reference-source-page-id reference)
-                          (forest-reference-source-id reference)
-                          (forest-reference-target-page-id reference)
-                          (forest-reference-target-fragment reference)
-                          (forest-reference-label reference)))
+                          (reference-source-page-id reference)
+                          (reference-source-id reference)
+                          (reference-target-page-id reference)
+                          (reference-target-fragment reference)
+                          (reference-label reference)))
                       (cdr entry)))
                reference-index)))
+         (topic-relation (make-page-topic-rows pages))
          (composition
-           (make-forest-composition
+           (composition:make-composition
              (append-map
                (lambda (page)
                  (map (lambda (element)
-                        (make-subtree-definition
+                        (composition:make-subtree-definition
                           (site-page-id page)
                           (content-element-property element 'tree-id)))
                       (direct-subtree-elements
@@ -449,153 +487,153 @@
              (append-map cdr transclusion-index)))
          (_ (validate-composition-cycles! pages composition)))
     (%make-forest site pages reference-index heading-index
-                  reference-relation composition)))
+                  reference-relation composition topic-relation)))
 
-(define (forest-page forest id)
+(define (find-page forest id)
   (or (find (lambda (page) (equal? id (site-page-id page)))
-            (forest-pages forest))
+            (pages forest))
       (error "unknown forest page" id)))
 
-(define (forest-subtree-definitions forest)
+(define (subtree-definitions forest)
   (map (lambda (definition)
-         (list (subtree-definition-parent definition)
-               (subtree-definition-child definition)))
-       (forest-composition-subtree-definitions
-         (forest-composition forest))))
+       (list (composition:subtree-definition-parent definition)
+               (composition:subtree-definition-child definition)))
+       (composition:subtree-definitions
+         (composition forest))))
 
-(define (forest-heading-ids forest id)
-  (map forest-heading-id (forest-headings forest id)))
+(define (heading-ids forest id)
+  (map heading-id (headings forest id)))
 
-(define (forest-headings forest id)
-  (let ((entry (assoc id (forest-heading-index forest))))
+(define (headings forest id)
+  (let ((entry (assoc id (heading-index forest))))
     (unless entry
       (error "unknown forest page" id))
     (cdr entry)))
 
-(define (forest-links forest id)
+(define (links forest id)
   (map (lambda (reference)
-         (let ((fragment (forest-reference-target-fragment reference)))
-           (string-append (forest-reference-target-page-id reference)
+         (let ((fragment (reference-target-fragment reference)))
+           (string-append (reference-target-page-id reference)
                           (if fragment (string-append "#" fragment) ""))))
-       (forest-outgoing-references forest id)))
+       (outgoing-references forest id)))
 
-(define (forest-outgoing-references forest id)
-  (let ((entry (assoc id (forest-reference-index forest))))
+(define (outgoing-references forest id)
+  (let ((entry (assoc id (reference-index forest))))
     (unless entry
       (error "unknown forest page" id))
     (let ((reference-ids
-            (forest-outgoing-reference-ids
-              (forest-reference-relation forest) id)))
+            (outgoing-reference-ids
+              (reference-relation forest) id)))
       (filter (lambda (reference)
-                (member (forest-reference-source-id reference)
+                (member (reference-source-id reference)
                         reference-ids equal?))
               (cdr entry)))))
 
-(define (forest-outgoing-transclusions forest id)
-  (unless (assoc id (forest-heading-index forest))
+(define (outgoing-transclusions forest id)
+  (unless (assoc id (heading-index forest))
     (error "unknown forest page" id))
-  (forest-composition-outgoing-transclusions
-    (forest-composition forest) id))
+  (composition:outgoing-transclusions
+    (composition forest) id))
 
-(define (forest-incoming-transclusions forest id)
-  (unless (assoc id (forest-heading-index forest))
+(define (incoming-transclusions forest id)
+  (unless (assoc id (heading-index forest))
     (error "unknown forest page" id))
-  (forest-composition-incoming-transclusions
-    (forest-composition forest) id))
+  (composition:incoming-transclusions
+    (composition forest) id))
 
-(define (forest-transcluding-pages forest id)
+(define (transcluding-pages forest id)
   (let ((source-ids
           (delete-duplicates
-            (map forest-transclusion-source-tree-id
-                 (forest-incoming-transclusions forest id))
+            (map composition:transclusion-source-tree-id
+                 (incoming-transclusions forest id))
             equal?)))
     (filter (lambda (page)
               (member (site-page-id page) source-ids equal?))
-            (forest-pages forest))))
+            (pages forest))))
 
-(define* (forest-incoming-references forest id #:optional fragment)
-  (unless (assoc id (forest-heading-index forest))
+(define* (incoming-references forest id #:optional fragment)
+  (unless (assoc id (heading-index forest))
     (error "unknown forest page" id))
   (when (and fragment
-             (not (member fragment (forest-heading-ids forest id) string=?)))
+             (not (member fragment (heading-ids forest id) string=?)))
     (error "unknown forest heading fragment" id fragment))
-  (let* ((keys (forest-incoming-reference-keys
-                 (forest-reference-relation forest) id fragment))
+  (let* ((keys (incoming-reference-keys
+                 (reference-relation forest) id fragment))
          (key? (lambda (reference)
-                 (member (list (forest-reference-source-page-id reference)
-                               (forest-reference-source-id reference))
+                 (member (list (reference-source-page-id reference)
+                               (reference-source-id reference))
                          keys equal?))))
-    (filter key? (append-map cdr (forest-reference-index forest)))))
+    (filter key? (append-map cdr (reference-index forest)))))
 
-(define (forest-backlinks forest id)
-  (unless (assoc id (forest-heading-index forest))
+(define (backlinks forest id)
+  (unless (assoc id (heading-index forest))
     (error "unknown forest page" id))
   (let ((source-ids
-          (forest-backlink-page-ids (forest-reference-relation forest) id)))
+          (backlink-page-ids (reference-relation forest) id)))
     (filter (lambda (page) (member (site-page-id page) source-ids equal?))
-            (forest-pages forest))))
+            (pages forest))))
 
-(define (forest-common-backlinks forest left-id right-id)
+(define (common-backlinks forest left-id right-id)
   (for-each
     (lambda (id)
-      (unless (assoc id (forest-heading-index forest))
+      (unless (assoc id (heading-index forest))
         (error "unknown forest page" id)))
     (list left-id right-id))
   (let ((source-ids
-          (forest-common-backlink-page-ids
-            (forest-reference-relation forest) left-id right-id)))
+          (common-backlink-page-ids
+            (reference-relation forest) left-id right-id)))
     (filter (lambda (page) (member (site-page-id page) source-ids equal?))
-            (forest-pages forest))))
+            (pages forest))))
 
-(define (forest-reachable-pages forest id)
-  (unless (assoc id (forest-heading-index forest))
+(define (reachable-pages forest id)
+  (unless (assoc id (heading-index forest))
     (error "unknown forest page" id))
   (let ((reachable-ids
-          (forest-reachable-page-ids (forest-reference-relation forest) id)))
+          (reachable-page-ids (reference-relation forest) id)))
     (filter (lambda (page)
               (member (site-page-id page) reachable-ids equal?))
-            (forest-pages forest))))
+            (pages forest))))
 
-(define (forest-source-paths forest)
-  (let ((site (forest-site forest)))
+(define (source-paths forest)
+  (let ((site (site forest)))
     (delete-duplicates
       (append (site-sources site)
               (filter-map site-page-source (site-pages site)))
       string=?)))
 
-(define (forest-module-paths forest)
-  (let* ((site (forest-site forest))
+(define (module-paths forest)
+  (let* ((site (site forest))
          (page-paths (filter-map site-page-source (site-pages site))))
     (filter (lambda (path) (not (member path page-paths string=?)))
             (site-sources site))))
 
-(define (forest-included-tree-ids forest start-id)
+(define (included-tree-ids forest start-id)
   (let loop ((pending (list start-id)) (seen '()))
     (if (null? pending)
         seen
         (let ((id (car pending)))
           (if (member id seen equal?)
               (loop (cdr pending) seen)
-              (let ((page (forest-page forest id)))
+              (let ((page (find-page forest id)))
                 (loop
                   (append
             (map (lambda (element)
                    (content-element-property element 'target))
                  (transclusion-elements
-                   (site-page-document (forest-page forest id))))
+                   (site-page-document (find-page forest id))))
                     (map (lambda (element)
                            (content-element-property element 'tree-id))
                          (subtree-elements (site-page-document page)))
                     (cdr pending))
                   (cons id seen))))))))
 
-(define (forest-page-source-paths forest page)
+(define (page-source-paths forest page)
   (delete-duplicates
-    (append (forest-module-paths forest)
+    (append (module-paths forest)
             (filter-map
               (lambda (id)
-                (site-page-source (forest-page forest id)))
-              (forest-included-tree-ids forest (site-page-id page)))
+                (site-page-source (find-page forest id)))
+              (included-tree-ids forest (site-page-id page)))
             (filter-map site-page-source
-                        (forest-backlinks forest (site-page-id page))))
+                        (backlinks forest (site-page-id page))))
     string=?))

@@ -14,8 +14,8 @@
   #:use-module (srfi srfi-19)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (render-forest-rss
-            make-forester-rss-renderer))
+  #:export (render-rss
+            make-rss-renderer))
 
 (define (page-url base routes page)
   (web-absolute-route-url base (html-page-url routes (site-page-id page))))
@@ -73,7 +73,7 @@
 (define (channel-description site)
   (or (site-description site) (site-title site)))
 
-(define* (render-forest-rss forest #:key site-url
+(define* (render-rss forest #:key site-url
                             (feed-path "feed.xml")
                             (routes (make-html-routes)))
   (unless (forest? forest)
@@ -86,7 +86,7 @@
   (unless (html-routes? routes)
     (error "Forester RSS renderer requires HTML routes" routes))
   (let* ((base (web-base-url site-url))
-         (site (forest-site forest))
+         (site (site forest))
          (home-url (web-absolute-route-url base (html-index-url routes)))
          (items
            (map (lambda (page)
@@ -122,14 +122,14 @@
              (if (null? items) "" (string-append (string-join items "\n") "\n"))
              "  </channel>\n"
              "</rss>\n")))
-    (list (make-artifact feed-path content (forest-source-paths forest)))))
+    (list (make-artifact feed-path content (source-paths forest)))))
 
-(define* (make-forester-rss-renderer #:key site-url
+(define* (make-rss-renderer #:key site-url
                                      (feed-path "feed.xml")
                                      (routes (make-html-routes))
                                      (cache-key #f))
   (let ((render (lambda (forest)
-                  (render-forest-rss forest
+                  (render-rss forest
                                      #:site-url site-url
                                      #:feed-path feed-path
                                      #:routes routes))))

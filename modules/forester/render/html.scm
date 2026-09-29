@@ -4,6 +4,7 @@
 
 (define-module (forester render html)
   #:use-module (grove build)
+  #:use-module ((forester composition) #:prefix composition:)
   #:use-module (forester site)
   #:use-module (grove ir)
   #:use-module (grove output)
@@ -11,30 +12,30 @@
   #:use-module (grove render html routes)
   #:use-module (grove site)
   #:use-module (grove style html)
-  #:use-module (forester style html)
+  #:use-module ((forester style html) #:prefix forester:)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (forest->html
-            render-forest-html
-            make-forester-html-renderer))
+  #:export (site->html
+            render-html
+            make-html-renderer))
 
 (define (link-url routes reference)
   (string-append
     (html-page-url routes
-                   (forest-reference-target-page-id reference))
-    (if (forest-reference-target-fragment reference)
+                   (reference-target-page-id reference))
+    (if (reference-target-fragment reference)
         (string-append "#"
-                       (forest-reference-target-fragment reference))
+                       (reference-target-fragment reference))
         "")))
 
 (define (reference-source-url routes reference)
   (string-append
-    (html-page-url routes (forest-reference-source-page-id reference))
-    "#" (forest-reference-source-id reference)))
+    (html-page-url routes (reference-source-page-id reference))
+    "#" (reference-source-id reference)))
 
 (define* (page-content-handlers forest routes page #:optional (anchor-prefix ""))
-  (let ((heading-ids (forest-heading-ids forest (site-page-id page)))
-        (references (forest-outgoing-references
+  (let ((heading-ids (heading-ids forest (site-page-id page)))
+        (references (outgoing-references
                       forest (site-page-id page))))
     `((image . ,(lambda (element children)
                  (let* ((source (content-element-property element 'source))
@@ -51,7 +52,7 @@
                  (let ((reference (car references)))
                    (set! references (cdr references))
                    `(a (@ (id ,(string-append anchor-prefix
-                                             (forest-reference-source-id reference)))
+                                             (reference-source-id reference)))
                          (href ,(link-url routes reference)))
                      ,@children))))
       (heading . ,(lambda (_ children)
@@ -65,7 +66,7 @@
 
 (define* (subtree-content-sxml forest routes page #:optional (anchor-prefix ""))
   (let ((transclusions
-          (forest-outgoing-transclusions forest (site-page-id page))))
+          (outgoing-transclusions forest (site-page-id page))))
    (content->sxml
     (site-page-document page)
     #:handlers (page-content-handlers
@@ -74,7 +75,7 @@
     #:lazy-handlers
     (list (cons 'subtree (lambda (element _render)
                     (let* ((id (content-element-property element 'tree-id))
-                           (target (forest-page forest id)))
+                           (target (find-page forest id)))
                       (tree-block-sxml
                         "inline-subtree" id (site-page-title target)
                         (html-page-url routes id)
@@ -84,7 +85,7 @@
           (cons 'transclude (lambda (element _render)
                        (let* ((id (content-element-property element 'target))
                               (transclusion (car transclusions))
-                              (target (forest-page forest id)))
+                              (target (find-page forest id)))
                          (set! transclusions (cdr transclusions))
                          (tree-block-sxml
                            "transclusion" id (site-page-title target)
@@ -92,7 +93,7 @@
                            (subtree-content-sxml
                              forest routes target
                              (string-append anchor-prefix "transcluded-"
-                                            (forest-transclusion-source-id
+                                            (composition:transclusion-source-id
                                               transclusion)
                                             "--"))))))))))
 
@@ -120,19 +121,19 @@
 
 (define (backlink-groups forest page)
   (let* ((page-id (site-page-id page))
-         (incoming (forest-incoming-references forest page-id))
+         (incoming (incoming-references forest page-id))
          (page-references
            (filter (lambda (reference)
-                     (not (forest-reference-target-fragment reference)))
+                     (not (reference-target-fragment reference)))
                    incoming))
          (heading-groups
            (filter-map
              (lambda (heading)
-               (let* ((fragment (forest-heading-id heading))
+               (let* ((fragment (heading-id heading))
                       (references
-                        (forest-incoming-references forest page-id fragment)))
+                        (incoming-references forest page-id fragment)))
                  (and (pair? references) (cons fragment references))))
-             (forest-headings forest page-id))))
+             (headings forest page-id))))
     (append (if (null? page-references) '() (list (cons #f page-references)))
             heading-groups)))
 
@@ -140,25 +141,25 @@
   (let ((source
           (find (lambda (candidate)
                   (equal? (site-page-id candidate)
-                          (forest-reference-source-page-id reference)))
-                (forest-pages forest))))
+                          (reference-source-page-id reference)))
+                (pages forest))))
     `(li
        (a (@ (href ,(reference-source-url routes reference)))
           ,(site-page-title source))
        " — "
-       ,(forest-reference-label reference))))
+       ,(reference-label reference))))
 
 (define (backlink-group-sxml forest page routes group)
   (let* ((fragment (car group))
          (target-heading
            (and fragment
                 (find (lambda (heading)
-                        (string=? fragment (forest-heading-id heading)))
-                      (forest-headings forest (site-page-id page)))))
+                        (string=? fragment (heading-id heading)))
+                      (headings forest (site-page-id page)))))
          (references (cdr group))
          (label (if target-heading
                     `(a (@ (href ,(string-append "#" fragment)))
-                        ,(forest-heading-label target-heading))
+                        ,(heading-label target-heading))
                     "This page")))
     `(li ,label
          (ul ,@(map (lambda (reference)
@@ -176,7 +177,7 @@
                                  groups)))))))
 
 (define (table-of-contents-sxml forest page)
-  (let ((headings (forest-headings forest (site-page-id page))))
+  (let ((headings (headings forest (site-page-id page))))
     (if (null? headings)
         '()
         (list
@@ -186,8 +187,8 @@
                ,@(map (lambda (heading)
                         `(li
                            (a (@ (href ,(string-append
-                                          "#" (forest-heading-id heading))))
-                              ,(forest-heading-label heading))))
+                                          "#" (heading-id heading))))
+                              ,(heading-label heading))))
                       headings)))))))
 
 (define default-mathjax-src
@@ -265,7 +266,7 @@
 
 (define* (index-html forest style routes mathjax-src
                      #:optional (inline-stylesheets? #f))
-  (let ((site (forest-site forest)))
+  (let ((site (site forest)))
     (sxml->html
       (html-document
         (site-title site)
@@ -289,7 +290,7 @@
 
 (define* (page-html forest page style routes mathjax-src
                     #:optional (inline-stylesheets? #f))
-  (let* ((site (forest-site forest))
+  (let* ((site (site forest))
          (body (subtree-content-sxml forest routes page))
          (article (append body (backlinks-sxml forest page routes))))
     (sxml->html
@@ -317,11 +318,11 @@
                    (any (lambda (path) (member path sources string=?))
                         changed))))))
 
-(define (render-forest-html-changed forest style routes mathjax-src
+(define (render-html-changed forest style routes mathjax-src
                                     changed old-artifacts)
   (check-html-input forest style routes mathjax-src)
-  (let* ((site (forest-site forest))
-         (index-sources (forest-source-paths forest))
+  (let* ((site (site forest))
+         (index-sources (source-paths forest))
          (index-path (html-index-path routes))
          (old-index (find-artifact old-artifacts index-path))
          (index-current
@@ -335,7 +336,7 @@
          (page-artifacts
            (map (lambda (page)
                   (let* ((path (html-page-path routes (site-page-id page)))
-                         (sources (forest-page-source-paths forest page))
+                         (sources (page-source-paths forest page))
                          (old (find-artifact old-artifacts path))
                          (current (make-artifact path "" sources)))
                     (if (artifact-current? current old changed)
@@ -344,7 +345,7 @@
                           path
                           (page-html forest page style routes mathjax-src)
                           sources))))
-                (forest-pages forest))))
+                (pages forest))))
     (append (html-style-artifacts style)
             (cons index-artifact page-artifacts))))
 
@@ -363,58 +364,58 @@
     (error "MathJax source must be a URL, relative artifact path, or #f"
            mathjax-src)))
 
-(define* (forest->html forest #:key
+(define* (site->html forest #:key
                        (style (make-html-style))
                        (routes (make-html-routes))
                        (mathjax-src default-mathjax-src))
-  (set! style (make-forester-html-style #:style style))
+  (set! style (forester:make-html-style #:style style))
   (check-html-input forest style routes mathjax-src)
-  (let ((site (forest-site forest)))
-    (when (member "index" (map site-page-id (forest-pages forest)))
+  (let ((site (site forest)))
+    (when (member "index" (map site-page-id (pages forest)))
       (error "HTML alist key conflicts with forest page" "index"))
     (cons
       (cons "index" (index-html forest style routes mathjax-src #t))
       (map (lambda (page)
              (cons (site-page-id page)
                    (page-html forest page style routes mathjax-src #t)))
-           (forest-pages forest)))))
+           (pages forest)))))
 
-(define* (render-forest-html forest #:key
+(define* (render-html forest #:key
                              (style (make-html-style))
                              (routes (make-html-routes))
                              (mathjax-src default-mathjax-src))
-  (set! style (make-forester-html-style #:style style))
+  (set! style (forester:make-html-style #:style style))
   (check-html-input forest style routes mathjax-src)
   (append
     (html-style-artifacts style)
     (cons
       (make-artifact (html-index-path routes)
                      (index-html forest style routes mathjax-src)
-                     (forest-source-paths forest))
+                     (source-paths forest))
       (map (lambda (page)
              (make-artifact
                (html-page-path routes (site-page-id page))
                (page-html forest page style routes mathjax-src)
-               (forest-page-source-paths forest page)))
-           (forest-pages forest)))))
+               (page-source-paths forest page)))
+           (pages forest)))))
 
-(define* (make-forester-html-renderer #:key
+(define* (make-html-renderer #:key
                                       (style (make-html-style))
                                       (routes (make-html-routes))
                                       (mathjax-src default-mathjax-src)
                                       (cache-key #f))
-  (let* ((style (make-forester-html-style #:style style))
+  (let* ((style (forester:make-html-style #:style style))
          (render (lambda (forest)
-                  (render-forest-html forest
+                  (render-html forest
                                       #:style style
                                       #:routes routes
                                       #:mathjax-src mathjax-src))))
     (if cache-key
         (make-cached-renderer
           render
-          #:cache-key (string-append "forester-html-v11:" cache-key)
+          #:cache-key (string-append "forester-html-v12:" cache-key)
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
-            (render-forest-html-changed forest style routes mathjax-src
+            (render-html-changed forest style routes mathjax-src
                                         changed old-artifacts)))
         render)))

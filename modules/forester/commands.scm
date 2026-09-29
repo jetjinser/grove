@@ -6,7 +6,7 @@
   #:use-module (grove ir)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (title link image subtree transclude summary published updated))
+  #:export (title link image tag taxon subtree transclude summary published updated))
 
 (define (title . body)
   (make-content-element 'title body))
@@ -30,6 +30,31 @@
     (error "Forester image source must be a non-empty string" source))
   (make-content-element 'image alternative-text
                         #:properties `((source . ,source))))
+
+(define (valid-topic-id? id)
+  (and (string? id)
+       (> (string-length id) 0)
+       (let ((first (string-ref id 0))
+             (last (string-ref id (- (string-length id) 1))))
+         (and (or (char-alphabetic? first) (char-numeric? first))
+              (or (char-alphabetic? last) (char-numeric? last))))
+       (every (lambda (character)
+                (or (char-alphabetic? character)
+                    (char-numeric? character)
+                    (char=? character #\-)))
+              (string->list id))))
+
+(define* (topic-element kind id label)
+  (unless (valid-topic-id? id)
+    (error "Forester topic ID must contain only letters, digits, and hyphens, and begin/end with a letter or digit"
+           id))
+  (make-content-element kind label #:properties `((id . ,id))))
+
+(define* (tag id . label)
+  (topic-element 'tag id (if (null? label) (list id) label)))
+
+(define* (taxon id . label)
+  (topic-element 'taxon id (if (null? label) (list id) label)))
 
 (define subtree-id-unspecified (list 'subtree-id-unspecified))
 

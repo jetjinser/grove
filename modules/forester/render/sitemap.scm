@@ -12,8 +12,8 @@
   #:use-module (grove site)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (render-forest-sitemap
-            make-forester-sitemap-renderer))
+  #:export (render-sitemap
+            make-sitemap-renderer))
 
 (define (page-lastmod page)
   (let ((updated (assq-ref (site-page-metadata page) 'updated)))
@@ -22,7 +22,7 @@
              (site-page-id page) updated))
     updated))
 
-(define* (render-forest-sitemap forest #:key site-url
+(define* (render-sitemap forest #:key site-url
                                 (sitemap-path "sitemap.xml")
                                 (routes (make-html-routes)))
   (unless (forest? forest)
@@ -55,21 +55,21 @@
                                            "</lastmod>\n")
                             "")
                         "    </url>")))
-                  (forest-pages forest))))
+                  (pages forest))))
          (content
            (string-append
              "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
              "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n"
              (if (null? urls) "" (string-append (string-join urls "\n") "\n"))
              "</urlset>\n")))
-    (list (make-artifact sitemap-path content (forest-source-paths forest)))))
+    (list (make-artifact sitemap-path content (source-paths forest)))))
 
-(define* (make-forester-sitemap-renderer #:key site-url
+(define* (make-sitemap-renderer #:key site-url
                                          (sitemap-path "sitemap.xml")
                                          (routes (make-html-routes))
                                          (cache-key #f))
   (let ((render (lambda (forest)
-                  (render-forest-sitemap forest
+                  (render-sitemap forest
                                          #:site-url site-url
                                          #:sitemap-path sitemap-path
                                          #:routes routes))))

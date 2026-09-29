@@ -9,6 +9,7 @@
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64)
   #:use-module (forester input scribble)
+  #:use-module (forester relations)
   #:use-module (forester render html)
   #:use-module (forester render rss)
   #:use-module (forester render sitemap)
@@ -19,6 +20,7 @@
   #:use-module (grove output)
   #:use-module (grove project)
   #:use-module (grove project site)
+  #:use-module (grove relation dsl)
   #:use-module (grove render html routes)
   #:use-module (grove site))
 
@@ -53,7 +55,7 @@
     (mkdir mathematics-directory)
     (write-test-file
       (string-append module-directory "/commands.grv")
-      "@(define-module (tests unit forester linked commands)\n  #:use-module (forester commands)\n  #:re-export (link title summary published updated))")
+      "@(define-module (tests unit forester linked commands)\n  #:use-module (forester commands)\n  #:re-export (link tag taxon title summary published updated))")
     (write-test-file
       (string-append source-directory "/algebra.grv")
       (string-append
@@ -62,6 +64,8 @@
         "@summary{A short algebra note.}\n"
         "@published{2026-09-27}\n"
         "@updated{2026-09-28}\n"
+        "@taxon[\"mathematics\"]{Mathematics}\n"
+        "@tag[\"algebra\"]{Algebra}\n"
         "@heading{Quadratic equations}\n"
         "@paragraph{See @link[\"limits\"]{limits}. "
         "@math{x^2+y^2=z^2}}\n@display-math{a^2+b^2=c^2}"))
@@ -70,6 +74,8 @@
       (string-append
         "@use-modules[(tests unit forester linked commands)]\n"
         "@title{Limits}\n"
+        "@taxon[\"mathematics\"]{Mathematics}\n"
+        "@tag[\"analysis\"]{Analysis}\n"
         "@paragraph{See @link[\"algebra\"]{algebra}. "
         "Read @link[\"algebra#quadratic-equations\"]{about quadratics}.}"))
     (write-test-file
@@ -85,31 +91,31 @@
                #:source-directory source-directory
                #:prepare (make-scribble-module-setup module-directory)
                #:read-page
-               (make-forester-page-reader
+               (make-page-reader
                  (make-scribble-document-reader))
                #:analyze make-forest
                #:renderers
-               (list (make-forester-html-renderer
+               (list (make-html-renderer
                        #:routes
                        (make-html-routes
                          #:page-path
                          (lambda (id)
                            (string-append "notes/" id ".html"))))
-                     (make-forester-rss-renderer
+                     (make-rss-renderer
                        #:site-url "https://notes.example"
                        #:routes
                        (make-html-routes
                          #:page-path
                          (lambda (id)
                            (string-append "notes/" id ".html"))))
-                     (make-forester-sitemap-renderer
+                     (make-sitemap-renderer
                        #:site-url "https://notes.example"
                        #:routes
                        (make-html-routes
                          #:page-path
                          (lambda (id)
                            (string-append "notes/" id ".html"))))
-                     (make-forester-text-renderer #:prefix "text"))
+                     (make-text-renderer #:prefix "text"))
                #:output-directory output-directory))
            (artifacts (build-project project))
            (paths (map artifact-path artifacts))
@@ -130,14 +136,14 @@
       (test-assert "missing page titles identify the source path"
         (exception-contains?
           (lambda ()
-            ((make-forester-page-reader
+            ((make-page-reader
                (lambda (path) (make-content-document '())))
              (string-append source-directory "/no-title.grv")))
           (string-append source-directory "/no-title.grv")))
       (test-assert "page reader rejects impossible calendar dates"
         (exception-contains?
           (lambda ()
-            ((make-forester-page-reader
+            ((make-page-reader
                (lambda (_)
                  (make-content-document
                    (list
@@ -169,19 +175,19 @@
         (test-equal "page reader retains source paths"
           (string-append source-directory "/algebra.grv")
           (site-page-source
-            ((make-forester-page-reader
+            ((make-page-reader
              (make-scribble-document-reader))
              (string-append source-directory "/algebra.grv"))))
         (test-equal "nested source directories do not become page IDs"
           "limits"
           (site-page-id
-            ((make-forester-page-reader
+            ((make-page-reader
              (make-scribble-document-reader))
              (string-append mathematics-directory "/limits.grv"))))
         (test-equal "nested source paths remain available for diagnostics"
           (string-append mathematics-directory "/limits.grv")
           (site-page-source
-            ((make-forester-page-reader
+            ((make-page-reader
              (make-scribble-document-reader))
              (string-append mathematics-directory "/limits.grv"))))
         (test-equal "HTML page artifacts depend on their backlinks"
@@ -191,21 +197,47 @@
           expected-algebra-html-sources
           (artifact-sources algebra-text-artifact))
         (let ((algebra-page
-                ((make-forester-page-reader
+                ((make-page-reader
                    (make-scribble-document-reader))
                  (string-append source-directory "/algebra.grv"))))
-          (test-equal "page reader extracts Forester metadata"
+      (test-equal "page reader extracts Forester metadata"
             '((summary . "A short algebra note.")
               (published . "2026-09-27")
-              (updated . "2026-09-28"))
+              (updated . "2026-09-28")
+              (tags ("algebra" . "Algebra"))
+              (taxon "mathematics" . "Mathematics"))
             (site-page-metadata algebra-page))
           (test-assert "page metadata stays out of the page body"
             (not (find (lambda (node)
                          (and (content-element? node)
                               (memq (content-element-kind node)
-                                    '(summary published updated))))
+                                    '(summary published updated tag taxon))))
                        (content-document-children
                          (site-page-document algebra-page))))))
+        (let* ((read-page
+                 (make-page-reader
+                   (make-scribble-document-reader)))
+               (forest
+                 (make-forest
+                   (make-site
+                     (list
+                       (read-page (string-append source-directory "/algebra.grv"))
+                       (read-page
+                         (string-append mathematics-directory "/limits.grv")))))))
+          (test-equal "miniKanren queries topic membership and labels"
+            '(("algebra" "Mathematics") ("limits" "Mathematics"))
+            (query (page-id label)
+              (topic-membero
+                (topic-relation forest)
+                (topic-id "mathematics")
+                (page-id page-id)
+                (label label))))
+          (test-equal "topic page helper preserves site ordering"
+            '("algebra" "limits")
+            (map site-page-id (topic-pages forest "mathematics")))
+          (test-equal "topic queries can select tags separately from taxa"
+            '("algebra")
+            (topic-page-ids (topic-relation forest) "algebra" 'tag)))
         (test-assert "RSS uses summaries and updated dates"
           (and (string-contains rss-feed
                    "<description>A short algebra note.</description>")
@@ -227,9 +259,11 @@
         (and (string-contains
                sitemap "https://notes.example/notes/algebra.html")
              (string-contains sitemap "<lastmod>2026-09-28</lastmod>")))
-      (test-assert "HTML project output resolves page links"
+        (test-assert "HTML project output resolves page links"
         (string-contains algebra-html
           "href=\"/notes/limits.html\">limits</a>"))
+      (test-assert "HTML does not impose topic navigation"
+        (not (string-contains algebra-html "page-topics")))
       (test-assert "HTML project emits stable heading anchors"
         (string-contains algebra-html
           "<h2 id=\"quadratic-equations\">Quadratic equations</h2>"))
@@ -255,17 +289,17 @@
                  #:source-directory source-directory
                  #:prepare (make-scribble-module-setup module-directory)
                  #:read-page
-                 (make-forester-page-reader (make-scribble-document-reader))
+                 (make-page-reader (make-scribble-document-reader))
                  #:analyze make-forest
                  #:renderers
-                 (list (make-forester-html-renderer
+                 (list (make-html-renderer
                         #:routes
                          (make-html-routes
                            #:page-path
                            (lambda (id)
                              (string-append "notes/" id ".html")))
                          #:cache-key "forester-html-test-v1")
-                       (make-forester-text-renderer
+                       (make-text-renderer
                          #:prefix "text"
                          #:cache-key "forester-text-test-v1"))
                  #:output-directory cache-output-directory
