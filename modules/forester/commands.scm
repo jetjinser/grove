@@ -6,13 +6,25 @@
   #:use-module (grove ir)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (title link image tag taxon subtree transclude summary published updated))
+  #:export (title link image tag taxon subtree transclude summary published updated
+            lipsum))
 
 (define (title . body)
   (make-content-element 'title body))
 
 (define (summary . body)
   (make-content-element 'summary body))
+
+;; The classic opening Lorem Ipsum paragraph, from:
+;; https://github.com/PhelypeOleinik/lipsum/blob/master/lipsum-la.txt
+(define (lipsum . options)
+  (cond
+    ((null? options)
+     "Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Ut purus elit, vestibulum ut, placerat ac, adipiscing vitae, felis. Curabitur dictum gravida mauris. Nam arcu libero, nonummy eget, consectetuer id, vulputate a, magna. Donec vehicula augue eu neque. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Mauris ut leo. Cras viverra metus rhoncus sem. Nulla et lectus vestibulum urna fringilla ultrices. Phasellus eu tellus sit amet tortor gravida placerat.")
+    ((equal? options '("short"))
+     "Lorem ipsum dolor sit amet, consectetuer adipiscing elit.")
+    (else
+      (error "Lipsum accepts no option or the short option" options))))
 
 (define (published date)
   (make-content-element 'published (list date)))

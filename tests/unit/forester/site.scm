@@ -88,6 +88,20 @@
 (test-error "HTML routes require an explicit home page ID" #t
   (make-html-routes))
 
+(let ((document (evaluate-document "@lipsum{}")))
+  (test-assert "@lipsum expands to ordinary text"
+    (content-text? (car (content-document-children document))))
+  (test-assert "@lipsum provides the classic opening text"
+    (string-prefix?
+      "Lorem ipsum dolor sit amet, consectetuer adipiscing elit."
+      (content-text-value (car (content-document-children document))))))
+
+(test-equal "@lipsum accepts a short option"
+  "Lorem ipsum dolor sit amet, consectetuer adipiscing elit."
+  (content-text-value
+    (car (content-document-children
+           (evaluate-document "@lipsum[\"short\"]{}")))))
+
 (let* ((destination (page-with-links "destination" '()))
        (source (page-with-links "source" '("destination" "destination")))
        (other-source (page-with-links "other-source" '("destination")))
