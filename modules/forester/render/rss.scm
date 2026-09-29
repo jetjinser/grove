@@ -25,7 +25,9 @@
       (assq-ref (site-page-metadata page) 'published)))
 
 (define rss-text-handlers
-  `((heading . ,(lambda (_ body) (string-append body "\n")))
+  `((tag . ,(lambda (_element _body) ""))
+    (taxon . ,(lambda (_element _body) ""))
+    (heading . ,(lambda (_ body) (string-append body "\n")))
     (blockquote . ,(lambda (_ body)
                      (string-append
                        (string-join

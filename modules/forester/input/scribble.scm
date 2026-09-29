@@ -105,15 +105,17 @@
         (string-drop-right filename (string-length ".grv"))
         title
         (make-content-document
-          (remove metadata-element? children)
+          (remove (lambda (child)
+                    (and (content-element? child)
+                         (memq (content-element-kind child)
+                               '(title summary published updated))))
+                  children)
           (content-document-source document))
         path
         #:metadata (filter cdr
                      (list (cons 'summary summary)
                            (cons 'published published)
-                           (cons 'updated updated)
-                           (cons 'tags (and (pair? tags) tags))
-                           (cons 'taxon taxon)))))))
+                           (cons 'updated updated)))))))
 
 (define (make-page-reader read-document)
   "Return a reader whose page IDs are source basenames without `.grv'."

@@ -5,13 +5,24 @@
 (define-module (forester relations)
   #:use-module (grove relation dsl)
   #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-13)
   #:export (make-reference-relation
             incoming-reference-keys
             outgoing-reference-ids
             backlink-page-ids
             common-backlink-page-ids
             reachable-page-ids
-            make-topic-relation
+            make-content-node-relation
+            nodeo
+            node-propertyo
+            childo
+            descendanto
+            paragrapho
+            plain-text-paragrapho
+            math-nodeo
+            math-containing-paragrapho
+            shorter-than-o
+            contains-texto
             topic-membero
             topic-page-ids))
 
@@ -19,22 +30,107 @@
 (define-relation-schema make-reference-relation referenceo
   (source-page-id reference-id target-page-id fragment label))
 
-;; Rows are (kind topic-id label page-id), with kind `tag or `taxon.
-(define-relation-schema make-topic-relation topic-membero
-  (kind topic-id label page-id))
+;; Rows are (node-id page-id parent-id kind position properties text
+;; character-count plain-text?).
+(define-relation-schema make-content-node-relation nodeo
+  (node-id page-id parent-id kind position properties text
+   character-count plain-text?))
+
+(define-relation (list-membero value values)
+  (either
+    ((exists (tail)
+       (== `(,value . ,tail) values)))
+    ((exists (head tail)
+       (== `(,head . ,tail) values)
+       (=/= value head)
+       (list-membero value tail)))))
+
+(define-relation (node-propertyo relation node-id key value)
+  (exists (properties entry)
+    (nodeo relation
+           (node-id node-id)
+           (properties properties))
+    (list-membero entry properties)
+    (== `(,key . ,value) entry)))
+
+(define-relation (paragrapho relation node-id)
+  (nodeo relation (node-id node-id) (kind 'paragraph)))
+
+(define-relation (plain-text-paragrapho relation node-id)
+  (nodeo relation
+         (node-id node-id)
+         (kind 'paragraph)
+         (plain-text? #t)))
+
+(define-relation (math-nodeo relation node-id)
+  (nodeo relation (node-id node-id) (kind 'math)))
+
+(define-relation (childo relation parent-id child-id)
+  (nodeo relation
+         (node-id child-id)
+         (parent-id parent-id)))
+
+(define-relation (descendanto relation ancestor-id descendant-id)
+  (either
+    ((childo relation ancestor-id descendant-id))
+    ((exists (parent-id)
+       (childo relation ancestor-id parent-id)
+       (descendanto relation parent-id descendant-id)))))
+
+(define-relation (math-containing-paragrapho relation paragraph-id)
+  (paragrapho relation paragraph-id)
+  (exists (math-id)
+    (descendanto relation paragraph-id math-id)
+    (math-nodeo relation math-id)))
+
+(define-relation (shorter-than-o relation node-id maximum)
+  (exists (character-count)
+    (nodeo relation
+           (node-id node-id)
+           (character-count character-count))
+    (project (character-count maximum)
+      (if (and (integer? character-count)
+               (integer? maximum)
+               (< character-count maximum))
+          succeed
+          fail))))
+
+(define-relation (contains-texto relation node-id needle)
+  (exists (text)
+    (nodeo relation (node-id node-id) (text text))
+    (project (text needle)
+      (if (and (string? text)
+               (string? needle)
+               (string-contains text needle))
+          succeed
+          fail))))
+
+(define-relation (topic-membero relation topic-id page-id label)
+  (exists (node-id kind)
+    (nodeo relation
+           (node-id node-id)
+           (page-id page-id)
+           (kind kind)
+           (text label))
+    (either
+      ((== 'tag kind)
+       (node-propertyo relation node-id 'id topic-id))
+      ((== 'taxon kind)
+       (node-propertyo relation node-id 'id topic-id)))))
 
 (define* (topic-page-ids relation topic-id #:optional kind)
   (delete-duplicates
     (if kind
         (query (page-id)
-          (topic-membero relation
-                         (kind kind)
-                         (topic-id topic-id)
-                         (page-id page-id)))
+          (exists (node-id)
+            (nodeo relation
+                   (node-id node-id)
+                   (kind kind)
+                   (page-id page-id))
+            (node-propertyo relation node-id 'id topic-id)))
         (query (page-id)
-          (topic-membero relation
-                         (topic-id topic-id)
-                         (page-id page-id))))
+          (exists (label)
+            (topic-membero relation topic-id page-id label))))
     equal?))
 
 (define-relation (incoming-referenceo relation target-page-id

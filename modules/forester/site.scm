@@ -14,7 +14,8 @@
             make-forest
             site
             pages
-            topic-relation
+            content-node-relation
+            content-node
             topic-pages
             find-page
             links
@@ -295,7 +296,7 @@
 
 (define-record-type <forest>
   (%make-forest site pages reference-index heading-index reference-relation
-                composition topic-relation)
+                composition content-node-relation content-node-index)
   forest?
   (site site)
   (pages pages)
@@ -303,46 +304,96 @@
   (heading-index heading-index)
   (reference-relation reference-relation)
   (composition composition)
-  (topic-relation topic-relation))
-
-(define (page-topics page)
-  (let ((taxon (assq-ref (site-page-metadata page) 'taxon)))
-    (append (if taxon (list (cons 'taxon taxon)) '())
-            (map (lambda (tag) (cons 'tag tag))
-                 (or (assq-ref (site-page-metadata page) 'tags) '())))))
+  (content-node-relation content-node-relation)
+  (content-node-index content-node-index))
 
 (define* (topic-pages forest topic-id #:optional kind)
   (let ((page-ids
-          (topic-page-ids (topic-relation forest) topic-id kind)))
+          (topic-page-ids (content-node-relation forest) topic-id kind)))
     (filter (lambda (page)
               (member (site-page-id page) page-ids string=?))
             (pages forest))))
 
-(define (make-page-topic-rows pages)
-  (let ((rows
-          (append-map
-            (lambda (page)
-              (map (lambda (entry)
-                     (let ((kind (car entry))
-                           (id (cadr entry))
-                           (label (cddr entry)))
-                       (unless (and (string? id) (not (string-null? id))
-                                    (string? label) (not (string-null? label)))
-                         (error "invalid topic metadata on page"
-                                (site-page-id page) entry))
-                       (list kind id label (site-page-id page))))
-                   (page-topics page)))
-            pages)))
+(define (indexed-elements children)
+  (filter-map
+    (lambda (child position)
+      (and (content-element? child) (cons position child)))
+    children (iota (length children))))
+
+(define (validate-topic-facts! facts)
+  (let ((topics
+          (filter-map
+            (lambda (row)
+              (and (memq (list-ref row 3) '(tag taxon))
+                   (list (list-ref row 1)
+                         (assq-ref (list-ref row 5) 'id)
+                         (list-ref row 6))))
+            facts)))
     (for-each
-      (lambda (row)
-        (let ((same-id (find (lambda (candidate)
-                               (string=? (cadr candidate) (cadr row)))
-                             rows)))
-          (unless (string=? (caddr row) (caddr same-id))
-            (error "inconsistent labels for Forester topic"
-                   (cadr row) (caddr same-id) (caddr row)))))
-      rows)
-    (make-topic-relation rows)))
+      (lambda (topic)
+        (let ((id (cadr topic))
+              (label (caddr topic)))
+          (unless (and (string? id) (not (string-null? id))
+                       (string? label) (not (string-null? label)))
+            (error "invalid topic IR element" topic))
+          (let ((same-id
+                  (find (lambda (candidate)
+                          (string=? id (cadr candidate)))
+                        topics)))
+            (unless (string=? label (caddr same-id))
+              (error "inconsistent labels for Forester topic"
+                     id (caddr same-id) label)))))
+      topics)))
+
+(define (content-node-facts pages)
+  (let ((index '())
+        (next-id 0))
+    (letrec
+      ((visit
+         (lambda (page content parent-id position)
+           (if (not (content-element? content))
+               '()
+               (let* ((id next-id)
+                      (kind (content-element-kind content))
+                      (properties (content-element-properties content))
+                      (text (content->plain-text content))
+                      (children
+                        (if (eq? kind 'subtree)
+                            '()
+                            (indexed-elements
+                              (content-element-children content)))))
+                 (set! next-id (1+ next-id))
+                 (set! index (cons (cons id content) index))
+                 (cons
+                   (list id (site-page-id page) parent-id kind position
+                         properties text (string-length text)
+                         (element-plain-text? content))
+                   (append-map
+                     (lambda (entry)
+                       (visit page (cdr entry) id (car entry)))
+                     children)))))))
+      (let ((facts
+              (append-map
+                (lambda (page)
+                  (append-map
+                    (lambda (entry)
+                      (visit page (cdr entry) #f (car entry)))
+                    (indexed-elements
+                      (content-document-children
+                        (site-page-document page)))))
+                pages)))
+        (validate-topic-facts! facts)
+        (values (make-content-node-relation facts) index)))))
+
+(define (element-plain-text? element)
+  (and (content-element? element)
+       (every (lambda (child) (not (content-element? child)))
+              (content-element-children element))))
+
+(define (content-node forest id)
+  (let ((entry (assoc id (content-node-index forest))))
+    (or (and entry (cdr entry))
+        (error "unknown content node" id))))
 
 (define (make-forest site)
   (unless (site? site)
@@ -472,7 +523,10 @@
                           (reference-label reference)))
                       (cdr entry)))
                reference-index)))
-         (topic-relation (make-page-topic-rows pages))
+         (content-node-state
+           (call-with-values
+             (lambda () (content-node-facts pages))
+             list))
          (composition
            (composition:make-composition
              (append-map
@@ -487,7 +541,9 @@
              (append-map cdr transclusion-index)))
          (_ (validate-composition-cycles! pages composition)))
     (%make-forest site pages reference-index heading-index
-                  reference-relation composition topic-relation)))
+                  reference-relation composition
+                  (car content-node-state)
+                  (cadr content-node-state))))
 
 (define (find-page forest id)
   (or (find (lambda (page) (equal? id (site-page-id page)))

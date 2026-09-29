@@ -37,7 +37,9 @@
   (let ((heading-ids (heading-ids forest (site-page-id page)))
         (references (outgoing-references
                       forest (site-page-id page))))
-    `((image . ,(lambda (element children)
+    `((tag . ,(lambda (_element _children) '()))
+      (taxon . ,(lambda (_element _children) '()))
+      (image . ,(lambda (element children)
                  (let* ((source (content-element-property element 'source))
                         (url (if (or (external-url? source)
                                      (string-prefix? "/" source))

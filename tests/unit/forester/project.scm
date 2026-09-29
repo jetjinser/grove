@@ -68,7 +68,8 @@
         "@tag[\"algebra\"]{Algebra}\n"
         "@heading{Quadratic equations}\n"
         "@paragraph{See @link[\"limits\"]{limits}. "
-        "@math{x^2+y^2=z^2}}\n@display-math{a^2+b^2=c^2}"))
+        "@math{x^2+y^2=z^2}}\n"
+        "@paragraph{范畴论 is useful.}\n@display-math{a^2+b^2=c^2}"))
     (write-test-file
       (string-append mathematics-directory "/limits.grv")
       (string-append
@@ -200,20 +201,20 @@
                 ((make-page-reader
                    (make-scribble-document-reader))
                  (string-append source-directory "/algebra.grv"))))
-      (test-equal "page reader extracts Forester metadata"
+      (test-equal "page reader keeps only non-topic metadata in metadata"
             '((summary . "A short algebra note.")
               (published . "2026-09-27")
-              (updated . "2026-09-28")
-              (tags ("algebra" . "Algebra"))
-              (taxon "mathematics" . "Mathematics"))
+              (updated . "2026-09-28"))
             (site-page-metadata algebra-page))
-          (test-assert "page metadata stays out of the page body"
-            (not (find (lambda (node)
-                         (and (content-element? node)
-                              (memq (content-element-kind node)
-                                    '(summary published updated tag taxon))))
-                       (content-document-children
-                         (site-page-document algebra-page))))))
+          (test-equal "topic declarations remain as IR nodes"
+            '(taxon tag)
+            (map content-element-kind
+                 (filter (lambda (node)
+                           (and (content-element? node)
+                                (memq (content-element-kind node)
+                                      '(title tag taxon))))
+                         (content-document-children
+                           (site-page-document algebra-page))))))
         (let* ((read-page
                  (make-page-reader
                    (make-scribble-document-reader)))
@@ -228,16 +229,64 @@
             '(("algebra" "Mathematics") ("limits" "Mathematics"))
             (query (page-id label)
               (topic-membero
-                (topic-relation forest)
-                (topic-id "mathematics")
-                (page-id page-id)
-                (label label))))
+                (content-node-relation forest)
+                "mathematics"
+                page-id
+                label)))
           (test-equal "topic page helper preserves site ordering"
             '("algebra" "limits")
             (map site-page-id (topic-pages forest "mathematics")))
           (test-equal "topic queries can select tags separately from taxa"
             '("algebra")
-            (topic-page-ids (topic-relation forest) "algebra" 'tag)))
+            (topic-page-ids (content-node-relation forest) "algebra" 'tag))
+          (let* ((nodes (content-node-relation forest))
+                 (paragraph-ids
+                   (query (node-id)
+                     (nodeo nodes
+                       (node-id node-id)
+                       (page-id "algebra")
+                       (kind 'paragraph)))))
+            (test-equal "content queries find short paragraphs by text"
+              '("范畴论 is useful.")
+              (query (text)
+                (exists (node-id)
+                  (nodeo nodes
+                    (node-id node-id)
+                    (page-id "algebra")
+                    (kind 'paragraph)
+                    (text text))
+                  (shorter-than-o nodes node-id 120)
+                  (contains-texto nodes node-id "范畴论"))))
+            (test-equal "plain text paragraph goal excludes inline elements"
+              '("范畴论 is useful.")
+              (query (text)
+                (exists (node-id)
+                  (nodeo nodes
+                    (node-id node-id)
+                    (page-id "algebra")
+                    (text text))
+                  (plain-text-paragrapho nodes node-id)
+                  (contains-texto nodes node-id "范畴论"))))
+            (test-assert "content node IDs resolve back to IR elements"
+              (and (pair? paragraph-ids)
+                   (eq? 'paragraph
+                     (content-element-kind
+                       (content-node forest (car paragraph-ids))))))
+            (test-assert "paragraph and math goals compose through descendants"
+              (pair? (query (node-id)
+                       (exists (math-id)
+                         (nodeo nodes
+                           (node-id node-id)
+                           (page-id "algebra")
+                           (kind 'paragraph))
+                         (descendanto nodes node-id math-id)
+                         (math-nodeo nodes math-id)))))
+            (test-assert "math-containing paragraph helper finds the same nodes"
+              (pair? (query (node-id)
+                       (math-containing-paragrapho nodes node-id)
+                       (nodeo nodes
+                         (node-id node-id)
+                         (page-id "algebra")))))))
         (test-assert "RSS uses summaries and updated dates"
           (and (string-contains rss-feed
                    "<description>A short algebra note.</description>")
@@ -263,7 +312,10 @@
         (string-contains algebra-html
           "href=\"/notes/limits.html\">limits</a>"))
       (test-assert "HTML does not impose topic navigation"
-        (not (string-contains algebra-html "page-topics")))
+        (and (not (string-contains algebra-html "page-topics"))
+             (not (string-contains algebra-html "class=\"tag\""))
+             (not (string-contains algebra-html "class=\"taxon\""))
+             (not (string-contains algebra-html "Mathematics"))))
       (test-assert "HTML project emits stable heading anchors"
         (string-contains algebra-html
           "<h2 id=\"quadratic-equations\">Quadratic equations</h2>"))
@@ -279,6 +331,7 @@
                "mathjax@4/tex-chtml.js")))
       (test-assert "text target writes linked page content"
         (and (string-contains algebra-text "limits [limits.txt]")
+             (not (string-contains algebra-text "Mathematics"))
              (string-contains
                (read-test-file (string-append output-directory
                                                "/text/limits.txt"))

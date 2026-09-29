@@ -46,7 +46,7 @@ supported goals.
 The optional `(grove relation dsl)` module provides a small macro vocabulary
 for libraries that define reusable rules. It re-exports the relation and
 miniKanren APIs from `(grove relation)` and adds `define-relation`, `exists`,
-`all`, `either`, and `query`:
+`all`, `either`, `project`, and `query`:
 
 ```scheme
 (use-modules (grove relation dsl))
@@ -64,7 +64,9 @@ miniKanren APIs from `(grove relation)` and adds `define-relation`, `exists`,
 ```
 
 These forms expand to faster-minikanren relations, `fresh`, `conde`, and
-`run*`; they add no new evaluation engine. `define-relation-schema` declares
+`run*`; `project` exposes miniKanren's standard host-language projection and
+requires its projected terms to be ground. They add no new evaluation engine.
+`define-relation-schema` declares
 the tuple columns once, generates a constructor with fixed arity, and creates a
 named query macro. Query clauses name columns, so omitted columns become
 independent anonymous logic variables. Unknown or repeated columns are

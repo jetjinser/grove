@@ -20,7 +20,9 @@
 (define (page-content-handlers forest routes page)
   (let ((references (outgoing-references forest (site-page-id page)))
         (headings (headings forest (site-page-id page))))
-    `((image . ,(lambda (element body)
+    `((tag . ,(lambda (_element _body) ""))
+      (taxon . ,(lambda (_element _body) ""))
+      (image . ,(lambda (element body)
                  (if (string-null? (string-trim-both body))
                      (string-append "[image: "
                                     (content-element-property element 'source)
