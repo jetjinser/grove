@@ -42,6 +42,7 @@
               racket
 
               guile
+              guile-gcrypt
               guile-quickcheck
               self'.packages.blue
               self'.packages.faster-minikanren
@@ -54,8 +55,16 @@
                 prefix = "$DEVSHELL_DIR/${pkgs.guile.siteDir}";
               }
               {
+                name = "GUILE_LOAD_PATH";
+                prefix = "${pkgs.guile-gcrypt}/share/guile/site/3.0";
+              }
+              {
                 name = "GUILE_LOAD_COMPILED_PATH";
                 prefix = "$DEVSHELL_DIR/${pkgs.guile.siteCcacheDir}";
+              }
+              {
+                name = "GUILE_LOAD_COMPILED_PATH";
+                prefix = "${pkgs.guile-gcrypt}/lib/guile/3.0/site-ccache";
               }
             ];
           };

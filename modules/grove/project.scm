@@ -167,7 +167,8 @@
           (filter (lambda (entry)
                     (let ((previous
                             (state-entry-by-path old-sources (car entry))))
-                      (and previous (not (= (cadr previous) (cadr entry))))))
+                      (and previous
+                           (not (equal? (cadr previous) (cadr entry))))))
                   current-sources))
         (removed
           (filter (lambda (entry)
@@ -183,7 +184,8 @@
          (sources (artifact-sources artifact))
          (old-sources (and old (caddr old))))
     (or (not old)
-        (not (= (cadr old) (content-fingerprint (artifact-content artifact))))
+        (not (equal? (cadr old)
+                     (content-fingerprint (artifact-content artifact))))
         (not (equal? sources old-sources))
         (not sources)
         (paths-intersect? (append (or sources '())
@@ -217,7 +219,7 @@
                           (call-with-input-file path get-string-all))
                         (lambda args #f)))))
           (if (and content
-                   (= (content-fingerprint content) (cadr entry)))
+                   (equal? (content-fingerprint content) (cadr entry)))
               (loop (cdr entries)
                     (cons (make-artifact (car entry) content (caddr entry))
                           artifacts))
@@ -229,7 +231,9 @@
     (and project-key renderer-keys
          (call-with-output-string
            (lambda (port)
-             (write (list project-key renderer-keys) port))))))
+             (write (list 'grove-render-cache-v2
+                          project-key renderer-keys)
+                    port))))))
 
 (define (render-all model renderers)
   (let loop ((renderers renderers)
