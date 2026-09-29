@@ -18,10 +18,13 @@
     "grove/output.scm"
     "grove/project.scm"
     "grove/project/site.scm"
+    "grove/private/minikanren.scm"
+    "grove/relation/dsl.scm"
     "grove/site.scm"
     "grove/input/scribble.scm"
     "grove/render/html.scm"
     "grove/render/html/routes.scm"
+    "grove/render/static.scm"
     "grove/render/text.scm"
     "grove/style/html.scm"
     "language/scribble/commands.scm"
@@ -30,6 +33,7 @@
 
 (define +forester-sources+
   '("forester/commands.scm"
+    "forester/composition.scm"
     "forester/private/date.scm"
     "forester/private/web.scm"
     "forester/site.scm"
@@ -40,7 +44,8 @@
     "forester/render/rss.scm"
     "forester/render/sitemap.scm"
     "forester/render/text.scm"
-    "forester/render/text/routes.scm"))
+    "forester/render/text/routes.scm"
+    "forester/relations.scm"))
 
 (define grv-modules
   (map
