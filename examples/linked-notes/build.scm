@@ -59,26 +59,26 @@
     #:extra-sources (list notes-css-path)
     #:prepare
     (make-scribble-module-setup module-directory)
-    #:read-page (make-forester-page-reader read-document)
+    #:read-page (make-page-reader read-document)
     #:analyze make-forest
     #:renderers
-    (list (make-forester-html-renderer
+    (list (make-html-renderer
             #:style notes-style
             #:routes notes-routes
             #:cache-key "linked-notes-html-v2")
-          (make-forester-text-renderer
+          (make-text-renderer
             #:prefix "text"
             #:routes notes-text-routes
             #:cache-key "linked-notes-text-v2")
-          (make-forester-rss-renderer
+          (make-rss-renderer
             #:site-url "https://notes.example"
             #:routes notes-routes
             #:cache-key "linked-notes-rss-v2")
-          (make-forester-sitemap-renderer
+          (make-sitemap-renderer
             #:site-url "https://notes.example"
             #:routes notes-routes
             #:cache-key "linked-notes-sitemap-v2")
-          (make-forester-graph-renderer
+          (make-graph-renderer
             #:path "forest-graph.scm"
             #:cache-key "linked-notes-graph-v1")
           (make-static-assets-renderer

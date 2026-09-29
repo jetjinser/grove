@@ -38,23 +38,23 @@
              #:extra-sources (list stylesheet-path)
              #:prepare (make-scribble-module-setup module-directory)
              #:read-page
-             (make-forester-page-reader (make-scribble-document-reader))
+             (make-page-reader (make-scribble-document-reader))
              #:analyze make-forest
              #:renderers
-             (list (make-forester-html-renderer
+             (list (make-html-renderer
                      #:style style #:routes routes
                      #:cache-key (string-append cache-key "-html-v1"))
-                   (make-forester-text-renderer
+                   (make-text-renderer
                      #:prefix "text"
                      #:cache-key (string-append cache-key "-text-v1"))
-                   (make-forester-rss-renderer
+                   (make-rss-renderer
                      #:site-url site-url #:routes routes
                      #:cache-key (string-append cache-key "-rss-v1:" site-url))
-                   (make-forester-sitemap-renderer
+                   (make-sitemap-renderer
                      #:site-url site-url #:routes routes
                      #:cache-key
                      (string-append cache-key "-sitemap-v1:" site-url))
-                   (make-forester-graph-renderer
+                   (make-graph-renderer
                      #:path "forest-graph.scm"
                      #:cache-key (string-append cache-key "-graph-v1")))
              #:output-directory output-directory

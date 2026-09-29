@@ -91,14 +91,14 @@ transclusion occurrences; consumers query those meanings directly:
 
 ```scheme
 (define composition
-  (make-forest-composition
+  (make-composition
     (list (make-subtree-definition "math-0003" "unstable-0"))
-    (list (make-forest-transclusion
+    (list (make-transclusion
             "math-0004" "transclude-1" "unstable-0"))))
 
-(forest-composition-subtree-definitions composition)
-(forest-composition-outgoing-transclusions composition "math-0004")
-(forest-composition-incoming-transclusions composition "unstable-0")
+(subtree-definitions composition)
+(outgoing-transclusions composition "math-0004")
+(incoming-transclusions composition "unstable-0")
 ```
 
 The API preserves fact and occurrence order and rejects duplicate definitions

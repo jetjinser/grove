@@ -51,12 +51,12 @@ analyzer and renderer library:
     #:description "A linked notebook for mathematical ideas."
     #:source-directory source-directory
     #:prepare (make-scribble-module-setup "modules")
-    #:read-page (make-forester-page-reader read-document)
+    #:read-page (make-page-reader read-document)
     #:analyze make-forest
     #:renderers
-    (list (make-forester-html-renderer
+    (list (make-html-renderer
             #:style style #:routes routes #:cache-key "linked-html-v1")
-          (make-forester-text-renderer
+          (make-text-renderer
             #:prefix "text" #:cache-key "linked-text-v1"))
     #:output-directory "result"
     #:cache-key "linked-project-v1"))
@@ -116,7 +116,7 @@ syntax. With no analyzer, renderers receive the `project-context` directly.
 
 ## Forester source paths and page IDs
 
-`make-forester-page-reader` derives a page ID from the source file's basename,
+`make-page-reader` derives a page ID from the source file's basename,
 without its `.grv` extension. Directories organize the source tree but do not
 become part of the ID or page link. A prefix-and-sequence name such as
 `math-0002` gives trees a globally unique, flat namespace; the source could be
@@ -189,13 +189,13 @@ Callbacks that perform partial updates take responsibility for keeping their
 complete output set correct. Cacheable renderers must not rely on skipped side
 effects, and partial callbacks run only on source changes.
 
-`make-forester-html-renderer` accepts an optional `#:cache-key`. With a key,
+`make-html-renderer` accepts an optional `#:cache-key`. With a key,
 its HTML artifacts depend on the page itself and pages that link to it, plus
 shared Scheme module sources. The incremental callback uses those dependencies
 to preserve unrelated page output while refreshing indexes and pages whose
 backlinks changed. The key must cover the renderer's routes, style, and
 MathJax configuration.
-`make-forester-text-renderer` provides the same opt-in caching and incremental
+`make-text-renderer` provides the same opt-in caching and incremental
 behavior, with an optional output `#:prefix` such as `"text"`.
 
 Text output paths and cross-page references can be configured with
@@ -209,7 +209,7 @@ Forester can also add an RSS 2.0 feed as an independent target:
 ```scheme
 (use-modules (forester render rss))
 
-(make-forester-rss-renderer
+(make-rss-renderer
   #:site-url "https://notes.example"
   #:routes routes
   #:feed-path "feed.xml"
@@ -230,7 +230,7 @@ Forester can also emit a sitemap as an independent target:
 ```scheme
 (use-modules (forester render sitemap))
 
-(make-forester-sitemap-renderer
+(make-sitemap-renderer
   #:site-url "https://notes.example"
   #:routes routes
   #:sitemap-path "sitemap.xml"
@@ -249,7 +249,7 @@ The analyzed Forest can also be exported as a readable Scheme graph datum:
 ```scheme
 (use-modules (forester render graph))
 
-(make-forester-graph-renderer
+(make-graph-renderer
   #:path "forest-graph.scm"
   #:cache-key "notes-graph-v1")
 ```
@@ -332,16 +332,25 @@ text; `@published` and `@updated` use `YYYY-MM-DD` dates:
 @summary{A short introduction to algebra.}
 @published{2026-09-27}
 @updated{2026-09-28}
+@taxon["mathematics"]{Mathematics}
+@tag["algebra"]{Algebra}
 @paragraph{...}
 ```
 
 The Forester page reader removes these declarations from the body and stores
-them in the Grove page metadata alist. RSS uses the summary instead of the
-whole page when present. It emits `updated`, or `published` when no updated
-date is supplied, as an RFC 822 `pubDate` at midnight UTC. Sites that do not
-need metadata can continue to provide only a title and body.
+them in the Grove page metadata alist. A page can have one taxon and any number
+of tags. `(forester relations)` provides the `topic-membero` miniKanren goal,
+which queries the relation returned by `(topic-relation forest)` from
+`(forester site)`. A project can use the results to construct its own pages or
+renderer output. Grove does not impose topic pages or navigation. IDs
+use letters, digits, and hyphens, start and end with a letter or digit, and a
+shared ID must use the same label on every page. RSS uses the summary instead
+of the whole page when present. It emits `updated`, or `published` when no
+updated date is supplied, as an RFC 822
+`pubDate` at midnight UTC. Sites that do not need metadata can continue to
+provide only a title and body.
 
 Forester's HTML renderer uses MathJax 4's combined TeX-to-CommonHTML component
 on pages that contain math. It loads the component with `defer`; projects can
-pass `#:mathjax-src` to `make-forester-html-renderer` to use a locally hosted
+pass `#:mathjax-src` to `make-html-renderer` to use a locally hosted
 copy or another compatible MathJax build, and can pass `#f` to disable it.
