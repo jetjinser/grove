@@ -10,33 +10,26 @@
   #:use-module (grove math types)
   #:use-module (grove math derivation)
   #:use-module (grove math strategy)
-  #:use-module (grove relation)
+  #:use-module (grove math verification)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:use-module (srfi srfi-9)
   #:export (math-source->term math-derive math-derive-curl-curl
             math-search math-search-backward math-simplify
-            math-search-result->content math-verify-step math-verify-derivation
-            math-verification? math-verification-valid?
-            math-verification-errors math-verification-derivation)
-  #:re-export (math-derivation-step? math-derivation-step-from
+            math-derivation->content math-check-chain math-verification->content)
+  #:re-export (math-verify-step math-verify-derivation
+               math-verification? math-verification-valid?
+               math-verification-errors math-verification-diagnostics
+               math-verification-derivation math-diagnostic?
+               math-diagnostic-step math-diagnostic-rule math-diagnostic-path
+               math-diagnostic-code math-diagnostic-premises math-diagnostic-message
+               math-derivation-step? math-derivation-step-from
                math-derivation-step-to math-derivation-step-rule
-               math-derivation-step-path math-search-result?
-               math-search-result-terms math-search-result-steps
-               math-search-result-assumptions
+               math-derivation-step-path math-derivation?
+               math-derivation-terms math-derivation-steps
+               math-derivation-assumptions
                math-search-report? math-search-report-candidates
                math-search-report-reason math-search-report-limits
                math-search-report-states math-search-report-complete?))
-
-(define-record-type <math-verification>
-  (make-math-verification derivation errors)
-  math-verification?
-  (derivation math-verification-derivation)
-  (errors math-verification-errors))
-
-(define (math-verification-valid? verification)
-  (and (math-verification? verification)
-       (null? (math-verification-errors verification))))
 
 (define (math-source->term source)
   (math-expression->term (parse-math source)))
@@ -49,22 +42,9 @@
                    (string-split source #\;))))
     sources))
 
-(define (curl-curl-field term)
-  (and (list? term) (= (length term) 2) (eq? (car term) 'curl)
-       (let ((inner (cadr term)))
-         (and (list? inner) (= (length inner) 2)
-              (eq? (car inner) 'curl)
-              (cadr inner)))))
-
 (define (check-derivation-types! input assumptions)
   (unless (math-infer-type assumptions input)
-    (error (math-type-diagnostic assumptions input)))
-  (let ((field (curl-curl-field input)))
-    (when (and field (not (member `(smooth ,field) assumptions)))
-      (error "curl-curl-identity requires a smooth(~a) assumption"
-             (if (and (pair? field) (eq? (car field) 'var))
-                 (cadr field)
-                 field)))))
+    (error (math-type-diagnostic assumptions input))))
 
 (define (math-cell contents)
   (make-content-element 'math-cell contents))
@@ -85,14 +65,6 @@
           (math-cell '())
           (math-cell (list (math-token 'mtext ""))))))
 
-(define (path-label path)
-  (if (null? path)
-      "root"
-      (string-join (map (lambda (index)
-                          (format #f "operand ~a" (+ index 1)))
-                        path)
-                   " → ")))
-
 (define (math-row-next term rule path assumptions)
   (make-content-element 'math-row
     (list (math-cell (list (make-content-element
@@ -102,14 +74,14 @@
           (math-cell
             (list (math-token 'mtext
                     (format #f "~a (at ~a)"
-                            (symbol->string rule) (path-label path))))))))
+                            (symbol->string rule) (math-path-label path))))))))
 
-(define (math-search-result->content result)
-  (unless (math-search-result? result)
+(define (math-derivation->content result)
+  (unless (math-derivation? result)
     (error "expected a math search result" result))
-  (let ((terms (math-search-result-terms result))
-        (steps (math-search-result-steps result))
-        (assumptions (math-search-result-assumptions result)))
+  (let ((terms (math-derivation-terms result))
+        (steps (math-derivation-steps result))
+        (assumptions (math-derivation-assumptions result)))
     (make-content-element
       'math
       (list (make-content-element
@@ -124,64 +96,6 @@
                          steps))))
       #:properties '((display? . #t))
       #:flow-kind 'block)))
-
-(define (math-verify-step assumptions from to rule path)
-  (let ((metadata (math-rewrite-rule-ref rule))
-        (from-type (math-infer-type assumptions from))
-        (to-type (math-infer-type assumptions to)))
-    (and metadata
-         from-type to-type
-         (eq? (math-typed-term-type from-type)
-              (math-typed-term-type to-type))
-         (math-rewrite-rule-condition-checked? metadata)
-         (pair? (run 1 (verified?)
-                 (rewrite-stepo assumptions from to rule path)
-                 (== verified? #t))))))
-
-(define (math-verify-derivation result)
-  (unless (math-search-result? result)
-    (error "expected a math search result" result))
-  (let* ((assumptions (math-search-result-assumptions result))
-         (terms (math-search-result-terms result))
-         (steps (math-search-result-steps result))
-         (errors
-           (append
-             (if (= (length terms) (+ (length steps) 1))
-                 '()
-                 (list "term and step counts do not form a complete chain"))
-             (filter-map
-               (lambda (term)
-                 (and (not (math-infer-type assumptions term))
-                      (format #f "term has no consistent type: ~s" term)))
-               terms)
-             (let loop ((steps steps) (terms terms) (index 1) (errors '()))
-               (if (or (null? steps) (null? terms) (null? (cdr terms)))
-                   (reverse errors)
-                   (let* ((step (car steps))
-                          (from (car terms))
-                          (to (cadr terms))
-                          (message
-                            (cond
-                              ((not (math-derivation-step? step))
-                               (format #f "step ~a has an invalid record" index))
-                              ((or (not (equal? (math-derivation-step-from step)
-                                               from))
-                                   (not (equal? (math-derivation-step-to step)
-                                               to)))
-                               (format #f "step ~a endpoints do not match the term chain"
-                                       index))
-                              ((not (math-verify-step
-                                      assumptions
-                                      (math-derivation-step-from step)
-                                      (math-derivation-step-to step)
-                                      (math-derivation-step-rule step)
-                                      (math-derivation-step-path step)))
-                               (format #f "step ~a does not satisfy its named rule, path, and premises"
-                                       index))
-                              (else #f))))
-                     (loop (cdr steps) (cdr terms) (+ index 1)
-                           (if message (cons message errors) errors))))))))
-    (make-math-verification result errors)))
 
 (define max-derivation-steps 32)
 
@@ -251,3 +165,16 @@
 (define* (math-simplify source #:key (assumptions '()) (rules #f) (max-steps 32))
   (simplify-math-term (math-source->term source)
     (math-source->assumptions assumptions) #:rules rules #:max-steps max-steps))
+
+(define* (math-check-chain sources #:key (assumptions '()) (steps #f) (rules #f))
+  (unless (and (list? sources) (every string? sources))
+    (error "handwritten math lines must be source strings" sources))
+  (check-math-chain (map math-source->term sources)
+    (math-source->assumptions assumptions) #:steps steps #:rules rules))
+
+(define (math-verification->content verification)
+  (unless (math-verification? verification)
+    (error "expected a math verification" verification))
+  (unless (math-verification-valid? verification)
+    (error (string-join (math-verification-errors verification) "\n")))
+  (math-derivation->content (math-verification-derivation verification)))

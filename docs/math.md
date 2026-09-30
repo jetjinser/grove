@@ -103,7 +103,7 @@ selects registered rule names; an empty list disables all rules and an unknown
 name is an argument error. Limits return the candidates found so far, rather
 than discarding them or claiming no solution exists. Each candidate retains
 its term sequence and named rewrite
-steps, and `math-search-result->content` lowers a candidate to displayable
+steps, and `math-derivation->content` lowers a candidate to displayable
 MathML IR. For example:
 
 ```scheme
@@ -113,7 +113,7 @@ MathML IR. For example:
     #:rules '(curl-curl-identity divergence-free subtract-zero)
     #:max-depth 3))
 (math-search-report-reason report)
-(map math-search-result->content (math-search-report-candidates report))
+(map math-derivation->content (math-search-report-candidates report))
 ```
 
 Report accessors expose `candidates`, `reason`, `limits`, and `states`.
@@ -158,3 +158,63 @@ Other inverse arithmetic expansions are available through explicit `#:rules`,
 for example `#:rules '(add-zero)` to recover `x + 0` from `x`. Field-generating
 inverses enumerate explicit declarations, and term size plus depth bound their
 expansion. A limit is not a proof that no derivation exists.
+
+## Authored derivations
+
+`math-check-chain` checks the author's exact sequence of source expressions.
+Each adjacent pair must be related by one selected rule at one operand path;
+it does not silently search for and insert intermediate expressions.
+Search candidates and authored chains use the same `math-derivation` certificate
+with `terms`, `steps`, and the original `assumptions`. Independent replay lives
+in `(grove math verification)`; it does not trust the strategy that produced a
+candidate.
+
+```scheme
+(define checked
+  (math-check-chain
+    '("curl(curl(E))"
+      "grad(div(E)) - laplacian(E)"
+      "zero(vector) - laplacian(E)"
+      "-laplacian(E)")
+    #:assumptions '("vector(E); smooth(E); div(E)=0")))
+(math-verification-valid? checked)
+(math-verification->content checked)
+```
+
+The default infers each step's rule and path. Optional `#:steps` supplies one
+annotation per transition: a rule symbol infers the matching path;
+`(rule path)` fixes both; `#f` leaves that transition to inference.
+`#:rules` restricts allowed rules, including explicit annotations. For example:
+
+```scheme
+(math-check-chain '("x + (y + 0)" "x + y")
+  #:assumptions '("scalar(x); scalar(y)")
+  #:steps '((add-zero (1))))
+```
+
+Operand paths are zero-based lists, so `(1)` selects the second operand;
+the empty path `()` selects the root. Diagnostics display one-based positions.
+`math-verification-diagnostics` returns structured diagnostics containing
+`step`, `rule`, `path`, `code`, `premises`, and `message` accessors under the
+`math-diagnostic-` prefix. `math-verification-errors` returns readable messages.
+Errors distinguish missing premises, invalid paths, rule-shape and target
+mismatches, unknown/disabled rules, and type failures. Checking continues after
+a failed step. Missing-premise inference is diagnostic only: it never modifies
+the certificate's assumptions or turns an unproved premise into a verified fact.
+`math-verification->content` accepts only a valid verification.
+
+In a `.plant` document, `@check-derive` takes the assumption string in brackets
+and one complete expression per nonempty body line:
+
+```scheme
+@check-derive["vector(E); smooth(E); div(E)=0"]{
+  curl(curl(E))
+  grad(div(E)) - laplacian(E)
+  zero(vector) - laplacian(E)
+  -laplacian(E)
+}
+```
+
+Successful chains render the authored lines as annotated MathML. Failed chains
+stop document evaluation with the step diagnostics. Scheme-level
+`math-check-chain` provides explicit annotations and programmatic error handling.

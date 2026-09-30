@@ -98,7 +98,7 @@
                     (rest (cdr queue)))
                (if (equal? current goal)
                    (search rest (+ states 1)
-                     (cons (make-math-search-result
+                     (cons (make-math-derivation
                              (if backward? terms (reverse terms))
                              (if backward? steps (reverse steps))
                              assumptions)
@@ -147,7 +147,7 @@
              (done? (null? answers)))
         (if (or done? (= count max-steps))
             (make-math-search-report
-              (list (make-math-search-result (reverse terms) (reverse steps) assumptions))
+              (list (make-math-derivation (reverse terms) (reverse steps) assumptions))
               (if done? 'normal-form 'step-limit)
               (if done? '() '(step-limit)) count)
             (let* ((answer (car answers)) (next (car answer)))

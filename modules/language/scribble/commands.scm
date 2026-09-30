@@ -79,6 +79,14 @@
     (math-derive (content-verbatim-string body)
                  #:assumptions assumptions)))
 
+(define-public (check-derive assumptions . source)
+  (let ((lines
+          (filter (lambda (line) (not (string-null? line)))
+                  (map string-trim-both
+                       (string-split (content-verbatim-string source) #\newline)))))
+    (math-verification->content
+      (math-check-chain lines #:assumptions (list assumptions)))))
+
 (define-public (tex-math . source)
   (make-content-element 'math
                         (map make-content-text

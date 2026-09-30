@@ -6,9 +6,9 @@
   #:export (make-math-derivation-step math-derivation-step?
             math-derivation-step-from math-derivation-step-to
             math-derivation-step-rule math-derivation-step-path
-            make-math-search-result math-search-result?
-            math-search-result-terms math-search-result-steps
-            math-search-result-assumptions))
+            make-math-derivation math-derivation?
+            math-derivation-terms math-derivation-steps
+            math-derivation-assumptions))
 
 ;; Both generated candidates and authored chains share the same certificate.
 (define-record-type <math-derivation-step>
@@ -19,9 +19,9 @@
   (rule math-derivation-step-rule)
   (path math-derivation-step-path))
 
-(define-record-type <math-search-result>
-  (make-math-search-result terms steps assumptions)
-  math-search-result?
-  (terms math-search-result-terms)
-  (steps math-search-result-steps)
-  (assumptions math-search-result-assumptions))
+(define-record-type <math-derivation>
+  (make-math-derivation terms steps assumptions)
+  math-derivation?
+  (terms math-derivation-terms)
+  (steps math-derivation-steps)
+  (assumptions math-derivation-assumptions))

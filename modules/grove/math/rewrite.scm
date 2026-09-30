@@ -5,6 +5,7 @@
 (define-module (grove math rewrite)
   #:use-module (grove relation)
   #:use-module (grove math types)
+  #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:export (curl-curlo
@@ -21,6 +22,7 @@
             math-simplification-rules
             math-backward-rules
             math-rewrite-rule-ref
+            math-rule-required-facts
             rewrite-curl-curl))
 
 (define-record-type <math-rewrite-rule>
@@ -79,6 +81,26 @@
 (define math-backward-rules
   '(curl-curl-identity divergence-free div-curl-zero subtract-zero
     curl-grad-zero div-grad-laplacian))
+
+;; Diagnostic contracts describe explicit facts, not facts proved by Grove.
+;; #f means the named rule does not match this left-hand structure. Types are
+;; independently checked by the judgment; only direct declarations appear here.
+(define (math-rule-required-facts name input)
+  (define (zero? term) (member term '((num "0") (zero vector))))
+  (match (list name input)
+    (('curl-curl-identity ('curl ('curl field))) `((smooth ,field)))
+    (('divergence-free ('grad ('div field))) `((= (div ,field) (num "0"))))
+    (('div-curl-zero ('div ('curl field))) `((vector ,field) (smooth ,field)))
+    (('curl-grad-zero ('curl ('grad field))) `((scalar ,field) (smooth ,field)))
+    (('div-grad-laplacian ('div ('grad field))) `((scalar ,field) (smooth ,field)))
+    (('subtract-zero ('- zero term)) (and (zero? zero) '()))
+    (('add-zero ('+ term zero)) (and (zero? zero) '()))
+    (('zero-add ('+ zero term)) (and (zero? zero) '()))
+    (('subtract-right-zero ('- term zero)) (and (zero? zero) '()))
+    (('double-negation ('- ('- term))) '())
+    (('multiply-one ('* term ('num "1"))) '())
+    (('one-multiply ('* ('num "1") term)) '())
+    (_ #f)))
 
 (define (assumptiono assumptions assumption)
   (conde
@@ -225,7 +247,7 @@
          (rewrite-childreno assumptions rest (+ index 1)
                             rewritten-rest rule rest-path)
          (== `(,child . ,rewritten-rest) outputs)
-         (== path `(,index . ,rest-path)))))))
+         (== path rest-path))))))
 
 (define (unrewrite-stepo assumptions input output rule path)
   (conde
@@ -248,7 +270,7 @@
          (unrewrite-childreno assumptions rest (+ index 1)
                               restored-rest rule rest-path)
          (== `(,child . ,restored-rest) inputs)
-         (== path `(,index . ,rest-path)))))))
+         (== path rest-path))))))
 
 ;; Compatibility relation for callers that need only the resulting term.
 (define (rewriteo assumptions input output)

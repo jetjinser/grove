@@ -5,9 +5,56 @@
 (define-module (grove math term)
   #:use-module (grove math syntax)
   #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-13)
   #:export (math-term?
             math-term-size
+            math-term->source
+            math-term-at-path
+            math-term-paths
+            math-path-label
             math-expression->term))
+
+(define (math-term->source term)
+  (unless (math-term? term) (error "invalid math term" term))
+  (case (car term)
+    ((var) (symbol->string (cadr term)))
+    ((num) (cadr term))
+    ((zero) "zero(vector)")
+    ((+ - * / ^ = sub)
+     (if (= (length term) 2)
+         (format #f "-(~a)" (math-term->source (cadr term)))
+         (format #f "(~a ~a ~a)" (math-term->source (cadr term))
+                 (if (eq? (car term) 'sub) "_" (symbol->string (car term)))
+                 (math-term->source (caddr term)))))
+    (else (format #f "~a(~a)" (car term)
+                  (string-join (map math-term->source (cdr term)) ", ")))))
+
+(define (math-term-at-path term path)
+  (and (math-term? term) (list? path)
+       (every (lambda (index) (and (exact-integer? index) (>= index 0))) path)
+       (let walk ((term term) (path path))
+         (if (null? path) term
+             (and (not (memq (car term) '(var num zero)))
+                  (< (car path) (length (cdr term)))
+                  (walk (list-ref (cdr term) (car path)) (cdr path)))))))
+
+(define (math-term-paths term)
+  (if (memq (car term) '(var num zero))
+      '(())
+      (cons '()
+        (append-map
+          (lambda (child index)
+            (map (lambda (path) (cons index path)) (math-term-paths child)))
+          (cdr term) (iota (length (cdr term)))))))
+
+(define (math-path-label path)
+  (cond
+    ((null? path) "root")
+    ((and (list? path)
+          (every (lambda (index) (and (exact-integer? index) (>= index 0))) path))
+     (string-join (map (lambda (index) (format #f "operand ~a" (+ index 1))) path)
+                  " → "))
+    (else (format #f "~s" path))))
 
 (define (math-term-size term)
   (unless (math-term? term) (error "invalid math term" term))
@@ -26,7 +73,7 @@
     ((and (pair? term) (memq (car term) '(var num zero))) #f)
     ((not (list? term)) #f)
     ((not (pair? term)) #f)
-    ((memq (car term) '(+ - * / ^ =))
+    ((memq (car term) '(+ - * / ^ = sub))
      (and (= (length term) (if (and (eq? (car term) '-)
                                     (= (length term) 2))
                                2 3))

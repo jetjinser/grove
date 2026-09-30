@@ -19,6 +19,7 @@
     "grove/math/types.scm"
     "grove/math/derivation.scm"
     "grove/math/strategy.scm"
+    "grove/math/verification.scm"
     "grove/math/layout.scm"
     "grove/math/rewrite.scm"
     "grove/math/pipeline.scm"

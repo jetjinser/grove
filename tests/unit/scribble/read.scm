@@ -78,6 +78,37 @@
 (test-begin "scribble read")
 
 (let* ((env (default-environment scribble))
+       (document
+         (evaluate-document env
+           "@check-derive[\"vector(E); smooth(E); div(E)=0\"]{
+  curl(curl(E))
+  grad(div(E)) - laplacian(E)
+
+  zero(vector) - laplacian(E)
+  -laplacian(E)
+}"))
+       (html (sxml->html (content->sxml document))))
+  (test-assert "@check-derive verifies and displays the author's exact math chain"
+    (and (= (substring-count html "<mtr>") 4)
+         (string-contains html "curl-curl-identity")
+         (string-contains html "divergence-free (at operand 1)")
+         (string-contains html "subtract-zero"))))
+
+(test-assert "@check-derive reports the missing premise at its authored step"
+  (exception-contains?
+    (lambda ()
+      (evaluate-document (default-environment scribble)
+        "@check-derive[\"scalar(f)\"]{curl(grad(f))\nzero(vector)}"))
+    "step 1, curl-grad-zero at root: missing premises: smooth(f)"))
+
+(test-assert "@check-derive rejects silently skipped intermediate rewrites"
+  (exception-contains?
+    (lambda ()
+      (evaluate-document (default-environment scribble)
+        "@check-derive[\"vector(E); smooth(E); div(E)=0\"]{curl(curl(E))\n-laplacian(E)}"))
+    "not the supplied target"))
+
+(let* ((env (default-environment scribble))
        (document (evaluate-document env
          "@derive[\"scalar(f); smooth(f)\"]{curl(grad(f)) + zero(vector)}"))
        (html (sxml->html (content->sxml document))))
