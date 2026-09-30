@@ -160,7 +160,8 @@
            (rewrite-stepo '((scalar (var x))) '(- (num "0") (var x)) result rule path))))
   (test-equal "rewrite relations expose a contract for every current rule"
     '(curl-curl-identity divergence-free div-curl-zero subtract-zero
-      add-zero zero-add subtract-right-zero double-negation multiply-one one-multiply)
+      add-zero zero-add subtract-right-zero double-negation multiply-one one-multiply
+      curl-grad-zero div-grad-laplacian)
     (map math-rewrite-rule-name math-rewrite-rules))
   (test-assert "curl-curl side conditions are matched against typed assumptions"
     (and (math-rewrite-rule? (math-rewrite-rule-ref 'curl-curl-identity))
@@ -352,6 +353,53 @@
         (content->sxml
           (make-content-element 'math (list (math-term->layout '(sin (var x)))))))
       "<mo>⁡</mo>"))
+  (for-each
+    (lambda (example)
+      (let* ((source (car example)) (target (cadr example))
+             (candidate (car (math-search source target
+                               #:assumptions '("scalar(f); smooth(f)")
+                               #:max-depth 1)))
+             (backward (car (math-search-backward target source
+                              #:assumptions '("scalar(f); smooth(f)")
+                              #:max-depth 1))))
+        (test-assert (string-append "scalar-field identity: " source)
+          (and (math-verification-valid? (math-verify-derivation candidate))
+               (math-verification-valid? (math-verify-derivation backward))))
+        (test-equal "scalar-field inverse search preserves forward term order"
+          (math-search-result-terms candidate) (math-search-result-terms backward))
+        (test-equal "scalar-field identity requires regularity"
+          '() (math-search source target #:assumptions '("scalar(f)")
+                #:max-depth 1))))
+    '(("curl(grad(f))" "zero(vector)")
+      ("div(grad(f))" "laplacian(f)")))
+  (test-equal "smoothness must refer to the exact scalar field"
+    '()
+    (math-search "curl(grad(f))" "zero(vector)"
+      #:assumptions '("scalar(f); smooth(g)") #:max-depth 1))
+  (test-equal "scalar-field identity rejects vector fields"
+    '()
+    (run* (result rule path)
+      (rewrite-stepo '((vector (var f)) (smooth (var f)))
+                     '(curl (grad (var f))) result rule path)))
+  (let* ((candidate
+           (car (math-search "1 * (curl(grad(f)) + zero(vector))"
+                  "zero(vector)" #:assumptions '("scalar(f); smooth(f)")
+                  #:max-depth 3)))
+         (html (sxml->html (content->sxml
+                            (math-search-result->content candidate)))))
+    (test-assert "vector identities compose with typed nested simplification"
+      (math-verification-valid? (math-verify-derivation candidate)))
+    (test-assert "composed derivation renders MathML operators and vector zero"
+      (and (string-contains html "<mtable>")
+           (string-contains html "<mo>∇</mo>")
+           (string-contains html "<mo>×</mo>")
+           (string-contains html "<mn>0</mn>")
+           (string-contains html "curl-grad-zero"))))
+  (test-assert "div-grad identity composes with scalar simplification"
+    (math-verification-valid?
+      (math-verify-derivation
+        (car (math-search "div(grad(f)) + 0" "laplacian(f)"
+               #:assumptions '("scalar(f); smooth(f)") #:max-depth 2)))))
   (test-end "grove math pipeline"))
 
 (run-math-tests)

@@ -78,6 +78,16 @@
 (test-begin "scribble read")
 
 (let* ((env (default-environment scribble))
+       (document (evaluate-document env
+         "@derive[\"scalar(f); smooth(f)\"]{curl(grad(f)) + zero(vector)}"))
+       (html (sxml->html (content->sxml document))))
+  (test-assert "@derive composes scalar-field identities and vector-zero simplification"
+    (and (string-contains html "curl-grad-zero")
+         (string-contains html "add-zero")
+         (string-contains html "<mover accent=\"true\">")
+         (= (substring-count html "<mtr>") 3))))
+
+(let* ((env (default-environment scribble))
        (document
          (evaluate-document
            env

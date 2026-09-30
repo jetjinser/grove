@@ -58,7 +58,11 @@
     (make-math-rewrite-rule 'subtract-right-zero "X - 0 = X" "matching scalar or vector types" #t)
     (make-math-rewrite-rule 'double-negation "-(-X) = X" "X is scalar or vector" #t)
     (make-math-rewrite-rule 'multiply-one "X * 1 = X" "X is scalar or vector" #t)
-    (make-math-rewrite-rule 'one-multiply "1 * X = X" "X is scalar or vector" #t)))
+    (make-math-rewrite-rule 'one-multiply "1 * X = X" "X is scalar or vector" #t)
+    (make-math-rewrite-rule 'curl-grad-zero "curl(grad(f)) = zero(vector)"
+      "assumptions declare scalar(f) and smooth(f)" #t)
+    (make-math-rewrite-rule 'div-grad-laplacian "div(grad(f)) = laplacian(f)"
+      "assumptions declare scalar(f) and smooth(f)" #t)))
 
 (define (math-rewrite-rule-ref name)
   (find (lambda (rule) (eq? (math-rewrite-rule-name rule) name))
@@ -111,6 +115,20 @@
     (math-typeo assumptions term type)
     (zeroo type zero)))
 
+(define (scalar-field-identityo assumptions input output rule)
+  (fresh (field)
+    (conde
+      ((== input `(curl (grad ,field)))
+       (== output '(zero vector))
+       (== rule 'curl-grad-zero))
+      ((== input `(div (grad ,field)))
+       (== output `(laplacian ,field))
+       (== rule 'div-grad-laplacian)))
+    ;; Explicit facts make inversion of vector zero a finite query.
+    (assumptiono assumptions `(scalar ,field))
+    (assumptiono assumptions `(smooth ,field))
+    (math-typeo assumptions field 'scalar)))
+
 ;; Both sides are unified before type judgments: forward queries ground X from
 ;; the input; inverse queries ground it from the output. All forward rules shrink.
 (define (simplifyo assumptions input output rule)
@@ -155,7 +173,8 @@
     ((div-curl-zeroo assumptions input output)
      (== rule 'div-curl-zero))
     ((subtract-zeroo assumptions input output)
-     (== rule 'subtract-zero))))
+     (== rule 'subtract-zero))
+    ((scalar-field-identityo assumptions input output rule))))
 
 ;; Apply one named rule at INPUT, returning the rule that fired.
 (define (rewrite-rooto assumptions input output rule)
@@ -168,6 +187,7 @@
      (== rule 'div-curl-zero))
     ((subtract-zeroo assumptions input output)
      (== rule 'subtract-zero))
+    ((scalar-field-identityo assumptions input output rule))
     ((simplifyo assumptions input output rule))))
 
 ;; Paths count operands only; the root is (), the first operand is (0), etc.

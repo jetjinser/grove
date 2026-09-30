@@ -75,8 +75,16 @@ The current rules are deliberately few. `curl-curl-identity` encodes
 `vector(E)` and `smooth(E)` declarations. `divergence-free` requires a vector
 declaration and an explicit structurally matching assumption such as `div(E)=0`.
 `div-curl-zero` encodes `div(curl(E)) = 0` and requires matching vector and
-smoothness declarations. `subtract-zero` applies the unconditional algebraic
+smoothness declarations. `subtract-zero` applies the typed algebraic
 identity `0 - X = -X`.
+Two scalar-field identities require matching `scalar(f)` and `smooth(f)` facts:
+`curl-grad-zero` rewrites `curl(grad(f))` to vector zero;
+`div-grad-laplacian` rewrites `div(grad(f))` to scalar `laplacian(f)`.
+For example, `@derive["scalar(f); smooth(f)"]{curl(grad(f)) + zero(vector)}`
+combines a differential identity with typed zero elimination. Both identities
+support bounded backward search; zero-producing inverse queries enumerate only
+explicitly declared fields. Operators describe ordinary Euclidean three-dimensional
+vector calculus with classical smooth fields.
 The displayed path and rule make a derivation inspectable, but do not amount to
 a formal proof that the author's declared facts hold.
 The rewrite module exposes a rule registry with each law, its side condition,
