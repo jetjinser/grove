@@ -26,7 +26,13 @@
             math-search-result?
             math-search-result-terms
             math-search-result-steps
-            math-search-result->content))
+            math-search-result->content
+            math-verify-step
+            math-verify-derivation
+            math-verification?
+            math-verification-valid?
+            math-verification-errors
+            math-verification-derivation))
 
 (define-record-type <math-derivation-step>
   (make-math-derivation-step from to rule path)
@@ -42,6 +48,16 @@
   (terms math-search-result-terms)
   (steps math-search-result-steps)
   (assumptions math-search-result-assumptions))
+
+(define-record-type <math-verification>
+  (make-math-verification derivation errors)
+  math-verification?
+  (derivation math-verification-derivation)
+  (errors math-verification-errors))
+
+(define (math-verification-valid? verification)
+  (and (math-verification? verification)
+       (null? (math-verification-errors verification))))
 
 (define (math-source->term source)
   (math-expression->term (parse-math source)))
@@ -129,6 +145,59 @@
                          steps))))
       #:properties '((display? . #t))
       #:flow-kind 'block)))
+
+(define (math-verify-step assumptions from to rule path)
+  (let ((metadata (math-rewrite-rule-ref rule)))
+    (and metadata
+         (math-rewrite-rule-condition-checked? metadata)
+         (pair? (run 1 (verified?)
+                 (rewrite-stepo assumptions from to rule path)
+                 (== verified? #t))))))
+
+(define (math-verify-derivation result)
+  (unless (math-search-result? result)
+    (error "expected a math search result" result))
+  (let* ((assumptions (math-search-result-assumptions result))
+         (terms (math-search-result-terms result))
+         (steps (math-search-result-steps result))
+         (errors
+           (append
+             (if (= (length terms) (+ (length steps) 1))
+                 '()
+                 (list "term and step counts do not form a complete chain"))
+             (filter-map
+               (lambda (term)
+                 (and (not (math-infer-type assumptions term))
+                      (format #f "term has no consistent type: ~s" term)))
+               terms)
+             (let loop ((steps steps) (terms terms) (index 1) (errors '()))
+               (if (or (null? steps) (null? terms) (null? (cdr terms)))
+                   (reverse errors)
+                   (let* ((step (car steps))
+                          (from (car terms))
+                          (to (cadr terms))
+                          (message
+                            (cond
+                              ((not (math-derivation-step? step))
+                               (format #f "step ~a has an invalid record" index))
+                              ((or (not (equal? (math-derivation-step-from step)
+                                               from))
+                                   (not (equal? (math-derivation-step-to step)
+                                               to)))
+                               (format #f "step ~a endpoints do not match the term chain"
+                                       index))
+                              ((not (math-verify-step
+                                      assumptions
+                                      (math-derivation-step-from step)
+                                      (math-derivation-step-to step)
+                                      (math-derivation-step-rule step)
+                                      (math-derivation-step-path step)))
+                               (format #f "step ~a does not satisfy its named rule, path, and premises"
+                                       index))
+                              (else #f))))
+                     (loop (cdr steps) (cdr terms) (+ index 1)
+                           (if message (cons message errors) errors))))))))
+    (make-math-verification result errors)))
 
 (define max-derivation-steps 32)
 

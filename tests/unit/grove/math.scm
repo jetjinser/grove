@@ -67,6 +67,11 @@
     #f
     (math-infer-type '((scalar (var x)) (vector (var E)))
                      '(+ (var x) (var E))))
+  (test-equal "zero minus a vector is typed as vector negation"
+    'vector
+    (math-typed-term-type
+      (math-infer-type '((vector (var E)))
+                       '(- (num "0") (laplacian (var E))))))
   (test-equal "type inference rejects conflicting declarations"
     #f
     (math-infer-type '((scalar (var x)) (vector (var x))) '(var x)))
@@ -185,6 +190,11 @@
         (and (string-contains html "<mtable>")
              (string-contains html "<mover accent=\"true\">")
              (string-contains html "divergence-free (at operand 1)"))))
+    (test-assert "forward search candidates pass independent derivation checking"
+      (math-verification-valid? (math-verify-derivation result)))
+    (test-equal "verification retains the candidate derivation"
+      result
+      (math-verification-derivation (math-verify-derivation result)))
     (test-equal "goal search reports no solution below the required depth"
       '()
       (math-search
@@ -218,7 +228,9 @@
                     (= (div (var E)) (num "0")))
                   (math-derivation-step-from step)
                   output rule path))))
-          (math-search-result-steps backward-result))))
+          (math-search-result-steps backward-result)))
+      (test-assert "backward search candidates pass independent derivation checking"
+        (math-verification-valid? (math-verify-derivation backward-result))))
     (test-error "goal search enforces a finite state budget" #t
       (math-search
         "curl(curl(E))" "-laplacian(E)"
@@ -239,6 +251,26 @@
           "(0 - x) - (0 - y)" "(-x) - (-y)"
           #:assumptions '("scalar(x); scalar(y)")
           #:max-depth 2 #:max-results 1))))
+  (test-assert "step verification confirms the rule, path, and premises"
+    (math-verify-step
+      '((vector (var E)) (smooth (var E)))
+      '(curl (curl (var E)))
+      '(- (grad (div (var E))) (laplacian (var E)))
+      'curl-curl-identity '()))
+  (test-equal "step verification rejects an incorrect operand path"
+    #f
+    (math-verify-step
+      '((vector (var E)) (smooth (var E)))
+      '(curl (curl (var E)))
+      '(- (grad (div (var E))) (laplacian (var E)))
+      'curl-curl-identity '(0)))
+  (test-equal "step verification rejects a missing regularity premise"
+    #f
+    (math-verify-step
+      '((vector (var E)))
+      '(curl (curl (var E)))
+      '(- (grad (div (var E))) (laplacian (var E)))
+      'curl-curl-identity '()))
   (test-assert "generic function calls use MathML function application"
     (string-contains
       (sxml->html

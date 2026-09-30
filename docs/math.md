@@ -84,6 +84,25 @@ MathML IR. For example:
        #:max-depth 3))
 ```
 
+Search results are candidates. `math-verify-step` checks one recorded edge
+against the named miniKanren rule and its exact operand path. For an entire
+candidate, `math-verify-derivation` returns a verification record; inspect it
+with `math-verification-valid?`, `math-verification-errors`, and
+`math-verification-derivation`:
+
+```scheme
+(let ((candidate
+        (car (math-search "curl(curl(E))" "-laplacian(E)"
+               #:assumptions '("vector(E); smooth(E); div(E)=0")
+               #:max-depth 3))))
+  (math-verification-valid? (math-verify-derivation candidate)))
+```
+
+Verification reruns each named relation with the candidate's stored
+assumptions, checks the term chain and type judgments, and rejects rules whose
+registered conditions are not marked as checked. It checks structural use of
+author-supplied assumptions; it does not prove those assumptions true.
+
 This searches forward from a known expression to a target. The inverse query
 `math-search-backward` takes the target first and a required source expression
 second; it returns candidates as ordinary forward derivations. For example,
