@@ -1,0 +1,42 @@
+@; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+@; SPDX-License-Identifier: CC0-1.0
+
+@use-modules[(math-derivations commands) (grove math pipeline)]
+@title{Differentiate a polynomial, then simplify}
+@summary{Two separate passes with independently replayable provenance.}
+
+For a polynomial in independent scalar coordinates, Grove supports constants, variables, sums, differences, products and natural-number powers. Other declared coordinates are held constant. The first pass expands differentiation rules; the second removes neutral factors, zero products and trivial powers. It does not collect like terms or expand products into a canonical polynomial.
+
+@heading{Automatic differentiation in two passes}
+@verbatim["@differentiate[\"x\" \"scalar(x)\"]{x^3 + 2*x}"]
+@differentiate["x" "scalar(x)"]{x^3 + 2*x}
+
+The first table ends with the raw derivative. The second begins with exactly that expression and ends with 3*x^2 + 2. Both tables retain individual rule names and operand paths. All expressions render as native MathML, including the derivative operator and fractions.
+
+@heading{A composite base and a constant coordinate}
+@differentiate["x" "scalar(x); scalar(y)"]{(x+y)^3}
+
+The power rule differentiates its base as well. Since y is an independent coordinate, its derivative with respect to x is zero. Parentheses around a sum used as a power base are preserved during rendering.
+
+@heading{Search from a derivative term to a target}
+@search-derive["scalar(x)" "3*x^2"]{differentiate(x^3,x)}
+
+The symbolic derivative is an ordinary mathematical term. Goal search can therefore combine differentiation and arithmetic rules; the convenience command above keeps those operations in separate passes instead.
+
+@heading{Verify selected steps by hand}
+@check-derive["scalar(x)"]{
+  differentiate(x^3,x)
+  3*x^2*differentiate(x,x)
+  3*x^2*1
+  3*x^2
+}
+
+@heading{Reject an incorrect result}
+@(map paragraph
+   (math-verification-errors
+     (math-check-chain '("differentiate(x,x)" "2")
+       #:assumptions '("scalar(x)"))))
+
+A claimed derivative of 2 fails replay against the variable rule. The automatic polynomial pass also rejects division, functions such as sin(x), and negative or symbolic exponents before producing a partial derivation. Bounds limit expansion size and step count; this is not an integration engine or a general computer algebra system.
+
+The same certificate machinery checks @link["vector-analysis"]{vector identities}.

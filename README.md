@@ -24,8 +24,9 @@ authored material rather than repeat another API example.
 | [`inventory`](examples/inventory/build.scm) | CSV input and CSV/Scheme artifacts without Grove's content IR or HTML | Your inputs and outputs are structured data |
 | [`showcases/forest-category`](examples/showcases/forest-category/build.scm) | A small cross-linked category theory forest | You want an authored-content example |
 | [`showcases/heat-conduction`](examples/showcases/heat-conduction/build.scm) | A longer linked derivation using the same showcase runner | You want a larger content sample |
+| [`showcases/math-derivations`](examples/showcases/math-derivations/build.scm) | Checked vector identities and polynomial differentiation, with search and failure diagnostics | You want executable mathematical articles |
 
-The two showcases share their runner in
+The showcases share their runner in
 [`examples/common/`](examples/common/). `linked-notes` keeps a separate,
 complete configuration as the reference integration. These examples are
 functional demonstrations, not performance benchmarks.

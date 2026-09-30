@@ -20,7 +20,8 @@
             math-derivation->content math-check-chain math-verification->content
             math-differentiate math-differentiation-result?
             math-differentiation-expansion math-differentiation-simplification
-            math-differentiation-final math-differentiation->content)
+            math-differentiation-final math-differentiation->content
+            math-search-report->content)
   #:re-export (math-verify-step math-verify-derivation
                math-verification? math-verification-valid?
                math-verification-errors math-verification-diagnostics
@@ -81,6 +82,18 @@
 (define (math-differentiation->content result)
   (list (math-derivation->content (math-differentiation-expansion result))
         (math-derivation->content (math-differentiation-simplification result))))
+
+;; Preserve the stopping reason even when a bounded search found a candidate.
+(define (math-search-report->content report)
+  (unless (math-search-report? report)
+    (error "expected a math search report" report))
+  (cons (make-content-element 'paragraph
+          (list (format #f "Search stopped: ~a; ~a candidate(s); ~a states visited."
+                  (math-search-report-reason report)
+                  (length (math-search-report-candidates report))
+                  (math-search-report-states report)))
+          #:flow-kind 'block)
+        (map math-derivation->content (math-search-report-candidates report))))
 
 (define (math-source->assumptions sources)
   (append-map

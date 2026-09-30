@@ -1,0 +1,39 @@
+@; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+@; SPDX-License-Identifier: CC0-1.0
+
+@use-modules[(math-derivations commands) (grove math pipeline)]
+@title{The curl of a curl in a divergence-free field}
+@summary{A vector identity derived, searched, and independently checked.}
+
+Let E be a smooth vector field with zero divergence. Its double curl is the negative vector Laplacian. Grove uses explicit facts: the declaration vector(E) determines the type, smooth(E) permits the differential identity, and div(E)=0 is an assumed equation. These facts are premises, not conclusions proved by the system.
+
+@heading{Automatic derivation}
+@derive["vector(E); smooth(E); div(E)=0"]{curl(curl(E))}
+
+Every displayed equality records the rule and operand where it was applied. Vector zero is distinct from scalar zero, so the intermediate subtraction stays well typed.
+
+@heading{Searching for a specified conclusion}
+@search-derive["vector(E); smooth(E); div(E)=0" "-laplacian(E)"]{curl(curl(E))}
+
+The search is bounded. Its report retains the stopping reason alongside the candidate; finding one derivation does not imply that all possible derivations have been enumerated.
+
+@heading{Checking an authored chain}
+@check-derive["vector(E); smooth(E); div(E)=0"]{
+  curl(curl(E))
+  grad(div(E)) - laplacian(E)
+  zero(vector) - laplacian(E)
+  -laplacian(E)
+}
+
+The author chooses the intermediate expressions. The checker reconstructs and replays one registered rule per adjacent pair; it does not silently fill in missing steps.
+
+@heading{When a premise is missing}
+@(map paragraph
+   (math-verification-errors
+     (math-check-chain
+       '("curl(curl(E))" "grad(div(E))-laplacian(E)")
+       #:assumptions '("vector(E)"))))
+
+Here the identity has the correct shape but smooth(E) is absent. The diagnostic identifies the failed step, its rule, and its missing premise. It is displayed as data so this intentionally unsuccessful check does not abort the article build.
+
+For an algebraic pass with a different input language, see @link["polynomial-differentiation"]{polynomial differentiation}.

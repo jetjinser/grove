@@ -92,6 +92,11 @@
     (math-differentiate (content-verbatim-string source) variable
       #:assumptions (list assumptions))))
 
+(define-public (search-derive assumptions target . source)
+  (math-search-report->content
+    (math-search (content-verbatim-string source) target
+      #:assumptions (list assumptions) #:max-results 1)))
+
 (define-public (tex-math . source)
   (make-content-element 'math
                         (map make-content-text

@@ -91,6 +91,11 @@
 (test-assert "incorrect handwritten derivative fails verification"
   (not (math-verification-valid?
          (math-check-chain '("differentiate(x,x)" "2") #:assumptions facts))))
+(test-equal "incorrect variable derivative diagnoses the structurally matching rule"
+  'differentiate-variable
+  (math-diagnostic-rule
+    (car (math-verification-diagnostics
+           (math-check-chain '("differentiate(x,x)" "2") #:assumptions facts)))))
 (test-assert "target search finds and verifies derivative steps"
   (let ((report (math-search "differentiate(x,x)" "1" #:assumptions facts)))
     (and (pair? (math-search-report-candidates report))

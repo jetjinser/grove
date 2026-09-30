@@ -78,6 +78,21 @@
 (test-begin "scribble read")
 
 (let* ((document (evaluate-document (default-environment scribble)
+                   "@search-derive[\"scalar(x)\" \"1\"]{differentiate(x,x)}"))
+       (html (sxml->html (content->sxml document))))
+  (test-assert "@search-derive presents candidates and the search stopping reason"
+    (and (string-contains html "Search stopped:")
+         (string-contains html "1 candidate(s)")
+         (string-contains html "differentiate-variable"))))
+
+(let* ((document (evaluate-document (default-environment scribble)
+                   "@search-derive[\"scalar(x)\" \"2\"]{differentiate(x,x)}"))
+       (html (sxml->html (content->sxml document))))
+  (test-assert "an unsuccessful search displays its report without aborting the article"
+    (and (string-contains html "exhausted; 0 candidate(s)")
+         (not (string-contains html "<mtable>")))))
+
+(let* ((document (evaluate-document (default-environment scribble)
                    "@differentiate[\"x\" \"scalar(x)\"]{x^3 + 2*x}"))
        (html (sxml->html (content->sxml document))))
   (test-assert "@differentiate displays both passes as native MathML"

@@ -1,0 +1,5 @@
+/* SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+ * SPDX-License-Identifier: CC0-1.0 */
+body { max-width: 70rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; }
+.math-display { overflow-x: auto; margin: 1.5rem 0; }
+pre { overflow-x: auto; padding: 1rem; background: #eee; }
