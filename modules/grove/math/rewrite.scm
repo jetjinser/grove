@@ -51,8 +51,14 @@
     (make-math-rewrite-rule
       'subtract-zero
       "0 - X = -X"
-      "none"
-      #t)))
+      "zero and X have the same scalar or vector type"
+      #t)
+    (make-math-rewrite-rule 'add-zero "X + 0 = X" "matching scalar or vector types" #t)
+    (make-math-rewrite-rule 'zero-add "0 + X = X" "matching scalar or vector types" #t)
+    (make-math-rewrite-rule 'subtract-right-zero "X - 0 = X" "matching scalar or vector types" #t)
+    (make-math-rewrite-rule 'double-negation "-(-X) = X" "X is scalar or vector" #t)
+    (make-math-rewrite-rule 'multiply-one "X * 1 = X" "X is scalar or vector" #t)
+    (make-math-rewrite-rule 'one-multiply "1 * X = X" "X is scalar or vector" #t)))
 
 (define (math-rewrite-rule-ref name)
   (find (lambda (rule) (eq? (math-rewrite-rule-name rule) name))
@@ -105,6 +111,37 @@
     (math-typeo assumptions term type)
     (zeroo type zero)))
 
+;; Both sides are unified before type judgments: forward queries ground X from
+;; the input; inverse queries ground it from the output. All forward rules shrink.
+(define (simplifyo assumptions input output rule)
+  (fresh (term type)
+    (== output term)
+    (conde
+      ((fresh (zero)
+         (== input `(+ ,term ,zero))
+         (== rule 'add-zero)
+         (math-typeo assumptions term type)
+         (zeroo type zero)))
+      ((fresh (zero)
+         (== input `(+ ,zero ,term))
+         (== rule 'zero-add)
+         (math-typeo assumptions term type)
+         (zeroo type zero)))
+      ((fresh (zero)
+         (== input `(- ,term ,zero))
+         (== rule 'subtract-right-zero)
+         (math-typeo assumptions term type)
+         (zeroo type zero)))
+      ((== input `(- (- ,term))) (== rule 'double-negation)
+       (math-typeo assumptions term type)
+       (conde ((== type 'scalar)) ((== type 'vector))))
+      ((== input `(* ,term (num "1"))) (== rule 'multiply-one)
+       (math-typeo assumptions term type)
+       (conde ((== type 'scalar)) ((== type 'vector))))
+      ((== input `(* (num "1") ,term)) (== rule 'one-multiply)
+       (math-typeo assumptions term type)
+       (conde ((== type 'scalar)) ((== type 'vector)))))))
+
 (define (unrewrite-rooto assumptions input output rule)
   (conde
     ((curl-curlo assumptions input output)
@@ -130,7 +167,8 @@
     ((div-curl-zeroo assumptions input output)
      (== rule 'div-curl-zero))
     ((subtract-zeroo assumptions input output)
-     (== rule 'subtract-zero))))
+     (== rule 'subtract-zero))
+    ((simplifyo assumptions input output rule))))
 
 ;; Paths count operands only; the root is (), the first operand is (0), etc.
 (define (rewrite-stepo assumptions input output rule path)

@@ -12,6 +12,13 @@ numeric `0` does not silently become a vector. Divergence-free rewriting now
 produces vector zero, and derivation verification checks type preservation at
 every step.
 
+Automatic simplification removes a matching typed zero from either side of
+addition and the right side of subtraction, cancels double negation, and removes
+scalar one from either side of multiplication. These six rules apply to scalar
+and vector terms and strictly reduce term size. They are forward simplifications;
+backward search does not insert arbitrary zero/one decorations. Each transition
+still records its rule and operand path.
+
 Grove keeps mathematical meaning separate from mathematical presentation.
 The current content IR nodes (`math-frac`, `math-sup`, `math-align`, and
 `math-token`) describe layout and lower to MathML. The new `(grove math ...)`

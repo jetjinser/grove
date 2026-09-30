@@ -159,7 +159,8 @@
     (car (run 1 (result rule path)
            (rewrite-stepo '((scalar (var x))) '(- (num "0") (var x)) result rule path))))
   (test-equal "rewrite relations expose a contract for every current rule"
-    '(curl-curl-identity divergence-free div-curl-zero subtract-zero)
+    '(curl-curl-identity divergence-free div-curl-zero subtract-zero
+      add-zero zero-add subtract-right-zero double-negation multiply-one one-multiply)
     (map math-rewrite-rule-name math-rewrite-rules))
   (test-assert "curl-curl side conditions are matched against typed assumptions"
     (and (math-rewrite-rule? (math-rewrite-rule-ref 'curl-curl-identity))
@@ -308,6 +309,29 @@
       '(curl (curl (var E)))
       '(- (grad (div (var E))) (laplacian (var E)))
       'curl-curl-identity '()))
+  (for-each
+    (lambda (example)
+      (let* ((source (car example)) (target (cadr example))
+             (candidate (car (math-search source target
+                               #:assumptions '("scalar(x); vector(E)")
+                               #:max-depth 1))))
+        (test-assert (string-append "typed simplification: " source)
+          (math-verification-valid? (math-verify-derivation candidate)))))
+    '(("x + 0" "x") ("0 + x" "x") ("x - 0" "x")
+      ("-(-x)" "x") ("x * 1" "x") ("1 * x" "x")
+      ("E + zero(vector)" "E") ("zero(vector) + E" "E")
+      ("E - zero(vector)" "E") ("-(-E)" "E")
+      ("E * 1" "E") ("1 * E" "E")))
+  (test-assert "nested simplification converges to a type-preserving result"
+    (math-verification-valid?
+      (math-verify-derivation
+        (car (math-search "1 * (-(-E) + zero(vector))" "E"
+               #:assumptions '("vector(E)") #:max-depth 3)))))
+  (test-equal "wrongly typed zero cannot trigger vector addition simplification"
+    '()
+    (run* (result rule path)
+      (rewrite-stepo '((vector (var E))) '(+ (var E) (num "0"))
+                     result rule path)))
   (test-equal "step verification rejects an incorrect operand path"
     #f
     (math-verify-step
