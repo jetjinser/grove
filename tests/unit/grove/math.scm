@@ -113,6 +113,21 @@
                        (= (div (var E)) (num "0")))
                      '(- (grad (div (var E))) (laplacian (var E)))
                      result))))
+  (test-equal "divergence of curl rewrites to scalar zero for a smooth vector field"
+    '((num "0") div-curl-zero ())
+    (car (run 1 (result rule path)
+           (rewrite-stepo '((vector (var E)) (smooth (var E)))
+                          '(div (curl (var E))) result rule path))))
+  (test-equal "divergence of curl requires a matching smoothness assumption"
+    '()
+    (run* (result rule path)
+      (rewrite-stepo '((vector (var E)))
+                     '(div (curl (var E))) result rule path)))
+  (test-equal "divergence of curl rejects a scalar field"
+    '()
+    (run* (result rule path)
+      (rewrite-stepo '((scalar (var E)) (smooth (var E)))
+                     '(div (curl (var E))) result rule path)))
   (test-equal "named rewrite records the nested operand path"
     '((- (num "0") (laplacian (var E))) divergence-free (0))
     (car (run 1 (result rule path)
@@ -130,7 +145,7 @@
     (car (run 1 (result rule path)
            (rewrite-stepo '() '(- (num "0") (var x)) result rule path))))
   (test-equal "rewrite relations expose a contract for every current rule"
-    '(curl-curl-identity divergence-free subtract-zero)
+    '(curl-curl-identity divergence-free div-curl-zero subtract-zero)
     (map math-rewrite-rule-name math-rewrite-rules))
   (test-assert "curl-curl side conditions are matched against typed assumptions"
     (and (math-rewrite-rule? (math-rewrite-rule-ref 'curl-curl-identity))
@@ -143,6 +158,9 @@
   (test-assert "the divergence-free relation checks its declared assumption"
     (math-rewrite-rule-condition-checked?
       (math-rewrite-rule-ref 'divergence-free)))
+  (test-assert "div-curl zero checks vector and regularity assumptions"
+    (math-rewrite-rule-condition-checked?
+      (math-rewrite-rule-ref 'div-curl-zero)))
   (test-equal "conditional rewrite does not use a fact about another field"
     '()
     (run* (result)
@@ -154,6 +172,25 @@
     (run* (result rule path)
       (rewrite-stepo '((vector (var E)))
                      '(curl (curl (var E))) result rule path)))
+  (let* ((candidate
+           (car (math-search "div(curl(E))" "0"
+                  #:assumptions '("vector(E); smooth(E)"))))
+         (verification (math-verify-derivation candidate)))
+    (test-equal "div-curl goal search returns the expected terms"
+      '((div (curl (var E))) (num "0"))
+      (math-search-result-terms candidate))
+    (test-equal "div-curl goal search records its named rule"
+      '(div-curl-zero)
+      (map math-derivation-step-rule
+           (math-search-result-steps candidate)))
+    (test-assert "div-curl derivation passes independent verification"
+      (math-verification-valid? verification))
+    (test-equal "div-curl backward search grounds zero from declared vector fields"
+      (math-search-result-terms candidate)
+      (math-search-result-terms
+        (car (math-search-backward "0" "div(curl(E))"
+               #:assumptions '("vector(E); smooth(E)")
+               #:max-depth 1)))))
   (let* ((derivation
            (math-derive-curl-curl "curl(curl(E))"
                                   #:assumptions

@@ -60,7 +60,9 @@ The current rules are deliberately few. `curl-curl-identity` encodes
 `curl(curl(E)) = grad(div(E)) - laplacian(E)` and requires matching
 `vector(E)` and `smooth(E)` declarations. `divergence-free` requires a vector
 declaration and an explicit structurally matching assumption such as `div(E)=0`.
-`subtract-zero` applies the unconditional algebraic identity `0 - X = -X`.
+`div-curl-zero` encodes `div(curl(E)) = 0` and requires matching vector and
+smoothness declarations. `subtract-zero` applies the unconditional algebraic
+identity `0 - X = -X`.
 The displayed path and rule make a derivation inspectable, but do not amount to
 a formal proof that the author's declared facts hold.
 The rewrite module exposes a rule registry with each law, its side condition,

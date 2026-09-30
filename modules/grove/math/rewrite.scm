@@ -44,6 +44,11 @@
       "assumptions declare vector(E) and contain the matching fact div(E) = 0"
       #t)
     (make-math-rewrite-rule
+      'div-curl-zero
+      "div(curl(E)) = 0"
+      "assumptions declare vector(E) and smooth(E)"
+      #t)
+    (make-math-rewrite-rule
       'subtract-zero
       "0 - X = -X"
       "none"
@@ -66,6 +71,17 @@
   (fresh (field)
     (== input `(grad (div ,field)))
     (assumptiono assumptions `(= (div ,field) (num "0")))
+    (math-typeo assumptions field 'vector)
+    (== output '(num "0"))))
+
+;; The divergence of a curl vanishes for a sufficiently regular vector field.
+(define (div-curl-zeroo assumptions input output)
+  (fresh (field)
+    (== input `(div (curl ,field)))
+    ;; Ground the inverse query from the user's declared vector fields;
+    ;; otherwise zero would generate an unbounded family of arbitrary terms.
+    (assumptiono assumptions `(vector ,field))
+    (assumptiono assumptions `(smooth ,field))
     (math-typeo assumptions field 'vector)
     (== output '(num "0"))))
 
@@ -92,6 +108,8 @@
        (assumptiono assumptions `(= (div ,field) (num "0")))
        (math-typeo assumptions field 'vector)
        (== rule 'divergence-free)))
+    ((div-curl-zeroo assumptions input output)
+     (== rule 'div-curl-zero))
     ((fresh (term)
        (== input `(- (num "0") ,term))
        (== output `(- ,term))
@@ -104,6 +122,8 @@
      (== rule 'curl-curl-identity))
     ((divergence-zeroo assumptions input output)
      (== rule 'divergence-free))
+    ((div-curl-zeroo assumptions input output)
+     (== rule 'div-curl-zero))
     ((subtract-zeroo input output)
      (== rule 'subtract-zero))))
 
