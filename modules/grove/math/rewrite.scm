@@ -72,7 +72,7 @@
     (== input `(grad (div ,field)))
     (assumptiono assumptions `(= (div ,field) (num "0")))
     (math-typeo assumptions field 'vector)
-    (== output '(num "0"))))
+    (== output '(zero vector))))
 
 ;; The divergence of a curl vanishes for a sufficiently regular vector field.
 (define (div-curl-zeroo assumptions input output)
@@ -93,10 +93,17 @@
     (math-typeo assumptions field 'vector)
     (assumptiono assumptions `(smooth ,field))))
 
-(define (subtract-zeroo input output)
-  (fresh (term)
-    (== input `(- (num "0") ,term))
-    (== output `(- ,term))))
+(define (zeroo type term)
+  (conde
+    ((== type 'scalar) (== term '(num "0")))
+    ((== type 'vector) (== term '(zero vector)))))
+
+(define (subtract-zeroo assumptions input output)
+  (fresh (term zero type)
+    (== input `(- ,zero ,term))
+    (== output `(- ,term))
+    (math-typeo assumptions term type)
+    (zeroo type zero)))
 
 (define (unrewrite-rooto assumptions input output rule)
   (conde
@@ -104,16 +111,14 @@
      (== rule 'curl-curl-identity))
     ((fresh (field)
        (== input `(grad (div ,field)))
-       (== output '(num "0"))
+       (== output '(zero vector))
        (assumptiono assumptions `(= (div ,field) (num "0")))
        (math-typeo assumptions field 'vector)
        (== rule 'divergence-free)))
     ((div-curl-zeroo assumptions input output)
      (== rule 'div-curl-zero))
-    ((fresh (term)
-       (== input `(- (num "0") ,term))
-       (== output `(- ,term))
-       (== rule 'subtract-zero)))))
+    ((subtract-zeroo assumptions input output)
+     (== rule 'subtract-zero))))
 
 ;; Apply one named rule at INPUT, returning the rule that fired.
 (define (rewrite-rooto assumptions input output rule)
@@ -124,7 +129,7 @@
      (== rule 'divergence-free))
     ((div-curl-zeroo assumptions input output)
      (== rule 'div-curl-zero))
-    ((subtract-zeroo input output)
+    ((subtract-zeroo assumptions input output)
      (== rule 'subtract-zero))))
 
 ;; Paths count operands only; the root is (), the first operand is (0), etc.

@@ -30,6 +30,7 @@
 
 (define (math-typeo assumptions term type)
   (conde
+    ((== term '(zero vector)) (== type 'vector))
     ((fresh (name)
        (== `(var ,name) term)
        (facto assumptions `(scalar (var ,name)))
@@ -48,11 +49,6 @@
     ((fresh (left right operand-type)
        (== `(+ ,left ,right) term)
        (math-typeo assumptions left operand-type)
-       (math-typeo assumptions right operand-type)
-       (== type operand-type)))
-    ;; Zero minus a term is unary negation, so its type follows the term.
-    ((fresh (right operand-type)
-       (== `(- (num "0") ,right) term)
        (math-typeo assumptions right operand-type)
        (== type operand-type)))
     ((fresh (left right operand-type)

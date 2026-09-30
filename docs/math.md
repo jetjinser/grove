@@ -5,6 +5,13 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # Math processing
 
+Scalar zero is `(num "0")`; vector zero is the distinct term `(zero vector)`.
+The source spelling `zero(vector)` produces vector zero and renders an accented
+zero in MathML. Addition, subtraction and equations require matching types;
+numeric `0` does not silently become a vector. Divergence-free rewriting now
+produces vector zero, and derivation verification checks type preservation at
+every step.
+
 Grove keeps mathematical meaning separate from mathematical presentation.
 The current content IR nodes (`math-frac`, `math-sup`, `math-align`, and
 `math-token`) describe layout and lower to MathML. The new `(grove math ...)`

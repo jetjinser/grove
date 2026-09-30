@@ -240,7 +240,8 @@
     (test-assert "@derive applies conditional and algebraic rewrites in sequence"
       (and (= (substring-count html "<mtr>") 4)
            (= (substring-count html "<mo>=</mo>") 3)
-           (string-contains html "<mn>0</mn><mo>−</mo>")
+           (string-contains html "<mn>0</mn>")
+           (string-contains html "</mover><mo>−</mo>")
            (string-contains html "<mo>−</mo><mrow><mi>Δ</mi>")))))
 
 (let ((env (default-environment scribble)))

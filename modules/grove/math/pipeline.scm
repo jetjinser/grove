@@ -147,8 +147,13 @@
       #:flow-kind 'block)))
 
 (define (math-verify-step assumptions from to rule path)
-  (let ((metadata (math-rewrite-rule-ref rule)))
+  (let ((metadata (math-rewrite-rule-ref rule))
+        (from-type (math-infer-type assumptions from))
+        (to-type (math-infer-type assumptions to)))
     (and metadata
+         from-type to-type
+         (eq? (math-typed-term-type from-type)
+              (math-typed-term-type to-type))
          (math-rewrite-rule-condition-checked? metadata)
          (pair? (run 1 (verified?)
                  (rewrite-stepo assumptions from to rule path)

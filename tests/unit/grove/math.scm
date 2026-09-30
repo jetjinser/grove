@@ -71,7 +71,21 @@
     'vector
     (math-typed-term-type
       (math-infer-type '((vector (var E)))
-                       '(- (num "0") (laplacian (var E))))))
+                       '(- (zero vector) (laplacian (var E))))))
+  (test-equal "vector zero has an explicit symbolic representation"
+    '(zero vector) (math-source->term "zero(vector)"))
+  (test-equal "scalar zero cannot be subtracted from a vector"
+    #f (math-infer-type '((vector (var E))) '(- (num "0") (var E))))
+  (test-equal "vector zero supports vector equations and addition"
+    '(vector proposition)
+    (map (lambda (term)
+           (math-typed-term-type (math-infer-type '((vector (var E))) term)))
+         '((+ (var E) (zero vector)) (= (var E) (zero vector)))))
+  (test-assert "vector zero renders with a vector accent"
+    (string-contains
+      (sxml->html (content->sxml
+        (make-content-element 'math (list (math-term->layout '(zero vector))))))
+      "<mover accent=\"true\">"))
   (test-equal "type inference rejects conflicting declarations"
     #f
     (math-infer-type '((scalar (var x)) (vector (var x))) '(var x)))
@@ -107,7 +121,7 @@
     (rewrite-curl-curl '(curl (curl (var E)))
                        #:assumptions '((vector (var E)))))
   (test-equal "conditional rewrite uses a declared divergence-free fact"
-    '(- (num "0") (laplacian (var E)))
+    '(- (zero vector) (laplacian (var E)))
     (car (run 1 (result)
            (rewriteo '((vector (var E))
                        (= (div (var E)) (num "0")))
@@ -129,7 +143,7 @@
       (rewrite-stepo '((scalar (var E)) (smooth (var E)))
                      '(div (curl (var E))) result rule path)))
   (test-equal "named rewrite records the nested operand path"
-    '((- (num "0") (laplacian (var E))) divergence-free (0))
+    '((- (zero vector) (laplacian (var E))) divergence-free (0))
     (car (run 1 (result rule path)
            (rewrite-stepo '((vector (var E))
                             (= (div (var E)) (num "0")))
@@ -143,7 +157,7 @@
   (test-equal "subtraction simplification is named at the root"
     '((- (var x)) subtract-zero ())
     (car (run 1 (result rule path)
-           (rewrite-stepo '() '(- (num "0") (var x)) result rule path))))
+           (rewrite-stepo '((scalar (var x))) '(- (num "0") (var x)) result rule path))))
   (test-equal "rewrite relations expose a contract for every current rule"
     '(curl-curl-identity divergence-free div-curl-zero subtract-zero)
     (map math-rewrite-rule-name math-rewrite-rules))
@@ -213,7 +227,7 @@
     (test-equal "bounded goal search returns the complete derivation chain"
       '((curl (curl (var E)))
         (- (grad (div (var E))) (laplacian (var E)))
-        (- (num "0") (laplacian (var E)))
+        (- (zero vector) (laplacian (var E)))
         (- (laplacian (var E))))
       (math-search-result-terms result))
     (test-equal "goal search records each named rewrite"
