@@ -52,6 +52,16 @@
            (rewriteo '((= (div (var E)) (num "0")))
                      '(- (grad (div (var E))) (laplacian (var E)))
                      result))))
+  (test-equal "named rewrite records the nested operand path"
+    '((- (num "0") (laplacian (var E))) divergence-free (0))
+    (car (run 1 (result rule path)
+           (rewrite-stepo '((= (div (var E)) (num "0")))
+                          '(- (grad (div (var E))) (laplacian (var E)))
+                          result rule path))))
+  (test-equal "curl-curl rewrite records its rule at the root"
+    '((- (grad (div (var E))) (laplacian (var E))) curl-curl-identity ())
+    (car (run 1 (result rule path)
+           (rewrite-stepo '() '(curl (curl (var E))) result rule path))))
   (test-equal "conditional rewrite does not use a fact about another field"
     '()
     (run* (result)
@@ -68,7 +78,8 @@
            (string-contains html "<mo>∇</mo>")
            (string-contains html "<mo>×</mo>")
            (string-contains html "<mo>·</mo>")
-           (string-contains html "Δ"))))
+           (string-contains html "Δ")
+           (string-contains html "curl-curl identity (at root)"))))
   (test-assert "generic function calls use MathML function application"
     (string-contains
       (sxml->html
