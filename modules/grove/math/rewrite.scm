@@ -4,6 +4,7 @@
 
 (define-module (grove math rewrite)
   #:use-module (grove relation)
+  #:use-module (grove math types)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:export (curl-curlo
@@ -33,12 +34,12 @@
     (make-math-rewrite-rule
       'curl-curl-identity
       "curl(curl(E)) = grad(div(E)) - laplacian(E)"
-      "E is a twice differentiable vector field"
-      #f)
+      "assumptions declare vector(E) and smooth(E)"
+      #t)
     (make-math-rewrite-rule
       'divergence-free
       "grad(div(E)) = 0"
-      "the assumptions contain the structurally matching fact div(E) = 0"
+      "assumptions declare vector(E) and contain the matching fact div(E) = 0"
       #t)
     (make-math-rewrite-rule
       'subtract-zero
@@ -49,12 +50,6 @@
 (define (math-rewrite-rule-ref name)
   (find (lambda (rule) (eq? (math-rewrite-rule-name rule) name))
         math-rewrite-rules))
-
-;; Vector-calculus identity: curl(curl(E)) = grad(div(E)) - laplacian(E).
-(define (curl-curlo input output)
-  (fresh (field)
-    (== input `(curl (curl ,field)))
-    (== output `(- (grad (div ,field)) (laplacian ,field)))))
 
 (define (assumptiono assumptions assumption)
   (conde
@@ -68,8 +63,17 @@
 (define (divergence-zeroo assumptions input output)
   (fresh (field)
     (== input `(grad (div ,field)))
+    (math-typeo assumptions field 'vector)
     (assumptiono assumptions `(= (div ,field) (num "0")))
     (== output '(num "0"))))
+
+;; Vector-calculus identity, gated by explicit type and regularity facts.
+(define (curl-curlo assumptions input output)
+  (fresh (field)
+    (== input `(curl (curl ,field)))
+    (math-typeo assumptions field 'vector)
+    (assumptiono assumptions `(smooth ,field))
+    (== output `(- (grad (div ,field)) (laplacian ,field)))))
 
 (define (subtract-zeroo input output)
   (fresh (term)
@@ -79,7 +83,7 @@
 ;; Apply one named rule at INPUT, returning the rule that fired.
 (define (rewrite-rooto assumptions input output rule)
   (conde
-    ((curl-curlo input output)
+    ((curl-curlo assumptions input output)
      (== rule 'curl-curl-identity))
     ((divergence-zeroo assumptions input output)
      (== rule 'divergence-free))
@@ -115,6 +119,8 @@
   (fresh (rule path)
     (rewrite-stepo assumptions input output rule path)))
 
-(define (rewrite-curl-curl term)
-  (let ((answers (run 1 (result) (curl-curlo term result))))
+(define* (rewrite-curl-curl term #:key (assumptions '()))
+  (let ((answers
+          (run 1 (result)
+            (curl-curlo assumptions term result))))
     (and (pair? answers) (car answers))))

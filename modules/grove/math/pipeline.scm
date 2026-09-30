@@ -8,6 +8,7 @@
   #:use-module (grove math term)
   #:use-module (grove math layout)
   #:use-module (grove math rewrite)
+  #:use-module (grove math types)
   #:use-module (grove relation)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
@@ -17,6 +18,31 @@
 
 (define (math-source->term source)
   (math-expression->term (parse-math source)))
+
+(define (math-source->assumptions sources)
+  (append-map
+    (lambda (source)
+      (map math-source->term
+           (filter (lambda (part) (not (string-null? (string-trim-both part))))
+                   (string-split source #\;))))
+    sources))
+
+(define (curl-curl-field term)
+  (and (list? term) (= (length term) 2) (eq? (car term) 'curl)
+       (let ((inner (cadr term)))
+         (and (list? inner) (= (length inner) 2)
+              (eq? (car inner) 'curl)
+              (cadr inner)))))
+
+(define (check-derivation-types! input assumptions)
+  (unless (math-infer-type assumptions input)
+    (error (math-type-diagnostic assumptions input)))
+  (let ((field (curl-curl-field input)))
+    (when (and field (not (member `(smooth ,field) assumptions)))
+      (error "curl-curl-identity requires a smooth(~a) assumption"
+             (if (and (pair? field) (eq? (car field) 'var))
+                 (cadr field)
+                 field)))))
 
 (define (math-cell contents)
   (make-content-element 'math-cell contents))
@@ -80,8 +106,9 @@
 
 (define* (math-derive source #:key (assumptions '()))
   (let* ((input (math-source->term source))
-         (assumptions (map math-source->term assumptions))
+         (assumptions (math-source->assumptions assumptions))
          (steps (derive-steps input assumptions)))
+    (check-derivation-types! input assumptions)
     (unless (> (length steps) 1)
       (error "no math rewrite rule applies to the expression" input))
     (make-content-element
@@ -95,5 +122,5 @@
       #:properties '((display? . #t))
       #:flow-kind 'block)))
 
-(define (math-derive-curl-curl source)
-  (math-derive source))
+(define* (math-derive-curl-curl source #:key (assumptions '()))
+  (math-derive source #:assumptions assumptions))

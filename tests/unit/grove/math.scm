@@ -8,6 +8,7 @@
   #:use-module (grove math term)
   #:use-module (grove math layout)
   #:use-module (grove math rewrite)
+  #:use-module (grove math types)
   #:use-module (grove math pipeline)
   #:use-module (grove relation)
   #:use-module (grove render html)
@@ -40,28 +41,65 @@
     (math-source->term "div(E)=0"))
   (test-assert "math terms accept the declared symbolic grammar"
     (math-term? '(+ (var x) (* (var y) (num "2")))))
+  (test-equal "numbers and declared variables receive scalar and vector types"
+    '(scalar vector)
+    (list (math-typed-term-type
+            (math-infer-type '((scalar (var x))) '(+ (var x) (num "2"))))
+          (math-typed-term-type
+            (math-infer-type '((vector (var E))) '(curl (var E))))))
+  (test-equal "type inference rejects curl applied to a scalar field"
+    #f
+    (math-infer-type '((scalar (var E))) '(curl (var E))))
+  (test-equal "type inference rejects mixed scalar-vector addition"
+    #f
+    (math-infer-type '((scalar (var x)) (vector (var E)))
+                     '(+ (var x) (var E))))
+  (test-equal "type inference rejects conflicting declarations"
+    #f
+    (math-infer-type '((scalar (var x)) (vector (var x))) '(var x)))
+  (test-equal "type diagnostics identify the required vector declaration"
+    "curl requires a vector operand; add vector(E)"
+    (math-type-diagnostic '() '(curl (var E))))
+  (test-error "@derive reports missing type declarations" #t
+    (math-derive "curl(curl(E))"))
+  (test-error "@derive reports a missing regularity assumption" #t
+    (math-derive "curl(curl(E))"
+                 #:assumptions '("vector(E)")))
   (test-equal "symbolic terms lower to the separate layout IR"
     'math-row
     (content-element-kind (math-term->layout '(curl (var E)))))
   (test-equal "miniKanren relation derives curl-curl identity"
+    '((- (grad (div (var E))) (laplacian (var E))) curl-curl-identity ())
+    (car (run 1 (result rule path)
+           (rewrite-stepo '((vector (var E)) (smooth (var E)))
+                          '(curl (curl (var E))) result rule path))))
+  (test-equal "curl-curl helper enforces vector and regularity premises"
     '(- (grad (div (var E))) (laplacian (var E)))
-    (rewrite-curl-curl '(curl (curl (var E)))))
+    (rewrite-curl-curl '(curl (curl (var E)))
+                       #:assumptions '((vector (var E)) (smooth (var E)))))
+  (test-equal "curl-curl helper rejects a missing regularity premise"
+    #f
+    (rewrite-curl-curl '(curl (curl (var E)))
+                       #:assumptions '((vector (var E)))))
   (test-equal "conditional rewrite uses a declared divergence-free fact"
     '(- (num "0") (laplacian (var E)))
     (car (run 1 (result)
-           (rewriteo '((= (div (var E)) (num "0")))
+           (rewriteo '((vector (var E))
+                       (= (div (var E)) (num "0")))
                      '(- (grad (div (var E))) (laplacian (var E)))
                      result))))
   (test-equal "named rewrite records the nested operand path"
     '((- (num "0") (laplacian (var E))) divergence-free (0))
     (car (run 1 (result rule path)
-           (rewrite-stepo '((= (div (var E)) (num "0")))
+           (rewrite-stepo '((vector (var E))
+                            (= (div (var E)) (num "0")))
                           '(- (grad (div (var E))) (laplacian (var E)))
                           result rule path))))
   (test-equal "curl-curl rewrite records its rule at the root"
     '((- (grad (div (var E))) (laplacian (var E))) curl-curl-identity ())
     (car (run 1 (result rule path)
-           (rewrite-stepo '() '(curl (curl (var E))) result rule path))))
+           (rewrite-stepo '((vector (var E)) (smooth (var E)))
+                          '(curl (curl (var E))) result rule path))))
   (test-equal "subtraction simplification is named at the root"
     '((- (var x)) subtract-zero ())
     (car (run 1 (result rule path)
@@ -69,27 +107,32 @@
   (test-equal "rewrite relations expose a contract for every current rule"
     '(curl-curl-identity divergence-free subtract-zero)
     (map math-rewrite-rule-name math-rewrite-rules))
-  (test-assert "curl-curl side conditions are documented but not type-checked"
+  (test-assert "curl-curl side conditions are matched against typed assumptions"
     (and (math-rewrite-rule? (math-rewrite-rule-ref 'curl-curl-identity))
          (string-contains
            (math-rewrite-rule-condition
              (math-rewrite-rule-ref 'curl-curl-identity))
-           "vector field")
-         (not (math-rewrite-rule-condition-checked?
-                (math-rewrite-rule-ref 'curl-curl-identity)))))
+           "vector(E)")
+         (math-rewrite-rule-condition-checked?
+           (math-rewrite-rule-ref 'curl-curl-identity))))
   (test-assert "the divergence-free relation checks its declared assumption"
     (math-rewrite-rule-condition-checked?
       (math-rewrite-rule-ref 'divergence-free)))
   (test-equal "conditional rewrite does not use a fact about another field"
     '()
     (run* (result)
-      (rewriteo '((= (div (var F)) (num "0")))
+      (rewriteo '((vector (var F)) (= (div (var F)) (num "0")))
                 '(grad (div (var E)))
                 result)))
   (test-equal "curl-curl relation leaves a non-matching term without answer"
-    #f
-    (rewrite-curl-curl '(curl (var E))))
-  (let* ((derivation (math-derive-curl-curl "curl(curl(E))"))
+    '()
+    (run* (result rule path)
+      (rewrite-stepo '((vector (var E)))
+                     '(curl (curl (var E))) result rule path)))
+  (let* ((derivation
+           (math-derive-curl-curl "curl(curl(E))"
+                                  #:assumptions
+                                  '("vector(E); smooth(E)")))
          (html (sxml->html (content->sxml derivation))))
     (test-assert "lowering creates a display MathML alignment"
       (and (string-contains html "<mtable>")

@@ -219,7 +219,10 @@
     (syntax->datum (read-with-scheme-language env "(+ 1 2)"))))
 
 (let ((env (default-environment scribble)))
-  (let* ((document (evaluate-document env "@derive{curl(curl(E))}"))
+  (let* ((document
+           (evaluate-document
+             env
+             "@derive[\"vector(E); smooth(E)\"]{curl(curl(E))}"))
          (html (sxml->html (content->sxml document))))
     (test-assert "@derive connects parsed math, miniKanren rewriting, and MathML"
       (and (string-contains html "<mtable>")
@@ -230,7 +233,9 @@
 
 (let ((env (default-environment scribble)))
   (let* ((document
-           (evaluate-document env "@derive[\"div(E)=0\"]{curl(curl(E))}"))
+           (evaluate-document
+             env
+             "@derive[\"vector(E); smooth(E); div(E)=0\"]{curl(curl(E))}"))
          (html (sxml->html (content->sxml document))))
     (test-assert "@derive applies conditional and algebraic rewrites in sequence"
       (and (= (substring-count html "<mtr>") 4)
