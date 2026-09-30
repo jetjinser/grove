@@ -3,42 +3,40 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (language scribble commands)
-  #:use-module (grove ir)
-  #:export (bold verbatim paragraph heading blockquote
-            itemize item code code-block math display-math))
+  #:use-module (grove ir))
 
-(define (bold . body)
+(define-public (bold . body)
   (make-content-element 'bold body))
 
-(define (verbatim . body)
+(define-public (verbatim . body)
   (make-content-element
     'verbatim
     (list (make-content-text (content-verbatim-string body)))))
 
-(define (paragraph . body)
+(define-public (paragraph . body)
   (make-content-element 'paragraph body))
 
-(define (heading . body)
+(define-public (heading . body)
   (make-content-element 'heading body))
 
-(define (blockquote . body)
+(define-public (blockquote . body)
   (make-content-element 'blockquote body))
 
-(define (itemize . body)
+(define-public (itemize . body)
   (make-content-element 'itemize body))
 
-(define (item . body)
+(define-public (item . body)
   (make-content-element 'item body))
 
-(define (code . body)
+(define-public (code . body)
   (make-content-element 'code body))
 
-(define (code-block . body)
+(define-public (code-block . body)
   (make-content-element 'code-block body))
 
-(define (math source-text)
+(define-public (math source-text)
   (make-content-element 'math (list source-text)))
 
-(define (display-math source-text)
+(define-public (display-math source-text)
   (make-content-element 'math (list source-text)
                         #:properties '((display? . #t))))
