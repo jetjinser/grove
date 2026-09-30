@@ -316,10 +316,34 @@ renderer uses an underlined heading, quoted lines, bullets, backticks, and
 fenced code blocks. The IR remains open to other element kinds and custom
 renderer handlers.
 
-`@lipsum[1-3]{}` inserts the selected Lorem Ipsum paragraphs as ordinary text;
-without a range, it inserts the full corpus. The corpus is a separate data file
+Elements declare whether they participate in document flow as blocks. The
+Scribble reader uses this IR-level distinction when it groups ordinary text
+into paragraphs, so custom elements can opt in without relying on their kind
+name:
+
+```scheme
+(make-content-element 'callout body #:flow-kind 'block)
+```
+
+Elements default to inline flow. The `paragraph`, `heading`, `blockquote`,
+`itemize`, `item`, `verbatim`, `code-block`, and display-math commands declare
+block flow semantics.
+
+`@lipsum[1-3]{}` inserts the selected Lorem Ipsum text; without a range, it
+inserts the full corpus. At document level, text separated by blank lines is
+decoded into ordinary paragraph elements. The corpus is a separate data file
 at `modules/forester/data/lipsum-la.txt`, distributed under LPPL 1.3 or later;
 its notice and license are included alongside the file.
+
+Scheme expressions can return a list of document values, which the reader
+splices into the document flow. `text-paragraphs` splits plain text at blank
+lines, so a command can be mapped to paragraph elements without constructing
+IR values directly:
+
+```scheme
+@use-modules[(forester commands)]
+@(map paragraph (text-paragraphs (lipsum "1-3")))
+```
 
 The complete runnable example, including custom routes and CSS, is in
 `examples/linked-notes/build.scm`.

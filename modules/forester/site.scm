@@ -145,7 +145,8 @@
            (content-element-kind content)
            (filter-map owned-content (content-element-children content))
            (content-element-source content)
-           #:properties (content-element-properties content))))
+           #:properties (content-element-properties content)
+           #:flow-kind (content-element-flow-kind content))))
     ((content-document? content)
      (make-content-document
        (filter-map owned-content (content-document-children content))
@@ -198,7 +199,8 @@
              (content-element-source content)
              #:properties (if id
                               (cons (cons 'tree-id id) properties)
-                              properties))))
+                              properties)
+             #:flow-kind (content-element-flow-kind content))))
         ((content-document? content)
          (make-content-document
            (map transform (content-document-children content))

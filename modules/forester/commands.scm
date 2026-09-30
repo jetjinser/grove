@@ -11,10 +11,10 @@
 (define lipsum-source #f)
 
 (define-public (title . body)
-  (make-content-element 'title body))
+  (make-content-element 'title body #:flow-kind 'block))
 
 (define-public (summary . body)
-  (make-content-element 'summary body))
+  (make-content-element 'summary body #:flow-kind 'block))
 
 (define lipsum-paragraphs
   (let ((path (search-path %load-path "forester/data/lipsum-la.txt")))
@@ -85,10 +85,10 @@
     (make-content-text text lipsum-source)))
 
 (define-public (published date)
-  (make-content-element 'published (list date)))
+  (make-content-element 'published (list date) #:flow-kind 'block))
 
 (define-public (updated date)
-  (make-content-element 'updated (list date)))
+  (make-content-element 'updated (list date) #:flow-kind 'block))
 
 (define-public link
   (lambda* (target . label)
@@ -120,7 +120,8 @@
   (unless (valid-topic-id? id)
     (error "Forester topic ID must contain only letters, digits, and hyphens, and begin/end with a letter or digit"
            id))
-  (make-content-element kind label #:properties `((id . ,id))))
+  (make-content-element kind label #:properties `((id . ,id))
+                        #:flow-kind 'block))
 
 (define-public tag
   (lambda* (id . label)
@@ -160,9 +161,11 @@
             (remove (lambda (element) (eq? element title-element)) body)
             #:properties
             (append `((title . ,title-text))
-                    (if named? `((tree-id . ,id)) '()))))))))
+                    (if named? `((tree-id . ,id)) '()))
+            #:flow-kind 'block))))))
 
 (define-public (transclude id)
   (unless (and (string? id) (not (string-null? id)))
     (error "Forester transclusion target must be a non-empty tree ID" id))
-  (make-content-element 'transclude '() #:properties `((target . ,id))))
+  (make-content-element 'transclude '() #:properties `((target . ,id))
+                        #:flow-kind 'block))

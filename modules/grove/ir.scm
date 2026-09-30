@@ -19,6 +19,8 @@
             content-element?
             make-content-element
             content-element-kind
+            content-element-flow-kind
+            content-element-block?
             content-element-children
             content-element-properties
             content-element-property
@@ -54,12 +56,13 @@
   (%make-content-layout kind raw source))
 
 (define-record-type <content-element>
-  (%make-content-element kind children properties source)
+  (%make-content-element kind children properties source flow-kind)
   content-element?
   (kind content-element-kind)
   (children content-element-children)
   (properties content-element-properties)
-  (source content-element-source))
+  (source content-element-source)
+  (flow-kind content-element-flow-kind))
 
 (define (normalize-child child)
   (if (string? child)
@@ -67,14 +70,21 @@
       child))
 
 (define* (make-content-element kind children #:optional (source #f)
-                               #:key (properties '()))
+                               #:key (properties '())
+                                     (flow-kind #f))
   (unless (symbol? kind)
     (error "content element kind must be a symbol" kind))
   (unless (valid-properties? properties)
     (error "content element properties must have unique symbol keys"
            properties))
+  (let ((flow-kind (or flow-kind 'inline)))
+  (unless (memq flow-kind '(inline block))
+    (error "content element flow kind must be inline or block" flow-kind))
   (%make-content-element kind (normalize-children children 'element)
-                         properties source))
+                         properties source flow-kind)))
+
+(define (content-element-block? element)
+  (eq? (content-element-flow-kind element) 'block))
 
 (define (content-element-property element key)
   (assq-ref (content-element-properties element) key))

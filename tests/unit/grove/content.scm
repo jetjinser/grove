@@ -30,6 +30,8 @@
 (test-error "element property keys are unique" #t
   (make-content-element 'paragraph '()
     #:properties '((role . "status") (role . "note"))))
+(test-error "element flow kinds are constrained" #t
+  (make-content-element 'paragraph '() #:flow-kind 'floating))
 
 (let* ((notice
          (make-content-element 'notice '("Hello")
@@ -39,6 +41,18 @@
     (and (content-element? notice)
          (eq? (content-element-kind notice) 'notice)
          (equal? (content-element-property notice 'role) "status")))
+  (let ((block (make-content-element 'custom-panel '()
+                 #:flow-kind 'block)))
+    (test-assert "custom elements can declare block flow semantics"
+      (and (content-element-block? block)
+           (eq? (content-element-flow-kind block) 'block)))
+    (test-assert "flow semantics survive ordinary IR reconstruction"
+      (content-element-block?
+        (make-content-element
+          (content-element-kind block)
+          (content-element-children block)
+          #:properties (content-element-properties block)
+          #:flow-kind (content-element-flow-kind block)))))
   (test-equal "HTML supplies a generic fallback for open element kinds"
     '(article (span (@ (class "notice")) "Hello"))
     (content->sxml document))

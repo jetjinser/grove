@@ -4,6 +4,7 @@
 
 (define-module (tests unit scribble read)
   #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64)
   #:use-module (rnrs io ports)
   #:use-module (system base language)
@@ -169,6 +170,24 @@
   (let* ((document
            (evaluate-document
              env
+             "First paragraph.\n\nSecond @bold{paragraph}.\n"))
+         (paragraphs (filter content-element?
+                             (content-document-children document))))
+    (test-equal "blank lines in direct prose create paragraphs"
+      '(paragraph paragraph)
+      (map content-element-kind paragraphs))
+    (test-equal "inline commands stay inside their prose paragraph"
+      '(content-text bold content-text)
+      (map (lambda (value)
+             (if (content-element? value)
+                 (content-element-kind value)
+                 'content-text))
+           (content-element-children (cadr paragraphs))))))
+
+(let ((env (default-environment scribble)))
+  (let* ((document
+           (evaluate-document
+             env
              "@heading{A heading}\n@blockquote{Quoted}\n@itemize{@item{One}@item{Two}}\n@paragraph{@code{x + 1}}\n@code-block{(display \"hi\")}"))
          (elements (filter content-element?
                            (content-document-children document))))
@@ -180,14 +199,66 @@
   (let* ((document
            (evaluate-document
              env
+             "@use-modules[(grove ir)]\nBefore.\n@(make-content-element 'custom-block '(\"Panel\") #:flow-kind 'block)\nAfter."))
+         (elements (filter content-element?
+                           (content-document-children document))))
+    (test-equal "custom block semantics split surrounding prose"
+      '(paragraph custom-block paragraph)
+      (map content-element-kind elements))))
+
+(let ((env (default-environment scribble)))
+  (let ((document
+          (evaluate-document
+            env
+            "@use-modules[(forester commands)]\n@(map paragraph (text-paragraphs (lipsum \"1-3\")))")))
+    (let ((paragraphs (filter content-element?
+                              (content-document-children document))))
+    (test-equal "Scheme expression lists splice into the document flow"
+      '(paragraph paragraph paragraph)
+      (map content-element-kind paragraphs))
+    (test-assert "commands can be mapped over text without constructing IR"
+      (and (string-prefix?
+             "Lorem ipsum"
+             (content-verbatim-string
+               (content-element-children (car paragraphs))))
+           (string-prefix?
+             "Nam dui ligula"
+             (content-verbatim-string
+               (content-element-children (cadr paragraphs))))
+           (string-prefix?
+             "Nulla malesuada porttitor diam"
+             (content-verbatim-string
+               (content-element-children (caddr paragraphs)))))))))
+
+(let ((env (default-environment scribble)))
+  (let ((document
+          (evaluate-document
+            env
+            "@(define (sample-text) (string-append \"First paragraph.\" (make-string 2 (integer->char 10)) \"Second paragraph.\"))\n@(map paragraph (text-paragraphs (sample-text)))")))
+    (test-equal "text-paragraphs works with any plain-text command"
+      '("First paragraph." "Second paragraph.")
+      (map (lambda (element)
+             (content-verbatim-string (content-element-children element)))
+           (filter content-element?
+                   (content-document-children document))))))
+
+(let ((env (default-environment scribble)))
+  (let* ((document
+           (evaluate-document
+             env
              "@use-modules[(forester commands)]\n@(define note-label \"from Scheme\")\n@title{@|note-label|}\n@link[\"target\"]{Target}"))
          (children (content-document-children document))
          (elements (filter content-element? children))
          (title (car elements))
          (link (last elements)))
     (test-equal "source can import a module before using its bindings"
-      'link
+      'paragraph
       (content-element-kind link))
+    (test-equal "top-level inline commands are placed in a paragraph"
+      '(link)
+      (map content-element-kind
+           (filter content-element?
+                   (content-element-children link))))
     (test-equal "source definitions are available to later at-expressions"
       "from Scheme"
       (content-verbatim-string (content-element-children title)))
@@ -209,10 +280,16 @@
             env
             "@(define evaluation-order '())@(set! evaluation-order (cons 'first evaluation-order))@bold{body}@(set! evaluation-order (cons 'last evaluation-order))")))
     (test-equal "non-content Scheme results are ignored"
-      '(bold)
+      '(paragraph)
       (map content-element-kind
            (filter content-element?
                    (content-document-children document))))
+    (test-equal "top-level inline content is wrapped in a paragraph"
+      '(bold)
+      (map content-element-kind
+           (content-element-children
+             (car (filter content-element?
+                          (content-document-children document))))))
     (test-equal "Scheme expressions run in source order"
       '(last first)
       (module-ref env 'evaluation-order))))

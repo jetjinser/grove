@@ -27,10 +27,7 @@
 (eval '(use-modules (forester commands)) environment)
 
 (define (evaluate-document source)
-  (eval ((language-reader scribble)
-          (open-input-string source)
-          environment)
-        environment))
+  (scribble-evaluate-document (open-input-string source) environment))
 
 (define algebra
   (make-site-page
@@ -85,16 +82,30 @@
 
 (test-begin "forester site")
 
+(define (document-paragraph-texts document)
+  (map (lambda (paragraph)
+         (content-text-value
+           (car (content-element-children paragraph))))
+       (filter (lambda (element)
+                 (and (content-element? element)
+                      (eq? (content-element-kind element) 'paragraph)))
+               (content-document-children document))))
+
 (test-error "HTML routes require an explicit home page ID" #t
   (make-html-routes))
 
 (let* ((document (evaluate-document "@lipsum{}"))
        (page (make-site-page "lipsum" "Lipsum" document))
        (forest (make-forest (make-site (list page))))
-       (source (content-text-source
-                 (car (content-document-children document)))))
-  (test-assert "@lipsum expands to ordinary text"
-    (content-text? (car (content-document-children document))))
+       (paragraph (car (content-document-children document)))
+       (text (car (content-element-children paragraph)))
+       (source (content-text-source text)))
+  (test-equal "top-level @lipsum text becomes ordinary paragraphs"
+    150
+    (length (document-paragraph-texts document)))
+  (test-equal "@lipsum paragraphs use paragraph IR"
+    'paragraph
+    (content-element-kind paragraph))
   (test-assert "@lipsum records its corpus as an IR source"
     source)
   (test-assert "@lipsum corpus participates in page cache dependencies"
@@ -102,24 +113,22 @@
   (test-assert "@lipsum provides the classic opening text"
     (string-prefix?
       "Lorem ipsum dolor sit amet, consectetuer adipiscing elit."
-      (content-text-value (car (content-document-children document))))))
+      (content-text-value text))))
 
 (let* ((document (evaluate-document "@lipsum[1-3]{}"))
-       (text (content-text-value
-               (car (content-document-children document)))))
+       (paragraphs (document-paragraph-texts document)))
   (test-assert "@lipsum selects a paragraph range"
-    (and (string-contains text "Curabitur dictum gravida mauris.")
-         (string-contains text "Nam dui ligula")
-         (string-contains text "Nulla malesuada porttitor diam")))
-  (test-assert "@lipsum separates selected paragraphs with blank lines"
-    (string-contains text "rutrum.\n\nNam dui ligula")))
+    (and (= (length paragraphs) 3)
+         (string-contains (car paragraphs) "Curabitur dictum gravida mauris.")
+         (string-prefix? "Nam dui ligula" (cadr paragraphs))
+         (string-prefix? "Nulla malesuada porttitor diam"
+                         (caddr paragraphs)))))
 
 (test-assert "@lipsum selects a single paragraph"
   (string-prefix?
     "Nam dui ligula"
-    (content-text-value
-      (car (content-document-children
-             (evaluate-document "@lipsum[2]{}"))))))
+    (car (document-paragraph-texts
+           (evaluate-document "@lipsum[2]{}")))))
 
 (test-error "@lipsum rejects reversed paragraph ranges" #t
   (evaluate-document "@lipsum[3-2]{}"))
@@ -128,12 +137,8 @@
   (evaluate-document "@lipsum[1-151]{}"))
 
 (test-equal "@lipsum without a range returns all 150 paragraphs"
-  (content-text-value
-    (car (content-document-children
-           (evaluate-document "@lipsum[1-150]{}"))))
-  (content-text-value
-    (car (content-document-children
-           (evaluate-document "@lipsum{}")))))
+  (document-paragraph-texts (evaluate-document "@lipsum[1-150]{}"))
+  (document-paragraph-texts (evaluate-document "@lipsum{}")))
 
 (let* ((destination (page-with-links "destination" '()))
        (source (page-with-links "source" '("destination" "destination")))
