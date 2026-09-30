@@ -207,13 +207,14 @@
            source
            (html-asset-url routes source))))
 
-(define (content-has-math? content)
+(define (content-has-tex-math? content)
   (cond
     ((content-element? content)
-     (or (eq? (content-element-kind content) 'math)
-         (any content-has-math? (content-element-children content))))
+     (or (and (eq? (content-element-kind content) 'math)
+              (content-element-property content 'tex?))
+         (any content-has-tex-math? (content-element-children content))))
     ((content-document? content)
-     (any content-has-math? (content-document-children content)))
+     (any content-has-tex-math? (content-document-children content)))
     (else #f)))
 
 (define (page-description site page)
@@ -266,9 +267,12 @@
        ,@body
        (script ,fragment-reveal-script))))
 
+(define (serialize-html-document sxml)
+  (string-append "<!DOCTYPE html>\n" (sxml->html sxml)))
+
 (define (index-redirect-html routes page)
   (let ((url (html-page-url routes (site-page-id page))))
-    (sxml->html
+    (serialize-html-document
       `(html
          (head
            (meta (@ (charset "utf-8")))
@@ -296,13 +300,13 @@
   (let* ((site (site forest))
          (body (subtree-content-sxml forest routes page))
          (article (append body (backlinks-sxml forest page routes))))
-    (sxml->html
+    (serialize-html-document
       (html-document
         (site-page-title page)
         (site-page-id page)
         (page-description site page)
         (append (table-of-contents-sxml forest page) (list article))
-        (content-has-math? (site-page-document page))
+        (content-has-tex-math? (site-page-document page))
         (site-title site)
         style
         routes

@@ -271,6 +271,27 @@
   (test-assert "HTML text is escaped"
     (string-contains algebra-html "Algebra &amp; limits")))
 
+(test-assert "HTML pages declare standards mode"
+  (string-prefix? "<!DOCTYPE html>" (assoc-ref
+                                       (render-test-html
+                                         (make-forest
+                                           (make-site (list algebra limits))))
+                                       "algebra")))
+
+(let* ((page
+         (make-site-page
+           "maxwell"
+           "Maxwell equations"
+           (evaluate-document
+             "@display-math{@align{∇ · @vec{D} &= ρ\n∇ × @vec{E} &= −@frac{∂@vec{B}}{∂t}}}")))
+       (html (assoc-ref (render-test-html
+                          (make-forest (make-site (list page))))
+                        "maxwell")))
+  (test-assert "MathML Core pages render without loading MathJax"
+    (and (string-contains html "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"")
+         (string-contains html "<mtable>")
+         (not (string-contains html "mathjax")))))
+
 (let* ((target-document
          (make-content-document
            (list
