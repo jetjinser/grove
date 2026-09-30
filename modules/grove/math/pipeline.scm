@@ -51,15 +51,15 @@
   (make-content-element 'math-token (list value)
                         #:properties `((token-kind . ,kind))))
 
-(define (math-expression-children term)
-  (let ((layout (math-term->layout term)))
+(define (math-expression-children term assumptions)
+  (let ((layout (math-term->layout term assumptions)))
     (if (eq? (content-element-kind layout) 'math-row)
         (content-element-children layout)
         (list layout))))
 
-(define (math-row-first term)
+(define (math-row-first term assumptions)
   (make-content-element 'math-row
-    (list (math-cell (math-expression-children term))
+    (list (math-cell (math-expression-children term assumptions))
           (math-cell '())
           (math-cell (list (math-token 'mtext ""))))))
 
@@ -71,12 +71,12 @@
                         path)
                    " → ")))
 
-(define (math-row-next term rule path)
+(define (math-row-next term rule path assumptions)
   (make-content-element 'math-row
     (list (math-cell (list (make-content-element
                              'math-token (list "=")
                              #:properties '((token-kind . mo)))))
-          (math-cell (math-expression-children term))
+          (math-cell (math-expression-children term assumptions))
           (math-cell
             (list (math-token 'mtext
                     (format #f "~a (at ~a)"
@@ -115,9 +115,10 @@
       'math
       (list (make-content-element
               'math-align
-              (cons (math-row-first input)
+              (cons (math-row-first input assumptions)
                     (map (lambda (step)
-                           (math-row-next (car step) (cadr step) (caddr step)))
+                           (math-row-next (car step) (cadr step) (caddr step)
+                                          assumptions))
                          (cdr steps)))))
       #:properties '((display? . #t))
       #:flow-kind 'block)))

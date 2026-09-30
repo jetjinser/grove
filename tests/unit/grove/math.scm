@@ -33,6 +33,18 @@
   (test-equal "precedence is resolved before term lowering"
     '(+ (var x) (* (var y) (num "2")))
     (math-source->term "x + y * 2"))
+  (test-equal "underscore tokenizes as a script marker between identifiers"
+    '(identifier subscript identifier eof)
+    (map math-token-kind (tokenize-math "E_x")))
+  (test-equal "subscript source lowers to a distinct symbolic term"
+    '(sub (var E) (var x))
+    (math-source->term "E_x"))
+  (test-equal "superscript and subscript attach to the same base in order"
+    '(sub (^ (var x) (num "2")) (var i))
+    (math-source->term "x^2_i"))
+  (test-equal "grouping keeps a compound subscript inside an exponent"
+    '(^ (var x) (sub (var a) (var i)))
+    (math-source->term "x^(a_i)"))
   (test-equal "unary minus, powers, and fractions have distinct term forms"
     '(+ (- (^ (var x) (num "2"))) (/ (var y) (num "3")))
     (math-source->term "-x^2 + y/3"))
@@ -68,6 +80,13 @@
   (test-equal "symbolic terms lower to the separate layout IR"
     'math-row
     (content-element-kind (math-term->layout '(curl (var E)))))
+  (test-assert "subscript layout lowers to the MathML msub element"
+    (string-contains
+      (sxml->html
+        (content->sxml
+          (make-content-element 'math
+            (list (math-term->layout '(sub (var E) (var x)))))))
+      "<msub>"))
   (test-equal "miniKanren relation derives curl-curl identity"
     '((- (grad (div (var E))) (laplacian (var E))) curl-curl-identity ())
     (car (run 1 (result rule path)
@@ -139,6 +158,7 @@
            (string-contains html "<mo>∇</mo>")
            (string-contains html "<mo>×</mo>")
            (string-contains html "<mo>·</mo>")
+           (string-contains html "<mover accent=\"true\">")
            (string-contains html "Δ")
            (string-contains html "curl-curl-identity (at root)"))))
   (test-assert "generic function calls use MathML function application"

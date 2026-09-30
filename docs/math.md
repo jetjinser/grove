@@ -23,9 +23,13 @@ over those terms. `(grove math layout)` lowers terms to the existing math
 layout nodes. `(grove math pipeline)` composes these passes.
 
 The initial parser accepts identifiers, integer numerals, function calls,
-parenthesized groups, unary minus, and the binary operators `=`, `+`, `-`,
-`*`/`×`, `/`, and `^` with conventional precedence. It does not infer implicit
-multiplication or consume general `@math` commands yet.
+parenthesized groups, unary minus, superscripts (`x^2`), subscripts (`x_i`),
+and the operators `=`, `+`, `-`, `*`/`×`, and `/` with conventional
+precedence. Scripts attach in source order; parentheses group compound script
+expressions. It does not infer implicit multiplication or consume general
+`@math` commands. Matrices and aligned derivations remain explicit structures
+in `@math`, because their row, cell, and alignment markers carry layout
+meaning that cannot be reliably guessed from plain text.
 
 `@derive{...}` applies available relations repeatedly to the expression and
 shows each intermediate term, joined with equality signs. Each transition is

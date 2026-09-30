@@ -48,7 +48,7 @@
   (memq (char-general-category char) '(Nd Nl No)))
 
 (define (identifier-char? char)
-  (or (letter? char) (mark? char) (digit? char) (char=? char #\_)))
+  (or (letter? char) (mark? char) (digit? char)))
 
 (define (tokenize-math source)
   (unless (string? source)
@@ -61,7 +61,7 @@
           (let ((char (at position)))
             (cond
               ((char-whitespace? char) (loop (+ position 1) tokens))
-              ((or (letter? char) (char=? char #\_))
+              ((letter? char)
                (let collect ((end (+ position 1)))
                  (if (and (< end length) (identifier-char? (at end)))
                      (collect (+ end 1))
@@ -86,6 +86,7 @@
                              ((#\* #\×) 'multiply)
                              ((#\/ #\÷) 'divide)
                              ((#\^) 'power)
+                             ((#\_) 'subscript)
                              ((#\=) 'equals)
                              ((#\() 'left-paren)
                              ((#\)) 'right-paren)
@@ -119,6 +120,7 @@
                              ((plus minus) 10)
                              ((multiply divide) 20)
                              ((power) 30)
+                             ((subscript) 30)
                              (else -1))))
              (primary
                (lambda ()
@@ -171,12 +173,37 @@
                                     (expression
                                       (if (eq? (math-token-kind operator) 'power)
                                           priority (+ priority 1))))
+                                  (kind (math-token-kind operator))
+                                  (right-children
+                                    (math-expression-children right))
                                   (combined
-                                    (make-math-expression
-                                      'binary (math-token-kind operator)
-                                      (list left right)
-                                      (math-expression-start left)
-                                      (math-expression-end right))))
+                                    (if (and (eq? kind 'power)
+                                             (eq? (math-expression-kind right)
+                                                  'binary)
+                                             (eq? (math-expression-value right)
+                                                  'subscript)
+                                             (not (eq? (math-expression-kind
+                                                         (car right-children))
+                                                       'group)))
+                                        (let* ((base
+                                                 (make-math-expression
+                                                   'binary 'power
+                                                   (list left
+                                                         (car right-children))
+                                                   (math-expression-start left)
+                                                   (math-expression-end
+                                                     (car right-children))))
+                                               (index (cadr right-children)))
+                                          (make-math-expression
+                                            'binary 'subscript
+                                            (list base index)
+                                            (math-expression-start left)
+                                            (math-expression-end index)))
+                                        (make-math-expression
+                                          'binary kind
+                                          (list left right)
+                                          (math-expression-start left)
+                                          (math-expression-end right)))))
                              (loop combined)))))))))
       (let ((result (expression 0)))
         (unless (eq? (math-token-kind (current)) 'eof)

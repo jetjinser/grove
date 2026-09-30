@@ -40,7 +40,8 @@
     ((binary)
      (let ((operator (case (math-expression-value expression)
                        ((plus) '+) ((minus) '-) ((multiply) '*)
-                       ((divide) '/) ((power) '^) ((equals) '=))))
+                       ((divide) '/) ((power) '^) ((subscript) 'sub)
+                       ((equals) '=))))
        (cons operator (map math-expression->term
                            (math-expression-children expression)))))
     (else (error "unsupported math syntax node"
