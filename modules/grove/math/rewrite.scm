@@ -4,10 +4,51 @@
 
 (define-module (grove math rewrite)
   #:use-module (grove relation)
+  #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-9)
   #:export (curl-curlo
             rewriteo
             rewrite-stepo
+            math-rewrite-rule?
+            math-rewrite-rule-name
+            math-rewrite-rule-equation
+            math-rewrite-rule-condition
+            math-rewrite-rule-condition-checked?
+            math-rewrite-rules
+            math-rewrite-rule-ref
             rewrite-curl-curl))
+
+(define-record-type <math-rewrite-rule>
+  (make-math-rewrite-rule name equation condition condition-checked?)
+  math-rewrite-rule?
+  (name math-rewrite-rule-name)
+  (equation math-rewrite-rule-equation)
+  (condition math-rewrite-rule-condition)
+  (condition-checked? math-rewrite-rule-condition-checked?))
+
+;; This registry is the public contract for the relations below. A false
+;; condition-checked? means callers must supply the condition themselves.
+(define math-rewrite-rules
+  (list
+    (make-math-rewrite-rule
+      'curl-curl-identity
+      "curl(curl(E)) = grad(div(E)) - laplacian(E)"
+      "E is a twice differentiable vector field"
+      #f)
+    (make-math-rewrite-rule
+      'divergence-free
+      "grad(div(E)) = 0"
+      "the assumptions contain the structurally matching fact div(E) = 0"
+      #t)
+    (make-math-rewrite-rule
+      'subtract-zero
+      "0 - X = -X"
+      "none"
+      #t)))
+
+(define (math-rewrite-rule-ref name)
+  (find (lambda (rule) (eq? (math-rewrite-rule-name rule) name))
+        math-rewrite-rules))
 
 ;; Vector-calculus identity: curl(curl(E)) = grad(div(E)) - laplacian(E).
 (define (curl-curlo input output)

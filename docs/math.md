@@ -48,3 +48,7 @@ requires an explicit structurally matching assumption such as `div(E)=0`.
 `subtract-zero` applies the unconditional algebraic identity `0 - X = -X`.
 The displayed path and rule make a derivation inspectable, but do not amount to
 a formal proof that the rule's mathematical side conditions hold.
+The rewrite module exposes a rule registry with each law, its side condition,
+and whether the current implementation checks that condition. The
+curl-curl rule is explicitly marked unchecked until mathematical types and
+regularity assumptions are represented in the term system.

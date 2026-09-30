@@ -62,6 +62,24 @@
     '((- (grad (div (var E))) (laplacian (var E))) curl-curl-identity ())
     (car (run 1 (result rule path)
            (rewrite-stepo '() '(curl (curl (var E))) result rule path))))
+  (test-equal "subtraction simplification is named at the root"
+    '((- (var x)) subtract-zero ())
+    (car (run 1 (result rule path)
+           (rewrite-stepo '() '(- (num "0") (var x)) result rule path))))
+  (test-equal "rewrite relations expose a contract for every current rule"
+    '(curl-curl-identity divergence-free subtract-zero)
+    (map math-rewrite-rule-name math-rewrite-rules))
+  (test-assert "curl-curl side conditions are documented but not type-checked"
+    (and (math-rewrite-rule? (math-rewrite-rule-ref 'curl-curl-identity))
+         (string-contains
+           (math-rewrite-rule-condition
+             (math-rewrite-rule-ref 'curl-curl-identity))
+           "vector field")
+         (not (math-rewrite-rule-condition-checked?
+                (math-rewrite-rule-ref 'curl-curl-identity)))))
+  (test-assert "the divergence-free relation checks its declared assumption"
+    (math-rewrite-rule-condition-checked?
+      (math-rewrite-rule-ref 'divergence-free)))
   (test-equal "conditional rewrite does not use a fact about another field"
     '()
     (run* (result)
@@ -79,7 +97,7 @@
            (string-contains html "<mo>×</mo>")
            (string-contains html "<mo>·</mo>")
            (string-contains html "Δ")
-           (string-contains html "curl-curl identity (at root)"))))
+           (string-contains html "curl-curl-identity (at root)"))))
   (test-assert "generic function calls use MathML function application"
     (string-contains
       (sxml->html

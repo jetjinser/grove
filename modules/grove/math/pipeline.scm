@@ -37,13 +37,6 @@
           (math-cell '())
           (math-cell (list (math-token 'mtext ""))))))
 
-(define (rule-label rule)
-  (case rule
-    ((curl-curl-identity) "curl-curl identity")
-    ((divergence-free) "divergence-free assumption")
-    ((subtract-zero) "subtract zero")
-    (else (symbol->string rule))))
-
 (define (path-label path)
   (if (null? path)
       "root"
@@ -61,7 +54,7 @@
           (math-cell
             (list (math-token 'mtext
                     (format #f "~a (at ~a)"
-                            (rule-label rule) (path-label path))))))))
+                            (symbol->string rule) (path-label path))))))))
 
 (define max-derivation-steps 32)
 
