@@ -3,45 +3,105 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester commands)
+  #:use-module (ice-9 rdelim)
   #:use-module (grove ir)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
-  #:export (title link image tag taxon subtree transclude summary published updated
-            lipsum))
+  #:use-module (srfi srfi-13))
 
-(define (title . body)
+(define lipsum-source #f)
+
+(define-public (title . body)
   (make-content-element 'title body))
 
-(define (summary . body)
+(define-public (summary . body)
   (make-content-element 'summary body))
 
-;; The classic opening Lorem Ipsum paragraph, from:
-;; https://github.com/PhelypeOleinik/lipsum/blob/master/lipsum-la.txt
-(define (lipsum . options)
-  (cond
-    ((null? options)
-     "Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Ut purus elit, vestibulum ut, placerat ac, adipiscing vitae, felis. Curabitur dictum gravida mauris. Nam arcu libero, nonummy eget, consectetuer id, vulputate a, magna. Donec vehicula augue eu neque. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Mauris ut leo. Cras viverra metus rhoncus sem. Nulla et lectus vestibulum urna fringilla ultrices. Phasellus eu tellus sit amet tortor gravida placerat.")
-    ((equal? options '("short"))
-     "Lorem ipsum dolor sit amet, consectetuer adipiscing elit.")
-    (else
-      (error "Lipsum accepts no option or the short option" options))))
+(define lipsum-paragraphs
+  (let ((path (search-path %load-path "forester/data/lipsum-la.txt")))
+    (unless path
+      (error "Cannot find forester/data/lipsum-la.txt on the Guile load path"))
+    (set! lipsum-source path)
+    (call-with-input-file path
+      (lambda (port)
+        (let loop ((line (read-line port))
+                   (current-lines '())
+                   (paragraphs '()))
+          (cond
+            ((eof-object? line)
+             (reverse
+               (if (null? current-lines)
+                   paragraphs
+                   (cons (string-join (reverse current-lines) " ")
+                         paragraphs))))
+            ((string-null? (string-trim-both line))
+             (loop (read-line port)
+                   '()
+                   (if (null? current-lines)
+                       paragraphs
+                       (cons (string-join (reverse current-lines) " ")
+                             paragraphs))))
+            (else
+              (loop (read-line port)
+                    (cons (string-trim-both line) current-lines)
+                    paragraphs))))))))
 
-(define (published date)
+(define (lipsum-selector->range selector)
+  (let* ((text (cond
+                 ((string? selector) selector)
+                 ((symbol? selector) (symbol->string selector))
+                 ((number? selector) (number->string selector))
+                 (else #f)))
+         (separator (and text (string-index text #\-)))
+         (first (and text
+                     (string->number
+                       (if separator
+                           (substring text 0 separator)
+                           text))))
+         (last (and text
+                    (string->number
+                      (if separator
+                          (substring text (+ separator 1))
+                          text)))))
+    (unless (and first last
+                 (integer? first) (integer? last)
+                 (exact? first) (exact? last)
+                 (> first 0) (>= last first)
+                 (<= last (length lipsum-paragraphs)))
+      (error "Invalid Lipsum paragraph range"
+             selector
+             (length lipsum-paragraphs)))
+    (cons first last)))
+
+(define-public (lipsum . options)
+  (let* ((range (if (null? options)
+                    (cons 1 (length lipsum-paragraphs))
+                    (if (= (length options) 1)
+                        (lipsum-selector->range (car options))
+                        (error "Lipsum accepts one paragraph range" options))))
+         (selected
+           (take (drop lipsum-paragraphs (- (car range) 1))
+                 (+ 1 (- (cdr range) (car range)))))
+         (text (string-join selected "\n\n")))
+    (make-content-text text lipsum-source)))
+
+(define-public (published date)
   (make-content-element 'published (list date)))
 
-(define (updated date)
+(define-public (updated date)
   (make-content-element 'updated (list date)))
 
-(define* (link target . label)
-  (make-content-element 'link
-                        (if (null? label) (list target) label)
-                        #:properties `((target . ,target))))
+(define-public link
+  (lambda* (target . label)
+    (make-content-element 'link
+                          (if (null? label) (list target) label)
+                          #:properties `((target . ,target)))))
 
-(define* (image source . alternative-text)
-  (unless (and (string? source) (not (string-null? source)))
-    (error "Forester image source must be a non-empty string" source))
-  (make-content-element 'image alternative-text
-                        #:properties `((source . ,source))))
+(define-public image
+  (lambda* (source . alternative-text)
+    (unless (and (string? source) (not (string-null? source)))
+      (error "Forester image source must be a non-empty string" source))
+    (make-content-element 'image alternative-text
+                          #:properties `((source . ,source)))))
 
 (define (valid-topic-id? id)
   (and (string? id)
@@ -62,44 +122,47 @@
            id))
   (make-content-element kind label #:properties `((id . ,id))))
 
-(define* (tag id . label)
-  (topic-element 'tag id (if (null? label) (list id) label)))
+(define-public tag
+  (lambda* (id . label)
+    (topic-element 'tag id (if (null? label) (list id) label))))
 
-(define* (taxon id . label)
-  (topic-element 'taxon id (if (null? label) (list id) label)))
+(define-public taxon
+  (lambda* (id . label)
+    (topic-element 'taxon id (if (null? label) (list id) label))))
 
 (define subtree-id-unspecified (list 'subtree-id-unspecified))
 
-(define* (subtree #:key (id subtree-id-unspecified) . arguments)
-  (let* ((named? (not (eq? id subtree-id-unspecified)))
-         ;; Guile's rest argument contains keyword arguments as well.
-         (body (if named? (drop arguments 2) arguments)))
-    (when (and named?
-               (not (and (string? id)
-                         (not (string-null? id))
-                         (not (string-index id #\#)))))
-      (error "Forester subtree ID must be a non-empty string without #" id))
-    (let ((titles (filter (lambda (element)
-                            (and (content-element? element)
-                                 (eq? (content-element-kind element) 'title)))
-                          body)))
-      (unless (= (length titles) 1)
-        (error "Forester subtree requires exactly one direct @title"
-               (length titles)))
-      (let* ((title-element (car titles))
-             (title-content (content-element-children title-element))
-             (title-text (string-trim-both
-                           (content-verbatim-string title-content))))
-        (when (string-null? title-text)
-          (error "Forester subtree title cannot be empty"))
-        (make-content-element
-          'subtree
-          (remove (lambda (element) (eq? element title-element)) body)
-          #:properties
-          (append `((title . ,title-text))
-                  (if named? `((tree-id . ,id)) '())))))))
+(define-public subtree
+  (lambda* (#:key (id subtree-id-unspecified) . arguments)
+    (let* ((named? (not (eq? id subtree-id-unspecified)))
+           ;; Guile's rest argument contains keyword arguments as well.
+           (body (if named? (drop arguments 2) arguments)))
+      (when (and named?
+                 (not (and (string? id)
+                           (not (string-null? id))
+                           (not (string-index id #\#)))))
+        (error "Forester subtree ID must be a non-empty string without #" id))
+      (let ((titles (filter (lambda (element)
+                              (and (content-element? element)
+                                   (eq? (content-element-kind element) 'title)))
+                            body)))
+        (unless (= (length titles) 1)
+          (error "Forester subtree requires exactly one direct @title"
+                 (length titles)))
+        (let* ((title-element (car titles))
+               (title-content (content-element-children title-element))
+               (title-text (string-trim-both
+                             (content-verbatim-string title-content))))
+          (when (string-null? title-text)
+            (error "Forester subtree title cannot be empty"))
+          (make-content-element
+            'subtree
+            (remove (lambda (element) (eq? element title-element)) body)
+            #:properties
+            (append `((title . ,title-text))
+                    (if named? `((tree-id . ,id)) '()))))))))
 
-(define (transclude id)
+(define-public (transclude id)
   (unless (and (string? id) (not (string-null? id)))
     (error "Forester transclusion target must be a non-empty tree ID" id))
   (make-content-element 'transclude '() #:properties `((target . ,id))))

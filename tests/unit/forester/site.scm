@@ -88,19 +88,52 @@
 (test-error "HTML routes require an explicit home page ID" #t
   (make-html-routes))
 
-(let ((document (evaluate-document "@lipsum{}")))
+(let* ((document (evaluate-document "@lipsum{}"))
+       (page (make-site-page "lipsum" "Lipsum" document))
+       (forest (make-forest (make-site (list page))))
+       (source (content-text-source
+                 (car (content-document-children document)))))
   (test-assert "@lipsum expands to ordinary text"
     (content-text? (car (content-document-children document))))
+  (test-assert "@lipsum records its corpus as an IR source"
+    source)
+  (test-assert "@lipsum corpus participates in page cache dependencies"
+    (member source (page-source-paths forest page) string=?))
   (test-assert "@lipsum provides the classic opening text"
     (string-prefix?
       "Lorem ipsum dolor sit amet, consectetuer adipiscing elit."
       (content-text-value (car (content-document-children document))))))
 
-(test-equal "@lipsum accepts a short option"
-  "Lorem ipsum dolor sit amet, consectetuer adipiscing elit."
+(let* ((document (evaluate-document "@lipsum[1-3]{}"))
+       (text (content-text-value
+               (car (content-document-children document)))))
+  (test-assert "@lipsum selects a paragraph range"
+    (and (string-contains text "Curabitur dictum gravida mauris.")
+         (string-contains text "Nam dui ligula")
+         (string-contains text "Nulla malesuada porttitor diam")))
+  (test-assert "@lipsum separates selected paragraphs with blank lines"
+    (string-contains text "rutrum.\n\nNam dui ligula")))
+
+(test-assert "@lipsum selects a single paragraph"
+  (string-prefix?
+    "Nam dui ligula"
+    (content-text-value
+      (car (content-document-children
+             (evaluate-document "@lipsum[2]{}"))))))
+
+(test-error "@lipsum rejects reversed paragraph ranges" #t
+  (evaluate-document "@lipsum[3-2]{}"))
+
+(test-error "@lipsum rejects ranges beyond its corpus" #t
+  (evaluate-document "@lipsum[1-151]{}"))
+
+(test-equal "@lipsum without a range returns all 150 paragraphs"
   (content-text-value
     (car (content-document-children
-           (evaluate-document "@lipsum[\"short\"]{}")))))
+           (evaluate-document "@lipsum[1-150]{}"))))
+  (content-text-value
+    (car (content-document-children
+           (evaluate-document "@lipsum{}")))))
 
 (let* ((destination (page-with-links "destination" '()))
        (source (page-with-links "source" '("destination" "destination")))

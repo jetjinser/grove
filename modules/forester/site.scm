@@ -81,6 +81,18 @@
      (append-map direct-subtree-elements (content-document-children content)))
     (else '())))
 
+(define (content-source-paths content)
+  (cond
+    ((content-text? content)
+     (if (content-text-source content)
+         (list (content-text-source content))
+         '()))
+    ((content-element? content)
+     (append-map content-source-paths (content-element-children content)))
+    ((content-document? content)
+     (append-map content-source-paths (content-document-children content)))
+    (else '())))
+
 (define (transclusion-elements content)
   (cond
     ((content-element? content)
@@ -675,7 +687,11 @@
   (let ((site (site forest)))
     (delete-duplicates
       (append (site-sources site)
-              (filter-map site-page-source (site-pages site)))
+              (filter-map site-page-source (site-pages site))
+              (append-map
+                (lambda (page)
+                  (content-source-paths (site-page-document page)))
+                (site-pages site)))
       string=?)))
 
 (define (module-paths forest)
@@ -711,6 +727,7 @@
               (lambda (id)
                 (site-page-source (find-page forest id)))
               (included-tree-ids forest (site-page-id page)))
+            (content-source-paths (site-page-document page))
             (filter-map site-page-source
                         (backlinks forest (site-page-id page))))
     string=?))

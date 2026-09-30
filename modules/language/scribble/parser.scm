@@ -14,6 +14,7 @@
   #:use-module (scheme char)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-14) ; char-set
+  #:use-module (srfi srfi-13) ; string utilities
   #:use-module (srfi srfi-26) ; cut(e)
   #:use-module (ice-9 match)
   #:use-module (ice-9 rdelim)
@@ -73,6 +74,14 @@
 (define (read-number in)
   (let ([token (read-delimited +scribble-delims+ in 'peek)])
     (or (string->number token)
+        (and (let ((separator (string-index token #\-)))
+               (and separator
+                    (> separator 0)
+                    (< separator (- (string-length token) 1))
+                    (string-every char-numeric? (substring token 0 separator))
+                    (string-every char-numeric?
+                                  (substring token (+ separator 1)))))
+             (list 'quote (string->symbol token)))
         (error "invalid numeric syntax:" token))))
 
 (define (read-escaped in terminal)

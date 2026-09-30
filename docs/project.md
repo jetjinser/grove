@@ -316,6 +316,11 @@ renderer uses an underlined heading, quoted lines, bullets, backticks, and
 fenced code blocks. The IR remains open to other element kinds and custom
 renderer handlers.
 
+`@lipsum[1-3]{}` inserts the selected Lorem Ipsum paragraphs as ordinary text;
+without a range, it inserts the full corpus. The corpus is a separate data file
+at `modules/forester/data/lipsum-la.txt`, distributed under LPPL 1.3 or later;
+its notice and license are included alongside the file.
+
 The complete runnable example, including custom routes and CSS, is in
 `examples/linked-notes/build.scm`.
 

@@ -59,12 +59,17 @@
     +grove-sources+))
 
 (define forester-modules
-  (map
-    (λ (source)
-      (guile-module
-        (inputs source)
-        (outputs (->.go source))
-        (load-path #%~(list #%?srcdir))
-        (optimizations
-          '(#:seal-private-binddings? #t))))
-    +forester-sources+))
+  (append
+    (map
+      (λ (source)
+        (guile-module
+          (inputs source)
+          (outputs (->.go source))
+          (load-path #%~(list #%?srcdir))
+          (optimizations
+            '(#:seal-private-binddings? #t))))
+      +forester-sources+)
+    (list
+      (template-file
+        (inputs "forester/data/lipsum-la.txt")
+        (outputs "forester/data/lipsum-la.txt")))))
