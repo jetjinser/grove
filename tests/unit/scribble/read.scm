@@ -219,6 +219,15 @@
     (syntax->datum (read-with-scheme-language env "(+ 1 2)"))))
 
 (let ((env (default-environment scribble)))
+  (let* ((document (evaluate-document env "@derive{curl(curl(E))}"))
+         (html (sxml->html (content->sxml document))))
+    (test-assert "@derive connects parsed math, miniKanren rewriting, and MathML"
+      (and (string-contains html "<mtable>")
+           (string-contains html "<mi>curl</mi>")
+           (string-contains html "<mi>grad</mi>")
+           (string-contains html "<mi>Δ</mi>")))))
+
+(let ((env (default-environment scribble)))
   (let* ((document
            (evaluate-document
              env

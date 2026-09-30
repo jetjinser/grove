@@ -4,6 +4,7 @@
 
 (define-module (language scribble commands)
   #:use-module (grove ir)
+  #:use-module (grove math pipeline)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13))
 
@@ -70,6 +71,9 @@
   (make-content-element 'math (decode-math-fragments source)
                         #:properties '((display? . #t))
                         #:flow-kind 'block))
+
+(define-public (derive . source)
+  (math-derive-curl-curl (content-verbatim-string source)))
 
 (define-public (tex-math . source)
   (make-content-element 'math

@@ -85,7 +85,11 @@
                              (lambda (cell index)
                                `(mtd (@ (style
                                          ,(if (zero? index)
-                                              "text-align: right"
+                                              (if (= (length
+                                                       (content-element-children row))
+                                                     1)
+                                                  "text-align: left"
+                                                  "text-align: right")
                                               "text-align: left")))
                                      ,(render-math-row
                                         (content-element-children cell))))
