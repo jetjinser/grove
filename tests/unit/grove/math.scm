@@ -16,6 +16,12 @@
   #:use-module (grove ir)
   #:export (run-math-tests))
 
+(define (search-candidates . arguments)
+  (math-search-report-candidates (apply math-search arguments)))
+
+(define (backward-candidates . arguments)
+  (math-search-report-candidates (apply math-search-backward arguments)))
+
 (define (run-math-tests)
   (test-begin "grove math pipeline")
   (let* ((tokens (tokenize-math "curl(curl(E))"))
@@ -189,7 +195,7 @@
       (rewrite-stepo '((vector (var E)))
                      '(curl (curl (var E))) result rule path)))
   (let* ((candidate
-           (car (math-search "div(curl(E))" "0"
+           (car (search-candidates "div(curl(E))" "0"
                   #:assumptions '("vector(E); smooth(E)"))))
          (verification (math-verify-derivation candidate)))
     (test-equal "div-curl goal search returns the expected terms"
@@ -204,7 +210,7 @@
     (test-equal "div-curl backward search grounds zero from declared vector fields"
       (math-search-result-terms candidate)
       (math-search-result-terms
-        (car (math-search-backward "0" "div(curl(E))"
+        (car (backward-candidates "0" "div(curl(E))"
                #:assumptions '("vector(E); smooth(E)")
                #:max-depth 1)))))
   (let* ((derivation
@@ -221,7 +227,7 @@
            (string-contains html "Δ")
            (string-contains html "curl-curl-identity (at root)"))))
   (let* ((results
-           (math-search
+           (search-candidates
              "curl(curl(E))" "-laplacian(E)"
              #:assumptions '("vector(E); smooth(E); div(E)=0")
              #:max-depth 3))
@@ -250,12 +256,12 @@
       (math-verification-derivation (math-verify-derivation result)))
     (test-equal "goal search reports no solution below the required depth"
       '()
-      (math-search
+      (search-candidates
         "curl(curl(E))" "-laplacian(E)"
         #:assumptions '("vector(E); smooth(E); div(E)=0")
         #:max-depth 2))
     (let* ((backward-results
-             (math-search-backward
+             (backward-candidates
                "-laplacian(E)" "curl(curl(E))"
                #:assumptions '("vector(E); smooth(E); div(E)=0")
                #:max-depth 3))
@@ -284,13 +290,14 @@
           (math-search-result-steps backward-result)))
       (test-assert "backward search candidates pass independent derivation checking"
         (math-verification-valid? (math-verify-derivation backward-result))))
-    (test-error "goal search enforces a finite state budget" #t
-      (math-search
+    (test-equal "goal search reports a finite state budget"
+      'state-limit
+      (math-search-report-reason (math-search
         "curl(curl(E))" "-laplacian(E)"
         #:assumptions '("vector(E); smooth(E); div(E)=0")
-        #:max-depth 3 #:max-states 1)))
+        #:max-depth 3 #:max-states 1))))
   (let ((results
-          (math-search
+          (search-candidates
             "(0 - x) - (0 - y)" "(-x) - (-y)"
             #:assumptions '("scalar(x); scalar(y)")
             #:max-depth 2 #:max-results 2)))
@@ -300,7 +307,7 @@
     (test-equal "result bound limits the number of returned candidates"
       1
       (length
-        (math-search
+        (search-candidates
           "(0 - x) - (0 - y)" "(-x) - (-y)"
           #:assumptions '("scalar(x); scalar(y)")
           #:max-depth 2 #:max-results 1))))
@@ -313,7 +320,7 @@
   (for-each
     (lambda (example)
       (let* ((source (car example)) (target (cadr example))
-             (candidate (car (math-search source target
+             (candidate (car (search-candidates source target
                                #:assumptions '("scalar(x); vector(E)")
                                #:max-depth 1))))
         (test-assert (string-append "typed simplification: " source)
@@ -326,7 +333,7 @@
   (test-assert "nested simplification converges to a type-preserving result"
     (math-verification-valid?
       (math-verify-derivation
-        (car (math-search "1 * (-(-E) + zero(vector))" "E"
+        (car (search-candidates "1 * (-(-E) + zero(vector))" "E"
                #:assumptions '("vector(E)") #:max-depth 3)))))
   (test-equal "wrongly typed zero cannot trigger vector addition simplification"
     '()
@@ -356,10 +363,10 @@
   (for-each
     (lambda (example)
       (let* ((source (car example)) (target (cadr example))
-             (candidate (car (math-search source target
+             (candidate (car (search-candidates source target
                                #:assumptions '("scalar(f); smooth(f)")
                                #:max-depth 1)))
-             (backward (car (math-search-backward target source
+             (backward (car (backward-candidates target source
                               #:assumptions '("scalar(f); smooth(f)")
                               #:max-depth 1))))
         (test-assert (string-append "scalar-field identity: " source)
@@ -368,13 +375,13 @@
         (test-equal "scalar-field inverse search preserves forward term order"
           (math-search-result-terms candidate) (math-search-result-terms backward))
         (test-equal "scalar-field identity requires regularity"
-          '() (math-search source target #:assumptions '("scalar(f)")
+          '() (search-candidates source target #:assumptions '("scalar(f)")
                 #:max-depth 1))))
     '(("curl(grad(f))" "zero(vector)")
       ("div(grad(f))" "laplacian(f)")))
   (test-equal "smoothness must refer to the exact scalar field"
     '()
-    (math-search "curl(grad(f))" "zero(vector)"
+    (search-candidates "curl(grad(f))" "zero(vector)"
       #:assumptions '("scalar(f); smooth(g)") #:max-depth 1))
   (test-equal "scalar-field identity rejects vector fields"
     '()
@@ -382,7 +389,7 @@
       (rewrite-stepo '((vector (var f)) (smooth (var f)))
                      '(curl (grad (var f))) result rule path)))
   (let* ((candidate
-           (car (math-search "1 * (curl(grad(f)) + zero(vector))"
+           (car (search-candidates "1 * (curl(grad(f)) + zero(vector))"
                   "zero(vector)" #:assumptions '("scalar(f); smooth(f)")
                   #:max-depth 3)))
          (html (sxml->html (content->sxml
@@ -398,8 +405,70 @@
   (test-assert "div-grad identity composes with scalar simplification"
     (math-verification-valid?
       (math-verify-derivation
-        (car (math-search "div(grad(f)) + 0" "laplacian(f)"
+        (car (search-candidates "div(grad(f)) + 0" "laplacian(f)"
                #:assumptions '("scalar(f); smooth(f)") #:max-depth 2)))))
+  (let* ((report (math-search "(x + 0) + (y + 0)" "x + y"
+                   #:assumptions '("scalar(x); scalar(y)")
+                   #:rules '(add-zero) #:max-states 4)))
+    (test-equal "state-limited search preserves candidates already found"
+      1 (length (math-search-report-candidates report)))
+    (test-equal "state-limited report states why it stopped"
+      'state-limit (math-search-report-reason report))
+    (test-equal "search counts explored states" 4 (math-search-report-states report))
+    (test-assert "partial candidates still verify"
+      (every (lambda (candidate)
+               (math-verification-valid? (math-verify-derivation candidate)))
+             (math-search-report-candidates report)))
+    (test-assert "limited report does not claim completeness"
+      (not (math-search-report-complete? report))))
+  (test-equal "depth cutoff differs from exhausted search"
+    'depth-limit
+    (math-search-report-reason
+      (math-search "x + 0" "x" #:assumptions '("scalar(x)") #:max-depth 0)))
+  (test-equal "an exhausted dead end is a complete search"
+    'exhausted
+    (math-search-report-reason
+      (math-search "x" "y" #:assumptions '("scalar(x); scalar(y)")
+        #:rules '() #:max-depth 0)))
+  (test-equal "result limit remains visible in the report"
+    'result-limit
+    (math-search-report-reason
+      (math-search "(x + 0) + (y + 0)" "x + y"
+        #:assumptions '("scalar(x); scalar(y)") #:rules '(add-zero)
+        #:max-results 1)))
+  (test-equal "inverse generation respects the explicit term size bound"
+    'term-size-limit
+    (math-search-report-reason
+      (math-search-backward "x" "y" #:assumptions '("scalar(x); scalar(y)")
+        #:rules '(add-zero) #:max-term-size 3)))
+  (test-equal "explicit inverse arithmetic rule selection enables bounded expansion"
+    '((+ (var x) (num "0")) (var x))
+    (math-search-result-terms
+      (car (math-search-report-candidates
+             (math-search-backward "x" "x + 0" #:assumptions '("scalar(x)")
+               #:rules '(add-zero) #:max-depth 1)))))
+  (test-equal "rule selection excludes other applicable rules"
+    '()
+    (math-search-report-candidates
+      (math-search "x + 0" "x" #:assumptions '("scalar(x)") #:rules '(multiply-one))))
+  (test-error "unknown selected rules are rejected" #t
+    (math-search "x" "x" #:assumptions '("scalar(x)") #:rules '(unknown-rule)))
+  (let* ((report (math-simplify "curl(curl(E)) + zero(vector)"
+                   #:assumptions '("vector(E)")))
+         (candidate (car (math-search-report-candidates report))))
+    (test-equal "normalization only uses shrinking arithmetic rules"
+      '((+ (curl (curl (var E))) (zero vector)) (curl (curl (var E))))
+      (math-search-result-terms candidate))
+    (test-equal "normalization reports normal form"
+      'normal-form (math-search-report-reason report))
+    (test-assert "normalization candidate verifies"
+      (math-verification-valid? (math-verify-derivation candidate))))
+  (test-equal "normalization retains a partially simplified chain at its step limit"
+    'step-limit
+    (math-search-report-reason
+      (math-simplify "1 * (x + 0)" #:assumptions '("scalar(x)") #:max-steps 1)))
+  (test-error "normalization rejects non-shrinking rules" #t
+    (math-simplify "x" #:assumptions '("scalar(x)") #:rules '(curl-curl-identity)))
   (test-end "grove math pipeline"))
 
 (run-math-tests)

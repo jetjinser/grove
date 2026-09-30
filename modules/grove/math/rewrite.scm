@@ -18,6 +18,8 @@
             math-rewrite-rule-condition
             math-rewrite-rule-condition-checked?
             math-rewrite-rules
+            math-simplification-rules
+            math-backward-rules
             math-rewrite-rule-ref
             rewrite-curl-curl))
 
@@ -67,6 +69,16 @@
 (define (math-rewrite-rule-ref name)
   (find (lambda (rule) (eq? (math-rewrite-rule-name rule) name))
         math-rewrite-rules))
+
+(define math-simplification-rules
+  '(subtract-zero add-zero zero-add subtract-right-zero double-negation
+    multiply-one one-multiply))
+
+;; Inverse decoration rules are available on explicit selection, but are not
+;; useful as default proof-search branches. Subtract-zero retains its inverse.
+(define math-backward-rules
+  '(curl-curl-identity divergence-free div-curl-zero subtract-zero
+    curl-grad-zero div-grad-laplacian))
 
 (define (assumptiono assumptions assumption)
   (conde
@@ -162,31 +174,32 @@
 
 (define (unrewrite-rooto assumptions input output rule)
   (conde
-    ((curl-curlo assumptions input output)
-     (== rule 'curl-curl-identity))
+    ((== rule 'curl-curl-identity)
+     (curl-curlo assumptions input output))
     ((fresh (field)
        (== input `(grad (div ,field)))
        (== output '(zero vector))
        (assumptiono assumptions `(= (div ,field) (num "0")))
        (math-typeo assumptions field 'vector)
        (== rule 'divergence-free)))
-    ((div-curl-zeroo assumptions input output)
-     (== rule 'div-curl-zero))
-    ((subtract-zeroo assumptions input output)
-     (== rule 'subtract-zero))
-    ((scalar-field-identityo assumptions input output rule))))
+    ((== rule 'div-curl-zero)
+     (div-curl-zeroo assumptions input output))
+    ((== rule 'subtract-zero)
+     (subtract-zeroo assumptions input output))
+    ((scalar-field-identityo assumptions input output rule))
+    ((simplifyo assumptions input output rule))))
 
 ;; Apply one named rule at INPUT, returning the rule that fired.
 (define (rewrite-rooto assumptions input output rule)
   (conde
-    ((curl-curlo assumptions input output)
-     (== rule 'curl-curl-identity))
-    ((divergence-zeroo assumptions input output)
-     (== rule 'divergence-free))
-    ((div-curl-zeroo assumptions input output)
-     (== rule 'div-curl-zero))
-    ((subtract-zeroo assumptions input output)
-     (== rule 'subtract-zero))
+    ((== rule 'curl-curl-identity)
+     (curl-curlo assumptions input output))
+    ((== rule 'divergence-free)
+     (divergence-zeroo assumptions input output))
+    ((== rule 'div-curl-zero)
+     (div-curl-zeroo assumptions input output))
+    ((== rule 'subtract-zero)
+     (subtract-zeroo assumptions input output))
     ((scalar-field-identityo assumptions input output rule))
     ((simplifyo assumptions input output rule))))
 

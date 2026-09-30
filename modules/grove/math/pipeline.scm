@@ -1,5 +1,4 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
-;;;
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math pipeline)
@@ -9,45 +8,25 @@
   #:use-module (grove math layout)
   #:use-module (grove math rewrite)
   #:use-module (grove math types)
+  #:use-module (grove math derivation)
+  #:use-module (grove math strategy)
   #:use-module (grove relation)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-9)
-  #:export (math-source->term
-            math-derive
-            math-derive-curl-curl
-            math-search
-            math-search-backward
-            math-derivation-step?
-            math-derivation-step-from
-            math-derivation-step-to
-            math-derivation-step-rule
-            math-derivation-step-path
-            math-search-result?
-            math-search-result-terms
-            math-search-result-steps
-            math-search-result->content
-            math-verify-step
-            math-verify-derivation
-            math-verification?
-            math-verification-valid?
-            math-verification-errors
-            math-verification-derivation))
-
-(define-record-type <math-derivation-step>
-  (make-math-derivation-step from to rule path)
-  math-derivation-step?
-  (from math-derivation-step-from)
-  (to math-derivation-step-to)
-  (rule math-derivation-step-rule)
-  (path math-derivation-step-path))
-
-(define-record-type <math-search-result>
-  (make-math-search-result terms steps assumptions)
-  math-search-result?
-  (terms math-search-result-terms)
-  (steps math-search-result-steps)
-  (assumptions math-search-result-assumptions))
+  #:export (math-source->term math-derive math-derive-curl-curl
+            math-search math-search-backward math-simplify
+            math-search-result->content math-verify-step math-verify-derivation
+            math-verification? math-verification-valid?
+            math-verification-errors math-verification-derivation)
+  #:re-export (math-derivation-step? math-derivation-step-from
+               math-derivation-step-to math-derivation-step-rule
+               math-derivation-step-path math-search-result?
+               math-search-result-terms math-search-result-steps
+               math-search-result-assumptions
+               math-search-report? math-search-report-candidates
+               math-search-report-reason math-search-report-limits
+               math-search-report-states math-search-report-complete?))
 
 (define-record-type <math-verification>
   (make-math-verification derivation errors)
@@ -206,11 +185,10 @@
 
 (define max-derivation-steps 32)
 
-(define (derive-steps input assumptions)
+(define (derive-steps input assumptions rules)
   (let advance ((current input) (history (list input)) (steps 0))
     (let ((answers
-            (run 1 (result rule path)
-              (rewrite-stepo assumptions current result rule path))))
+            (math-rewrite-answers assumptions current rules #f)))
       (cond
         ((null? answers) (reverse history))
         ((= steps max-derivation-steps)
@@ -226,10 +204,12 @@
                     (cons (list next rule path) history)
                     (+ steps 1))))))))
 
-(define* (math-derive source #:key (assumptions '()))
+(define* (math-derive source #:key (assumptions '()) (rules #f))
   (let* ((input (math-source->term source))
          (assumptions (math-source->assumptions assumptions))
-         (steps (derive-steps input assumptions)))
+         (rules (math-selected-rules rules
+                  (map math-rewrite-rule-name math-rewrite-rules)))
+         (steps (derive-steps input assumptions rules)))
     (check-derivation-types! input assumptions)
     (unless (> (length steps) 1)
       (error "no math rewrite rule applies to the expression" input))
@@ -248,105 +228,26 @@
 (define* (math-derive-curl-curl source #:key (assumptions '()))
   (math-derive source #:assumptions assumptions))
 
-(define (check-search-bound name value minimum)
-  (unless (and (integer? value) (>= value minimum))
-    (error "invalid math search bound" name value minimum)))
-
-(define* (bounded-math-search start goal assumptions backward?
-                              #:key (max-depth 8)
-                                    (max-results 5)
-                                    (max-states 256))
-  (check-search-bound 'max-depth max-depth 0)
-  (check-search-bound 'max-results max-results 1)
-  (check-search-bound 'max-states max-states 1)
-  (unless (math-infer-type assumptions start)
-    (error "cannot type the math search starting term"
-           (math-type-diagnostic assumptions start)))
-  (unless (math-infer-type assumptions goal)
-    (error "cannot type the math search goal term"
-           (math-type-diagnostic assumptions goal)))
-  (let search ((queue (list (list start (list start) '() 0 (list start))))
-                 (visited-states 0)
-                 (results '()))
-      (cond
-        ((null? queue) (reverse results))
-        ((>= (length results) max-results) (reverse results))
-        ((>= visited-states max-states)
-         (error "math search exceeded its state limit"
-                max-states "raise max-states to continue"))
-        (else
-         (let* ((state (car queue))
-                (current (list-ref state 0))
-                (terms-reversed (list-ref state 1))
-                (steps-reversed (list-ref state 2))
-                (depth (list-ref state 3))
-                (history (list-ref state 4))
-                (rest (cdr queue)))
-           (if (equal? current goal)
-               (search rest (+ visited-states 1)
-                       (cons (make-math-search-result
-                               (if backward?
-                                   terms-reversed
-                                   (reverse terms-reversed))
-                               (if backward?
-                                   steps-reversed
-                                   (reverse steps-reversed))
-                               assumptions)
-                             results))
-               (if (>= depth max-depth)
-                   (search rest (+ visited-states 1) results)
-                   (let* ((answers
-                            (if backward?
-                                (run* (next rule path)
-                                  (unrewrite-stepo assumptions next current
-                                                   rule path))
-                                (run* (next rule path)
-                                  (rewrite-stepo assumptions current
-                                                 next rule path))))
-                          (successors
-                            (filter-map
-                              (lambda (answer)
-                                (let ((next (car answer)))
-                                  (and (not (member next history))
-                                       (list next
-                                         (cons next terms-reversed)
-                                         (cons
-                                           (make-math-derivation-step
-                                             (if backward? next current)
-                                             (if backward? current next)
-                                             (cadr answer) (caddr answer))
-                                           steps-reversed)
-                                         (+ depth 1)
-                                         (cons next history)))))
-                              answers)))
-                     (search (append rest successors)
-                             (+ visited-states 1)
-                             results)))))))))
-
 (define* (math-search source target
-                      #:key (assumptions '())
-                            (max-depth 8)
-                            (max-results 5)
-                            (max-states 256))
-  (bounded-math-search
-    (math-source->term source)
-    (math-source->term target)
-    (math-source->assumptions assumptions)
-    #f
-    #:max-depth max-depth
-    #:max-results max-results
-    #:max-states max-states))
+                      #:key (assumptions '()) (rules #f)
+                            (max-depth 8) (max-results 5)
+                            (max-states 256) (max-term-size 128))
+  (search-math-terms
+    (math-source->term source) (math-source->term target)
+    (math-source->assumptions assumptions) #f
+    #:rules rules #:max-depth max-depth #:max-results max-results
+    #:max-states max-states #:max-term-size max-term-size))
 
 (define* (math-search-backward target source
-                               #:key (assumptions '())
-                                     (max-depth 8)
-                                     (max-results 5)
-                                     (max-states 256))
-  (bounded-math-search
-    (math-source->term target)
-    (math-source->term source)
-    (math-source->assumptions assumptions)
-    #t
-    #:max-depth max-depth
-    #:max-results max-results
-    #:max-states max-states))
+                               #:key (assumptions '()) (rules #f)
+                                     (max-depth 8) (max-results 5)
+                                     (max-states 256) (max-term-size 128))
+  (search-math-terms
+    (math-source->term target) (math-source->term source)
+    (math-source->assumptions assumptions) #t
+    #:rules rules #:max-depth max-depth #:max-results max-results
+    #:max-states max-states #:max-term-size max-term-size))
+
+(define* (math-simplify source #:key (assumptions '()) (rules #f) (max-steps 32))
+  (simplify-math-term (math-source->term source)
+    (math-source->assumptions assumptions) #:rules rules #:max-steps max-steps))

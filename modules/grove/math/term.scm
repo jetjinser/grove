@@ -6,7 +6,14 @@
   #:use-module (grove math syntax)
   #:use-module (srfi srfi-1)
   #:export (math-term?
+            math-term-size
             math-expression->term))
+
+(define (math-term-size term)
+  (unless (math-term? term) (error "invalid math term" term))
+  (if (memq (car term) '(var num zero))
+      1
+      (+ 1 (apply + (map math-term-size (cdr term))))))
 
 (define (math-term? term)
   (cond

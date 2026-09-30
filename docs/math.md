@@ -16,7 +16,7 @@ Automatic simplification removes a matching typed zero from either side of
 addition and the right side of subtraction, cancels double negation, and removes
 scalar one from either side of multiplication. These six rules apply to scalar
 and vector terms and strictly reduce term size. They are forward simplifications;
-backward search does not insert arbitrary zero/one decorations. Each transition
+backward search does not insert zero/one decorations by default. Each transition
 still records its rule and operand path.
 
 Grove keeps mathematical meaning separate from mathematical presentation.
@@ -33,7 +33,9 @@ source → tokens → syntax tree → symbolic term → relation rewrite → lay
 parses it with source spans. `(grove math term)` maps that syntax tree to
 Scheme s-expressions such as `(curl (curl (var E)))`; this is the term grammar
 used by relational rules. `(grove math rewrite)` defines miniKanren relations
-over those terms. `(grove math layout)` lowers terms to the existing math
+over those terms. `(grove math strategy)` selects rules and implements bounded
+search and shrinking normalization; `(grove math derivation)` stores their
+certificates. `(grove math layout)` lowers terms to the existing math
 layout nodes. `(grove math pipeline)` composes these passes.
 
 The initial parser accepts identifiers, integer numerals, function calls,
@@ -94,19 +96,41 @@ consistency by the type judgment, though their truth is not proved.
 
 For target-directed queries, `(grove math pipeline)` exports `math-search`.
 It performs breadth-first search over the miniKanren one-step relation and
-returns the shortest candidates first. `#:max-depth`, `#:max-results`, and
-`#:max-states` bound derivation length, returned candidates, and explored
-states; hitting the state limit reports an error rather than claiming that no
-solution exists. Each result retains its term sequence and named rewrite
+returns a search report with the shortest candidates first. `#:max-depth`,
+`#:max-results`, `#:max-states`, and `#:max-term-size` bound derivation length,
+returned candidates, explored states, and nodes per generated term. `#:rules`
+selects registered rule names; an empty list disables all rules and an unknown
+name is an argument error. Limits return the candidates found so far, rather
+than discarding them or claiming no solution exists. Each candidate retains
+its term sequence and named rewrite
 steps, and `math-search-result->content` lowers a candidate to displayable
 MathML IR. For example:
 
 ```scheme
-(map math-search-result->content
-     (math-search "curl(curl(E))" "-laplacian(E)"
-       #:assumptions '("vector(E); smooth(E); div(E)=0")
-       #:max-depth 3))
+(define report
+  (math-search "curl(curl(E))" "-laplacian(E)"
+    #:assumptions '("vector(E); smooth(E); div(E)=0")
+    #:rules '(curl-curl-identity divergence-free subtract-zero)
+    #:max-depth 3))
+(math-search-report-reason report)
+(map math-search-result->content (math-search-report-candidates report))
 ```
+
+Report accessors expose `candidates`, `reason`, `limits`, and `states`.
+Reasons are `exhausted`, `depth-limit`, `term-size-limit`, `state-limit`, or
+`result-limit`. The `limits` list retains all encountered cutoffs, and
+`math-search-report-complete?` is true only for exhaustive search. Exhaustion
+is relative to the selected rules and supplied assumptions. Multiple distinct
+paths to the same term remain distinct candidates.
+
+`math-simplify` is a separate strategy: it takes a source expression and
+normalizes using shrinking arithmetic rules, with optional `#:rules` and
+`#:max-steps`. It returns one candidate in the same report format, with reason
+`normal-form` or `step-limit`; a limited report retains the partial chain.
+For example, `(math-simplify "1 * (x + 0)" #:assumptions '("scalar(x)"))`
+normalizes to `x` without selecting a target or expanding differential identities.
+`math-derive` also accepts Scheme-level `#:rules` for its displayed automatic
+derivation.
 
 Search results are candidates. `math-verify-step` checks one recorded edge
 against the named miniKanren rule and its exact operand path. For an entire
@@ -115,10 +139,7 @@ with `math-verification-valid?`, `math-verification-errors`, and
 `math-verification-derivation`:
 
 ```scheme
-(let ((candidate
-        (car (math-search "curl(curl(E))" "-laplacian(E)"
-               #:assumptions '("vector(E); smooth(E); div(E)=0")
-               #:max-depth 3))))
+(let ((candidate (car (math-search-report-candidates report))))
   (math-verification-valid? (math-verify-derivation candidate)))
 ```
 
@@ -132,3 +153,8 @@ This searches forward from a known expression to a target. The inverse query
 second; it returns candidates as ordinary forward derivations. For example,
 the curl-curl example can be searched from `-laplacian(E)` back to
 `curl(curl(E))` using the same bounds and assumptions.
+Backward search defaults to differential identities and `subtract-zero`.
+Other inverse arithmetic expansions are available through explicit `#:rules`,
+for example `#:rules '(add-zero)` to recover `x + 0` from `x`. Field-generating
+inverses enumerate explicit declarations, and term size plus depth bound their
+expansion. A limit is not a proof that no derivation exists.
