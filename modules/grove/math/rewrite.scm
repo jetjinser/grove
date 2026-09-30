@@ -10,6 +10,8 @@
   #:export (curl-curlo
             rewriteo
             rewrite-stepo
+            unrewrite-rooto
+            unrewrite-stepo
             math-rewrite-rule?
             math-rewrite-rule-name
             math-rewrite-rule-equation
@@ -63,22 +65,37 @@
 (define (divergence-zeroo assumptions input output)
   (fresh (field)
     (== input `(grad (div ,field)))
-    (math-typeo assumptions field 'vector)
     (assumptiono assumptions `(= (div ,field) (num "0")))
+    (math-typeo assumptions field 'vector)
     (== output '(num "0"))))
 
 ;; Vector-calculus identity, gated by explicit type and regularity facts.
 (define (curl-curlo assumptions input output)
   (fresh (field)
     (== input `(curl (curl ,field)))
+    (== output `(- (grad (div ,field)) (laplacian ,field)))
     (math-typeo assumptions field 'vector)
-    (assumptiono assumptions `(smooth ,field))
-    (== output `(- (grad (div ,field)) (laplacian ,field)))))
+    (assumptiono assumptions `(smooth ,field))))
 
 (define (subtract-zeroo input output)
   (fresh (term)
     (== input `(- (num "0") ,term))
     (== output `(- ,term))))
+
+(define (unrewrite-rooto assumptions input output rule)
+  (conde
+    ((curl-curlo assumptions input output)
+     (== rule 'curl-curl-identity))
+    ((fresh (field)
+       (== input `(grad (div ,field)))
+       (== output '(num "0"))
+       (assumptiono assumptions `(= (div ,field) (num "0")))
+       (math-typeo assumptions field 'vector)
+       (== rule 'divergence-free)))
+    ((fresh (term)
+       (== input `(- (num "0") ,term))
+       (== output `(- ,term))
+       (== rule 'subtract-zero)))))
 
 ;; Apply one named rule at INPUT, returning the rule that fired.
 (define (rewrite-rooto assumptions input output rule)
@@ -112,6 +129,29 @@
          (rewrite-childreno assumptions rest (+ index 1)
                             rewritten-rest rule rest-path)
          (== `(,child . ,rewritten-rest) outputs)
+         (== path `(,index . ,rest-path)))))))
+
+(define (unrewrite-stepo assumptions input output rule path)
+  (conde
+    ((unrewrite-rooto assumptions input output rule)
+     (== path '()))
+    ((fresh (operator arguments restored child-path)
+       (== `(,operator . ,arguments) output)
+       (unrewrite-childreno assumptions arguments 0 restored rule child-path)
+       (== `(,operator . ,restored) input)
+       (== path child-path)))))
+
+(define (unrewrite-childreno assumptions outputs index inputs rule path)
+  (fresh (child rest restored child-path)
+    (== `(,child . ,rest) outputs)
+    (conde
+      ((unrewrite-stepo assumptions restored child rule child-path)
+       (== `(,restored . ,rest) inputs)
+       (== path `(,index . ,child-path)))
+      ((fresh (restored-rest rest-path)
+         (unrewrite-childreno assumptions rest (+ index 1)
+                              restored-rest rule rest-path)
+         (== `(,child . ,restored-rest) inputs)
          (== path `(,index . ,rest-path)))))))
 
 ;; Compatibility relation for callers that need only the resulting term.

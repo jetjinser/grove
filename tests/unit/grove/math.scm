@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit grove math)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-64)
   #:use-module (grove math syntax)
   #:use-module (grove math term)
@@ -161,6 +162,83 @@
            (string-contains html "<mover accent=\"true\">")
            (string-contains html "Δ")
            (string-contains html "curl-curl-identity (at root)"))))
+  (let* ((results
+           (math-search
+             "curl(curl(E))" "-laplacian(E)"
+             #:assumptions '("vector(E); smooth(E); div(E)=0")
+             #:max-depth 3))
+         (result (car results)))
+    (test-equal "bounded goal search returns the complete derivation chain"
+      '((curl (curl (var E)))
+        (- (grad (div (var E))) (laplacian (var E)))
+        (- (num "0") (laplacian (var E)))
+        (- (laplacian (var E))))
+      (math-search-result-terms result))
+    (test-equal "goal search records each named rewrite"
+      '(curl-curl-identity divergence-free subtract-zero)
+      (map math-derivation-step-rule
+           (math-search-result-steps result)))
+    (test-assert "a search candidate lowers to an annotated MathML derivation"
+      (let ((html
+              (sxml->html
+                (content->sxml (math-search-result->content result)))))
+        (and (string-contains html "<mtable>")
+             (string-contains html "<mover accent=\"true\">")
+             (string-contains html "divergence-free (at operand 1)"))))
+    (test-equal "goal search reports no solution below the required depth"
+      '()
+      (math-search
+        "curl(curl(E))" "-laplacian(E)"
+        #:assumptions '("vector(E); smooth(E); div(E)=0")
+        #:max-depth 2))
+    (let* ((backward-results
+             (math-search-backward
+               "-laplacian(E)" "curl(curl(E))"
+               #:assumptions '("vector(E); smooth(E); div(E)=0")
+               #:max-depth 3))
+           (backward-result (car backward-results)))
+      (test-equal "backward query returns a forward-ordered candidate proof"
+        (math-search-result-terms result)
+        (math-search-result-terms backward-result))
+      (test-equal "backward query returns rules in proof order"
+        '(curl-curl-identity divergence-free subtract-zero)
+        (map math-derivation-step-rule
+             (math-search-result-steps backward-result)))
+      (test-assert "every backward candidate edge satisfies the forward relation"
+        (every
+          (lambda (step)
+            (member
+              (list (math-derivation-step-to step)
+                    (math-derivation-step-rule step)
+                    (math-derivation-step-path step))
+              (run* (output rule path)
+                (rewrite-stepo
+                  '((vector (var E))
+                    (smooth (var E))
+                    (= (div (var E)) (num "0")))
+                  (math-derivation-step-from step)
+                  output rule path))))
+          (math-search-result-steps backward-result))))
+    (test-error "goal search enforces a finite state budget" #t
+      (math-search
+        "curl(curl(E))" "-laplacian(E)"
+        #:assumptions '("vector(E); smooth(E); div(E)=0")
+        #:max-depth 3 #:max-states 1)))
+  (let ((results
+          (math-search
+            "(0 - x) - (0 - y)" "(-x) - (-y)"
+            #:assumptions '("scalar(x); scalar(y)")
+            #:max-depth 2 #:max-results 2)))
+    (test-equal "search enumerates both valid rewrite orders"
+      2
+      (length results))
+    (test-equal "result bound limits the number of returned candidates"
+      1
+      (length
+        (math-search
+          "(0 - x) - (0 - y)" "(-x) - (-y)"
+          #:assumptions '("scalar(x); scalar(y)")
+          #:max-depth 2 #:max-results 1))))
   (test-assert "generic function calls use MathML function application"
     (string-contains
       (sxml->html

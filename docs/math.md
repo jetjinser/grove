@@ -67,3 +67,25 @@ The rewrite module exposes a rule registry with each law, its side condition,
 and whether the current implementation checks that condition. The
 curl-curl rule's type and regularity declarations are checked for presence and
 consistency by the type judgment, though their truth is not proved.
+
+For target-directed queries, `(grove math pipeline)` exports `math-search`.
+It performs breadth-first search over the miniKanren one-step relation and
+returns the shortest candidates first. `#:max-depth`, `#:max-results`, and
+`#:max-states` bound derivation length, returned candidates, and explored
+states; hitting the state limit reports an error rather than claiming that no
+solution exists. Each result retains its term sequence and named rewrite
+steps, and `math-search-result->content` lowers a candidate to displayable
+MathML IR. For example:
+
+```scheme
+(map math-search-result->content
+     (math-search "curl(curl(E))" "-laplacian(E)"
+       #:assumptions '("vector(E); smooth(E); div(E)=0")
+       #:max-depth 3))
+```
+
+This searches forward from a known expression to a target. The inverse query
+`math-search-backward` takes the target first and a required source expression
+second; it returns candidates as ordinary forward derivations. For example,
+the curl-curl example can be searched from `-laplacian(E)` back to
+`curl(curl(E))` using the same bounds and assumptions.
