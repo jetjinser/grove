@@ -30,6 +30,11 @@
 
 (define (math-typeo assumptions term type)
   (conde
+    ((fresh (expression name)
+       (== term `(differentiate ,expression (var ,name)))
+       (math-typeo assumptions expression 'scalar)
+       (math-typeo assumptions `(var ,name) 'scalar)
+       (== type 'scalar)))
     ((== term '(zero vector)) (== type 'vector))
     ((fresh (name)
        (== `(var ,name) term)

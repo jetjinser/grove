@@ -77,6 +77,16 @@
 
 (test-begin "scribble read")
 
+(let* ((document (evaluate-document (default-environment scribble)
+                   "@differentiate[\"x\" \"scalar(x)\"]{x^3 + 2*x}"))
+       (html (sxml->html (content->sxml document))))
+  (test-assert "@differentiate displays both passes as native MathML"
+    (and (= (substring-count html "<mtable>") 2)
+         (string-contains html "<mfrac>")
+         (string-contains html "<msup>")
+         (string-contains html "differentiate-power")
+         (string-contains html "zero-multiply"))))
+
 (let* ((env (default-environment scribble))
        (document
          (evaluate-document env

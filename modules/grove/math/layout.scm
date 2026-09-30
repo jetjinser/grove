@@ -25,6 +25,12 @@
       (if (and (pair? value) (memq (car value) '(var num zero)))
           (lower value)
           (argument value)))
+    (define (operand parent value right?)
+      (if (and (pair? value)
+               (or (and (memq parent '(* ^)) (memq (car value) '(+ - =)))
+                   (and right? (eq? parent '-) (memq (car value) '(+ -)))
+                   (and (eq? parent '^) (eq? (car value) '^))))
+          (argument value) (lower value)))
     (define (lower value)
       (unless (math-term? value)
         (error "invalid math term" value))
@@ -38,6 +44,12 @@
          (make-content-element 'math-vector (list (token 'mn "0"))))
         ((and (pair? value) (eq? (car value) 'num))
          (token 'mn (cadr value)))
+        ((and (eq? (car value) 'differentiate) (= (length value) 3))
+         (row (list
+           (make-content-element 'math-frac
+             (list (row (list (token 'mi "d")))
+                   (row (list (token 'mi "d") (lower (caddr value))))))
+           (argument (cadr value)))))
         ((and (eq? (car value) 'curl) (= (length value) 2))
          (row (list (operator "∇") (operator "×")
                     (operator-argument (cadr value)))))
@@ -57,13 +69,13 @@
                  'math-frac
                  (list (row (list (lower (cadr value))))
                        (row (list (lower (caddr value))))))
-               (row (list (lower (cadr value))
+               (row (list (operand (car value) (cadr value) #f)
                           (token 'mo symbol)
-                          (lower (caddr value)))))))
+                          (operand (car value) (caddr value) #t))))))
         ((and (eq? (car value) '^) (= (length value) 3))
          (make-content-element
            'math-sup
-           (list (row (list (lower (cadr value))))
+           (list (row (list (operand '^ (cadr value) #f)))
                  (row (list (lower (caddr value)))))))
         ((and (eq? (car value) 'sub) (= (length value) 3))
          (make-content-element
@@ -71,7 +83,7 @@
            (list (row (list (lower (cadr value))))
                  (row (list (lower (caddr value)))))))
         ((and (eq? (car value) '-) (= (length value) 2))
-         (row (list (token 'mo "−") (lower (cadr value)))))
+         (row (list (token 'mo "−") (operator-argument (cadr value)))))
         ((symbol? (car value))
          (let loop ((arguments (cdr value)) (first? #t) (children '()))
            (if (null? arguments)

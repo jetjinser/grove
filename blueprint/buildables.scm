@@ -17,6 +17,7 @@
     "grove/math/syntax.scm"
     "grove/math/term.scm"
     "grove/math/types.scm"
+    "grove/math/differentiation.scm"
     "grove/math/derivation.scm"
     "grove/math/strategy.scm"
     "grove/math/verification.scm"

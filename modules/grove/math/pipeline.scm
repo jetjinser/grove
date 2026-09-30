@@ -11,11 +11,16 @@
   #:use-module (grove math derivation)
   #:use-module (grove math strategy)
   #:use-module (grove math verification)
+  #:use-module (grove math differentiation)
+  #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (math-source->term math-derive math-derive-curl-curl
             math-search math-search-backward math-simplify
-            math-derivation->content math-check-chain math-verification->content)
+            math-derivation->content math-check-chain math-verification->content
+            math-differentiate math-differentiation-result?
+            math-differentiation-expansion math-differentiation-simplification
+            math-differentiation-final math-differentiation->content)
   #:re-export (math-verify-step math-verify-derivation
                math-verification? math-verification-valid?
                math-verification-errors math-verification-diagnostics
@@ -33,6 +38,49 @@
 
 (define (math-source->term source)
   (math-expression->term (parse-math source)))
+
+(define-record-type <math-differentiation-result>
+  (make-math-differentiation-result expansion simplification final)
+  math-differentiation-result?
+  (expansion math-differentiation-expansion)
+  (simplification math-differentiation-simplification)
+  (final math-differentiation-final))
+
+(define* (math-differentiate source variable #:key (assumptions '())
+                              (max-steps 128) (max-term-size 2048))
+  (unless (and (exact-integer? max-steps) (>= max-steps 0)
+               (exact-integer? max-term-size) (> max-term-size 0))
+    (error "invalid differentiation bounds" max-steps max-term-size))
+  (let* ((expression (math-source->term source))
+         (coordinate (math-source->term variable))
+         (facts (math-source->assumptions assumptions))
+         (input `(differentiate ,expression ,coordinate)))
+    (unless (and (eq? (car coordinate) 'var) (polynomial-term? expression))
+      (error "differentiation requires a polynomial and a coordinate variable" source variable))
+    (check-derivation-types! input facts)
+    (let expand ((current input) (terms (list input)) (steps '()) (count 0))
+      (when (> (math-term-size current) max-term-size)
+        (error "differentiation exceeded its term-size limit" max-term-size))
+      (let ((answers (math-rewrite-answers facts current math-differentiation-rules #f)))
+        (if (null? answers)
+            (let* ((expansion (make-math-derivation (reverse terms) (reverse steps) facts))
+                   (report (simplify-math-term current facts #:max-steps max-steps))
+                   (simplification (car (math-search-report-candidates report))))
+              (unless (math-search-report-complete? report)
+                (error "differentiation simplification exceeded its step limit" max-steps))
+              (make-math-differentiation-result expansion simplification
+                (last (math-derivation-terms simplification))))
+            (begin
+              (when (= count max-steps)
+                (error "differentiation exceeded its step limit" max-steps))
+              (let* ((answer (car answers)) (next (car answer)))
+                (expand next (cons next terms)
+                  (cons (make-math-derivation-step current next (cadr answer) (caddr answer)) steps)
+                  (+ count 1)))))))))
+
+(define (math-differentiation->content result)
+  (list (math-derivation->content (math-differentiation-expansion result))
+        (math-derivation->content (math-differentiation-simplification result))))
 
 (define (math-source->assumptions sources)
   (append-map

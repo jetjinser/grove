@@ -87,6 +87,11 @@
     (math-verification->content
       (math-check-chain lines #:assumptions (list assumptions)))))
 
+(define-public (differentiate variable assumptions . source)
+  (math-differentiation->content
+    (math-differentiate (content-verbatim-string source) variable
+      #:assumptions (list assumptions))))
+
 (define-public (tex-math . source)
   (make-content-element 'math
                         (map make-content-text

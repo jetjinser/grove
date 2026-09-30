@@ -5,6 +5,7 @@
 (define-module (grove math rewrite)
   #:use-module (grove relation)
   #:use-module (grove math types)
+  #:use-module (grove math differentiation)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
@@ -36,7 +37,7 @@
 ;; This registry is the public contract for the relations below. A false
 ;; condition-checked? means callers must supply the condition themselves.
 (define math-rewrite-rules
-  (list
+  (append (list
     (make-math-rewrite-rule
       'curl-curl-identity
       "curl(curl(E)) = grad(div(E)) - laplacian(E)"
@@ -66,7 +67,15 @@
     (make-math-rewrite-rule 'curl-grad-zero "curl(grad(f)) = zero(vector)"
       "assumptions declare scalar(f) and smooth(f)" #t)
     (make-math-rewrite-rule 'div-grad-laplacian "div(grad(f)) = laplacian(f)"
-      "assumptions declare scalar(f) and smooth(f)" #t)))
+      "assumptions declare scalar(f) and smooth(f)" #t)
+    (make-math-rewrite-rule 'multiply-zero "X * 0 = 0" "X is scalar" #t)
+    (make-math-rewrite-rule 'zero-multiply "0 * X = 0" "X is scalar" #t)
+    (make-math-rewrite-rule 'power-one "X ^ 1 = X" "X is scalar" #t)
+    (make-math-rewrite-rule 'power-zero "X ^ 0 = 1" "polynomial power convention" #t))
+    (map (lambda (name)
+           (make-math-rewrite-rule name (symbol->string name)
+             "scalar polynomial in independent scalar coordinates; natural powers" #t))
+         math-differentiation-rules)))
 
 (define (math-rewrite-rule-ref name)
   (find (lambda (rule) (eq? (math-rewrite-rule-name rule) name))
@@ -74,7 +83,7 @@
 
 (define math-simplification-rules
   '(subtract-zero add-zero zero-add subtract-right-zero double-negation
-    multiply-one one-multiply))
+    multiply-one one-multiply multiply-zero zero-multiply power-one power-zero))
 
 ;; Inverse decoration rules are available on explicit selection, but are not
 ;; useful as default proof-search branches. Subtract-zero retains its inverse.
@@ -100,6 +109,13 @@
     (('double-negation ('- ('- term))) '())
     (('multiply-one ('* term ('num "1"))) '())
     (('one-multiply ('* ('num "1") term)) '())
+    (('multiply-zero ('* term ('num "0"))) '())
+    (('zero-multiply ('* ('num "0") term)) '())
+    (('power-one ('^ term ('num "1"))) '())
+    (('power-zero ('^ term ('num "0"))) '())
+    ((rule ('differentiate expression ('var variable)))
+     (and (memq rule math-differentiation-rules)
+          (polynomial-term? expression) '()))
     (_ #f)))
 
 (define (assumptiono assumptions assumption)
@@ -214,6 +230,8 @@
 ;; Apply one named rule at INPUT, returning the rule that fired.
 (define (rewrite-rooto assumptions input output rule)
   (conde
+    ((differentiation-stepo assumptions input output rule))
+    ((polynomial-simplifyo assumptions input output rule))
     ((== rule 'curl-curl-identity)
      (curl-curlo assumptions input output))
     ((== rule 'divergence-free)
@@ -224,6 +242,18 @@
      (subtract-zeroo assumptions input output))
     ((scalar-field-identityo assumptions input output rule))
     ((simplifyo assumptions input output rule))))
+
+(define (polynomial-simplifyo assumptions input output rule)
+  (fresh (term)
+    (conde
+      ((== input `(* ,term (num "0"))) (== output '(num "0"))
+       (== rule 'multiply-zero))
+      ((== input `(* (num "0") ,term)) (== output '(num "0"))
+       (== rule 'zero-multiply))
+      ((== input `(^ ,term (num "1"))) (== output term) (== rule 'power-one))
+      ((== input `(^ ,term (num "0"))) (== output '(num "1"))
+       (== rule 'power-zero)))
+    (math-typeo assumptions term 'scalar)))
 
 ;; Paths count operands only; the root is (), the first operand is (0), etc.
 (define (rewrite-stepo assumptions input output rule path)

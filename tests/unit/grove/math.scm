@@ -172,7 +172,10 @@
   (test-equal "rewrite relations expose a contract for every current rule"
     '(curl-curl-identity divergence-free div-curl-zero subtract-zero
       add-zero zero-add subtract-right-zero double-negation multiply-one one-multiply
-      curl-grad-zero div-grad-laplacian)
+      curl-grad-zero div-grad-laplacian multiply-zero zero-multiply power-one power-zero
+      differentiate-constant differentiate-variable differentiate-independent
+      differentiate-negation differentiate-sum differentiate-difference
+      differentiate-product differentiate-power)
     (map math-rewrite-rule-name math-rewrite-rules))
   (test-assert "curl-curl side conditions are matched against typed assumptions"
     (and (math-rewrite-rule? (math-rewrite-rule-ref 'curl-curl-identity))
