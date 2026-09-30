@@ -68,8 +68,8 @@
         "@tag[\"algebra\"]{Algebra}\n"
         "@heading{Quadratic equations}\n"
         "@paragraph{See @link[\"limits\"]{limits}. "
-        "@math{x^2+y^2=z^2}}\n"
-        "@paragraph{范畴论 is useful.}\n@display-math{a^2+b^2=c^2}"))
+        "@tex-math{x^2+y^2=z^2}}\n"
+        "@paragraph{范畴论 is useful.}\n@tex-display-math{a^2+b^2=c^2}"))
     (write-test-file
       (string-append mathematics-directory "/limits.plant")
       (string-append
@@ -444,8 +444,8 @@
             "@title{Algebra}\n"
             "@heading{Polynomial equations}\n"
             "@paragraph{See @link[\"limits\"]{limits}. "
-            "@math{x^2+y^2=z^2}}\n"
-            "@display-math{a^2+b^2=c^2}\n"
+            "@tex-math{x^2+y^2=z^2}}\n"
+            "@tex-display-math{a^2+b^2=c^2}\n"
             "@paragraph{Also @link[\"unlinked\"]{unlinked}.}"))
         (write-test-file
           (string-append mathematics-directory "/limits.plant")

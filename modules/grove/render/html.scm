@@ -4,6 +4,7 @@
 
 (define-module (grove render html)
   #:use-module (grove ir)
+  #:use-module (srfi srfi-1)
   #:use-module (sxml simple)
   #:export (content->sxml
             sxml->html))
@@ -24,6 +25,8 @@
            (lazy-handler (assq-ref lazy-handlers kind)))
       (if lazy-handler
           (lazy-handler element render)
+          (if (eq? kind 'math)
+              (render-math element)
           (let ((children (map render (content-element-children element)))
                 (handler (assq-ref handlers kind)))
             (if handler
@@ -38,18 +41,77 @@
             ((code) (cons 'code children))
             ((code-block) `(pre (code ,@children)))
             ((verbatim) (cons 'pre children))
-            ((math)
-             (let ((display? (content-element-property element 'display?))
-                   (source-text
-                     (content-verbatim-string
-                       (content-element-children element))))
-               `(,(if display? 'div 'span)
-                  (@ (class ,(if display? "math-display" "math-inline")))
-                  ,(string-append (if display? "\\[" "\\(")
-                                  source-text
-                                  (if display? "\\]" "\\)")))))
                   (else
-                   `(span (@ (class ,(symbol->string kind))) ,@children))))))))
+                   `(span (@ (class ,(symbol->string kind))) ,@children)))))))))
+
+  (define (render-math-children children)
+    (map render-math-child children))
+
+  (define (render-math-row children)
+    `(mrow ,@(render-math-children children)))
+
+  (define (render-math-child child)
+    (if (not (content-element? child))
+        (error "math children must be tokenized" child)
+        (let ((kind (content-element-kind child))
+              (children (content-element-children child)))
+          (case kind
+            ((math-token)
+             (let ((tag (content-element-property child 'token-kind)))
+               (list tag (content-verbatim-string children))))
+            ((math-frac)
+             (unless (= (length children) 2)
+               (error "MathML fraction requires numerator and denominator" child))
+             `(mfrac ,(render-math-child (list-ref children 0))
+                     ,(render-math-child (list-ref children 1))))
+            ((math-sup math-sub)
+             (unless (= (length children) 2)
+               (error "MathML attachment requires a base and script" child))
+             `(,(if (eq? kind 'math-sup) 'msup 'msub)
+               ,(render-math-child (car children))
+               ,(render-math-child (cadr children))))
+            ((math-vector)
+             `(mover (@ (accent "true"))
+                    ,(render-math-row children)
+                    (mo "→")))
+            ((math-parens)
+             `(mrow (mo "(") ,@(render-math-children children) (mo ")")))
+            ((math-align)
+             `(mtable
+                ,@(map
+                    (lambda (row)
+                      `(mtr
+                         ,@(map
+                             (lambda (cell index)
+                               `(mtd (@ (style
+                                         ,(if (zero? index)
+                                              "text-align: right"
+                                              "text-align: left")))
+                                     ,(render-math-row
+                                        (content-element-children cell))))
+                             (content-element-children row)
+                             (iota (length (content-element-children row))))))
+                    children)))
+            ((math-row math-cell) (render-math-row children))
+            (else (error "unsupported MathML IR element" kind))))))
+
+  (define (render-math element)
+    (let ((display? (content-element-property element 'display?)))
+      (if (content-element-property element 'tex?)
+          `(,(if display? 'div 'span)
+             (@ (class ,(if display? "math-display" "math-inline")))
+             ,(string-append (if display? "\\[" "\\(")
+                             (content-verbatim-string
+                               (content-element-children element))
+                             (if display? "\\]" "\\)")))
+          (let ((mathml
+                  `(math (@ (xmlns "http://www.w3.org/1998/Math/MathML")
+                            ,@(if display? '((display "block")) '()))
+                       ,(render-math-row
+                          (content-element-children element)))))
+            (if display?
+                `(div (@ (class "math-display")) ,mathml)
+                `(span (@ (class "math-inline")) ,mathml))))))
 
   (render content))
 

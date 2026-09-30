@@ -19,8 +19,8 @@
 }
 
 @heading{Notation}
-@paragraph{Temperature is @math{u(x,t)}. The material has constant mass density @math{\rho_m}, specific heat @math{c}, and thermal conductivity @math{k}. The thermal diffusivity is @math{\alpha=k/(\rho_m c)}. Subscripts denote partial derivatives.}
+@paragraph{Temperature is @tex-math{u(x,t)}. The material has constant mass density @tex-math{\rho_m}, specific heat @tex-math{c}, and thermal conductivity @tex-math{k}. The thermal diffusivity is @tex-math{\alpha=k/(\rho_m c)}. Subscripts denote partial derivatives.}
 
-@display-math{\frac{\partial u}{\partial t}=\alpha\frac{\partial^2u}{\partial x^2}}
+@tex-display-math{\frac{\partial u}{\partial t}=\alpha\frac{\partial^2u}{\partial x^2}}
 
 @paragraph{The notes are an original exposition of the standard derivation, with equations checked independently. They were prompted by 顾樵《数学物理方法》（科学出版社，2012），第 5.2 节，ISBN 978-7-03-033064-2. The book excerpt itself is not reproduced here; no open license for it was identified.}

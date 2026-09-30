@@ -23,7 +23,7 @@ address with the `#:id` option:
 @subtree[#:id "difference-of-squares"]{
   @title{Difference of squares}
   @heading{Identity}
-  @display-math{a^2-b^2=(a-b)(a+b)}
+  @tex-display-math{a^2-b^2=(a-b)(a+b)}
   @paragraph{See @link["algebra#examples"]{the algebra examples}.}
 }
 ```

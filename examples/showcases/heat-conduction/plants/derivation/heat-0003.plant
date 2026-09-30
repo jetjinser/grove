@@ -7,17 +7,17 @@
 @summary{Combining flux and stored energy yields the local heat equation.}
 @published{2026-09-28}
 
-@paragraph{Take a rod slice of length @math{\Delta x} and cross-section @math{S}. Its mass is @math{\rho_m S\Delta x}. If its temperature changes by @math{\Delta u}, its stored thermal energy changes by @math{c\rho_m S\Delta x\Delta u}, assuming constant specific heat.}
+@paragraph{Take a rod slice of length @tex-math{\Delta x} and cross-section @tex-math{S}. Its mass is @tex-math{\rho_m S\Delta x}. If its temperature changes by @tex-math{\Delta u}, its stored thermal energy changes by @tex-math{c\rho_m S\Delta x\Delta u}, assuming constant specific heat.}
 
 @paragraph{Using the rightward flux convention from @link["heat-0002"]{Fourier's law}, the energy entering at the left minus the energy leaving at the right is}
 
-@display-math{S\bigl(q(x,t)-q(x+\Delta x,t)\bigr)\Delta t.}
+@tex-display-math{S\bigl(q(x,t)-q(x+\Delta x,t)\bigr)\Delta t.}
 
-@paragraph{Set net inflow equal to stored-energy change, divide by @math{S\Delta x\Delta t}, and take the limit as both increments approach zero. The result is @math{c\rho_m u_t=-q_x}. Substituting @math{q=-k u_x} gives the local balance:}
+@paragraph{Set net inflow equal to stored-energy change, divide by @tex-math{S\Delta x\Delta t}, and take the limit as both increments approach zero. The result is @tex-math{c\rho_m u_t=-q_x}. Substituting @tex-math{q=-k u_x} gives the local balance:}
 
-@display-math{c\rho_m\frac{\partial u}{\partial t}=k\frac{\partial^2u}{\partial x^2}.}
+@tex-display-math{c\rho_m\frac{\partial u}{\partial t}=k\frac{\partial^2u}{\partial x^2}.}
 
-@paragraph{For constant properties, define thermal diffusivity @math{\alpha=k/(\rho_m c)}. Then @math{u_t=\alpha u_{xx}}. Its units are area per time (@math{\mathrm{m^2/s}}); some derivations instead write @math{a^2=\alpha}, but @math{a} itself is not the diffusivity.}
+@paragraph{For constant properties, define thermal diffusivity @tex-math{\alpha=k/(\rho_m c)}. Then @tex-math{u_t=\alpha u_{xx}}. Its units are area per time (@tex-math{\mathrm{m^2/s}}); some derivations instead write @tex-math{a^2=\alpha}, but @tex-math{a} itself is not the diffusivity.}
 
 @heading{What the limit assumes}
 @paragraph{The slice is small compared with the scale over which temperature varies, but large enough to have a meaningful local temperature. The continuum model also assumes local thermal equilibrium, no bulk motion, and no phase change. Material constants are treated as uniform and independent of temperature. Relaxing these assumptions changes the balance or the constitutive law.}

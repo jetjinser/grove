@@ -38,11 +38,7 @@
     (item . ,(lambda (_ body) (string-append "- " body "\n")))
     (code . ,(lambda (_ body) body))
     (code-block . ,(lambda (_ body) (string-append body "\n")))
-    (math . ,(lambda (element _)
-               (string-append
-                 (content-verbatim-string
-                   (content-element-children element))
-                 "\n")))))
+    (math . ,(lambda (_ body) (string-append body "\n")))))
 
 (define (rss-date iso-date)
   (let* ((parsed (string->date iso-date "~Y-~m-~d"))

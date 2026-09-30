@@ -420,3 +420,42 @@ Forester's HTML renderer uses MathJax 4's combined TeX-to-CommonHTML component
 on pages that contain math. It loads the component with `defer`; projects can
 pass `#:mathjax-src` to `make-html-renderer` to use a locally hosted
 copy or another compatible MathJax build, and can pass `#f` to disable it.
+
+For MathML Core output, `@math` and `@display-math` scan plain text into
+identifier, number, and operator tokens. Structural commands such as
+`@frac{numerator}{denominator}`, `@vec{E}`, `@sup{E}{2}`, and `@sub{E}{x}`
+build explicit MathML structure. Inside `@align`, a single `&` marks the
+alignment point and each line break starts a row:
+
+```scheme
+@display-math{@align{
+  ∇ · @vec{D} &= ρ
+  ∇ × @vec{E} &= −@frac{∂@vec{B}}{∂t}
+  ∇ · @vec{B} &= 0
+  ∇ × @vec{H} &= @vec{J} + @frac{∂@vec{D}}{∂t}
+}}
+```
+
+The same commands can lay out the elimination to the wave equation. Here the
+derivation assumes a homogeneous, isotropic, charge-free conducting medium,
+`@vec{D}=ε@vec{E}`, `@vec{B}=μ@vec{H}`, and Ohm's law
+`@vec{J}=σ@vec{E}`; Gauss's law then gives `∇·@vec{E}=0`:
+
+```scheme
+@display-math{@align{
+  ∇ × (∇ × @vec{E}) &= −∇ × @frac{∂@vec{B}}{∂t}
+  &= −μ @frac{∂}{∂t} (∇ × @vec{H})
+  &= −μ @frac{∂}{∂t} @parens{@vec{J} + @frac{∂@vec{D}}{∂t}}
+  &= −μ @parens{@frac{∂@vec{J}}{∂t} + @frac{@sup{∂}{2}@vec{D}}{@sup{∂t}{2}}}
+  &= −μσ @frac{∂@vec{E}}{∂t} − με @frac{@sup{∂}{2}@vec{E}}{@sup{∂t}{2}}
+  ∇ × (∇ × @vec{E}) &= ∇(∇ · @vec{E}) − ∇²@vec{E}
+  &= −∇²@vec{E}
+  −∇²@vec{E} &= −μσ @frac{∂@vec{E}}{∂t} − με @frac{@sup{∂}{2}@vec{E}}{@sup{∂t}{2}}
+  ∇²@vec{E} &= μσ @frac{∂@vec{E}}{∂t} + με @frac{@sup{∂}{2}@vec{E}}{@sup{∂t}{2}}
+}}
+```
+
+This is intentionally token-level notation: grouping and operations such as
+fractions or scripts use commands; the scanner does not infer precedence or
+parse arbitrary expressions. Existing TeX input can use `@tex-math` and
+`@tex-display-math`, which keep the MathJax rendering path.

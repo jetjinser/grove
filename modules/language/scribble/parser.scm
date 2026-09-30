@@ -216,9 +216,32 @@
             [body? (eqv? (peek-char in) #\{)]
             [body  (cond [body? (read-char in)
                                 (scribble-parse in punc ec #:need-close? #t)]
-                         [else '()])])
+                         [else '()])]
+            [extra-bodies
+              (if (and body? (pair? cmd)
+                       (memq (car cmd) '(frac sup sub)))
+                  (let loop ([arguments '()])
+                    (if (eqv? (peek-char in) #\{)
+                        (begin
+                          (read-char in)
+                          (let ((fragments
+                                  (scribble-parse in punc ec
+                                                  #:need-close? #t)))
+                            (loop
+                              (cons (if (= (length fragments) 1)
+                                        (car fragments)
+                                        (cons 'list fragments))
+                                    arguments))))
+                        (reverse arguments)))
+                  '())]
+            [body-arguments
+              (if (pair? extra-bodies)
+                  (list (if (= (length body) 1)
+                            (car body)
+                            (cons 'list body)))
+                  body)])
        (wrap (if (or data? body?)
-               (append cmd data body)
+               (append cmd data body-arguments extra-bodies)
                (car cmd))))]))
 
 (define* (scribble-parse in #:optional [init-punc '()]

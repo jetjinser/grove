@@ -13,13 +13,13 @@
 @paragraph{The definition is independent of any particular model of set theory. Once a model is chosen, the category is called small when both its objects and its morphisms form sets.}
 
 @heading{Composition notation}
-@paragraph{Some authors write @math{fg} for @math{f} followed by @math{g}; here @math{fg} means @math{f} after @math{g}. The domain and codomain rule in @link["cat-0001"]{the definition} fixes this convention.}
+@paragraph{Some authors write @tex-math{fg} for @tex-math{f} followed by @tex-math{g}; here @tex-math{fg} means @tex-math{f} after @tex-math{g}. The domain and codomain rule in @link["cat-0001"]{the definition} fixes this convention.}
 
 @heading{The laws in context}
 @paragraph{Here are the identity and associativity laws used by the definition, embedded from the source tree:}
 @transclude["unstable-0"]
 
 @heading{An equivalent identity test}
-@paragraph{A morphism @math{f} is an identity exactly when composing it on the right leaves every compatible morphism unchanged and composing it on the left does the same. This lets us characterize identities using composition alone.}
+@paragraph{A morphism @tex-math{f} is an identity exactly when composing it on the right leaves every compatible morphism unchanged and composing it on the left does the same. This lets us characterize identities using composition alone.}
 
 @paragraph{The full axioms remain available on @link["cat-0001"]{the category page}.}

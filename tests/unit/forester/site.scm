@@ -34,7 +34,7 @@
     "algebra"
     "Algebra & limits"
     (evaluate-document
-      "@paragraph{The @link[\"limits\"]{limits} are useful. @math{x^2+y^2=z^2}}\n@display-math{a^2+b^2=c^2}\n@paragraph{@image[\"images/algebra.svg\"]{An algebra diagram.}}")
+      "@paragraph{The @link[\"limits\"]{limits} are useful. @tex-math{x^2+y^2=z^2}}\n@tex-display-math{a^2+b^2=c^2}\n@paragraph{@image[\"images/algebra.svg\"]{An algebra diagram.}}")
     #:metadata '((summary . "Algebra notes and mathematical ideas."))))
 
 (define limits

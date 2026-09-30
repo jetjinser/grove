@@ -7,13 +7,13 @@
 @summary{Choose a sign convention and relate flux to the temperature gradient.}
 @published{2026-09-28}
 
-@paragraph{Take the positive x direction to point to the right. Let @math{q(x,t)} be the heat energy crossing unit area per unit time, counted positive when it travels right. Fourier's law for a uniform, isotropic material is}
+@paragraph{Take the positive x direction to point to the right. Let @tex-math{q(x,t)} be the heat energy crossing unit area per unit time, counted positive when it travels right. Fourier's law for a uniform, isotropic material is}
 
-@display-math{q=-k\frac{\partial u}{\partial x}}
+@tex-display-math{q=-k\frac{\partial u}{\partial x}}
 
-@paragraph{The minus sign encodes the direction of heat flow: if temperature falls as x increases, then @math{u_x<0} and @math{q>0}. The conductivity @math{k>0} measures how readily the material carries heat. In SI units, @math{q} is @math{\mathrm{W\,m^{-2}}} and @math{k} is @math{\mathrm{W\,m^{-1}K^{-1}}}.}
+@paragraph{The minus sign encodes the direction of heat flow: if temperature falls as x increases, then @tex-math{u_x<0} and @tex-math{q>0}. The conductivity @tex-math{k>0} measures how readily the material carries heat. In SI units, @tex-math{q} is @tex-math{\mathrm{W\,m^{-2}}} and @tex-math{k} is @tex-math{\mathrm{W\,m^{-1}K^{-1}}}.}
 
 @heading{A small interval}
-@paragraph{Consider a rod with cross-sectional area @math{S}, and isolate the slice from @math{x} to @math{x+\Delta x}. During a short interval @math{\Delta t}, energy enters its left face at rate @math{S q(x,t)} and exits its right face at rate @math{S q(x+\Delta x,t)}. These are signed using the same rightward convention; the net inflow is their difference.}
+@paragraph{Consider a rod with cross-sectional area @tex-math{S}, and isolate the slice from @tex-math{x} to @tex-math{x+\Delta x}. During a short interval @tex-math{\Delta t}, energy enters its left face at rate @tex-math{S q(x,t)} and exits its right face at rate @tex-math{S q(x+\Delta x,t)}. These are signed using the same rightward convention; the net inflow is their difference.}
 
 @paragraph{The law describes transport, not storage. To determine the changing temperature, pair it with the energy balance in the note on @link["heat-0003"]{the thin-slice derivation}. For its physical assumptions and the resulting coefficient, continue to @link["heat-0006"]{the multidimensional equation}.}

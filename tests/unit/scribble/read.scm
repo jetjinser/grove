@@ -13,6 +13,7 @@
   #:use-module ((language scribble spec)
                 #:select (scribble scribble-evaluate-document))
   #:use-module (grove input scribble)
+  #:use-module (grove render html)
   #:use-module (grove ir))
 
 (define (read-with-scheme-language env input)
@@ -26,6 +27,13 @@
     (lambda () (thunk) #f)
     (lambda (key . args)
       (string-contains (format #f "~s" (cons key args)) text))))
+
+(define (substring-count text substring)
+  (let loop ((start 0) (count 0))
+    (let ((position (string-contains text substring start)))
+      (if position
+          (loop (+ position (string-length substring)) (+ count 1))
+          count))))
 
 (define temporary-source-index 0)
 
@@ -68,6 +76,50 @@
     (scribble-read (open-input-string scribble-str))))
 
 (test-begin "scribble read")
+
+(let* ((env (default-environment scribble))
+       (document
+         (evaluate-document
+           env
+           (string-append
+             "@display-math{@align{"
+             "∇ · @vec{D} &= ρ\n"
+             "∇ × @vec{E} &= −@frac{∂@vec{B}}{∂t}\n"
+             "∇ · @vec{B} &= 0\n"
+             "∇ × @vec{H} &= @vec{J} + @frac{∂@vec{D}}{∂t}"
+             "}}\n"
+             "@paragraph{Assume a homogeneous, isotropic, charge-free medium "
+             "with @math{@vec{D}=ε@vec{E}}, @math{@vec{B}=μ@vec{H}}, "
+             "and @math{@vec{J}=σ@vec{E}}. The x-component is "
+             "@math{@sub{E}{x}}.}\n"
+             "@display-math{@align{"
+             "∇ × (∇ × @vec{E}) &= −∇ × @frac{∂@vec{B}}{∂t}\n"
+             "&= −μ @frac{∂}{∂t} (∇ × @vec{H})\n"
+             "&= −μ @frac{∂}{∂t} @parens{@vec{J} + @frac{∂@vec{D}}{∂t}}\n"
+             "&= −μ @parens{@frac{∂@vec{J}}{∂t} + "
+             "@frac{@sup{∂}{2}@vec{D}}{@sup{∂t}{2}}}\n"
+             "&= −μσ @frac{∂@vec{E}}{∂t} − με "
+             "@frac{@sup{∂}{2}@vec{E}}{@sup{∂t}{2}}\n"
+             "∇ × (∇ × @vec{E}) &= ∇(∇ · @vec{E}) − ∇²@vec{E}\n"
+             "&= −∇²@vec{E}\n"
+             "−∇²@vec{E} &= −μσ @frac{∂@vec{E}}{∂t} − με "
+             "@frac{@sup{∂}{2}@vec{E}}{@sup{∂t}{2}}\n"
+             "∇²@vec{E} &= μσ @frac{∂@vec{E}}{∂t} + με "
+             "@frac{@sup{∂}{2}@vec{E}}{@sup{∂t}{2}}"
+             "}}")))
+       (html (sxml->html (content->sxml document))))
+  (test-assert "Maxwell equations and wave derivation emit MathML Core"
+    (and (= (substring-count html "<mtable>") 2)
+         (>= (substring-count html "<mtr>") 13)
+         (string-contains html "<mover accent=\"true\">")
+         (string-contains html
+                          "<mover accent=\"true\"><mrow>")
+         (string-contains html
+                          "</mrow><mo>→</mo></mover>")
+         (string-contains html "<mfrac>")
+         (string-contains html "<msup>")
+         (string-contains html "<msub>")
+         (string-contains html "<mtd"))))
 
 (test-read "empty"
   (eof-object)
