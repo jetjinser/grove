@@ -223,9 +223,20 @@
          (html (sxml->html (content->sxml document))))
     (test-assert "@derive connects parsed math, miniKanren rewriting, and MathML"
       (and (string-contains html "<mtable>")
-           (string-contains html "<mi>curl</mi>")
-           (string-contains html "<mi>grad</mi>")
+           (string-contains html "<mo>∇</mo>")
+           (string-contains html "<mo>×</mo>")
+           (string-contains html "<mo>·</mo>")
            (string-contains html "<mi>Δ</mi>")))))
+
+(let ((env (default-environment scribble)))
+  (let* ((document
+           (evaluate-document env "@derive[\"div(E)=0\"]{curl(curl(E))}"))
+         (html (sxml->html (content->sxml document))))
+    (test-assert "@derive applies conditional and algebraic rewrites in sequence"
+      (and (= (substring-count html "<mtr>") 4)
+           (= (substring-count html "<mo>=</mo>") 3)
+           (string-contains html "<mn>0</mn><mo>−</mo>")
+           (string-contains html "<mo>−</mo><mrow><mi>Δ</mi>")))))
 
 (let ((env (default-environment scribble)))
   (let* ((document

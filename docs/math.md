@@ -23,12 +23,19 @@ over those terms. `(grove math layout)` lowers terms to the existing math
 layout nodes. `(grove math pipeline)` composes these passes.
 
 The initial parser accepts identifiers, integer numerals, function calls,
-parenthesized groups, unary minus, and the binary operators `+`, `-`, `*`/`×`,
-`/`, and `^` with conventional precedence. It does not infer implicit
+parenthesized groups, unary minus, and the binary operators `=`, `+`, `-`,
+`*`/`×`, `/`, and `^` with conventional precedence. It does not infer implicit
 multiplication or consume general `@math` commands yet.
 
-The initial `@derive{...}` command exercises one complete path: it parses
-`curl(curl(E))`, applies the curl-curl identity relation, and displays both
-terms as a MathML alignment. The parser and layout lowering are intentionally
-limited; this is a foundation for focused passes, not a general CAS or a
-replacement for the existing `@math` authoring syntax.
+`@derive{...}` applies available relations repeatedly to the expression and
+shows each intermediate term, joined with equality signs. Optional bracket
+arguments declare assumptions, for example
+`@derive["div(E)=0"]{curl(curl(E))}`. This derives the curl-curl identity,
+uses the matching divergence-free assumption, and simplifies `0 - ΔE` to
+`-ΔE`. Assumptions are matched structurally; they are not inferred from a
+physical model. The layout pass presents vector operators with `∇`, `×`, and
+`·`, then the HTML renderer emits MathML Core elements such as `mo`, `mi`,
+`mrow`, and `mtable`. This output markup is MathML Core; the source expression
+syntax remains Grove's own small grammar. The rules and parser remain
+intentionally limited: this is a small relational rewrite system, not a
+general CAS or a replacement for existing `@math` authoring syntax.

@@ -86,6 +86,7 @@
                              ((#\* #\×) 'multiply)
                              ((#\/ #\÷) 'divide)
                              ((#\^) 'power)
+                             ((#\=) 'equals)
                              ((#\() 'left-paren)
                              ((#\)) 'right-paren)
                              ((#\,) 'comma)
@@ -114,6 +115,7 @@
                                    (math-token-start (current))))))
              (precedence (lambda (kind)
                            (case kind
+                             ((equals) 5)
                              ((plus minus) 10)
                              ((multiply divide) 20)
                              ((power) 30)

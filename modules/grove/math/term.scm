@@ -17,7 +17,7 @@
     ((and (pair? term) (memq (car term) '(var num))) #f)
     ((not (list? term)) #f)
     ((not (pair? term)) #f)
-    ((memq (car term) '(+ - * / ^))
+    ((memq (car term) '(+ - * / ^ =))
      (and (= (length term) (if (and (eq? (car term) '-)
                                     (= (length term) 2))
                                2 3))
@@ -40,7 +40,7 @@
     ((binary)
      (let ((operator (case (math-expression-value expression)
                        ((plus) '+) ((minus) '-) ((multiply) '*)
-                       ((divide) '/) ((power) '^))))
+                       ((divide) '/) ((power) '^) ((equals) '=))))
        (cons operator (map math-expression->term
                            (math-expression-children expression)))))
     (else (error "unsupported math syntax node"

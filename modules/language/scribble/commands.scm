@@ -73,7 +73,11 @@
                         #:flow-kind 'block))
 
 (define-public (derive . source)
-  (math-derive-curl-curl (content-verbatim-string source)))
+  (let* ((has-assumption? (> (length source) 1))
+         (assumptions (if has-assumption? (list (car source)) '()))
+         (body (if has-assumption? (cdr source) source)))
+    (math-derive (content-verbatim-string body)
+                 #:assumptions assumptions)))
 
 (define-public (tex-math . source)
   (make-content-element 'math

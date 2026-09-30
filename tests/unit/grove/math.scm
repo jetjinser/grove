@@ -9,6 +9,7 @@
   #:use-module (grove math layout)
   #:use-module (grove math rewrite)
   #:use-module (grove math pipeline)
+  #:use-module (grove relation)
   #:use-module (grove render html)
   #:use-module (grove ir)
   #:export (run-math-tests))
@@ -34,6 +35,9 @@
   (test-equal "unary minus, powers, and fractions have distinct term forms"
     '(+ (- (^ (var x) (num "2"))) (/ (var y) (num "3")))
     (math-source->term "-x^2 + y/3"))
+  (test-equal "equations parse as first-class mathematical terms"
+    '(= (div (var E)) (num "0"))
+    (math-source->term "div(E)=0"))
   (test-assert "math terms accept the declared symbolic grammar"
     (math-term? '(+ (var x) (* (var y) (num "2")))))
   (test-equal "symbolic terms lower to the separate layout IR"
@@ -42,6 +46,18 @@
   (test-equal "miniKanren relation derives curl-curl identity"
     '(- (grad (div (var E))) (laplacian (var E)))
     (rewrite-curl-curl '(curl (curl (var E)))))
+  (test-equal "conditional rewrite uses a declared divergence-free fact"
+    '(- (num "0") (laplacian (var E)))
+    (car (run 1 (result)
+           (rewriteo '((= (div (var E)) (num "0")))
+                     '(- (grad (div (var E))) (laplacian (var E)))
+                     result))))
+  (test-equal "conditional rewrite does not use a fact about another field"
+    '()
+    (run* (result)
+      (rewriteo '((= (div (var F)) (num "0")))
+                '(grad (div (var E)))
+                result)))
   (test-equal "curl-curl relation leaves a non-matching term without answer"
     #f
     (rewrite-curl-curl '(curl (var E))))
@@ -49,9 +65,16 @@
          (html (sxml->html (content->sxml derivation))))
     (test-assert "lowering creates a display MathML alignment"
       (and (string-contains html "<mtable>")
-           (string-contains html "curl")
-           (string-contains html "grad")
+           (string-contains html "<mo>∇</mo>")
+           (string-contains html "<mo>×</mo>")
+           (string-contains html "<mo>·</mo>")
            (string-contains html "Δ"))))
+  (test-assert "generic function calls use MathML function application"
+    (string-contains
+      (sxml->html
+        (content->sxml
+          (make-content-element 'math (list (math-term->layout '(sin (var x)))))))
+      "<mo>⁡</mo>"))
   (test-end "grove math pipeline"))
 
 (run-math-tests)
