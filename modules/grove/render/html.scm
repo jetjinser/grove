@@ -106,6 +106,9 @@
                              (iota (length (content-element-children row))))))
                     children)))
             ((math-row math-cell) (render-math-row children))
+            ((math-style)
+             `(mstyle (@ (mathvariant ,(symbol->string (content-element-property child 'variant))))
+                      ,@(render-math-children children)))
             (else (error "unsupported MathML IR element" kind))))))
 
   (define (render-math element)

@@ -5,7 +5,11 @@
 (define-module (language scribble commands)
   #:use-module (grove ir)
   #:use-module (grove math pipeline)
+  #:use-module (grove math context)
   #:use-module (grove math source)
+  #:use-module ((grove math semantic) #:prefix semantic:)
+  #:use-module (grove math expression)
+  #:use-module (grove math layout)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13))
 
@@ -66,10 +70,12 @@
   (make-content-element 'code-block body #:flow-kind 'block))
 
 (define-public (math . source)
-  (make-content-element 'math (decode-math-fragments source)))
+  (make-content-element 'math
+    (list (math-value->layout (apply semantic:expression source) (math-assumptions '())))))
 
 (define-public (display-math . source)
-  (make-content-element 'math (decode-math-fragments source)
+  (make-content-element 'math
+                        (list (math-value->layout (apply semantic:expression source) (math-assumptions '())))
                         #:properties '((display? . #t))
                         #:flow-kind 'block))
 
@@ -80,9 +86,9 @@
 
 ;; Guile's lambda* rest argument retains keyword/value pairs. Strip them once
 ;; for all math commands; lambda* owns option defaults and validation.
-(define (math-command-text fragments)
+(define (math-command-fragments fragments)
   (let body ((remaining fragments) (text '()))
-    (cond ((null? remaining) (math-source-text (reverse text)))
+    (cond ((null? remaining) (reverse text))
           ((keyword? (car remaining)) (body (cddr remaining) text))
           (else (body (cdr remaining) (cons (car remaining) text))))))
 
@@ -91,12 +97,12 @@
 
 (define-public derive
   (lambda* (#:key (assumptions #f) (view 'compact) #:rest source)
-    (math-derive (math-command-text source)
+    (math-derive (apply semantic:expression (math-command-fragments source))
       #:assumptions (command-assumptions assumptions) #:view view)))
 
 (define-public check-derive
   (lambda* (#:key (assumptions #f) (view 'compact) (on-error 'raise) #:rest source)
-    (let ((lines (math-source-lines (math-command-text source))))
+    (let ((lines (apply semantic:expression-lines (math-command-fragments source))))
       (math-verification->content
         (math-check-chain lines #:assumptions (command-assumptions assumptions))
         #:view view #:on-error on-error))))
@@ -105,7 +111,7 @@
   (lambda* (variable #:key (assumptions #f) (view 'compact) (on-error 'raise)
                           (max-steps 128) (max-term-size 2048) #:rest source)
     (math-completed-report->content
-      (math-differentiate (math-command-text source) variable
+      (math-differentiate (apply semantic:expression (math-command-fragments source)) variable
         #:assumptions (command-assumptions assumptions)
         #:max-steps max-steps #:max-term-size max-term-size)
       #:view view #:on-error on-error)))
@@ -114,7 +120,7 @@
   (lambda* (target #:key (assumptions #f) (view 'compact)
                        (max-depth 8) (max-states 256) #:rest source)
     (math-report->content
-      (math-search (math-command-text source) target
+      (math-search (apply semantic:expression (math-command-fragments source)) target
         #:assumptions (command-assumptions assumptions) #:max-results 1
         #:max-depth max-depth #:max-states max-states)
       #:view view)))
@@ -140,162 +146,4 @@
                                                value)))
                                   source))
                         #:properties '((tex? . #t) (display? . #t))
-                        #:flow-kind 'block))
-
-(define (math-token kind value)
-  (make-content-element 'math-token (list value)
-                        #:properties `((token-kind . ,kind))))
-
-(define math-letters '(Lu Ll Lt Lm Lo Mn Mc))
-(define math-numbers '(Nd Nl No))
-
-(define (scan-math-text text)
-  (let ((characters (string->list text)))
-    (let loop ((characters characters) (tokens '()))
-      (if (null? characters)
-          (reverse tokens)
-          (let* ((character (car characters))
-                 (category (char-general-category character)))
-            (cond
-              ((char-whitespace? character)
-               (loop (cdr characters) tokens))
-              ((memq category math-numbers)
-               (let collect ((rest (cdr characters))
-                             (number (list character)))
-                 (if (and (pair? rest)
-                          (memq (char-general-category (car rest)) math-numbers))
-                     (collect (cdr rest) (cons (car rest) number))
-                     (loop rest
-                           (cons (math-token 'mn
-                                             (list->string (reverse number)))
-                                 tokens)))))
-              ((memq category math-letters)
-               (loop (cdr characters)
-                     (cons (math-token 'mi (string character)) tokens)))
-              (else
-               (let ((operator
-                       (case character
-                         ((#\-) #\−)
-                         ((#\*) #\∗)
-                         (else character))))
-                 (loop (cdr characters)
-                       (cons (math-token 'mo (string operator)) tokens))))))))))
-
-(define (math-fragment? value)
-  (and (content-element? value)
-       (memq (content-element-kind value)
-             '(math-token math-frac math-vector math-sup math-sub math-parens
-               math-row math-cell math-align))))
-
-(define (decode-math-fragment value)
-  (cond
-    ((string? value) (scan-math-text value))
-    ((content-text? value) (scan-math-text (content-text-value value)))
-    ((list? value) (decode-math-fragments value))
-    ((and (content-element? value)
-          (eq? (content-element-kind value) 'math-token))
-     (list value))
-    ((math-fragment? value)
-     (list (make-content-element
-             (content-element-kind value)
-             (decode-math-fragments (content-element-children value))
-             (content-element-source value)
-             #:properties (content-element-properties value))))
-    (else (error "unsupported value in math expression" value))))
-
-(define (decode-math-fragments values)
-  (append-map decode-math-fragment values))
-
-(define (math-argument-row value)
-  (make-content-element
-    'math-row
-    (if (list? value) value (list value))))
-
-(define-public (frac numerator denominator)
-  (make-content-element 'math-frac
-                        (list (math-argument-row numerator)
-                              (math-argument-row denominator))))
-
-(define-public (vec . body)
-  (make-content-element 'math-vector body))
-
-(define-public (sup base exponent)
-  (make-content-element 'math-sup
-                        (list (math-argument-row base)
-                              (math-argument-row exponent))))
-
-(define-public (sub base index)
-  (make-content-element 'math-sub
-                        (list (math-argument-row base)
-                              (math-argument-row index))))
-
-(define-public (parens . body)
-  (make-content-element 'math-parens body))
-
-(define (align-fragment-events fragment)
-  (cond
-    ((content-layout? fragment)
-     (if (eq? (content-layout-kind fragment) 'newline)
-         '((line))
-         (list (list 'value fragment))))
-    ((or (string? fragment) (content-text? fragment))
-      (let loop ((characters
-                   (string->list (if (content-text? fragment)
-                                     (content-text-value fragment)
-                                     fragment)))
-                 (text '()) (events '()))
-        (cond
-          ((null? characters)
-           (reverse (if (null? text)
-                        events
-                        (cons (list 'text (list->string (reverse text)))
-                              events))))
-          ((char=? (car characters) #\newline)
-           (loop (cdr characters) '()
-                 (cons '(line)
-                       (if (null? text)
-                           events
-                           (cons (list 'text (list->string (reverse text)))
-                                 events)))))
-          ((char=? (car characters) #\&)
-           (loop (cdr characters) '()
-                 (cons '(cell)
-                       (if (null? text)
-                           events
-                           (cons (list 'text (list->string (reverse text)))
-                                 events)))))
-          (else
-           (loop (cdr characters) (cons (car characters) text) events)))))
-    (else
-     (list (list 'value fragment)))))
-
-(define (make-align-row cell cells)
-  (let ((all-cells (reverse (cons (reverse cell) cells))))
-    (and (not (every null? all-cells))
-         (make-content-element
-           'math-row
-           (map (lambda (contents)
-                  (make-content-element
-                    'math-cell (decode-math-fragments contents)))
-                all-cells)))))
-
-(define (align-lines fragments)
-  (let loop ((events (append-map align-fragment-events fragments))
-             (cell '()) (cells '()) (rows '()))
-    (cond
-      ((null? events)
-       (reverse (let ((row (make-align-row cell cells)))
-                  (if row (cons row rows) rows))))
-      ((eq? (caar events) 'line)
-       (let ((row (make-align-row cell cells)))
-         (loop (cdr events) '() '() (if row (cons row rows) rows))))
-      ((eq? (caar events) 'cell)
-       (loop (cdr events) '() (cons (reverse cell) cells) rows))
-      ((eq? (caar events) 'text)
-       (loop (cdr events) (cons (cadar events) cell) cells rows))
-      (else
-       (loop (cdr events) (cons (cadar events) cell) cells rows)))))
-
-(define-public (align . fragments)
-  (make-content-element 'math-align (align-lines fragments)
                         #:flow-kind 'block))

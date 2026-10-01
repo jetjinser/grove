@@ -218,8 +218,7 @@
                                 (scribble-parse in punc ec #:need-close? #t)]
                          [else '()])]
             [extra-bodies
-              (if (and body? (pair? cmd)
-                       (memq (car cmd) '(frac sup sub)))
+              (if (and body? (pair? cmd))
                   (let loop ([arguments '()])
                     (if (eqv? (peek-char in) #\{)
                         (begin

@@ -20,6 +20,7 @@
   ((language-reader scheme) (open-input-string input) env))
 
 (define (evaluate-document env input)
+  (eval '(use-modules ((grove math notation) #:prefix notation:)) env)
   (scribble-evaluate-document (open-input-string input) env))
 
 (define (exception-contains? thunk text)
@@ -170,30 +171,30 @@
          (evaluate-document
            env
            (string-append
-             "@display-math{@align{"
-             "∇ · @vec{D} &= ρ\n"
-             "∇ × @vec{E} &= −@frac{∂@vec{B}}{∂t}\n"
-             "∇ · @vec{B} &= 0\n"
-             "∇ × @vec{H} &= @vec{J} + @frac{∂@vec{D}}{∂t}"
+             "@notation:display-math{@notation:align{"
+             "∇ · @notation:vec{D} &= ρ\n"
+             "∇ × @notation:vec{E} &= −@notation:frac{∂@notation:vec{B}}{∂t}\n"
+             "∇ · @notation:vec{B} &= 0\n"
+             "∇ × @notation:vec{H} &= @notation:vec{J} + @notation:frac{∂@notation:vec{D}}{∂t}"
              "}}\n"
              "@paragraph{Assume a homogeneous, isotropic, charge-free medium "
-             "with @math{@vec{D}=ε@vec{E}}, @math{@vec{B}=μ@vec{H}}, "
-             "and @math{@vec{J}=σ@vec{E}}. The x-component is "
-             "@math{@sub{E}{x}}.}\n"
-             "@display-math{@align{"
-             "∇ × (∇ × @vec{E}) &= −∇ × @frac{∂@vec{B}}{∂t}\n"
-             "&= −μ @frac{∂}{∂t} (∇ × @vec{H})\n"
-             "&= −μ @frac{∂}{∂t} @parens{@vec{J} + @frac{∂@vec{D}}{∂t}}\n"
-             "&= −μ @parens{@frac{∂@vec{J}}{∂t} + "
-             "@frac{@sup{∂}{2}@vec{D}}{@sup{∂t}{2}}}\n"
-             "&= −μσ @frac{∂@vec{E}}{∂t} − με "
-             "@frac{@sup{∂}{2}@vec{E}}{@sup{∂t}{2}}\n"
-             "∇ × (∇ × @vec{E}) &= ∇(∇ · @vec{E}) − ∇²@vec{E}\n"
-             "&= −∇²@vec{E}\n"
-             "−∇²@vec{E} &= −μσ @frac{∂@vec{E}}{∂t} − με "
-             "@frac{@sup{∂}{2}@vec{E}}{@sup{∂t}{2}}\n"
-             "∇²@vec{E} &= μσ @frac{∂@vec{E}}{∂t} + με "
-             "@frac{@sup{∂}{2}@vec{E}}{@sup{∂t}{2}}"
+             "with @notation:math{@notation:vec{D}=ε@notation:vec{E}}, @notation:math{@notation:vec{B}=μ@notation:vec{H}}, "
+             "and @notation:math{@notation:vec{J}=σ@notation:vec{E}}. The x-component is "
+             "@notation:math{@notation:sub{E}{x}}.}\n"
+             "@notation:display-math{@notation:align{"
+             "∇ × (∇ × @notation:vec{E}) &= −∇ × @notation:frac{∂@notation:vec{B}}{∂t}\n"
+             "&= −μ @notation:frac{∂}{∂t} (∇ × @notation:vec{H})\n"
+             "&= −μ @notation:frac{∂}{∂t} @notation:parens{@notation:vec{J} + @notation:frac{∂@notation:vec{D}}{∂t}}\n"
+             "&= −μ @notation:parens{@notation:frac{∂@notation:vec{J}}{∂t} + "
+             "@notation:frac{@notation:sup{∂}{2}@notation:vec{D}}{@notation:sup{∂t}{2}}}\n"
+             "&= −μσ @notation:frac{∂@notation:vec{E}}{∂t} − με "
+             "@notation:frac{@notation:sup{∂}{2}@notation:vec{E}}{@notation:sup{∂t}{2}}\n"
+             "∇ × (∇ × @notation:vec{E}) &= ∇(∇ · @notation:vec{E}) − ∇²@notation:vec{E}\n"
+             "&= −∇²@notation:vec{E}\n"
+             "−∇²@notation:vec{E} &= −μσ @notation:frac{∂@notation:vec{E}}{∂t} − με "
+             "@notation:frac{@notation:sup{∂}{2}@notation:vec{E}}{@notation:sup{∂t}{2}}\n"
+             "∇²@notation:vec{E} &= μσ @notation:frac{∂@notation:vec{E}}{∂t} + με "
+             "@notation:frac{@notation:sup{∂}{2}@notation:vec{E}}{@notation:sup{∂t}{2}}"
              "}}")))
        (html (sxml->html (content->sxml document))))
   (test-assert "Maxwell equations and wave derivation emit MathML Core"

@@ -11,7 +11,7 @@
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
   #:export (math-location? math-location-file math-location-line math-location-column
-            math-location-excerpt math-location-label math-source-text math-source-lines
+            math-location-excerpt math-location-label math-source-text math-source-lines math-source-slice
             math-source-origin math-origin? math-origin-location math-locate-diagnostic
             math-branch-origin math-origin-with-prefix
             math-diagnostic-description math-report-with-source math-report-with-origin))
@@ -121,6 +121,15 @@
                 (column . ,(- (math-location-column location) 1)))))
           (lines (cdr remaining) (+ offset (string-length line) 1)
                  (if (string-null? trimmed) result (cons trimmed result)))))))
+
+(define (math-source-slice text start end)
+  (let ((slice (substring text start end)) (location (location-at text start)))
+    (when location
+      (set-source-properties! slice
+        `((filename . ,(math-location-file location))
+          (line . ,(- (math-location-line location) 1))
+          (column . ,(- (math-location-column location) 1)))))
+    slice))
 
 (define (math-locate-diagnostic diagnostic origin path)
   (make-math-diagnostic (math-diagnostic-step diagnostic) (math-diagnostic-rule diagnostic)

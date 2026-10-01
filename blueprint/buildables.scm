@@ -29,6 +29,7 @@
     "grove/math/source.scm"
     "grove/math/expression.scm"
     "grove/math/semantic.scm"
+    "grove/math/notation.scm"
     "grove/math/presentation.scm"
     "grove/math/pass.scm"
     "grove/math/strategy.scm"

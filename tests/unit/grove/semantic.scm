@@ -35,6 +35,8 @@
 (test-error "variable declarations require identifiers" #t (semantic:variable "x+y"))
 (test-error "juxtaposed operands require an explicit multiplication operator" #t
   (term "x" (semantic:variable 'y)))
+(test-error "ambiguous textual subscripts do not acquire a guessed meaning" #t
+  (term "E_x"))
 (test-equal "vector operators compose without presentation nodes"
   '(curl (curl (var E))) (math-value-term (semantic:curl (semantic:curl "E"))))
 (test-equal "a formal derivative has explicit operands"

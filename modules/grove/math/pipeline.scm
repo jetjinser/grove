@@ -2,7 +2,8 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math pipeline)
-  #:use-module (grove math syntax)
+  #:use-module ((grove math semantic) #:prefix semantic:)
+  #:use-module (grove math expression)
   #:use-module (grove math term)
   #:use-module (grove math context)
   #:use-module (grove math rewrite)
@@ -20,7 +21,7 @@
   #:export (math-source->term math-derive math-derive-curl-curl
             math-search math-search-backward math-simplify math-calculate math-collect
             math-check-chain
-            math-differentiate math-rewrite)
+            math-differentiate math-rewrite math-report-result)
   #:re-export (math-derivation->content math-verification->content
                math-report->content math-completed-report->content current-math-assumptions call-with-math-assumptions with-math-assumptions
                math-verify-step math-verify-derivation
@@ -42,7 +43,16 @@
                math-report-diagnostics math-report-passes math-report-derivation math-report-final))
 
 (define (math-source->term source)
-  (math-expression->term (parse-math source)))
+  (math-value-term (semantic:expression source)))
+
+(define* (report-with-input report input #:key (prefix '()))
+  (math-report-with-origin report
+    (math-origin-with-prefix (math-value-origin (semantic:expression input)) prefix)))
+
+(define (math-report-result report)
+  (let ((term (math-report-final report)))
+    (and term (make-math-value term
+                #:properties `((assumptions . ,(math-derivation-assumptions (math-report-derivation report))))))))
 
 (define* (math-differentiate source variable #:key (assumptions '())
                               (max-steps 128) (max-term-size 2048))
@@ -50,7 +60,7 @@
          (coordinate (math-source->term variable))
          (facts (math-assumptions assumptions))
          (input `(differentiate ,expression ,coordinate)))
-    (math-report-with-source
+    (report-with-input
       (if (and (eq? (car coordinate) 'var) (polynomial-term? expression))
           (run-math-passes input facts
             `((differentiate . ,math-differentiation-rules)
@@ -65,7 +75,7 @@
 
 (define* (math-rewrite source #:key (assumptions '()) (rules #f)
                         (max-steps 32) (max-term-size 2048))
-  (math-report-with-source
+  (report-with-input
     (run-math-pass (math-source->term source) (math-assumptions assumptions)
       #:name 'rewrite #:rules rules #:max-steps max-steps #:max-term-size max-term-size)
     source))
@@ -86,7 +96,7 @@
                       #:key (assumptions '()) (rules #f)
                             (max-depth 8) (max-results 5)
                             (max-states 256) (max-term-size 128))
-  (math-report-with-source
+  (report-with-input
     (search-math-terms
       (math-source->term source) (math-source->term target)
       (math-assumptions assumptions) #f
@@ -98,7 +108,7 @@
                                #:key (assumptions '()) (rules #f)
                                      (max-depth 8) (max-results 5)
                                      (max-states 256) (max-term-size 128))
-  (math-report-with-source
+  (report-with-input
     (search-math-terms
       (math-source->term target) (math-source->term source)
       (math-assumptions assumptions) #t
@@ -107,26 +117,26 @@
     source))
 
 (define* (math-simplify source #:key (assumptions '()) (rules #f) (max-steps 32) (max-term-size 2048))
-  (math-report-with-source
+  (report-with-input
     (simplify-math-term (math-source->term source)
       (math-assumptions assumptions) #:rules rules #:max-steps max-steps
       #:max-term-size max-term-size)
     source))
 
 (define* (math-calculate source #:key (assumptions '()) (max-steps 32) (max-term-size 2048))
-  (math-report-with-source
+  (report-with-input
     (calculate-math-term (math-source->term source)
       (math-assumptions assumptions) #:max-steps max-steps #:max-term-size max-term-size)
     source))
 
 (define* (math-collect source #:key (assumptions '()) (max-steps 32) (max-term-size 2048))
-  (math-report-with-source
+  (report-with-input
     (collect-math-term (math-source->term source)
       (math-assumptions assumptions) #:max-steps max-steps #:max-term-size max-term-size)
     source))
 
 (define* (math-check-chain sources #:key (assumptions '()) (steps #f) (rules #f))
-  (unless (and (list? sources) (every string? sources))
-    (error "handwritten math lines must be source strings" sources))
+  (unless (list? sources)
+    (error "handwritten math chains require a list of expressions" sources))
   (check-math-chain (map math-source->term sources)
-    (math-assumptions assumptions) #:steps steps #:rules rules #:sources (map math-source-origin sources)))
+    (math-assumptions assumptions) #:steps steps #:rules rules #:sources (map (lambda (source) (math-value-origin (semantic:expression source))) sources)))

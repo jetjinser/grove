@@ -24,7 +24,7 @@
   #:use-module (grove style html))
 
 (define environment (default-environment scribble))
-(eval '(use-modules (forester commands)) environment)
+(eval '(use-modules (forester commands) ((grove math notation) #:prefix notation:)) environment)
 
 (define (evaluate-document source)
   (scribble-evaluate-document (open-input-string source) environment))
@@ -283,7 +283,7 @@
            "maxwell"
            "Maxwell equations"
            (evaluate-document
-             "@display-math{@align{∇ · @vec{D} &= ρ\n∇ × @vec{E} &= −@frac{∂@vec{B}}{∂t}}}")))
+             "@notation:display-math{@notation:align{∇ · @notation:vec{D} &= ρ\n∇ × @notation:vec{E} &= −@notation:frac{∂@notation:vec{B}}{∂t}}}")))
        (html (assoc-ref (render-test-html
                           (make-forest (make-site (list page))))
                         "maxwell")))

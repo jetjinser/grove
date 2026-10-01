@@ -10,11 +10,25 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:re-export (math-value? math-value-term math-value-origin math-value-properties)
-  #:export (expression variable constant add subtract negate multiply divide power
-            grad divergence curl laplacian derivative vector-zero group))
+  #:export (expression expression-lines variable constant add subtract negate multiply divide power
+            grad divergence curl laplacian derivative vector-zero group styled))
 
 (define (fragments values)
   (append-map (lambda (value) (if (list? value) (fragments value) (list value))) values))
+
+(define (syntax-preferences syntax embedded)
+  (case (math-expression-kind syntax)
+    ((embedded) (math-value-properties (assv-ref embedded (math-expression-start syntax))))
+    ((group) (acons 'parenthesized? #t (syntax-preferences (car (math-expression-children syntax)) embedded)))
+    (else
+     (let ((children (map (lambda (child) (syntax-preferences child embedded)) (math-expression-children syntax))))
+       (if (every null? children) '() (list (cons 'children children)))))))
+
+(define (check-semantic-syntax syntax)
+  (when (and (eq? (math-expression-kind syntax) 'binary)
+             (eq? (math-expression-value syntax) 'subscript))
+    (error "a subscript needs an explicit mathematical meaning; use Notation DSL for a layout-only script"))
+  (for-each check-semantic-syntax (math-expression-children syntax)))
 
 ;; An embedded expression is an atomic operand, not a string to reparse.
 ;; Adjacent text fragments share a lexer, so fragment boundaries cannot split
@@ -28,14 +42,17 @@
            (let* ((source (math-source-text (reverse text)))
                   (syntax (parse-math-tokens
                             (append (reverse tokens) (list (make-math-token 'eof "" offset offset))))))
+             (check-semantic-syntax syntax)
              (make-math-value (math-expression->term syntax)
-               #:origin (math-source-origin source #:syntax syntax #:embedded embedded))))
+               #:origin (math-source-origin source #:syntax syntax
+                          #:embedded (map (lambda (entry) (cons (car entry) (math-value-origin (cdr entry)))) embedded))
+               #:properties (syntax-preferences syntax embedded))))
           ((math-value? (car remaining))
            (let ((value (car remaining)))
              (collect (cdr remaining) (+ offset 1)
                (cons (make-math-token 'embedded (math-value-term value) offset (+ offset 1)) tokens)
                (cons (string-copy " ") text)
-               (acons offset (math-value-origin value) embedded))))
+               (acons offset value embedded))))
           ((or (string? (car remaining)) (content-text? (car remaining)) (content-layout? (car remaining)))
            (let* ((run (take-while (lambda (value) (or (string? value) (content-text? value) (content-layout? value))) remaining))
                   (source (math-source-text run))
@@ -47,6 +64,28 @@
                (append (reverse run) text) embedded)))
           (else (error "Semantic DSL requires mathematical operands; Notation DSL has no computational semantics"
                        (car remaining)))))))
+
+;; A handwritten chain separates expressions by newlines, including newlines
+;; represented as layout nodes by the at-exp reader. Operands remain objects.
+(define-public (expression-lines . values)
+  (define (nonblank? parts)
+    (any (lambda (part) (or (math-value? part)
+                           (not (string-every char-whitespace? part)))) parts))
+  (let lines ((remaining (fragments values)) (pending '()) (output '()))
+    (cond
+      ((null? remaining)
+       (reverse (if (nonblank? pending) (cons (apply expression (reverse pending)) output) output)))
+      ((math-value? (car remaining)) (lines (cdr remaining) (cons (car remaining) pending) output))
+      ((or (string? (car remaining)) (content-text? (car remaining)) (content-layout? (car remaining)))
+       (let ((text (math-source-text (list (car remaining)))))
+         (let split ((start 0) (pending pending) (output output))
+           (let ((end (string-index text #\newline start)))
+             (if end
+                 (let ((pending (cons (math-source-slice text start end) pending)))
+                   (split (+ end 1) '()
+                     (if (nonblank? pending) (cons (apply expression (reverse pending)) output) output)))
+                 (lines (cdr remaining) (cons (math-source-slice text start (string-length text)) pending) output))))))
+      (else (error "handwritten semantic chains require mathematical expressions" (car remaining))))))
 
 (define-public (variable name)
   (let ((value (expression (if (symbol? name) (symbol->string name) name))))
@@ -63,7 +102,8 @@
 (define (operation name operands)
   (let ((values (map (lambda (operand) (expression operand)) operands)))
     (make-math-value (cons name (map math-value-term values))
-      #:origin (math-branch-origin (map math-value-origin values)))))
+      #:origin (math-branch-origin (map math-value-origin values))
+      #:properties (list (cons 'children (map math-value-properties values))))))
 
 (define-public (add left right) (operation '+ (list left right)))
 (define-public (subtract left right) (operation '- (list left right)))
@@ -71,12 +111,18 @@
 (define-public (multiply left right) (operation '* (list left right)))
 (define-public (divide numerator denominator) (operation '/ (list numerator denominator)))
 (define-public (power base exponent) (operation '^ (list base exponent)))
-(define-public (grad operand) (operation 'grad (list operand)))
-(define-public (divergence operand) (operation 'div (list operand)))
-(define-public (curl operand) (operation 'curl (list operand)))
-(define-public (laplacian operand) (operation 'laplacian (list operand)))
+(define-public (grad . body) (operation 'grad (list body)))
+(define-public (divergence . body) (operation 'div (list body)))
+(define-public (curl . body) (operation 'curl (list body)))
+(define-public (laplacian . body) (operation 'laplacian (list body)))
 (define-public (derivative operand coordinate) (operation 'differentiate (list operand (variable coordinate))))
 (define-public (vector-zero) (make-math-value '(zero vector)))
 (define-public (group . body)
   (let ((value (apply expression body)))
     (math-value-with-properties value (acons 'parenthesized? #t (math-value-properties value)))))
+
+(define-public styled
+  (lambda* (value #:key (variant 'normal))
+    (unless (memq variant '(normal bold italic bold-italic)) (error "unsupported math variant" variant))
+    (let ((value (expression value)))
+      (math-value-with-properties value (acons 'variant variant (math-value-properties value))))))

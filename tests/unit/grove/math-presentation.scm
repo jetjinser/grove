@@ -59,7 +59,7 @@
   (test-assert "authored target diagnostics retain line and indentation through a scope"
     (string-contains shown "proof.plant:5:3"))
   (test-assert "source snippet is accessible in a native disclosure"
-    (string-contains shown "<details><summary>proof.plant:5:3</summary><pre><code>2</code></pre></details>"))
+    (string-contains shown "<details><summary>proof.plant:5:3</summary><pre><code>  2</code></pre></details>"))
   (test-assert "an invalid chain does not render a claimed equality"
     (and (string-contains shown "class=\"math-diagnostic\"")
          (not (string-contains shown "<math ")))))

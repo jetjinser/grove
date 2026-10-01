@@ -50,13 +50,13 @@
     (map math-token-kind (tokenize-math "E_x")))
   (test-equal "subscript source lowers to a distinct symbolic term"
     '(sub (var E) (var x))
-    (math-source->term "E_x"))
+    (math-expression->term (parse-math "E_x")))
   (test-equal "superscript and subscript attach to the same base in order"
     '(sub (^ (var x) (num "2")) (var i))
-    (math-source->term "x^2_i"))
+    (math-expression->term (parse-math "x^2_i")))
   (test-equal "grouping keeps a compound subscript inside an exponent"
     '(^ (var x) (sub (var a) (var i)))
-    (math-source->term "x^(a_i)"))
+    (math-expression->term (parse-math "x^(a_i)")))
   (test-equal "unary minus, powers, and fractions have distinct term forms"
     '(+ (- (^ (var x) (num "2"))) (/ (var y) (num "3")))
     (math-source->term "-x^2 + y/3"))
@@ -615,7 +615,7 @@
       (let ((term (math-source->term source)))
         (test-equal "diagnostic source notation preserves mathematical structure"
           term (math-source->term (math-term->source term)))))
-    '("zero(vector)" "div(E)=0" "-(x + y)" "x^2_i" "1 * (x + 0)"))
+    '("zero(vector)" "div(E)=0" "-(x + y)" "x^2" "1 * (x + 0)"))
   (test-end "grove math pipeline"))
 
 (run-math-tests)
