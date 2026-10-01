@@ -1,4 +1,4 @@
-(use-modules (grove math pipeline) (grove math rewrite) (grove math rule)
+(use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math rewrite) (grove math rule)
              (grove math context) (grove math types) (grove relation)
              (tests unit grove polynomial-oracle)
              ((grove math semantic) #:prefix ◆:) (srfi srfi-1) (srfi srfi-64))
@@ -8,21 +8,21 @@
                   ("div(components(x,y,z))" "3")
                   ("curl(components(-y,x,0))" "components(0,0,2)")))
 (test-equal "missing basis is diagnosed" 'missing-premise
-  (math-report-reason (math-compute "grad(x)" #:assumptions '("coordinate(x)"))))
+  (math-report-reason (φ:compute "grad(x)" #:assumptions '("coordinate(x)"))))
 (test-equal "missing regularity is diagnosed" 'missing-premise
-  (math-report-reason (math-compute "grad(u)" #:assumptions (list basis "scalar(u)"))))
+  (math-report-reason (φ:compute "grad(u)" #:assumptions (list basis "scalar(u)"))))
 (test-equal "C1 alone cannot authorize a Laplacian" 'missing-premise
-  (math-report-reason (math-compute "laplacian(u)" #:assumptions (list basis "scalar(u); differentiable(u)"))))
+  (math-report-reason (φ:compute "laplacian(u)" #:assumptions (list basis "scalar(u); differentiable(u)"))))
 (test-equal "limits retain a valid prefix" 'step-limit
-  (math-report-reason (math-compute "grad(x^2)" #:max-steps 0 #:assumptions (list basis))))
+  (math-report-reason (φ:compute "grad(x^2)" #:max-steps 0 #:assumptions (list basis))))
 (test-equal "abstract vectors do not acquire invented components" 'unsupported-expression
-  (math-report-reason (math-compute "div(E)" #:assumptions (list basis "vector(E); differentiable(E)"))))
+  (math-report-reason (φ:compute "div(E)" #:assumptions (list basis "vector(E); differentiable(E)"))))
 (test-equal "another ordered basis supplies its own axes"
-  (math-source->term "components(2u,2v,2w)")
-  (math-report-final (math-compute "grad(u^2+v^2+w^2)" #:assumptions (list (◆:space 'u 'v 'w)))))
-(let* ((report (math-compute "grad(a)" #:assumptions (list basis "parameter(a)")))
+  (φ:term "components(2u,2v,2w)")
+  (math-report-final (φ:compute "grad(u^2+v^2+w^2)" #:assumptions (list (◆:space 'u 'v 'w)))))
+(let* ((report (φ:compute "grad(a)" #:assumptions (list basis "parameter(a)")))
        (result (math-report-result report)))
-  (test-equal "parameter gradient is zero" (math-source->term "components(0,0,0)") (math-report-final report))
+  (test-equal "parameter gradient is zero" (φ:term "components(0,0,0)") (math-report-final report))
   (test-equal "erased independence premises remain required" 'missing-premise
-    (math-report-reason (math-simplify result #:assumptions (list basis "scalar(a); differentiable(a)")))))
+    (math-report-reason (φ:simplify result #:assumptions (list basis "scalar(a); differentiable(a)")))))
 (test-end "Cartesian spatial calculus")

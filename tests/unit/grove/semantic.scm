@@ -12,14 +12,18 @@
     (set-source-properties! text `((filename . "formula.plant") (line . ,line) (column . ,column))) text))
 
 (test-begin "Semantic DSL")
+(test-error "Semantic constructors reject Formula text" #t (semantic:add "x" "x"))
+(test-error "Semantic calls require a function identifier" #t
+  (semantic:call (semantic:add (semantic:variable 'f) (semantic:variable 'g))
+    (semantic:variable 'x)))
 (test-equal "constructing an expression does not simplify it"
-  '(+ (var x) (var x)) (math-value-term (semantic:add "x" "x")))
+  '(+ (var x) (var x)) (math-value-term (φ:add "x" "x")))
 (test-equal "mixed commands and text lower to the same term as plain text"
-  (term "x^3 + 2*x") (term (semantic:power "x" "3") " + 2*" (semantic:variable 'x)))
+  (term "x^3 + 2*x") (term (φ:power "x" "3") " + 2*" (semantic:variable 'x)))
 (test-equal "an embedded sum remains one operand under multiplication"
-  (term "(x+y)*2") (term (semantic:add "x" "y") "*2"))
+  (term "(x+y)*2") (term (φ:add "x" "y") "*2"))
 (test-equal "an embedded quotient remains one operand under power"
-  (term "(x/y)^3") (term (semantic:divide "x" "y") "^3"))
+  (term "(x/y)^3") (term (φ:divide "x" "y") "^3"))
 (test-equal "adjacent text fragments do not split identifiers"
   '(var alpha) (term "al" "pha"))
 (test-equal "a Scheme list is a sequence of mathematical fragments"
@@ -43,17 +47,17 @@
 (test-error "reserved differentiation validates its arity" #t
   (term "differentiate(x)"))
 (test-equal "vector operators compose without presentation nodes"
-  '(curl (curl (var E))) (math-value-term (semantic:curl (semantic:curl "E"))))
+  '(curl (curl (var E))) (math-value-term (φ:curl (φ:curl "E"))))
 (test-equal "a formal derivative has explicit operands"
   '(differentiate (^ (var x) (num "3")) (var x))
-  (math-value-term (semantic:derivative (semantic:power "x" "3") "x")))
-(let* ((value (semantic:group "x+x"))
+  (math-value-term (φ:derivative (φ:power "x" "3") "x")))
+(let* ((value (φ:group "x+x"))
        (copy (math-value-with-properties value '((variant . normal)))))
   (test-equal "presentation preferences do not change mathematical identity"
     (math-value-term value) (math-value-term copy))
   (test-equal "explicit grouping is recorded beside the term"
     #t (assq-ref (math-value-properties value) 'parenthesized?)))
-(let* ((child (semantic:divide (located "2" 4 10) (located "0" 5 8)))
+(let* ((child (φ:divide (located "2" 4 10) (located "0" 5 8)))
        (parent (φ:read (located "x + " 3 2) child))
        (origin (math-value-origin parent)))
   (test-equal "embedded constructors retain a nested operand's source line"

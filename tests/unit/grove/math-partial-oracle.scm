@@ -1,7 +1,7 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(use-modules (grove math pipeline) (tests unit grove polynomial-oracle)
+(use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (tests unit grove polynomial-oracle)
              (srfi srfi-1) (srfi srfi-64))
 
 ;; Keep composed partial checks in their own suite so each independent oracle
@@ -10,7 +10,7 @@
 (define fixtures
   (map (lambda (entry)
          (list (car entry) (cadr entry)
-               (math-partial (car entry) (cadr entry) #:assumptions (caddr entry))))
+               (φ:partial (car entry) (cadr entry) #:assumptions (caddr entry))))
        '(("(x+y)^3+x*y-z^2" "y" ("coordinate(x); coordinate(y); coordinate(z)"))
          ("x*f(x,y)" "x" ("coordinate(x); coordinate(y); function(f,scalar,scalar,scalar); differentiable(f)"))
          ("f(y,x)+x" "x" ("coordinate(x); coordinate(y); function(f,scalar,scalar,scalar); differentiable(f)"))
@@ -29,7 +29,7 @@
         (lambda (fixture)
           (let ((source (car fixture)) (coordinate (cadr fixture)) (report (caddr fixture)))
             (test-equal "symbolic partials agree with an independently supplied polynomial function"
-              (evaluate `(partial ,(math-source->term source) ,(math-source->term coordinate)) environment)
+              (evaluate `(partial ,(φ:term source) ,(φ:term coordinate)) environment)
               (evaluate (math-report-final report) environment))
             (for-each
               (lambda (step)

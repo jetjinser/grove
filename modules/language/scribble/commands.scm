@@ -82,7 +82,7 @@
 
 ;; A function would evaluate the body before installing its assumptions.
 (define-syntax-rule (with-assumptions assumptions body ...)
-  (with-math-assumptions (list assumptions) (list body ...)))
+  (with-math-assumptions (φ:assumptions assumptions) (list body ...)))
 (export with-assumptions)
 
 ;; Guile's lambda* rest argument retains keyword/value pairs. Strip them once
@@ -94,7 +94,7 @@
           (else (body (cdr remaining) (cons (car remaining) text))))))
 
 (define (command-assumptions assumptions)
-  (if assumptions (list assumptions) '()))
+  (if assumptions (φ:assumptions assumptions) '()))
 
 (define-public derive
   (lambda* (#:key (assumptions #f) (view 'compact) (on-error 'raise)
@@ -115,7 +115,7 @@
   (lambda* (variable #:key (assumptions #f) (view 'compact) (on-error 'raise)
                           (max-steps 128) (max-term-size 2048) #:rest source)
     (math-completed-report->content
-      (math-differentiate (apply φ:read (math-command-fragments source)) variable
+      (math-differentiate (apply φ:read (math-command-fragments source)) (φ:read variable)
         #:assumptions (command-assumptions assumptions)
         #:max-steps max-steps #:max-term-size max-term-size)
       #:view view #:on-error on-error)))
@@ -125,7 +125,7 @@
                           (max-steps 128) (max-term-size 2048) #:rest source)
     "Compute and display a partial derivative in an explicit coordinate scope."
     (math-completed-report->content
-      (math-partial (apply φ:read (math-command-fragments source)) variable
+      (math-partial (apply φ:read (math-command-fragments source)) (φ:read variable)
         #:assumptions (command-assumptions assumptions)
         #:max-steps max-steps #:max-term-size max-term-size)
       #:view view #:on-error on-error)))
@@ -138,7 +138,7 @@
     (math-report->content
       (let ((input (apply φ:read (math-command-fragments source))))
         ((if backward? math-search-backward math-search)
-          (if backward? target input) (if backward? input target)
+          (if backward? (φ:read target) input) (if backward? input (φ:read target))
           #:assumptions (command-assumptions assumptions) #:rules rules #:max-results max-results
           #:max-depth max-depth #:max-states max-states #:max-term-size max-term-size))
       #:view view)))
@@ -180,7 +180,7 @@
   (lambda* (coordinate #:key (assumptions #f) (view 'compact) (on-error 'raise)
                             (max-steps 128) (max-term-size 8192) #:rest source)
     (math-completed-report->content
-      (math-antiderivative (apply φ:read (math-command-fragments source)) coordinate
+      (math-antiderivative (apply φ:read (math-command-fragments source)) (φ:read coordinate)
         #:assumptions (command-assumptions assumptions) #:max-steps max-steps #:max-term-size max-term-size)
       #:view view #:on-error on-error)))
 
@@ -197,6 +197,6 @@
   (lambda* (target #:key (assumptions #f) (view 'compact) (on-error 'raise)
                         (max-steps 256) (max-term-size 8192) #:rest source)
     (math-completed-report->content
-      (math-check-equation (apply φ:read (math-command-fragments source)) target
+      (math-check-equation (apply φ:read (math-command-fragments source)) (φ:read target)
         #:assumptions (command-assumptions assumptions) #:max-steps max-steps #:max-term-size max-term-size)
       #:view view #:on-error on-error)))

@@ -1,7 +1,7 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(use-modules (grove math pipeline) (grove math rewrite) (grove math term)
+(use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math rewrite) (grove math term)
              (tests unit grove polynomial-oracle)
              (srfi srfi-1) (srfi srfi-64))
 
@@ -9,7 +9,7 @@
                 (scalar (var f)) (smooth (var f)) (vector (var E)) (smooth (var E))))
 (define checked '())
 (define (check-edges source environment facts)
-  (let ((input (math-source->term source)))
+  (let ((input (φ:term source)))
     (for-each
       (lambda (answer)
         (set! checked (cons (cadr answer) checked))
@@ -50,9 +50,9 @@
             "partial((x+y)^3,x)" "partial(x/2,x)"
             "components(x+0,y*1,z^2)")))
       (let* ((source (format #f "(x+y)^~a+(1/2)*x*y-x*x" (abs seed)))
-             (report (math-differentiate source "x" #:assumptions '("scalar(x); scalar(y)"))))
+             (report (φ:differentiate source "x" #:assumptions '("scalar(x); scalar(y)"))))
         (test-equal "composed differentiation and simplification agree with independent exact polynomials"
-          (evaluate (math-source->term (format #f "differentiate(~a,x)" source)) environment)
+          (evaluate (φ:term (format #f "differentiate(~a,x)" source)) environment)
           (evaluate (math-report-final report) environment)))
       (let* ((solenoidal (curl field))
              (environment (append coordinates (list (cons 'E (vector solenoidal)))))
@@ -75,7 +75,7 @@
 (for-each
   (lambda (fixture)
     (test-equal "missing regularity or equation premises cannot produce a vector identity"
-      '() (math-rewrite-answers (car fixture) (math-source->term (cadr fixture)) (list (caddr fixture)) #f)))
+      '() (math-rewrite-answers (car fixture) (φ:term (cadr fixture)) (list (caddr fixture)) #f)))
   '((((vector (var E))) "curl(curl(E))" curl-curl-identity)
     (((vector (var E))) "div(curl(E))" div-curl-zero)
     (((scalar (var f))) "curl(grad(f))" curl-grad-zero)

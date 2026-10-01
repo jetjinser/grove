@@ -23,10 +23,11 @@ Grove keeps mathematical meaning separate from mathematical presentation.
 Semantic DSL in `(grove math semantic)` constructs reusable `math-value`
 objects: mathematical terms with source origins and presentation preferences
 kept alongside them. Notation DSL in `(grove math notation)` constructs
-layout nodes for display-only notation. Both render as native MathML; only
-semantic expressions enter computation. The document commands `@math` and
-`@display-math` use Semantic DSL by default. Examples use `◆:` for Semantic DSL
-and `◇:` for Notation DSL; these are author-chosen module import prefixes.
+layout nodes for display-only notation. Formula DSL in `(grove math formula)`
+reads text and embedded Semantic values, and offers convenience wrappers around
+Semantic constructors and computations. The document commands `@math` and
+`@display-math` accept Formula fragments and Semantic values. Use `φ:` for
+Formula DSL, `◆:` for Semantic DSL, and `◇:` for Notation DSL.
 
 Coordinates, constant parameters and function references may be defined as
 reusable values. Their declarations are separate from source origins and display
@@ -37,15 +38,15 @@ preferences, and enter the context only through an explicit scope:
 @(define a (◆:parameter 'a))
 @(define f (◆:function 'f #:inputs '(scalar) #:result 'scalar))
 @with-assumptions[(list x a f)]{
-  @math{@◆:call[f]{x^2}}
-  @differentiate[x]{@◆:multiply[a x]}
+  @math{@φ:call[f]{x^2}}
+  @differentiate[x]{@φ:multiply[a x]}
 }
 ```
 
 The equivalent facts are `coordinate(x)`, `parameter(a)` and
 `function(f,scalar,scalar)`; a function declaration lists input types followed
 by its result type. Signatures may have several scalar/vector inputs or no
-inputs. Calls use either `f(x)` or `◆:call`; typing checks their arity and operand
+inputs. Calls use either `f(x)` or `φ:call`; typing checks their arity and operand
 types. A function reference is not a scalar variable. Plain `scalar(x)` denotes
 an independent scalar variable; `parameter(a)` explicitly holds `a` constant
 and rejects differentiation with respect to it. Declaring `f` does not supply
@@ -53,15 +54,21 @@ its definition or a differentiation rule. Unknown undeclared calls remain
 displayable, while calculations diagnose the missing computational semantics.
 
 ```text
-text and embedded operands → syntax tree → mathematical value → passes
-                                                           ↓
-                                             Notation constructors → layout IR → MathML
+Formula fragments ──φ:read──▶ Semantic value ──pipeline──▶ computation passes
+                                   │
+                                   └──Notation lowering──▶ layout IR ──▶ MathML
 ```
 
-`(grove math syntax)` tokenizes a deliberately small expression grammar and
-parses it with source spans. `(grove math term)` maps that syntax tree to
-Scheme s-expressions such as `(curl (curl (var E)))`; this is the term grammar
-used by relational rules. `(grove math rewrite)` defines miniKanren relations
+`(grove math formula reader)` tokenizes the optional textual Formula DSL and
+lowers it to Semantic values. It treats embedded Semantic values as atomic
+operands, so authors can combine concise formula text with constructs that are
+easier to build procedurally. `(grove math semantic)` contains constructors that
+accept Semantic values; it does not parse Formula text. `(grove math pipeline)`
+accepts Semantic values only. The public `(grove math formula)` façade provides
+`φ:read` and convenience operations such as `φ:simplify` that read Formula
+fragments before calling the Semantic API. `(grove math term)` owns the
+Scheme s-expression term grammar, such as `(curl (curl (var E)))`, used by
+relational rules. `(grove math rewrite)` defines miniKanren relations
 over those terms. `(grove math strategy)` selects rules and implements bounded
 search and bounded normalization; `(grove math derivation)` stores their
 certificates. `(grove math layout)` lowers terms through the pure Notation
@@ -91,7 +98,7 @@ algorithms and special layout remain independent passes.
 
 | Entry point | Accepted computation domain |
 | --- | --- |
-| `math-rewrite`, forward/backward search, chain verification | Typed terms in the registered expression vocabulary; selected rules determine possible transitions. |
+| `math-rewrite`, search, chain verification | Semantic values over typed terms in the registered expression vocabulary; selected rules determine possible transitions. |
 | `math-calculate` | The same vocabulary; rewrites supported exact arithmetic subexpressions, retaining symbolic operands. |
 | `math-collect` | The same vocabulary; collects supported scalar coefficients, retaining other subexpressions. |
 | `math-simplify` | The same vocabulary; applies the selected typed identity, arithmetic and collection rules. |
@@ -119,7 +126,7 @@ and multivariate function differentiation are currently unsupported. Natural
 power computation uses the polynomial convention u^0 = 1; negative and symbolic
 exponents remain displayable but are outside this computation domain.
 
-The semantic parser accepts identifiers, integer numerals, function calls,
+Formula DSL accepts identifiers, integer numerals, function calls,
 parenthesized groups, unary minus, power notation (`x^2`),
 and `=`, `+`, `-`/`−`, `*`/`×`, and `/` with conventional precedence.
 Embedded Semantic DSL objects are atomic operands, not strings to reparse.
@@ -162,7 +169,7 @@ Premises may be shared in a local scope:
 }
 ```
 
-The Scheme equivalent is `(with-math-assumptions '("scalar(x)") body ...)`.
+The Scheme equivalent is `(with-math-assumptions (φ:assumptions "scalar(x)") body ...)`.
 Nested scopes and a command's `#:assumptions` add to the current facts;
 contradictions are diagnosed rather than replaced. Normal and exceptional
 exits restore the parent scope. Each certificate stores the effective facts,
@@ -213,7 +220,7 @@ The corresponding facts are `space(x,y,z)`, `field(f,scalar,x,y,z)` and
 `field(E,vector,x,y,z)`. A space value carries the coordinate declarations;
 a field value carries its field declaration. Explicit scope activation remains
 necessary. Field references have function type; applications take three scalar
-arguments and return their declared result. `◆:call` constructs applications,
+arguments and return their declared result. `φ:call` constructs applications,
 and textual calls may compose the arguments, such as `f(y,x,z)` or `f(x^2,y,z)`.
 Constant parameters remain distinct from coordinates and fields. Conflicting
 spaces, duplicate axes, parameter axes, mismatched signatures and use of a bare
@@ -264,8 +271,9 @@ Explicit selection of an unsupported query mode is an argument error.
 Differentiation and numerical calculation support forward generation and
 checking; they do not offer inverse integration or arbitrary number generation.
 
-For target-directed queries, `(grove math pipeline)` exports `math-search`.
-It performs breadth-first search over the miniKanren one-step relation and
+For target-directed queries, `(grove math pipeline)` exports `math-search`,
+which accepts Semantic values. The Formula façade exports `φ:search`, which
+reads its inputs first. It performs breadth-first search over the miniKanren one-step relation and
 returns a search report with the shortest candidates first. `#:max-depth`,
 `#:max-results`, `#:max-states`, and `#:max-term-size` bound derivation length,
 returned candidates, explored states, and nodes per generated term. `#:rules`
@@ -277,8 +285,9 @@ steps, and `math-derivation->content` lowers a candidate to displayable
 MathML IR. For example:
 
 ```scheme
+(use-modules ((grove math formula) #:prefix φ:))
 (define report
-  (math-search "curl(curl(E))" "-laplacian(E)"
+  (φ:search "curl(curl(E))" "-laplacian(E)"
     #:assumptions '("vector(E); smooth(E); div(E)=0")
     #:rules '(curl-curl-identity divergence-free subtract-zero)
     #:max-depth 3))
@@ -298,36 +307,37 @@ Reasons are `exhausted`, `depth-limit`, `term-size-limit`, `state-limit`, or
 is relative to the selected rules and supplied assumptions. Multiple distinct
 paths to the same term remain distinct candidates.
 
-`math-simplify` is a separate strategy: it takes a source expression and
+`φ:simplify` is a Formula convenience wrapper around the Semantic-only
+`math-simplify` pipeline function. It takes a source expression and
 normalizes using arithmetic and scalar collection rules, with optional `#:rules` and
 `#:max-steps`. It returns one candidate in the same report format, with reason
 `normal-form` or `step-limit`; a limited report retains the partial chain.
-For example, `(math-simplify "1 * (x + 0)" #:assumptions '("scalar(x)"))`
+For example, `(φ:simplify "1 * (x + 0)" #:assumptions '("scalar(x)"))`
 normalizes to `x` without selecting a target or expanding differential identities.
-`math-derive` also accepts Scheme-level `#:rules` for its displayed automatic
+`φ:derive` also accepts Scheme-level `#:rules` for its displayed automatic
 derivation.
 
-`math-calculate` runs exact constant arithmetic alone; `math-collect` combines
+`φ:calculate` runs exact constant arithmetic alone; `φ:collect` combines
 structurally identical scalar summands and numeric coefficients in products.
 For example, `1/3 + 1/6` becomes `1/2`, and `2*x + 3*x` becomes `5*x`.
-These are separate passes with ordinary replayable certificates; `math-simplify`
+These are separate passes with ordinary replayable certificates; `φ:simplify`
 combines them with zero/one elimination. Fractions retain the existing division
 IR, and signs retain unary minus. Arithmetic remains exact.
 
-`math-normalize` is an independent pass. It gives scalar sums and products a
+`φ:normalize` is an independent pass. It gives scalar sums and products a
 stable left-associated order, combines equal monomials and repeated factors,
 and collapses nested natural powers. Variables precede opaque function factors;
 summands are sorted by decreasing coordinate degree, then by their source
 representation, with constants last. These choices make repeated normalization
 idempotent; they do not identify every mathematically equivalent expression.
-The same rule is included in `math-simplify` and derivative simplification.
+The same rule is included in `φ:simplify` and derivative simplification.
 For example, `x+2*x+x` becomes `4*x`, and `2*x*3*x^2` becomes `6*x^3`.
 
 Scalar factor cancellation requires the original denominator to be nonzero.
 Under `coordinate(x); nonzero(x)`, `x/x` becomes `1`, and differentiation of
 `x/x^2` simplifies to `-1/x^2`. Cancellation handles exact coefficients and
 structurally equal factors with natural powers; it does not factor arbitrary
-polynomials. Factored structure remains the default. `math-expand` explicitly
+polynomials. Factored structure remains the default. `φ:expand` explicitly
 distributes products over sums/differences in a separate pass and then simplifies;
 it is never enabled by default, nor does it expand arbitrary binomial powers.
 
@@ -339,13 +349,13 @@ expression, styled, differentiated, searched or used in an authored chain.
 Reusing it requires the premise again; carrying a requirement never authorizes
 that premise. Certificate replay checks the retained requirements as well.
 
-`math-differentiate` returns a report containing the differentiation and
+`φ:differentiate` returns a report containing the differentiation and
 simplification pass reports, plus their joined certificate. Each pass has its
 own `#:max-steps` budget and shares `#:max-term-size`. A cutoff retains the
 completed prefix and does not run subsequent passes. Unsupported differentiation
 inputs, type errors and division by zero return diagnostics; invalid API
-arguments and syntax remain errors. `math-rewrite` exposes the report used by
-the display-oriented `math-derive`. `math-completed-report->content` renders
+arguments and syntax remain errors. `φ:rewrite` exposes the report used by
+the display-oriented `φ:derive`. `math-completed-report->content` renders
 only completed computations, which prevents `.plant` commands from presenting
 a partial derivative as a completed result.
 
@@ -375,7 +385,7 @@ a small graph, check reproducibility and all budget boundaries, and exercise
 cycles with an independently supplied transition graph.
 
 This searches forward from a known expression to a target. The inverse query
-`math-search-backward` takes the target first and a required source expression
+`φ:search-backward` takes the target first and a required source expression
 second; it returns candidates as ordinary forward derivations. For example,
 the curl-curl example can be searched from `-laplacian(E)` back to
 `curl(curl(E))` using the same bounds and assumptions.
@@ -393,35 +403,40 @@ expansion. A limit is not a proof that no derivation exists.
              ((grove math formula) #:prefix φ:)
              ((grove math notation) #:prefix ◇:)
              (grove math pipeline)]
-@(define p @φ:read{@◆:power{x}{3} + 2*x})
+@(define x (◆:variable 'x))
+@(define p (◆:add (◆:power x (◆:constant 3))
+                   (◆:multiply (◆:constant 2) x)))
 @math[p]
 @with-assumptions["scalar(x)"]{
   @differentiate["x" p]
-  @search-derive[p]{@◆:add[p "0"]}
+  @search-derive[p]{@φ:add[p "0"]}
   @(math-verification->content
-     (math-check-chain (list (◆:add p "0") p)))
+     (φ:check-chain (list (φ:add p "0") p)))
 }
 @◇:math{@◇:parens[p]}
 ```
 
-`φ:read` is the Formula DSL reader: it decodes text, embedded Semantic values, and
-lists of fragments into a Semantic value. Formula DSL is optional; Scheme
-constructors such as `◆:power`, `◆:add`, and `◆:multiply` build the same values
-directly. Explicit
-constructors include `variable`, exact rational `constant`, `add`, `subtract`,
-`negate`, `multiply`, `divide`, `power`, `grad`, `divergence`, `curl`, `laplacian`,
-`derivative`, and `vector-zero`. `group` preserves explicit parentheses;
-`styled` accepts `#:variant 'normal`, `'bold`, `'italic`, or `'bold-italic`.
+`φ:read` decodes Formula text, embedded Semantic values, and fragment lists
+into a Semantic value. Formula syntax is optional: Semantic constructors such
+as `◆:power`, `◆:add`, and `◆:multiply` build values directly from Semantic
+operands. The constructors include `◆:variable`, exact rational `◆:constant`,
+`◆:add`, `◆:subtract`, `◆:negate`, `◆:multiply`, `◆:divide`, `◆:power`,
+`◆:grad`, `◆:divergence`, `◆:curl`, `◆:laplacian`, `◆:derivative`, and
+`◆:vector-zero`. `◆:group` preserves explicit parentheses; `◆:styled` accepts
+`#:variant 'normal`, `'bold`, `'italic`, or `'bold-italic`.
 Neither grouping nor style changes the underlying mathematical term.
 Adjacent brace bodies form separate arguments for any at-exp command,
 including prefixed commands; each compound argument remains a fragment list.
 
-Construction and direct display never simplify expressions. The computation
-APIs accept a `math-value`, source text, or a fragment sequence through the same
-decoder. `math-report-result` returns the final term as a reusable mathematical
-value, with the certificate's assumptions retained for display. This does not
-install those assumptions into subsequent computations: use an explicit
-assumption scope for calculations involving free variables.
+Construction and direct display never simplify expressions. The Semantic
+pipeline accepts `math-value` objects and fact terms. Formula façade operations
+accept Formula text, embedded Semantic values, or fragment sequences and decode
+them before delegating to the pipeline. Use `φ:assumptions` to decode textual
+premises for a Semantic context; the context itself accepts only Semantic facts.
+`math-report-result` returns the final term as a
+reusable mathematical value, with the certificate's assumptions retained for
+display. This does not install those assumptions into subsequent computations:
+use an explicit assumption scope for calculations involving free variables.
 
 Notation DSL provides `math`, `display-math`, `frac`, `sup`, `sub`, `vec`,
 `parens`, and `align`. It can embed a semantic value for display. Notation
@@ -434,7 +449,7 @@ can render a diagnostic.
 
 ## Authored derivations
 
-`math-check-chain` checks the author's exact sequence of source expressions.
+`φ:check-chain` checks the author's exact sequence of source expressions.
 Each adjacent pair must be related by one selected rule at one operand path;
 it does not silently search for and insert intermediate expressions.
 Search candidates and authored chains use the same `math-derivation` certificate
@@ -444,7 +459,7 @@ candidate.
 
 ```scheme
 (define checked
-  (math-check-chain
+  (φ:check-chain
     '("curl(curl(E))"
       "grad(div(E)) - laplacian(E)"
       "zero(vector) - laplacian(E)"
@@ -460,7 +475,7 @@ annotation per transition: a rule symbol infers the matching path;
 `#:rules` restricts allowed rules, including explicit annotations. For example:
 
 ```scheme
-(math-check-chain '("x + (y + 0)" "x + y")
+(φ:check-chain '("x + (y + 0)" "x + y")
   #:assumptions '("scalar(x); scalar(y)")
   #:steps '((add-zero (1))))
 ```
@@ -491,7 +506,7 @@ and one complete expression per nonempty body line:
 
 Successful chains render the authored lines as annotated MathML. Failed chains
 stop document evaluation with the step diagnostics. Scheme-level
-`math-check-chain` provides explicit annotations and programmatic error handling.
+`φ:check-chain` provides explicit annotations and programmatic error handling.
 
 ## Article presentation and source diagnostics
 
@@ -594,18 +609,18 @@ multiplication sign; dot and cross products retain their own symbols.
 
 ## Cartesian components and partial derivatives
 
-`◆:components` constructs a vector with exactly three scalar entries in an
+`φ:components` constructs a vector with exactly three scalar entries in an
 explicit ordered Cartesian space. Its IR is `(components x-term y-term z-term)`;
 the chosen space travels as a requirement of the mathematical value, independently
 of its component terms and display properties. Construction does not activate
 that space. A raw textual `components(x,y,z)` uses the active space, and its
 computed result retains that basis too. Mixing bases or using a vector as an
-entry is diagnosed before computation. Scalar passes may simplify the entries; `math-compute` additionally lowers
+entry is diagnosed before computation. Scalar passes may simplify the entries; `φ:compute` additionally lowers
 component-wise vector operations and Cartesian spatial operators.
 
 ```scheme
 @(define r3 (◆:space 'x 'y 'z))
-@(define v (◆:components "x^2" "y" "sin(z)" #:space r3))
+@(define v (φ:components "x^2" "y" "sin(z)" #:space r3))
 @with-assumptions[r3]{@math[v]}
 ```
 
@@ -615,7 +630,7 @@ available for layout only, with no vector semantics. Text output separates
 component entries with commas.
 
 `◆:partial` constructs `(partial expression coordinate)` without evaluating it.
-`math-partial` computes the scalar derivative in a dedicated pass and runs
+`φ:partial` computes the scalar derivative in a dedicated pass and runs
 scalar simplification as a second pass. The article command is
 `@partial["x"]{x^3+2x*y}`. Both use explicit `coordinate(x)` declarations;
 a generic `scalar(x)` declaration does not establish an independent coordinate.
@@ -624,7 +639,7 @@ A bare scalar field without either role remains a symbolic partial, rather
 than being silently treated as an independent coordinate.
 
 ```scheme
-(math-partial "x^3+2x*y+a" "x"
+(φ:partial "x^3+2x*y+a" "x"
   #:assumptions '("coordinate(x); coordinate(y); parameter(a)"))
 ;; final term: 3*x^2 + 2*y
 ```
@@ -639,7 +654,7 @@ budget; term-size limits and source provenance follow the existing pipeline.
 Declared unknown multivariate scalar functions remain differentiable symbolic
 terms, provided their C1 premise is supplied. For example, under
 `function(f,scalar,scalar,scalar); differentiable(f)` and independent `x,y`,
-`math-partial "x*f(x,y)" "x"` produces
+`φ:partial "x*f(x,y)" "x"` produces
 `x*partial(f(x,y),x)+f(x,y)`. This is a symbolic normal form, not a calculated
 component of the unknown function. No multivariate function chain rule or
 argument-index derivative is inferred. C1 alone does not authorize second
@@ -652,7 +667,7 @@ when the visible term reduces to zero or one. Reuse must satisfy those
 requirements again; documentation and retained requirements never authorize
 new assumptions.
 
-Cartesian computation uses `math-compute` and `@compute`, with an explicit
+Cartesian computation uses `φ:compute` and `@compute`, with an explicit
 ordered `space` premise. It lowers component addition, subtraction, negation,
 scalar multiplication/division, dot/cross products and grad/div/curl/Laplacian
 in a `components` pass, evaluates partials with local simplification in a
@@ -667,7 +682,7 @@ recorded computation edge without invoking Grove's calculus implementation.
 
 ## Exact polynomial calculus
 
-`math-antiderivative source coordinate` / `@antiderivative["x"]{…}` returns
+`φ:antiderivative source coordinate` / `@antiderivative["x"]{…}` returns
 the exact polynomial primitive whose value at coordinate zero is zero.
 `◆:antiderivative` constructs the term; its notation is `A_x(f)`.
 Inputs use exact rational arithmetic, natural powers, and explicit independent
@@ -677,7 +692,7 @@ polynomial IR, integrates exponent vectors, checks the derivative, and emits
 Semantic IR. A separate scalar pass normalizes the output. The full family of
 primitives can additionally contain a function independent of the coordinate.
 
-`math-solve-poisson source #:coordinate "x"` / `@solve-poisson{…}` constructs
+`φ:solve-poisson source #:coordinate "x"` / `@solve-poisson{…}` constructs
 a polynomial particular solution of **Delta u = source** in the active ordered
 Cartesian space. The default axis is the first basis coordinate. The selected
 solution has zero value and zero first derivative on that axis's origin plane;
@@ -687,7 +702,7 @@ checks its PDE residual before returning. Boundary conditions and the complete
 homogeneous solution are not solved. `◆:poisson-particular` constructs this
 semantic operation.
 
-`math-check-equation left right` / `@check-equation["right"]{left}` computes
+`φ:check-equation left right` / `@check-equation["right"]{left}` computes
 the residual, expands exact polynomials, and simplifies. Only a zero residual
 is a completed verification. Nonzero or unresolved residuals produce
 `equation-not-proven`; cutoffs keep their valid prefix. This can separately

@@ -1,13 +1,13 @@
 @; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 @; SPDX-License-Identifier: CC0-1.0
 
-@use-modules[(math-derivations commands)
+@use-modules[((grove math formula) #:prefix φ:) (math-derivations commands)
              ((grove math semantic) #:prefix ◆:)]
 @title{Vector components and partial derivatives}
 @summary{An ordered Cartesian basis, scalar entries, and explicit partial terms.}
 
 @(define r3 (◆:space 'x 'y 'z))
-@(define v (◆:components "x^2" "y" "sin(z)" #:space r3))
+@(define v (φ:components "x^2" "y" "sin(z)" #:space r3))
 @with-assumptions[r3]{
   @math[v]
   @partial["x" #:view 'result]{x^3+2x*y}

@@ -1,4 +1,4 @@
-(use-modules (grove math pipeline) (grove math rewrite) (grove math rule)
+(use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math rewrite) (grove math rule)
              (grove math context) (grove math types) (grove relation)
              (tests unit grove polynomial-oracle)
              ((grove math semantic) #:prefix ◆:) (srfi srfi-1) (srfi srfi-64))
@@ -14,5 +14,5 @@
     ("dot(components(x,y,z),components(x,y,z))" "x^2+y^2+z^2")
     ("cross(components(1,0,0),components(0,1,0))" "components(0,0,1)")))
 (test-equal "vector denominator domain is checked" 'missing-premise
-  (math-report-reason (math-compute "components(x,y,z)/x" #:assumptions (list basis))))
+  (math-report-reason (φ:compute "components(x,y,z)/x" #:assumptions (list basis))))
 (test-end "Cartesian component algebra")

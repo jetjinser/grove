@@ -1,6 +1,6 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
-(use-modules (grove math pipeline) (grove math rewrite) (grove math types)
+(use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math rewrite) (grove math types)
              (grove relation) (tests unit grove cartesian-fixtures)
              (tests unit grove polynomial-oracle) (srfi srfi-1) (srfi srfi-64))
 (test-begin "independent Cartesian rule coverage")
@@ -8,7 +8,7 @@
 (define covered '())
 (for-each
   (lambda (source)
-    (let ((term (math-source->term source)))
+    (let ((term (φ:term source)))
       (for-each
         (lambda (answer)
           (set! covered (cons (cadr answer) covered))

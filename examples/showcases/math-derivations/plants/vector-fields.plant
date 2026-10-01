@@ -1,7 +1,7 @@
 @; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 @; SPDX-License-Identifier: CC0-1.0
 
-@use-modules[(math-derivations commands) ((grove math semantic) #:prefix ◆:)]
+@use-modules[((grove math formula) #:prefix φ:) (math-derivations commands) ((grove math semantic) #:prefix ◆:)]
 @title{Cartesian field products}
 @summary{Coordinate dependencies, dot and cross products, and checked product rules.}
 
@@ -13,7 +13,7 @@
 @derive{grad(f(x,y,z)*g(x,y,z))}
 @derive{div(f(x,y,z)*E(x,y,z))}
 @derive{curl(f(x,y,z)*E(x,y,z))}
-@math{@◆:dot[@◆:call[e "x" "y" "z"] @◆:call[e "x" "y" "z"]]}
+@math{@φ:dot[@φ:call[e "x" "y" "z"] @φ:call[e "x" "y" "z"]]}
 @check-derive[#:view 'full]{
   curl(f(x,y,z)*E(x,y,z))
   cross(grad(f(x,y,z)),E(x,y,z))+f(x,y,z)*curl(E(x,y,z))

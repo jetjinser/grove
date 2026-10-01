@@ -21,7 +21,7 @@
 @search-derive["3*x^2"]{differentiate(x^3,x)}
 }
 
-@(define report (math-differentiate p "x" #:assumptions '("scalar(x)")))
+@(define report (φ:differentiate p "x" #:assumptions '("scalar(x)")))
 @(paragraph (format #f "Independent derivation certificate replay: ~a"
    (math-verification-valid? (math-verify-derivation (math-report-derivation report)))))
 

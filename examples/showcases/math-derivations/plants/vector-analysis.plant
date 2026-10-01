@@ -1,14 +1,14 @@
 @; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 @; SPDX-License-Identifier: CC0-1.0
 
-@use-modules[(math-derivations commands) ((grove math semantic) #:prefix ◆:)]
+@use-modules[((grove math formula) #:prefix φ:) (math-derivations commands) ((grove math semantic) #:prefix ◆:)]
 @title{Checked vector identities}
 @summary{Explicit premises, automatic derivation, search and authored verification.}
 
-@(define double-curl @◆:curl{@◆:curl{E}})
+@(define double-curl @φ:curl{@φ:curl{E}})
 @with-assumptions["vector(E); smooth(E)"]{
 @derive[double-curl]
-@derive{@◆:divergence{@◆:curl{E}}}
+@derive{@φ:divergence{@φ:curl{E}}}
 @with-assumptions["div(E)=0"]{
 @derive[double-curl]
 @search-derive["-laplacian(E)" double-curl]
@@ -22,8 +22,8 @@
 }
 }
 @with-assumptions["scalar(f); smooth(f)"]{
-@derive{@◆:curl{@◆:grad{f}}}
-@derive{@◆:divergence{@◆:grad{f}}}
+@derive{@φ:curl{@φ:grad{f}}}
+@derive{@φ:divergence{@φ:grad{f}}}
 }
 
 @check-derive[#:assumptions "vector(E)" #:on-error 'show]{

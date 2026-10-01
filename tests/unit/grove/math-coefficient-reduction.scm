@@ -1,13 +1,13 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
-(use-modules (grove math pipeline) (grove math expression) (grove math premise) (grove math context)
+(use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math expression) (grove math premise) (grove math context)
              ((grove math semantic) #:prefix ◆:) (tests unit grove polynomial-oracle)
              (srfi srfi-1) (srfi srfi-64))
 (test-begin "primitive rational parameter coefficients")
 (define basis (◆:space 'x 'y 'z))
 (define facts (list basis "parameter(a); parameter(b); nonzero(a); nonzero(b); nonzero(a+b); nonzero(a^2+a*b)"))
 (define (reduce-coefficients source)
-  (math-rewrite source #:assumptions facts #:rules '(expand-polynomial)))
+  (φ:rewrite source #:assumptions facts #:rules '(expand-polynomial)))
 (define generated-cases
   (append-map
     (lambda (factor)
@@ -29,7 +29,7 @@
                        (list (cons 'a (scalar (list (list (car values) 0 0 0))))
                              (cons 'b (scalar (list (list (cadr values) 0 0 0))))))))
             (test-equal "independent specialization checks coefficient reduction"
-              (evaluate (math-source->term source) env) (evaluate (math-report-final report) env))
+              (evaluate (φ:term source) env) (evaluate (math-report-final report) env))
             (for-each (lambda (step)
                         (test-equal "each coefficient edge preserves independent arithmetic"
                           (evaluate (math-derivation-step-from step) env)
@@ -52,15 +52,15 @@
   (math-report-final (reduce-coefficients "x/(-a)")))
 (let ((result (math-report-result (reduce-coefficients "a/a"))))
   (test-equal "a cancelled denominator still requires the author's domain" 'missing-premise
-    (math-report-reason (math-simplify result #:assumptions (list basis "parameter(a); parameter(b)")))))
+    (math-report-reason (φ:simplify result #:assumptions (list basis "parameter(a); parameter(b)")))))
 (test-assert "a nonzero expanded denominator entails its reduced primitive factor"
-  (math-premise-known? (math-assumptions (list basis "parameter(a); parameter(b); nonzero(a^2+a*b)"))
-                      (math-source->term "nonzero(a+b)")))
+  (math-premise-known? (math-assumptions (append (list basis) (φ:assumptions "parameter(a); parameter(b); nonzero(a^2+a*b)")))
+                      (φ:term "nonzero(a+b)")))
 (test-assert "nonzero sum never implies nonzero individual summands"
-  (not (math-premise-known? (math-assumptions (list basis "parameter(a); parameter(b); nonzero(a+b)"))
-                           (math-source->term "nonzero(a)"))))
+  (not (math-premise-known? (math-assumptions (append (list basis) (φ:assumptions "parameter(a); parameter(b); nonzero(a+b)")))
+                           (φ:term "nonzero(a)"))))
 (test-assert "positive product entails nonzero factors but not their signs"
-  (let ((facts (math-assumptions (list basis "parameter(a); parameter(b); positive(a*b)"))))
-    (and (math-premise-known? facts (math-source->term "nonzero(a)"))
-         (not (math-premise-known? facts (math-source->term "positive(a)"))))))
+  (let ((facts (math-assumptions (append (list basis) (φ:assumptions "parameter(a); parameter(b); positive(a*b)")))))
+    (and (math-premise-known? facts (φ:term "nonzero(a)"))
+         (not (math-premise-known? facts (φ:term "positive(a)"))))))
 (test-end "primitive rational parameter coefficients")

@@ -4,7 +4,6 @@
 (define-module (grove math pipeline)
   #:use-module (grove ir)
   #:use-module ((grove math semantic) #:prefix semantic:)
-  #:use-module ((grove math formula) #:prefix φ:)
   #:use-module (grove math expression)
   #:use-module (grove math term)
   #:use-module (grove math context)
@@ -26,7 +25,7 @@
   #:use-module (grove math premise)
   #:use-module (grove math assumption)
   #:use-module (srfi srfi-1)
-  #:export (math-source->term math-derive
+  #:export (math-derive
             math-search math-search-backward math-simplify math-calculate math-collect
             math-check-chain
             math-check-equation math-antiderivative math-solve-poisson math-compute math-differentiate math-partial math-rewrite math-report-result math-normalize math-expand)
@@ -52,8 +51,10 @@
                math-report-states math-report-complete? math-report-status math-report-unresolved math-report-name
                math-report-diagnostics math-report-passes math-report-derivation math-report-final))
 
-(define (math-source->term source)
-  (math-value-term (φ:read source)))
+(define (value->term who value)
+  (unless (math-value? value)
+    (error who "expected a Semantic value" value))
+  (math-value-term value))
 
 (define (derivation-premises candidate)
   (append-map
@@ -63,7 +64,8 @@
     (math-derivation-steps candidate)))
 
 (define* (report-with-input report input #:optional (other-inputs '()) (assumptions #f))
-  (let* ((values (map φ:read (cons input other-inputs)))
+  (let* ((values (map (lambda (value) (begin (value->term 'math-report value) value))
+                   (cons input other-inputs)))
          (requirements (delete-duplicates (append-map math-value-requirements values) equal?))
          (inherited (append-map (lambda (value)
                                  (lset-difference equal? (math-value-requirements value)
@@ -99,10 +101,8 @@
                 #:properties `((assumptions . ,(math-derivation-assumptions (math-report-derivation report))))))))
 
 (define (derivative-report name rules source variable assumptions validate max-steps max-term-size)
-  (let* ((source (φ:read source))
-         (variable (φ:read variable))
-         (expression (math-value-term source))
-         (coordinate (math-value-term variable))
+  (let* ((expression (value->term name source))
+         (coordinate (value->term name variable))
          (facts (math-assumptions assumptions))
          (diagnostics (validate expression coordinate facts))
          (input `(,name ,expression ,coordinate)))
@@ -135,7 +135,7 @@ Declared unknown function derivatives remain explicit partial terms."
 (define* (math-rewrite source #:key (assumptions '()) (rules #f)
                         (max-steps 32) (max-term-size 2048))
   (report-with-input
-    (run-math-pass (math-source->term source) (math-assumptions assumptions)
+    (run-math-pass (value->term 'math-rewrite source) (math-assumptions assumptions)
       #:name 'rewrite #:rules rules #:max-steps max-steps #:max-term-size max-term-size)
     source))
 
@@ -182,10 +182,10 @@ Declared unknown function derivatives remain explicit partial terms."
                             (max-states 256) (max-term-size 128))
   (report-with-input
     (search-math-terms
-      (math-source->term source) (math-source->term target)
+      (value->term 'math-search source) (value->term 'math-search target)
       (math-assumptions assumptions) #f
-      #:start-origin (math-value-origin (φ:read source))
-      #:goal-origin (math-value-origin (φ:read target))
+      #:start-origin (math-value-origin source)
+      #:goal-origin (math-value-origin target)
       #:rules rules #:max-depth max-depth #:max-results max-results
       #:max-states max-states #:max-term-size max-term-size)
     source (list target) (math-assumptions assumptions)))
@@ -196,54 +196,54 @@ Declared unknown function derivatives remain explicit partial terms."
                                      (max-states 256) (max-term-size 128))
   (report-with-input
     (search-math-terms
-      (math-source->term target) (math-source->term source)
+      (value->term 'math-search-backward target) (value->term 'math-search-backward source)
       (math-assumptions assumptions) #t
-      #:start-origin (math-value-origin (φ:read target))
-      #:goal-origin (math-value-origin (φ:read source))
+      #:start-origin (math-value-origin target)
+      #:goal-origin (math-value-origin source)
       #:rules rules #:max-depth max-depth #:max-results max-results
       #:max-states max-states #:max-term-size max-term-size)
     source (list target) (math-assumptions assumptions)))
 
 (define* (math-simplify source #:key (assumptions '()) (rules #f) (max-steps 32) (max-term-size 2048))
   (report-with-input
-    (simplify-math-term (math-source->term source)
+    (simplify-math-term (value->term 'math-simplify source)
       (math-assumptions assumptions) #:rules rules #:max-steps max-steps
       #:max-term-size max-term-size)
     source))
 
 (define* (math-calculate source #:key (assumptions '()) (max-steps 32) (max-term-size 2048))
   (report-with-input
-    (calculate-math-term (math-source->term source)
+    (calculate-math-term (value->term 'math-calculate source)
       (math-assumptions assumptions) #:max-steps max-steps #:max-term-size max-term-size)
     source))
 
 (define* (math-normalize source #:key (assumptions '()) (max-steps 32) (max-term-size 2048))
   (report-with-input
-    (run-math-pass (math-source->term source) (math-assumptions assumptions)
+    (run-math-pass (value->term 'math-normalize source) (math-assumptions assumptions)
       #:name 'normalize #:rules '(normalize-scalar)
       #:max-steps max-steps #:max-term-size max-term-size)
     source))
 
 (define* (math-expand source #:key (assumptions '()) (max-steps 32) (max-term-size 2048))
   (report-with-input
-    (run-math-passes (math-source->term source) (math-assumptions assumptions)
+    (run-math-passes (value->term 'math-expand source) (math-assumptions assumptions)
       `((expand . (expand-scalar-product)) (simplify . ,math-simplification-rules))
       #:name 'expand #:max-steps max-steps #:max-term-size max-term-size)
     source))
 
 (define* (math-collect source #:key (assumptions '()) (max-steps 32) (max-term-size 2048))
   (report-with-input
-    (collect-math-term (math-source->term source)
+    (collect-math-term (value->term 'math-collect source)
       (math-assumptions assumptions) #:max-steps max-steps #:max-term-size max-term-size)
     source))
 
 (define* (math-check-chain sources #:key (assumptions '()) (steps #f) (rules #f))
-  (unless (list? sources)
-    (error "handwritten math chains require a list of expressions" sources))
-  (check-math-chain (map math-source->term sources)
+  (unless (and (list? sources) (every math-value? sources))
+    (error "handwritten math chains require a list of Semantic values" sources))
+  (check-math-chain (map math-value-term sources)
     (math-assumptions assumptions) #:steps steps #:rules rules
-    #:requirements (delete-duplicates (append-map (lambda (source) (math-value-requirements (φ:read source))) sources) equal?)
-    #:sources (map (lambda (source) (math-value-origin (φ:read source))) sources)))
+    #:requirements (delete-duplicates (append-map math-value-requirements sources) equal?)
+    #:sources (map math-value-origin sources)))
 
 (define (cartesian-passes term)
   (append
@@ -257,8 +257,8 @@ Declared unknown function derivatives remain explicit partial terms."
   "Lower Cartesian operators and component algebra, compute partials, then simplify.
 Unknown field derivatives remain explicit; no abstract field components are invented."
   (report-with-input
-    (run-math-passes (math-source->term source) (math-assumptions assumptions)
-      (append (cartesian-passes (math-source->term source))
+    (run-math-passes (value->term 'math-compute source) (math-assumptions assumptions)
+      (append (cartesian-passes (value->term 'math-compute source))
               `((simplify . ,math-simplification-rules)))
       #:name 'compute #:order 'innermost #:max-steps max-steps #:max-term-size max-term-size
       #:validate-final
@@ -291,7 +291,8 @@ Unknown field derivatives remain explicit; no abstract field components are inve
 No boundary conditions or uniqueness claim. The selected axis fixes one solution."
   (let* ((facts (math-assumptions assumptions))
          (basis (find math-space-declaration? facts))
-         (axis (or coordinate (and basis (symbol->string (cadadr basis))) "x")))
+         (axis (or coordinate
+                   (semantic:variable (if basis (cadadr basis) 'x)))))
     (polynomial-calculus-report 'poisson 'solve-polynomial-poisson source axis assumptions max-steps max-term-size)))
 
 (define (equation-residual-diagnostics term facts)
@@ -311,6 +312,8 @@ No boundary conditions or uniqueness claim. The selected axis fixes one solution
                              (max-steps 256) (max-term-size 8192))
   "Check an identity by computing and expanding its residual.
 A nonzero or symbolic residual is not a completed verification."
+  (value->term 'math-check-equation left)
+  (value->term 'math-check-equation right)
   (let* ((input (semantic:subtract left right))
          (facts (math-assumptions assumptions)))
     (report-with-input

@@ -2,11 +2,9 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math context)
-  #:use-module ((grove math formula) #:prefix φ:)
   #:use-module (grove math term)
   #:use-module (grove math expression)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:export (current-math-assumptions math-assumptions
             call-with-math-assumptions with-math-assumptions))
 
@@ -18,16 +16,16 @@
       (delete-duplicates facts equal?))))
 
 (define (math-assumptions sources)
-  (unless (list? sources) (error "math assumptions must be a list" sources))
+  (unless (list? sources) (error "math assumptions must be a list of Semantic facts" sources))
   (define (decode source)
     (cond
-      ((math-value? source) (math-value-declarations source))
+      ((math-value? source)
+       (let ((declarations (math-value-declarations source)))
+         (if (pair? declarations) declarations
+             (list (math-value-term source)))))
+      ((math-term? source) (list source))
       ((list? source) (append-map decode source))
-      ((string? source)
-       (map (lambda (part) (math-value-term (φ:read part)))
-            (filter (lambda (part) (not (string-null? part)))
-                    (map string-trim-both (string-split source #\;)))))
-      (else (error "math assumptions require source strings or declared mathematical values" source))))
+      (else (error "math assumptions require Semantic values or fact terms" source))))
   (delete-duplicates
     (append (current-math-assumptions)
       (append-map decode sources)) equal?))

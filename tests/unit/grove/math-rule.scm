@@ -1,7 +1,7 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(use-modules (grove math rule) (grove math rewrite) (grove math pipeline)
+(use-modules ((grove math formula) #:prefix φ:) (grove math rule) (grove math rewrite) (grove math pipeline)
              (grove relation) (srfi srfi-1) (srfi srfi-64))
 
 (test-begin "math rule contracts")
@@ -23,10 +23,10 @@
 (test-equal "differentiation is explicitly constructive, not inverse integration"
   '(forward check) (math-rewrite-rule-modes (math-rewrite-rule-ref 'differentiate-power)))
 (test-error "inverse derivative selection reports its unsupported mode" #t
-  (math-search-backward "1" "differentiate(x,x)" #:assumptions '("scalar(x)")
+  (φ:search-backward "1" "differentiate(x,x)" #:assumptions '("scalar(x)")
     #:rules '(differentiate-variable)))
 (test-error "inverse arithmetic computation is not silently ignored" #t
-  (math-search-backward "6" "2*3" #:rules '(evaluate-constant)))
+  (φ:search-backward "6" "2*3" #:rules '(evaluate-constant)))
 (test-error "unknown modes are rejected even with no rules" #t
   (math-selected-rules '() '() #:mode 'unknown))
 

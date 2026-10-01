@@ -15,19 +15,19 @@
     ("6sin(x)" "6*sin(x)") ("-6x" "-6*x") ("6 x" "6*x")
     ("6x/2" "6*x/2") ("(1/2)*6x" "(1/2)*6*x")
     ("6x+2y" "6*x+2*y")))
-(test-equal "multi-letter variables remain whole" '(var xy) (math-source->term "xy"))
-(test-equal "function calls remain calls" '(f (var x)) (math-source->term "f(x)"))
+(test-equal "multi-letter variables remain whole" '(var xy) (φ:term "xy"))
+(test-equal "function calls remain calls" '(f (var x)) (φ:term "f(x)"))
 (test-equal "implicit multiplication preserves source spans" '(0 . 4)
   (let ((expression (parse-math "6x^2")))
     (cons (math-expression-start expression) (math-expression-end expression))))
-(for-each (lambda (source) (test-error source #t (math-source->term source)))
+(for-each (lambda (source) (test-error source #t (φ:term source)))
   '("1/2x" "x y" "2 3" "x^2y"))
 (test-equal "embedded semantic operands accept coefficients"
   '(* (num "6") (var x))
   (math-value-term (φ:read "6" (semantic:variable 'x))))
 (define (html source)
   (sxml->html (content->sxml
-    (make-content-element 'math (list (math-term->layout (math-source->term source)))))))
+    (make-content-element 'math (list (math-term->layout (φ:term source)))))))
 (test-assert "coefficients render without a multiplication sign"
   (string-contains (html "6*x") "<mn>6</mn><mi>x</mi>"))
 (test-assert "negative coefficients retain their sign without extra grouping"
@@ -48,5 +48,5 @@
 (test-equal "implicit coefficients participate in differentiation"
   '(+ (* (num "3") (^ (var x) (num "2"))) (num "2"))
   (math-value-term (math-report-result
-    (math-differentiate "x^3+2x" "x" #:assumptions '("coordinate(x)")))))
+    (φ:differentiate "x^3+2x" "x" #:assumptions '("coordinate(x)")))))
 (test-end "implicit numeric coefficients")

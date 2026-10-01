@@ -1,7 +1,7 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(use-modules (grove math pipeline) (grove math rewrite)
+(use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math rewrite)
              (grove math pass) (grove math term)
              (srfi srfi-1) (srfi srfi-64))
 (define facts '("scalar(x); scalar(y)"))
@@ -15,7 +15,7 @@
 (test-begin "bounded mathematical search")
 ;; A small independently enumerable graph: each add-zero edge deletes exactly
 ;; one of the two authored zeros. Both paths have two edges, with no other paths.
-(let ((report (math-search "(x+0)+(y+0)" "x+y" #:assumptions facts #:rules '(add-zero))))
+(let ((report (φ:search "(x+0)+(y+0)" "x+y" #:assumptions facts #:rules '(add-zero))))
   (test-equal "exhaustive search finds both independently enumerated paths"
     '(((0) (1)) ((1) (0)))
     (map (lambda (certificate) (map math-derivation-step-path (math-derivation-steps certificate)))
@@ -28,7 +28,7 @@
   (lambda (depth)
     (for-each
       (lambda (states)
-        (let* ((run (lambda () (math-search "(x+0)+(y+0)" "x+y" #:assumptions facts
+        (let* ((run (lambda () (φ:search "(x+0)+(y+0)" "x+y" #:assumptions facts
                                 #:rules '(add-zero) #:max-depth depth #:max-states states)))
                (report (run)))
           (test-equal "identical bounded searches are reproducible" (fingerprint report) (fingerprint (run)))
@@ -43,16 +43,16 @@
             (test-assert "a bounded cutoff never claims exhaustion" (not (math-report-complete? report))))))
       '(1 2 4 5)))
   '(0 1 2))
-(let ((report (math-search "(x+0)+(y+0)" "x+y" #:assumptions facts #:rules '(add-zero) #:max-results 1)))
+(let ((report (φ:search "(x+0)+(y+0)" "x+y" #:assumptions facts #:rules '(add-zero) #:max-results 1)))
   (test-equal "result limit retains the already found path" 1 (length (math-report-candidates report)))
   (test-equal "result limit does not masquerade as an exhaustive result" 'result-limit (math-report-reason report)))
-(let ((report (math-search "x" "x" #:assumptions facts #:max-depth 0 #:max-states 1)))
+(let ((report (φ:search "x" "x" #:assumptions facts #:max-depth 0 #:max-states 1)))
   (test-assert "an exactly exhausted budget with no remaining work is complete" (math-report-complete? report))
   (test-equal "zero-edge certificates need no invented transition" '()
     (math-derivation-steps (car (math-report-candidates report)))))
 (for-each
   (lambda (size)
-    (let ((report (math-search-backward "x" "y" #:assumptions facts #:rules '(add-zero)
+    (let ((report (φ:search-backward "x" "y" #:assumptions facts #:rules '(add-zero)
                     #:max-depth 3 #:max-states 6 #:max-term-size size)))
       (test-assert "inverse growth is bounded by the explored-state budget" (<= (math-report-states report) 6))
       (test-assert "unbounded inverse growth is reported as a cutoff" (not (math-report-complete? report)))
@@ -76,7 +76,7 @@
           'rewrite-cycle (math-report-reason report))
         (test-equal "cycle reports keep their valid graph prefix" '((var x) (var y))
           (math-derivation-terms (math-report-derivation report))))
-      (let ((report (math-search "x" "0" #:assumptions facts #:rules '() #:max-depth 8)))
+      (let ((report (φ:search "x" "0" #:assumptions facts #:rules '() #:max-depth 8)))
         (test-equal "search avoids a cycle within each candidate path" 2 (math-report-states report))
         (test-assert "a fully explored cyclic component can be exhausted" (math-report-complete? report))))
     (lambda () (module-set! (resolve-module '(grove math rewrite)) 'math-rewrite-answers saved))))

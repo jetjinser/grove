@@ -22,10 +22,10 @@
   #:export (run-math-tests))
 
 (define (search-candidates . arguments)
-  (math-report-candidates (apply math-search arguments)))
+  (math-report-candidates (apply φ:search arguments)))
 
 (define (backward-candidates . arguments)
-  (math-report-candidates (apply math-search-backward arguments)))
+  (math-report-candidates (apply φ:search-backward arguments)))
 
 (define (diagnostic-codes verification)
   (map math-diagnostic-code (math-verification-diagnostics verification)))
@@ -47,17 +47,17 @@
       (math-value-term (φ:read "curl(curl(E))"))))
   (test-equal "precedence is resolved before term lowering"
     '(+ (var x) (* (var y) (num "2")))
-    (math-source->term "x + y * 2"))
+    (φ:term "x + y * 2"))
   (test-equal "underscore tokenizes as a script marker between identifiers"
     '(identifier subscript identifier eof)
     (map math-token-kind (tokenize-math "E_x")))
   (test-error "Semantic Formula DSL rejects layout-only subscripts" #t (φ:read "E_x"))
   (test-equal "unary minus, powers, and fractions have distinct term forms"
     '(+ (- (^ (var x) (num "2"))) (/ (var y) (num "3")))
-    (math-source->term "-x^2 + y/3"))
+    (φ:term "-x^2 + y/3"))
   (test-equal "equations parse as first-class mathematical terms"
     '(= (div (var E)) (num "0"))
-    (math-source->term "div(E)=0"))
+    (φ:term "div(E)=0"))
   (test-assert "math terms accept the declared symbolic grammar"
     (math-term? '(+ (var x) (* (var y) (num "2")))))
   (test-equal "numbers and declared variables receive scalar and vector types"
@@ -79,7 +79,7 @@
       (math-infer-type '((vector (var E)))
                        '(- (zero vector) (laplacian (var E))))))
   (test-equal "vector zero has an explicit symbolic representation"
-    '(zero vector) (math-source->term "zero(vector)"))
+    '(zero vector) (φ:term "zero(vector)"))
   (test-equal "scalar zero cannot be subtracted from a vector"
     #f (math-infer-type '((vector (var E))) '(- (num "0") (var E))))
   (test-equal "vector zero supports vector equations and addition"
@@ -99,9 +99,9 @@
     "curl requires a vector operand; add vector(E)"
     (math-type-diagnostic '() '(curl (var E))))
   (test-error "@derive reports missing type declarations" #t
-    (math-derive "curl(curl(E))"))
+    (φ:derive "curl(curl(E))"))
   (test-error "@derive reports a missing regularity assumption" #t
-    (math-derive "curl(curl(E))"
+    (φ:derive "curl(curl(E))"
                  #:assumptions '("vector(E)")))
   (test-equal "symbolic terms lower to the separate layout IR"
     'math-row
@@ -226,7 +226,7 @@
                #:assumptions '("vector(E); smooth(E)")
                #:max-depth 1)))))
   (let* ((derivation
-           (math-derive "curl(curl(E))"
+           (φ:derive "curl(curl(E))"
                                   #:assumptions
                                   '("vector(E); smooth(E)")))
          (html (sxml->html (content->sxml derivation))))
@@ -304,7 +304,7 @@
         (math-verification-valid? (math-verify-derivation backward-result))))
     (test-equal "goal search reports a finite state budget"
       'state-limit
-      (math-report-reason (math-search
+      (math-report-reason (φ:search
         "curl(curl(E))" "-laplacian(E)"
         #:assumptions '("vector(E); smooth(E); div(E)=0")
         #:max-depth 3 #:max-states 1))))
@@ -419,7 +419,7 @@
       (math-verify-derivation
         (car (search-candidates "div(grad(f)) + 0" "laplacian(f)"
                #:assumptions '("scalar(f); smooth(f)") #:max-depth 2)))))
-  (let* ((report (math-search "(x + 0) + (y + 0)" "x + y"
+  (let* ((report (φ:search "(x + 0) + (y + 0)" "x + y"
                    #:assumptions '("scalar(x); scalar(y)")
                    #:rules '(add-zero) #:max-states 4)))
     (test-equal "state-limited search preserves candidates already found"
@@ -436,36 +436,36 @@
   (test-equal "depth cutoff differs from exhausted search"
     'depth-limit
     (math-report-reason
-      (math-search "x + 0" "x" #:assumptions '("scalar(x)") #:max-depth 0)))
+      (φ:search "x + 0" "x" #:assumptions '("scalar(x)") #:max-depth 0)))
   (test-equal "an exhausted dead end is a complete search"
     'exhausted
     (math-report-reason
-      (math-search "x" "y" #:assumptions '("scalar(x); scalar(y)")
+      (φ:search "x" "y" #:assumptions '("scalar(x); scalar(y)")
         #:rules '() #:max-depth 0)))
   (test-equal "result limit remains visible in the report"
     'result-limit
     (math-report-reason
-      (math-search "(x + 0) + (y + 0)" "x + y"
+      (φ:search "(x + 0) + (y + 0)" "x + y"
         #:assumptions '("scalar(x); scalar(y)") #:rules '(add-zero)
         #:max-results 1)))
   (test-equal "inverse generation respects the explicit term size bound"
     'term-size-limit
     (math-report-reason
-      (math-search-backward "x" "y" #:assumptions '("scalar(x); scalar(y)")
+      (φ:search-backward "x" "y" #:assumptions '("scalar(x); scalar(y)")
         #:rules '(add-zero) #:max-term-size 3)))
   (test-equal "explicit inverse arithmetic rule selection enables bounded expansion"
     '((+ (var x) (num "0")) (var x))
     (math-derivation-terms
       (car (math-report-candidates
-             (math-search-backward "x" "x + 0" #:assumptions '("scalar(x)")
+             (φ:search-backward "x" "x + 0" #:assumptions '("scalar(x)")
                #:rules '(add-zero) #:max-depth 1)))))
   (test-equal "rule selection excludes other applicable rules"
     '()
     (math-report-candidates
-      (math-search "x + 0" "x" #:assumptions '("scalar(x)") #:rules '(multiply-one))))
+      (φ:search "x + 0" "x" #:assumptions '("scalar(x)") #:rules '(multiply-one))))
   (test-error "unknown selected rules are rejected" #t
-    (math-search "x" "x" #:assumptions '("scalar(x)") #:rules '(unknown-rule)))
-  (let* ((report (math-simplify "curl(curl(E)) + zero(vector)"
+    (φ:search "x" "x" #:assumptions '("scalar(x)") #:rules '(unknown-rule)))
+  (let* ((report (φ:simplify "curl(curl(E)) + zero(vector)"
                    #:assumptions '("vector(E)")))
          (candidate (car (math-report-candidates report))))
     (test-equal "normalization avoids expanding differential identities"
@@ -478,14 +478,14 @@
   (test-equal "normalization retains a partially simplified chain at its step limit"
     'step-limit
     (math-report-reason
-      (math-simplify "1 * (x + 0)" #:assumptions '("scalar(x)") #:max-steps 1)))
+      (φ:simplify "1 * (x + 0)" #:assumptions '("scalar(x)") #:max-steps 1)))
   (test-error "normalization rejects rules outside its arithmetic groups" #t
-    (math-simplify "x" #:assumptions '("scalar(x)") #:rules '(curl-curl-identity)))
+    (φ:simplify "x" #:assumptions '("scalar(x)") #:rules '(curl-curl-identity)))
   (let* ((sources '("curl(curl(E))" "grad(div(E)) - laplacian(E)"
                     "zero(vector) - laplacian(E)" "-laplacian(E)"))
          (assumptions '("vector(E); smooth(E); div(E)=0"))
-         (automatic (math-check-chain sources #:assumptions assumptions))
-         (explicit (math-check-chain sources #:assumptions assumptions
+         (automatic (φ:check-chain sources #:assumptions assumptions))
+         (explicit (φ:check-chain sources #:assumptions assumptions
                      #:steps '((curl-curl-identity ()) (divergence-free (0))
                                (subtract-zero ())))))
     (test-assert "authored chains infer and independently verify each adjacent rule"
@@ -499,7 +499,7 @@
     (test-assert "verified authored chains lower to annotated MathML"
       (string-contains (sxml->html (content->sxml (math-verification->content explicit)))
                        "Divergence Free")))
-  (let* ((verification (math-check-chain '("curl(grad(f))" "zero(vector)")
+  (let* ((verification (φ:check-chain '("curl(grad(f))" "zero(vector)")
                          #:assumptions '("scalar(f)")))
          (diagnostic (car (math-verification-diagnostics verification))))
     (test-equal "missing premises are inferred as diagnostics, never accepted as facts"
@@ -521,7 +521,7 @@
     (test-error "failed authored chains cannot be rendered as verified equalities" #t
       (math-verification->content verification)))
   (let* ((verification
-           (math-check-chain '("zero(vector) + curl(grad(f))"
+           (φ:check-chain '("zero(vector) + curl(grad(f))"
                                "zero(vector) + zero(vector)")
              #:assumptions '("scalar(f)")))
          (diagnostic (car (math-verification-diagnostics verification))))
@@ -530,7 +530,7 @@
     (test-assert "nested diagnostic labels use one-based operand positions"
       (string-contains (math-diagnostic-message diagnostic) "operand 2")))
   (let ((verification
-          (math-check-chain '("x + (y + 0)" "x + y")
+          (φ:check-chain '("x + (y + 0)" "x + y")
             #:assumptions '("scalar(x); scalar(y)") #:steps '((add-zero (1))))))
     (test-assert "explicit second-operand paths describe a real rewrite"
       (math-verification-valid? verification)))
@@ -552,7 +552,7 @@
       (test-equal (string-append "authored chain diagnoses " (symbol->string (car example)))
         (list (car example))
         (diagnostic-codes
-          (math-check-chain (cadr example) #:assumptions '("scalar(x); scalar(y)")
+          (φ:check-chain (cadr example) #:assumptions '("scalar(x); scalar(y)")
             #:steps (caddr example)))))
     '((unknown-rule ("x + 0" "x") (unknown))
       (invalid-path ("x + 0" "x") ((add-zero (2))))
@@ -561,11 +561,11 @@
   (test-equal "authored chains diagnose type-changing equations"
     '(type-change)
     (diagnostic-codes
-      (math-check-chain '("curl(grad(f))" "0")
+      (φ:check-chain '("curl(grad(f))" "0")
         #:assumptions '("scalar(f); smooth(f)") #:steps '(curl-grad-zero))))
   (for-each
     (lambda (example)
-      (let ((checked (math-check-chain (car example) #:assumptions (cadr example))))
+      (let ((checked (φ:check-chain (car example) #:assumptions (cadr example))))
         (test-equal "differential rule contracts explain missing authored premises"
           '(missing-premise) (diagnostic-codes checked))
         (test-assert "diagnostic contracts never discharge a differential premise"
@@ -578,26 +578,26 @@
   (test-assert "authored chains diagnose ill-typed operands"
     (memq 'type-error
       (diagnostic-codes
-        (math-check-chain '("curl(grad(f))" "zero(vector)")
+        (φ:check-chain '("curl(grad(f))" "zero(vector)")
           #:assumptions '("vector(f); smooth(f)") #:steps '(curl-grad-zero)))))
   (test-equal "rule selection applies to explicitly annotated authored chains"
     '(disabled-rule)
     (diagnostic-codes
-      (math-check-chain '("x + 0" "x") #:assumptions '("scalar(x)")
+      (φ:check-chain '("x + 0" "x") #:assumptions '("scalar(x)")
         #:steps '(add-zero) #:rules '(multiply-one))))
   (test-equal "disabled rules are not inferred for unannotated chains"
     '(no-rule)
     (diagnostic-codes
-      (math-check-chain '("x + 0" "x") #:assumptions '("scalar(x)") #:rules '())))
+      (φ:check-chain '("x + 0" "x") #:assumptions '("scalar(x)") #:rules '())))
   (test-equal "checking continues after the first failed authored step"
     '(1 2)
     (map math-diagnostic-step
       (math-verification-diagnostics
-        (math-check-chain '("x + 0" "y" "x")
+        (φ:check-chain '("x + 0" "y" "x")
           #:assumptions '("scalar(x); scalar(y)") #:steps '(add-zero multiply-one)))))
   (test-error "authored annotations must cover every adjacent pair" #t
-    (math-check-chain '("x + 0" "x") #:assumptions '("scalar(x)") #:steps '()))
-  (test-error "authored chains require at least two lines" #t (math-check-chain '("0")))
+    (φ:check-chain '("x + 0" "x") #:assumptions '("scalar(x)") #:steps '()))
+  (test-error "authored chains require at least two lines" #t (φ:check-chain '("0")))
   (test-equal "malformed certificates return diagnostics"
     '(invalid-chain)
     (diagnostic-codes (math-verify-derivation (make-math-derivation '() '() '()))))
@@ -616,9 +616,9 @@
           '((scalar (var x)))))))
   (for-each
     (lambda (source)
-      (let ((term (math-source->term source)))
+      (let ((term (φ:term source)))
         (test-equal "diagnostic source notation preserves mathematical structure"
-          term (math-source->term (math-term->source term)))))
+          term (φ:term (math-term->source term)))))
     '("zero(vector)" "div(E)=0" "-(x + y)" "x^2" "1 * (x + 0)"))
   (test-end "grove math pipeline"))
 

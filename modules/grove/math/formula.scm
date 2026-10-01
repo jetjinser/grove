@@ -2,108 +2,187 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math formula)
-  #:use-module (grove ir)
-  #:use-module (grove math syntax)
+  #:use-module ((grove math formula reader) #:prefix reader:)
+  #:use-module ((grove math semantic) #:prefix semantic:)
+  #:use-module ((grove math pipeline) #:prefix core:)
   #:use-module (grove math expression)
-  #:use-module (grove math source)
+  #:use-module (grove math assumption)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (read read-lines))
+  #:export (read read-lines assumptions term
+            add subtract negate multiply divide power dot cross
+            sin cos exp log grad divergence curl laplacian group styled
+            derivative partial-expression antiderivative-expression poisson-particular
+            call components
+            derive rewrite search search-backward simplify calculate normalize expand collect
+            check-chain compute check-equation solve-poisson differentiate partial partial-derivative))
 
-;; Formula DSL is an optional textual reader for Semantic values. Its AST is
-;; private to this boundary; all later computation uses ordinary math terms.
-(define (fragments values)
-  (append-map (lambda (value) (if (list? value) (fragments value) (list value))) values))
+;; Public Formula helpers are adapters: parse fragments once, then call the
+;; Semantic API. The parser itself lives in `formula reader` so Semantic
+;; constructors can use it without depending on this facade.
+(define-public (read . fragments)
+  (apply reader:read fragments))
 
-(define (syntax-preferences syntax embedded)
-  (case (math-expression-kind syntax)
-    ((embedded) (math-value-properties (assv-ref embedded (math-expression-start syntax))))
-    ((group) (acons 'parenthesized? #t (syntax-preferences (car (math-expression-children syntax)) embedded)))
-    (else
-     (let ((children (map (lambda (child) (syntax-preferences child embedded)) (math-expression-children syntax))))
-       (if (every null? children) '() (list (cons 'children children)))))))
+(define-public (read-lines . fragments)
+  (apply reader:read-lines fragments))
 
-(define (check-semantic-syntax syntax)
-  (when (and (eq? (math-expression-kind syntax) 'binary)
-             (eq? (math-expression-value syntax) 'subscript))
-    (error "a subscript needs an explicit mathematical meaning; use Notation DSL for a layout-only script"))
-  (for-each check-semantic-syntax (math-expression-children syntax)))
-
-(define (formula-expression->term expression)
-  (unless (math-expression? expression)
-    (error "expected a Formula DSL expression" expression))
-  (case (math-expression-kind expression)
-    ((embedded) (math-expression-value expression))
-    ((identifier) `(var ,(math-expression-value expression)))
-    ((number) `(num ,(math-expression-value expression)))
-    ((group) (formula-expression->term (car (math-expression-children expression))))
-    ((call)
-     (let ((arguments (map formula-expression->term (math-expression-children expression))))
-       (if (and (eq? (math-expression-value expression) 'zero)
-                (equal? arguments '((var vector))))
-           '(zero vector)
-           (cons (math-expression-value expression) arguments))))
-    ((negate) `(- ,(formula-expression->term (car (math-expression-children expression)))))
-    ((binary)
-     (let ((operator (case (math-expression-value expression)
-                       ((plus) '+) ((minus) '-) ((multiply) '*)
-                       ((divide) '/) ((power) '^) ((subscript) 'sub)
-                       ((equals) '=))))
-       (cons operator (map formula-expression->term (math-expression-children expression)))))
-    (else (error "unsupported Formula DSL syntax node" (math-expression-kind expression)))))
-
-(define-public (read . values)
-  "Read Formula DSL fragments into a Semantic value."
-  (if (and (= (length values) 1) (math-value? (car values))) (car values)
-      (let collect ((remaining (fragments values)) (offset 0)
-                    (tokens '()) (text '()) (embedded '()))
-        (cond
-          ((null? remaining)
-           (let* ((source (math-source-text (reverse text)))
-                  (syntax (parse-math-tokens
-                            (append (reverse tokens) (list (make-math-token 'eof "" offset offset)))))
-                  (term (begin (check-semantic-syntax syntax)
-                               (formula-expression->term syntax))))
-             (make-math-value term
-               #:origin (math-source-origin source #:syntax syntax
-                          #:embedded (map (lambda (entry) (cons (car entry) (math-value-origin (cdr entry)))) embedded))
-               #:properties (syntax-preferences syntax embedded)
-               #:requirements (append-map (lambda (entry) (math-value-requirements (cdr entry))) embedded)
-               #:declarations (delete-duplicates
-                                (append-map (lambda (entry) (math-value-declarations (cdr entry))) embedded) equal?))))
-          ((math-value? (car remaining))
-           (let ((value (car remaining)))
-             (collect (cdr remaining) (+ offset 1)
-               (cons (make-math-token 'embedded (math-value-term value) offset (+ offset 1)) tokens)
-               (cons (string-copy " ") text) (acons offset value embedded))))
-          ((or (string? (car remaining)) (content-text? (car remaining)) (content-layout? (car remaining)))
-           (let* ((run (take-while (lambda (value)
-                                     (or (string? value) (content-text? value) (content-layout? value))) remaining))
-                  (source (math-source-text run))
-                  (scanned (drop-right (tokenize-math source) 1)))
-             (collect (drop remaining (length run)) (+ offset (string-length source))
-               (append (reverse (map (lambda (token)
-                                       (make-math-token (math-token-kind token) (math-token-value token)
-                                         (+ offset (math-token-start token)) (+ offset (math-token-end token)))) scanned)) tokens)
-               (append (reverse run) text) embedded)))
-          (else (error "Formula DSL accepts text fragments and Semantic values" (car remaining)))))))
-
-(define-public (read-lines . values)
-  "Read a handwritten sequence of Formula DSL expressions separated by newlines."
-  (define (nonblank? parts)
-    (any (lambda (part) (or (math-value? part) (not (string-every char-whitespace? part)))) parts))
-  (let lines ((remaining (fragments values)) (pending '()) (output '()))
+(define (parse-assumptions sources)
+  "Read assumption syntax into Semantic fact terms for the computation API."
+  (define (decode source)
     (cond
-      ((null? remaining)
-       (reverse (if (nonblank? pending) (cons (apply read (reverse pending)) output) output)))
-      ((math-value? (car remaining)) (lines (cdr remaining) (cons (car remaining) pending) output))
-      ((or (string? (car remaining)) (content-text? (car remaining)) (content-layout? (car remaining)))
-       (let ((text (math-source-text (list (car remaining)))))
-         (let split ((start 0) (pending pending) (output output))
-           (let ((end (string-index text #\newline start)))
-             (if end
-                 (let ((pending (cons (math-source-slice text start end) pending)))
-                   (split (+ end 1) '()
-                     (if (nonblank? pending) (cons (apply read (reverse pending)) output) output)))
-                 (lines (cdr remaining) (cons (math-source-slice text start (string-length text)) pending) output))))))
-      (else (error "Formula DSL lines require text fragments or Semantic values" (car remaining))))))
+      ((string? source)
+       (map (lambda (part) (math-value-term (read part)))
+            (filter (lambda (part) (not (string-null? part)))
+              (map string-trim-both (string-split source #\;)))))
+      ((math-value? source)
+       (let ((declarations (math-value-declarations source)))
+         (if (pair? declarations) declarations
+             (list (math-value-term source)))))
+      ((math-assumption? source) (list source))
+      ((list? source) (append-map decode source))
+      (else (error "Formula assumptions require text, Semantic values, or fact terms" source))))
+  (delete-duplicates (append-map decode sources) equal?))
+
+(define-public (assumptions . sources)
+  (parse-assumptions sources))
+
+(define-public (term input)
+  (math-value-term (read input)))
+
+(define-syntax-rule (define-binary name constructor)
+  (define-public (name left right)
+    (constructor (read left) (read right))))
+
+(define-syntax-rule (define-unary name constructor)
+  (define-public (name . fragments)
+    (constructor (apply read fragments))))
+
+(define-binary add semantic:add)
+(define-binary subtract semantic:subtract)
+(define-unary negate semantic:negate)
+(define-binary multiply semantic:multiply)
+(define-binary divide semantic:divide)
+(define-binary power semantic:power)
+(define-binary dot semantic:dot)
+(define-binary cross semantic:cross)
+(define-unary sin semantic:sin)
+(define-unary cos semantic:cos)
+(define-unary exp semantic:exp)
+(define-unary log semantic:log)
+(define-unary grad semantic:grad)
+(define-unary divergence semantic:divergence)
+(define-unary curl semantic:curl)
+(define-unary laplacian semantic:laplacian)
+(define-unary group semantic:group)
+
+(define-public styled
+  (lambda* (input #:key (variant 'normal))
+    (semantic:styled (read input) #:variant variant)))
+
+(define-public (derivative input coordinate)
+  (semantic:derivative (read input) (read coordinate)))
+(define-public (partial-expression input coordinate)
+  (semantic:partial (read input) (read coordinate)))
+(define-public (antiderivative-expression input coordinate)
+  (semantic:antiderivative (read input) (read coordinate)))
+(define-public (poisson-particular input coordinate)
+  (semantic:poisson-particular (read input) (read coordinate)))
+
+(define-public (call function . operands)
+  (apply semantic:call function (map read operands)))
+
+(define-public components
+  (lambda* (x y z #:key space)
+    (semantic:components (read x) (read y) (read z) #:space space)))
+
+(define-public derive
+  (lambda* (source #:key (assumptions '()) (rules #f) (max-steps 32)
+                   (max-term-size 2048) (view 'compact) (on-error 'raise))
+    (core:math-derive (read source) #:assumptions (parse-assumptions (list assumptions)) #:rules rules
+      #:max-steps max-steps #:max-term-size max-term-size #:view view #:on-error on-error)))
+
+(define-public rewrite
+  (lambda* (source #:key (assumptions '()) (rules #f) (max-steps 32) (max-term-size 2048))
+    (core:math-rewrite (read source) #:assumptions (parse-assumptions (list assumptions)) #:rules rules
+      #:max-steps max-steps #:max-term-size max-term-size)))
+
+(define-public search
+  (lambda* (source target #:key (assumptions '()) (rules #f) (max-depth 8)
+            (max-results 5) (max-states 256) (max-term-size 128))
+    (core:math-search (read source) (read target) #:assumptions (parse-assumptions (list assumptions)) #:rules rules
+      #:max-depth max-depth #:max-results max-results #:max-states max-states
+      #:max-term-size max-term-size)))
+
+(define-public search-backward
+  (lambda* (target source #:key (assumptions '()) (rules #f) (max-depth 8)
+            (max-results 5) (max-states 256) (max-term-size 128))
+    (core:math-search-backward (read target) (read source) #:assumptions (parse-assumptions (list assumptions)) #:rules rules
+      #:max-depth max-depth #:max-results max-results #:max-states max-states
+      #:max-term-size max-term-size)))
+
+(define-public simplify
+  (lambda* (source #:key (assumptions '()) (rules #f) (max-steps 32) (max-term-size 2048))
+    (core:math-simplify (read source) #:assumptions (parse-assumptions (list assumptions)) #:rules rules
+      #:max-steps max-steps #:max-term-size max-term-size)))
+
+(define-public calculate
+  (lambda* (source #:key (assumptions '()) (max-steps 32) (max-term-size 2048))
+    (core:math-calculate (read source) #:assumptions (parse-assumptions (list assumptions))
+      #:max-steps max-steps #:max-term-size max-term-size)))
+
+(define-public normalize
+  (lambda* (source #:key (assumptions '()) (max-steps 32) (max-term-size 2048))
+    (core:math-normalize (read source) #:assumptions (parse-assumptions (list assumptions))
+      #:max-steps max-steps #:max-term-size max-term-size)))
+
+(define-public expand
+  (lambda* (source #:key (assumptions '()) (max-steps 32) (max-term-size 2048))
+    (core:math-expand (read source) #:assumptions (parse-assumptions (list assumptions))
+      #:max-steps max-steps #:max-term-size max-term-size)))
+
+(define-public collect
+  (lambda* (source #:key (assumptions '()) (max-steps 32) (max-term-size 2048))
+    (core:math-collect (read source) #:assumptions (parse-assumptions (list assumptions))
+      #:max-steps max-steps #:max-term-size max-term-size)))
+
+(define-public check-chain
+  (lambda* (sources #:key (assumptions '()) (steps #f) (rules #f))
+    (core:math-check-chain (map read sources)
+      #:assumptions (parse-assumptions (list assumptions)) #:steps steps #:rules rules)))
+
+(define-public compute
+  (lambda* (source #:key (assumptions '()) (max-steps 256) (max-term-size 8192))
+    (core:math-compute (read source) #:assumptions (parse-assumptions (list assumptions))
+      #:max-steps max-steps #:max-term-size max-term-size)))
+
+(define-public differentiate
+  (lambda* (source coordinate #:key (assumptions '()) (max-steps 128) (max-term-size 2048))
+    (core:math-differentiate (read source) (read coordinate)
+      #:assumptions (parse-assumptions (list assumptions))
+      #:max-steps max-steps #:max-term-size max-term-size)))
+
+(define-public partial
+  (lambda* (source coordinate #:key (assumptions '()) (max-steps 128) (max-term-size 2048))
+    (core:math-partial (read source) (read coordinate)
+      #:assumptions (parse-assumptions (list assumptions))
+      #:max-steps max-steps #:max-term-size max-term-size)))
+
+(define-public (partial-derivative source coordinate . options)
+  (apply partial source coordinate options))
+
+(define-public antiderivative
+  (lambda* (source coordinate #:key (assumptions '()) (max-steps 128) (max-term-size 8192))
+    (core:math-antiderivative (read source) (read coordinate)
+      #:assumptions (parse-assumptions (list assumptions))
+      #:max-steps max-steps #:max-term-size max-term-size)))
+
+(define-public solve-poisson
+  (lambda* (source #:key (coordinate #f) (assumptions '()) (max-steps 128) (max-term-size 8192))
+    (core:math-solve-poisson (read source) #:coordinate (and coordinate (read coordinate))
+      #:assumptions (parse-assumptions (list assumptions)) #:max-steps max-steps #:max-term-size max-term-size)))
+
+(define-public check-equation
+  (lambda* (left right #:key (assumptions '()) (max-steps 256) (max-term-size 8192))
+    (core:math-check-equation (read left) (read right)
+      #:assumptions (parse-assumptions (list assumptions))
+      #:max-steps max-steps #:max-term-size max-term-size)))

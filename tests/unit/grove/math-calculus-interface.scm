@@ -1,11 +1,11 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
-(use-modules (grove math pipeline) (grove math expression) (grove ir) (grove render html)
+(use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math expression) (grove ir) (grove render html)
              (tests unit grove cartesian-fixtures) (srfi srfi-13) (srfi srfi-64)
              (language scribble spec) (language scribble parser) (system base language))
 (test-begin "polynomial calculus composition and writing interface")
-(let ((report (math-compute "partial(antiderivative(x^3+2*x,x),x)" #:assumptions (list basis))))
-  (test-equal "a primitive composes with differentiation" (math-source->term "x^3+2*x") (math-report-final report))
+(let ((report (φ:compute "partial(antiderivative(x^3+2*x,x),x)" #:assumptions (list basis))))
+  (test-equal "a primitive composes with differentiation" (φ:term "x^3+2*x") (math-report-final report))
   (test-equal "composed primitive uses an explicit extra pass"
     '(polynomial-calculus components partial simplify) (map math-report-name (math-report-passes report)))
   (test-assert "composed certificate replays" (math-verification-valid? (math-verify-derivation (math-report-derivation report)))))
@@ -13,8 +13,8 @@
             (test-equal "unsupported primitive domain cannot disappear through cancellation" 'unsupported-expression
               (math-report-reason (execute "antiderivative(1/x,x)-antiderivative(1/x,x)"
                                     #:assumptions (list basis "nonzero(x)")))))
-  (list math-compute math-simplify))
-(let ((report (math-check-equation "partial(antiderivative((x+y)^2,x),x)" "(x+y)^2" #:assumptions (list basis))))
+  (list φ:compute φ:simplify))
+(let ((report (φ:check-equation "partial(antiderivative((x+y)^2,x),x)" "(x+y)^2" #:assumptions (list basis))))
   (test-assert "equation checker computes embedded primitives" (math-report-complete? report)))
 (let* ((source "@use-modules[((grove math semantic) #:prefix ◆:)]
 @(define r3 (◆:space 'x 'y 'z))

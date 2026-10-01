@@ -1,7 +1,7 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(use-modules (grove math pipeline) (grove math source)
+(use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math source)
              (grove render html) (grove render text)
              (language scribble spec) (system base language)
              (language scribble parser)
@@ -26,7 +26,7 @@
     (assq-ref (source-properties (car fragments)) 'column))
   (test-equal "following text retains its actual source line" 1
     (assq-ref (source-properties (car (reverse fragments))) 'line)))
-(define report (math-differentiate "x^3+2*x" "x" #:assumptions '("scalar(x)")))
+(define report (φ:differentiate "x^3+2*x" "x" #:assumptions '("scalar(x)")))
 (define certificate (math-report-derivation report))
 (define (display-report view)
   (car (math-completed-report->content report #:view view)))
@@ -75,7 +75,7 @@
 
 (let ((source (string-copy "x + (2 / 0)")))
   (set-source-properties! source '((filename . "notes/arithmetic.plant") (line . 7) (column . 2)))
-  (let* ((report (math-calculate source #:assumptions '("scalar(x)")))
+  (let* ((report (φ:calculate source #:assumptions '("scalar(x)")))
          (diagnostic (car (math-report-diagnostics report)))
          (location (math-diagnostic-source diagnostic)))
     (test-equal "nested invalid arithmetic points at its operand expression" 8 (math-location-line location))
@@ -86,13 +86,13 @@
        (target (string-copy "2")))
   (set-source-properties! source '((filename . "saved.plant") (line . 0) (column . 0)))
   (set-source-properties! target '((filename . "saved.plant") (line . 3) (column . 1)))
-  (let* ((checked (math-check-chain (list source target) #:assumptions '("scalar(x)")))
+  (let* ((checked (φ:check-chain (list source target) #:assumptions '("scalar(x)")))
          (replayed (math-verify-derivation (math-verification-derivation checked))))
     (test-equal "independent replay retains authored source attribution" 4
       (math-location-line (math-diagnostic-source (car (math-verification-diagnostics replayed)))))))
 (test-equal "ordinary Scheme inputs do not receive fabricated locations" #f
   (math-diagnostic-source (car (math-verification-diagnostics
-    (math-check-chain (map string-copy '("differentiate(x,x)" "2")) #:assumptions '("scalar(x)"))))))
+    (φ:check-chain (map string-copy '("differentiate(x,x)" "2")) #:assumptions '("scalar(x)"))))))
 (let* ((located (string-copy "x")) (computed (string-copy " + y")))
   (set-source-properties! located '((filename . "mixed.plant") (line . 0) (column . 0)))
   (let ((origin (math-source-origin (math-source-text (list located computed)))))

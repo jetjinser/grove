@@ -1,7 +1,7 @@
 @; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 @; SPDX-License-Identifier: CC0-1.0
 
-@use-modules[(math-derivations commands) ((grove math semantic) #:prefix ◆:)]
+@use-modules[((grove math formula) #:prefix φ:) (math-derivations commands) ((grove math semantic) #:prefix ◆:)]
 @title{Scalar calculus}
 @summary{Reusable declarations, chain and quotient rules, and real-domain premises.}
 
@@ -9,12 +9,12 @@
 @(define a (◆:parameter 'a))
 @(define f (◆:function 'f #:inputs '(scalar) #:result 'scalar))
 @with-assumptions[(list x a f "positive(x); smooth(f)")]{
-@differentiate[x]{@◆:sin{x^2}}
+@differentiate[x]{@φ:sin{x^2}}
 @differentiate[x]{cos(x^3)}
-@differentiate[x]{@◆:exp{a*x}}
-@differentiate[x]{@◆:log{x}}
+@differentiate[x]{@φ:exp{a*x}}
+@differentiate[x]{@φ:log{x}}
 @differentiate[x]{x/x^2}
-@differentiate[x]{@◆:call[f]{x^2}}
+@differentiate[x]{@φ:call[f]{x^2}}
 @math{@◆:prime[f]{x}}
 @check-derive[#:view 'full]{
   differentiate(log(x),x)
@@ -27,5 +27,5 @@
 @heading{Missing premises and invalid domains}
 @differentiate[x #:assumptions (list x) #:on-error 'show]{log(x)}
 @differentiate[x #:assumptions (list x) #:on-error 'show]{1/x}
-@differentiate[x #:assumptions (list x f) #:on-error 'show]{@◆:call[f]{x}}
+@differentiate[x #:assumptions (list x f) #:on-error 'show]{@φ:call[f]{x}}
 @differentiate[x #:assumptions (list x) #:on-error 'show]{log(-1)}
