@@ -6,6 +6,8 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-64)
   #:use-module (grove math syntax)
+  #:use-module (grove math formula)
+  #:use-module (grove math expression)
   #:use-module (grove math term)
   #:use-module (grove math layout)
   #:use-module (grove math rewrite)
@@ -40,24 +42,16 @@
       '(0 . 13)
       (cons (math-expression-start expression)
             (math-expression-end expression)))
-    (test-equal "syntax trees lower to symbolic Scheme terms"
+    (test-equal "Formula DSL reads to symbolic Scheme terms"
       '(curl (curl (var E)))
-      (math-expression->term expression)))
+      (math-value-term (read-formula "curl(curl(E))"))))
   (test-equal "precedence is resolved before term lowering"
     '(+ (var x) (* (var y) (num "2")))
     (math-source->term "x + y * 2"))
   (test-equal "underscore tokenizes as a script marker between identifiers"
     '(identifier subscript identifier eof)
     (map math-token-kind (tokenize-math "E_x")))
-  (test-equal "subscript source lowers to a distinct symbolic term"
-    '(sub (var E) (var x))
-    (math-expression->term (parse-math "E_x")))
-  (test-equal "superscript and subscript attach to the same base in order"
-    '(sub (^ (var x) (num "2")) (var i))
-    (math-expression->term (parse-math "x^2_i")))
-  (test-equal "grouping keeps a compound subscript inside an exponent"
-    '(^ (var x) (sub (var a) (var i)))
-    (math-expression->term (parse-math "x^(a_i)")))
+  (test-error "Semantic Formula DSL rejects layout-only subscripts" #t (read-formula "E_x"))
   (test-equal "unary minus, powers, and fractions have distinct term forms"
     '(+ (- (^ (var x) (num "2"))) (/ (var y) (num "3")))
     (math-source->term "-x^2 + y/3"))

@@ -12,7 +12,7 @@
 (define scalar-x '((scalar (var x))))
 (define conflict '((scalar (var y)) (vector (var y)) (scalar (var x))))
 (test-begin "mathematical expression contracts")
-(let ((value (semantic:expression "x+opaque(x)")))
+(let ((value (semantic:read "x+opaque(x)")))
   (test-assert "unknown function applications remain structurally valid"
     (math-term? (math-value-term value)))
   (test-assert "unknown function applications remain displayable"

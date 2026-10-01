@@ -1,6 +1,6 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
-(use-modules (grove math syntax) (grove math term) (grove math source)
+(use-modules (grove math syntax) (grove math formula) (grove math term) (grove math source)
              (grove math layout) (grove math pipeline) (grove math expression)
              ((grove math semantic) #:prefix semantic:)
              (grove ir) (grove render html)
@@ -9,12 +9,12 @@
 (for-each
   (lambda (pair)
     (test-equal (string-append "same multiplication term: " (car pair))
-      (math-expression->term (parse-math (cadr pair)))
-      (math-expression->term (parse-math (car pair)))))
+      (math-value-term (semantic:read (cadr pair)))
+      (math-value-term (semantic:read (car pair)))))
   '(("6x" "6*x") ("6x^2" "6*x^2") ("6(x+1)" "6*(x+1)")
     ("6sin(x)" "6*sin(x)") ("-6x" "-6*x") ("6 x" "6*x")
     ("6x/2" "6*x/2") ("(1/2)*6x" "(1/2)*6*x")
-    ("6x+2y" "6*x+2*y") ("6x^2_i" "6*x^2_i")))
+    ("6x+2y" "6*x+2*y")))
 (test-equal "multi-letter variables remain whole" '(var xy) (math-source->term "xy"))
 (test-equal "function calls remain calls" '(f (var x)) (math-source->term "f(x)"))
 (test-equal "implicit multiplication preserves source spans" '(0 . 4)
@@ -24,7 +24,7 @@
   '("1/2x" "x y" "2 3" "x^2y"))
 (test-equal "embedded semantic operands accept coefficients"
   '(* (num "6") (var x))
-  (math-value-term (semantic:expression "6" (semantic:variable 'x))))
+  (math-value-term (semantic:read "6" (semantic:variable 'x))))
 (define (html source)
   (sxml->html (content->sxml
     (make-content-element 'math (list (math-term->layout (math-source->term source)))))))

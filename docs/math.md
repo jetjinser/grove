@@ -392,7 +392,7 @@ expansion. A limit is not a proof that no derivation exists.
 @use-modules[((grove math semantic) #:prefix ◆:)
              ((grove math notation) #:prefix ◇:)
              (grove math pipeline)]
-@(define p @◆:expression{@◆:power{x}{3} + 2*x})
+@(define p @◆:read{@◆:power{x}{3} + 2*x})
 @math[p]
 @with-assumptions["scalar(x)"]{
   @differentiate["x" p]
@@ -403,7 +403,10 @@ expansion. A limit is not a proof that no derivation exists.
 @◇:math{@◇:parens[p]}
 ```
 
-`expression` decodes text, embedded values, and lists of fragments. Explicit
+`read` is the Formula DSL reader: it decodes text, embedded Semantic values, and
+lists of fragments into a Semantic value. Formula DSL is optional; Scheme
+constructors such as `◆:power`, `◆:add`, and `◆:multiply` build the same values
+directly. Explicit
 constructors include `variable`, exact rational `constant`, `add`, `subtract`,
 `negate`, `multiply`, `divide`, `power`, `grad`, `divergence`, `curl`, `laplacian`,
 `derivative`, and `vector-zero`. `group` preserves explicit parentheses;

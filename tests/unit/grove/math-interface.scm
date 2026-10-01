@@ -15,7 +15,7 @@
 (define (page source)
   (scribble-evaluate-document (open-input-string source) (default-environment scribble) "semantic.plant"))
 (define imports "@use-modules[((grove math semantic) #:prefix semantic:) ((grove math notation) #:prefix notation:) (grove math pipeline)]\n")
-(define polynomial (semantic:expression (semantic:power "x" "3") "+" (semantic:multiply "2" "x")))
+(define polynomial (semantic:read (semantic:power "x" "3") "+" (semantic:multiply "2" "x")))
 
 (test-begin "unified mathematical writing interface")
 (test-equal "semantic division uses the same notation as an authored fraction"
@@ -65,32 +65,32 @@
       (math-report-final (math-differentiate styled "x")))))
 (test-assert "nested grouping preferences survive composition"
   (string-contains
-    (html (document:math (semantic:expression (semantic:group "x+y") "+2")))
+    (html (document:math (semantic:read (semantic:group "x+y") "+2")))
     "<mo>(</mo>"))
 (test-assert "a negative power base renders with required parentheses"
   (string-contains (html (document:math (semantic:power (semantic:negate "x") "2")))
                    "<mo>(</mo>"))
 (test-assert "a valid semantic function is displayable without a calculation rule"
-  (string-contains (html (document:math (semantic:expression "sin(x)"))) "sin"))
+  (string-contains (html (document:math (semantic:read "sin(x)"))) "sin"))
 (test-equal "unsupported differentiation is distinct from missing semantics"
   'unsupported-expression
-  (math-diagnostic-code (car (math-report-diagnostics (math-differentiate (semantic:expression "opaque(x)") "x")))))
+  (math-diagnostic-code (car (math-report-diagnostics (math-differentiate (semantic:read "opaque(x)") "x")))))
 (test-error "notation operands are not interpreted by appearance" #t
   (math-calculate (notation:frac "1" "2")))
 (test-error "notation decoration does not declare a vector variable" #t
   (semantic:curl (notation:vec "E")))
 (with-math-assumptions '("scalar(x); scalar(i)")
   (test-equal "an uninterpreted function cannot silently act as a type-preserving index"
-    'unsupported-expression (math-report-reason (math-simplify (semantic:expression "sub(x,i)")))))
+    'unsupported-expression (math-report-reason (math-simplify (semantic:read "sub(x,i)")))))
 (test-assert "an uninterpreted function is not displayed as an inferred subscript"
-  (string-contains (html (document:math (semantic:expression "sub(x,i)"))) "<mi>sub</mi>"))
+  (string-contains (html (document:math (semantic:read "sub(x,i)"))) "<mi>sub</mi>"))
 (test-assert "notation can display a semantic object without changing its identity"
   (string-contains (html (notation:math (notation:parens polynomial))) "<msup>"))
 (test-equal "prefix commands support multiple complete body arguments"
   '((semantic:power (list "x+" (semantic:divide "y" "2")) "3"))
   (scribble-parse (open-input-string "@semantic:power{x+@semantic:divide{y}{2}}{3}")))
 (let ((rendered (html (page (string-append imports
-  "@(define p @semantic:expression{@semantic:power{x}{3} + 2*x})\n"
+  "@(define p @semantic:read{@semantic:power{x}{3} + 2*x})\n"
   "@math[p]\n"
   "@with-assumptions[\"scalar(x)\"]{\n"
   "@differentiate[\"x\" p]\n"

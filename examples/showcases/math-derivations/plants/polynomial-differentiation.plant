@@ -6,7 +6,7 @@
 @title{Polynomial differentiation}
 @summary{Separate differentiation and simplification passes with replayable steps.}
 
-@(define p @◆:expression{x^3+2x})
+@(define p @◆:read{x^3+2x})
 @with-assumptions["scalar(x)"]{
 @differentiate["x" p]
 @differentiate["x"]{(1/2)*x^2+x*x}

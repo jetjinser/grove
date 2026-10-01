@@ -3,7 +3,6 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math term)
-  #:use-module (grove math syntax)
   #:use-module (grove math operator)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
@@ -12,8 +11,7 @@
             math-term->source
             math-term-at-path
             math-term-paths
-            math-path-label
-            math-expression->term))
+            math-path-label))
 
 (define (math-term->source term)
   (unless (math-term? term) (error "invalid math term" term))
@@ -81,30 +79,3 @@
           (every math-term? (cdr term)) #t))
     ((symbol? (car term)) (every math-term? (cdr term)))
     (else #f)))
-
-(define (math-expression->term expression)
-  (unless (math-expression? expression)
-    (error "expected a parsed math expression" expression))
-  (case (math-expression-kind expression)
-    ((embedded) (math-expression-value expression))
-    ((identifier) `(var ,(math-expression-value expression)))
-    ((number) `(num ,(math-expression-value expression)))
-    ((group) (math-expression->term (car (math-expression-children expression))))
-    ((call)
-     (let ((arguments (map math-expression->term
-                           (math-expression-children expression))))
-       (if (and (eq? (math-expression-value expression) 'zero)
-                (equal? arguments '((var vector))))
-           '(zero vector)
-           (cons (math-expression-value expression) arguments))))
-    ((negate)
-     `(- ,(math-expression->term (car (math-expression-children expression)))))
-    ((binary)
-     (let ((operator (case (math-expression-value expression)
-                       ((plus) '+) ((minus) '-) ((multiply) '*)
-                       ((divide) '/) ((power) '^) ((subscript) 'sub)
-                       ((equals) '=))))
-       (cons operator (map math-expression->term
-                           (math-expression-children expression)))))
-    (else (error "unsupported math syntax node"
-                 (math-expression-kind expression)))))
