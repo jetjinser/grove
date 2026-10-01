@@ -4,5 +4,14 @@
 @use-modules[(math-derivations commands) (grove math catalog) (grove relation dsl)]
 @title{Inference rule catalog}
 
+@paragraph{The catalog is relational: rules can be selected by group, execution mode, input operator, or a declared premise. These queries inspect the same registered rules that the rewrite engine executes.}
+
+@(format #f "Rules whose input schema contains curl: ~s"
+         (query (name) (rule-operationo name 'curl)))
+
+@(format #f "Rules requiring differentiability: ~s"
+         (query (name premise)
+           (rule-premiseo name 'differentiable premise)))
+
 @(map (lambda (row) (math-rule->content (car row)))
       (query (name modes documentation) (ruleo name 'vector-calculus modes documentation)))

@@ -10,6 +10,20 @@
   (map car (query (name group modes documentation) (ruleo name group modes documentation))))
 (test-equal "group filtering queries actual registry facts" 8
   (length (query (name modes documentation) (ruleo name 'vector-calculus modes documentation))))
+(test-equal "mode filtering sees every checkable rule"
+  (length math-rewrite-rules)
+  (length (query (name) (rule-modeo name 'check))))
+(test-equal "operation filtering uses the input side of declared schemas"
+  '(curl-curl-identity div-curl-zero curl-grad-zero curl-product curl-components)
+  (query (name) (rule-operationo name 'curl)))
+(test-equal "premise filtering returns the actual declared premise"
+  '((curl-product (differentiable (unquote f)))
+    (curl-product (differentiable (unquote e))))
+  (query (name premise) (rule-premiseo name 'differentiable premise)
+         (== name 'curl-product)))
+(test-equal "algorithm rules without fixed schemas are absent from pattern queries" '()
+  (query (name) (rule-operationo name 'differentiate)
+         (== name 'differentiate-polynomial)))
 (test-equal "unknown names have no catalog answers" '()
   (query (group modes documentation) (ruleo 'missing-rule group modes documentation)))
 (test-equal "schema retains premises and executable type guards"

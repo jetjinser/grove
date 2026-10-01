@@ -7,6 +7,7 @@
   #:use-module (grove math rule)
   #:use-module (grove math layout)
   #:use-module (grove math term)
+  #:use-module (grove math operator)
   #:use-module (grove ir)
   #:use-module ((grove math notation core) #:prefix notation:)
   #:use-module (ice-9 format)
@@ -26,6 +27,57 @@
   "Relate rule names, groups, mode lists and Guile docstrings (#f if absent).
 Every argument may be unknown."
   (relationo catalog name group modes documentation))
+
+(define mode-catalog
+  (make-relation
+    (append-map (lambda (rule)
+                  (map (lambda (mode) (list (math-rewrite-rule-name rule) mode))
+                       (math-rewrite-rule-modes rule)))
+                math-rewrite-rules)
+    #:arity 2))
+
+(define-public (rule-modeo name mode)
+  "Relate a registered rule to each execution mode it supports."
+  (relationo mode-catalog name mode))
+
+(define (schema-operators term)
+  (if (not (pair? term)) '()
+      (append (if (math-operator-arities (car term)) (list (car term)) '())
+              (append-map schema-operators (cdr term)))))
+
+(define operation-catalog
+  (make-relation
+    (append-map
+      (lambda (rule)
+        (let ((schema (math-rewrite-rule-schema rule)))
+          (if schema
+              (map (lambda (operator) (list (math-rewrite-rule-name rule) operator))
+                   (delete-duplicates (schema-operators (car schema))))
+              '())))
+      math-rewrite-rules)
+    #:arity 2))
+
+(define-public (rule-operationo name operator)
+  "Relate a schema-backed rule to operators occurring in its input pattern."
+  (relationo operation-catalog name operator))
+
+(define premise-catalog
+  (make-relation
+    (append-map
+      (lambda (rule)
+        (let ((schema (math-rewrite-rule-schema rule)))
+          (if schema
+              (filter-map (lambda (premise)
+                            (and (pair? premise) (symbol? (car premise))
+                                 (list (math-rewrite-rule-name rule) (car premise) premise)))
+                          (list-ref schema 2))
+              '())))
+      math-rewrite-rules)
+    #:arity 3))
+
+(define-public (rule-premiseo name predicate premise)
+  "Relate a schema-backed rule to each declared premise predicate and term."
+  (relationo premise-catalog name predicate premise))
 
 ;; Metavariables are display placeholders, never concrete solver inputs.
 (define (template-term template)
