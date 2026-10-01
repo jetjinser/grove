@@ -11,7 +11,7 @@ Let E be a smooth vector field with zero divergence. Its double curl is the nega
 @heading{Automatic derivation}
 @derive{curl(curl(E))}
 
-Every displayed equality records the rule and operand where it was applied. Vector zero is distinct from scalar zero, so the intermediate subtraction stays well typed.
+Expand the steps to inspect each intermediate equality. Every equality records the rule and operand where it was applied. Vector zero is distinct from scalar zero, so the intermediate subtraction stays well typed.
 
 @heading{Searching for a specified conclusion}
 @search-derive["-laplacian(E)"]{curl(curl(E))}
@@ -19,7 +19,7 @@ Every displayed equality records the rule and operand where it was applied. Vect
 The search is bounded. Its report retains the stopping reason alongside the candidate; finding one derivation does not imply that all possible derivations have been enumerated.
 
 @heading{Checking an authored chain}
-@check-derive{
+@check-derive[#:view 'full]{
   curl(curl(E))
   grad(div(E)) - laplacian(E)
   zero(vector) - laplacian(E)
@@ -30,12 +30,11 @@ The author chooses the intermediate expressions. The checker reconstructs and re
 }
 
 @heading{When a premise is missing}
-@(map paragraph
-   (math-verification-errors
-     (math-check-chain
-       '("curl(curl(E))" "grad(div(E))-laplacian(E)")
-       #:assumptions '("vector(E)"))))
+@check-derive[#:assumptions "vector(E)" #:on-error 'show]{
+  curl(curl(E))
+  grad(div(E))-laplacian(E)
+}
 
-Here the identity has the correct shape but smooth(E) is absent. The diagnostic identifies the failed step, its rule, and its missing premise. It is displayed as data so this intentionally unsuccessful check does not abort the article build.
+Here the identity has the correct shape but smooth(E) is absent. The diagnostic identifies the failed step, its rule, and its missing premise. Open its source location to see the authored expression. It is displayed as data so this intentionally unsuccessful check does not abort the article build.
 
 For an algebraic pass with a different input language, see @link["polynomial-differentiation"]{polynomial differentiation}.

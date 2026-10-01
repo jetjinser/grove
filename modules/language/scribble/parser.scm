@@ -251,15 +251,24 @@
   (define-constant brace-char       #\{)
   (define-constant close-brace-char (char-mirror brace-char))
 
+  (define text-start #f)
+  (define (position)
+    `((filename . ,(port-filename in))
+      (line . ,(port-line in)) (column . ,(port-column in))))
+
   (define-inlinable (collect str res)
-    (if (pair? str) (cons (list->string (reverse str)) res) res))
+    (if (pair? str)
+        (let ((text (list->string (reverse str))))
+          (set-source-properties! text text-start)
+          (cons text res)) res))
   (define-inlinable (skip-space in)
     (let ([ch (peek-char in)])
       (cond [(char-whitespace? ch)  (read-char in) (skip-space in)]
             [(eqv? ch comment-char) (read-line in) (skip-space in)])))
 
   (define (tok str res punc depth)
-    (let ([c (read-char in)])
+    (let* ([start (position)] [c (read-char in)])
+      (when (null? str) (set! text-start start))
       (cond
         [(eof-object? c)
          (if (and (zero? depth) (not need-close?))
@@ -285,8 +294,11 @@
                 (cond [(eqv? #\| (peek-char in)) (read-char in) (tok '() ls punc depth)]
                       [else (loop (cons (scribble-read in) ls))]))]
              [else
-              (let ([str (drop str (length punc))]
-                    [x (scribble-parse-escape in escape-char)])
+              (let* ([str (drop str (length punc))]
+                     [saved-start text-start]
+                     [x (scribble-parse-escape in escape-char)])
+                (set! text-start saved-start)
+                (when (pair? x) (set-source-properties! x start))
                 (if (string? x)
                   (tok (append (reverse (string->list x)) str) res punc depth)
                   (tok '() (cons x (collect str res)) punc depth)))]))]
@@ -309,7 +321,9 @@
          (let* ([res (collect str res)]
                 [res (if (and (null? res) (null? str))
                        res
-                       (cons "\n" res))])
+                       (let ((text (string #\newline)))
+                         (set-source-properties! text start)
+                         (cons text res)))])
            (tok '() res punc depth))]
         [else
          (tok (cons c str) res punc depth)])))

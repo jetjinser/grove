@@ -234,7 +234,7 @@
            (string-contains html "<mo>·</mo>")
            (string-contains html "<mover accent=\"true\">")
            (string-contains html "Δ")
-           (string-contains html "curl-curl-identity (at root)"))))
+           (string-contains html "Curl Curl Identity"))))
   (let* ((results
            (search-candidates
              "curl(curl(E))" "-laplacian(E)"
@@ -257,7 +257,7 @@
                 (content->sxml (math-derivation->content result)))))
         (and (string-contains html "<mtable>")
              (string-contains html "<mover accent=\"true\">")
-             (string-contains html "divergence-free (at operand 1)"))))
+             (string-contains html "Divergence Free"))))
     (test-assert "forward search candidates pass independent derivation checking"
       (math-verification-valid? (math-verify-derivation result)))
     (test-equal "verification retains the candidate derivation"
@@ -495,7 +495,7 @@
            (math-derivation-steps (math-verification-derivation automatic))))
     (test-assert "verified authored chains lower to annotated MathML"
       (string-contains (sxml->html (content->sxml (math-verification->content explicit)))
-                       "divergence-free (at operand 1)")))
+                       "Divergence Free")))
   (let* ((verification (math-check-chain '("curl(grad(f))" "zero(vector)")
                          #:assumptions '("scalar(f)")))
          (diagnostic (car (math-verification-diagnostics verification))))

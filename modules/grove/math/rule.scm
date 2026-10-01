@@ -8,16 +8,18 @@
   #:export (make-math-rewrite-rule math-rule math-factso
             math-rules-stepo
             math-rewrite-rule? math-rewrite-rule-name math-rewrite-rule-equation
+            math-rewrite-rule-label
             math-rewrite-rule-condition math-rewrite-rule-condition-checked?
             math-rewrite-rule-group math-rewrite-rule-modes
             math-rewrite-rule-relation math-rewrite-rule-required-facts
             math-rewrite-rule-backward-default?))
 
 (define-record-type <math-rewrite-rule>
-  (%make-math-rewrite-rule name equation condition checked? group relation modes backward matcher default?)
+  (%make-math-rewrite-rule name equation label condition checked? group relation modes backward matcher default?)
   math-rewrite-rule?
   (name math-rewrite-rule-name)
   (equation math-rewrite-rule-equation)
+  (label math-rewrite-rule-label)
   (condition math-rewrite-rule-condition)
   (checked? math-rewrite-rule-condition-checked?)
   (group math-rewrite-rule-group)
@@ -51,15 +53,19 @@
 (define* (make-math-rewrite-rule name equation condition group relation
                                #:key (pattern #f) (premises '()) (matcher #f)
                                (forward? #t) (backward #f) (backward-default? #f)
-                               (condition-checked? #t))
+                               (condition-checked? #t) (label #f))
   (unless (and (symbol? name) (string? equation) (string? condition)
+               (or (not label) (string? label))
                (symbol? group) (procedure? relation)
                (boolean? forward?) (boolean? backward-default?) (boolean? condition-checked?)
                (or matcher pattern) (or (not matcher) (procedure? matcher))
                (or (not backward) (eq? backward #t) (procedure? backward))
                (or (not backward-default?) backward))
     (error "invalid math rule declaration" name))
-  (%make-math-rewrite-rule name equation condition condition-checked? group relation
+  (%make-math-rewrite-rule name equation
+    (or label (string-capitalize (string-map (lambda (c) (if (char=? c #\-) #\space c))
+                                             (symbol->string name))))
+    condition condition-checked? group relation
     (append (if forward? '(forward) '()) (if backward '(backward) '()) '(check))
     (if (eq? backward #t) relation backward)
     (or matcher (lambda (term)

@@ -71,14 +71,16 @@
     (polynomial-rule 'differentiate-product "d(f*g)/dx = d(f)/dx*g+f*d(g)/dx"
       (facts coordinate left right) (* ,left ,right)
       (+ (* (differentiate ,left (var ,coordinate)) ,right)
-         (* ,left (differentiate ,right (var ,coordinate)))) ())
+         (* ,left (differentiate ,right (var ,coordinate)))) ()
+      #:label "Product rule")
     (polynomial-rule 'differentiate-power "d(f^n)/dx = n*f^(n-1)*d(f)/dx"
       (facts coordinate base exponent result) (^ ,base (num ,exponent)) ,result
       ((project (exponent base coordinate)
          (let ((n (natural-value exponent)))
            (if (= n 0) (== result '(num "0"))
                (== result `(* (* (num ,exponent) (^ ,base (num ,(number->string (- n 1)))))
-                              (differentiate ,base (var ,coordinate)))))))))))
+                              (differentiate ,base (var ,coordinate))))))))
+      #:label "Power rule")))
 
 (define math-differentiation-rules
   (map math-rewrite-rule-name math-differentiation-rule-definitions))

@@ -12,7 +12,12 @@ For a polynomial in independent scalar coordinates, Grove supports exact integer
 @verbatim["@differentiate[\"x\"]{x^3 + 2*x}"]
 @differentiate["x"]{x^3 + 2*x}
 
-The first table ends with the raw derivative. The second begins with exactly that expression and ends with 3*x^2 + 2. Both tables retain individual rule names and operand paths. All expressions render as native MathML, including the derivative operator and fractions.
+By default the article shows the starting expression and the result. Open the steps to inspect the raw differentiation pass and the following simplification pass, with readable rule descriptions. All expressions render as native MathML, including the derivative operator and fractions.
+
+@heading{Showing only the endpoints}
+@differentiate["x" #:view 'result]{x^3 + 2*x}
+
+The result view omits the step display; it uses the same checked certificate.
 
 @heading{A composite base and a constant coordinate}
 @with-assumptions["scalar(y)"]{
@@ -32,7 +37,7 @@ Rational coefficients remain exact. The product rule produces two copies of x; c
 The symbolic derivative is an ordinary mathematical term. Goal search can therefore combine differentiation and arithmetic rules; the convenience command above keeps those operations in separate passes instead.
 
 @heading{Verify selected steps by hand}
-@check-derive{
+@check-derive[#:view 'full]{
   differentiate(x^3,x)
   3*x^2*differentiate(x,x)
   3*x^2*1
@@ -41,18 +46,15 @@ The symbolic derivative is an ordinary mathematical term. Goal search can theref
 }
 
 @heading{Reject an incorrect result}
-@(map paragraph
-   (math-verification-errors
-     (math-check-chain '("differentiate(x,x)" "2")
-       #:assumptions '("scalar(x)"))))
+@check-derive[#:assumptions "scalar(x)" #:on-error 'show]{
+  differentiate(x,x)
+  2
+}
 
 A claimed derivative of 2 fails replay against the variable rule. The automatic polynomial pass also rejects nonconstant division, functions such as sin(x), and negative or symbolic exponents before producing a partial derivation. Bounds limit expansion size and step count; this is not an integration engine or a general computer algebra system.
 
 @heading{Inspect an unfinished calculation}
-@(map paragraph
-   (map math-diagnostic-message
-     (math-report-diagnostics
-       (math-differentiate "x^3" "x" #:assumptions '("scalar(x)") #:max-steps 1))))
+@differentiate["x" #:assumptions "scalar(x)" #:max-steps 1 #:on-error 'show]{x^3}
 
 The report preserves the first power-rule step and marks its step limit. Scheme code can inspect that partial certificate; the document command refuses to display it as a completed derivative.
 

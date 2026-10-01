@@ -21,10 +21,12 @@
        (top-level? `(make-content-text ,fragment))
        (else fragment)))
     ((pair? fragment)
-     (cons (car fragment)
+     (let ((expression (cons (car fragment)
            (map (lambda (child)
                   (fragment->expression child #f))
-                (cdr fragment))))
+                (cdr fragment)))))
+       (set-source-properties! expression (source-properties fragment))
+       expression))
     (else fragment)))
 
 (define (scribble-language-reader port env)
@@ -174,6 +176,7 @@
   (use-interface-if-needed! module '(language scribble commands)))
 
 (define* (scribble-evaluate-document port environment #:optional (source #f))
+  (when source (set-port-filename! port source))
   (save-module-excursion
     (lambda ()
       (set-current-module environment)

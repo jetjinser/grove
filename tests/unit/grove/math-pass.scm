@@ -57,6 +57,6 @@
 (test-assert "generic report rendering identifies the operation and its diagnostics"
   (let ((html (sxml->html
                 `(article ,@(map content->sxml (math-report->content (math-calculate "1/0")))))))
-    (and (string-contains html "Calculate stopped:")
+    (and (string-contains html "Calculate failed:")
          (string-contains html "division by zero"))))
 (test-end "shared math execution")

@@ -5,6 +5,7 @@
 (define-module (language scribble commands)
   #:use-module (grove ir)
   #:use-module (grove math pipeline)
+  #:use-module (grove math source)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13))
 
@@ -81,7 +82,7 @@
 ;; for all math commands; lambda* owns option defaults and validation.
 (define (math-command-text fragments)
   (let body ((remaining fragments) (text '()))
-    (cond ((null? remaining) (content-verbatim-string (reverse text)))
+    (cond ((null? remaining) (math-source-text (reverse text)))
           ((keyword? (car remaining)) (body (cddr remaining) text))
           (else (body (cdr remaining) (cons (car remaining) text))))))
 
@@ -89,30 +90,34 @@
   (if assumptions (list assumptions) '()))
 
 (define-public derive
-  (lambda* (#:key (assumptions #f) #:rest source)
+  (lambda* (#:key (assumptions #f) (view 'compact) #:rest source)
     (math-derive (math-command-text source)
-      #:assumptions (command-assumptions assumptions))))
+      #:assumptions (command-assumptions assumptions) #:view view)))
 
 (define-public check-derive
-  (lambda* (#:key (assumptions #f) #:rest source)
-    (let ((lines
-            (filter (lambda (line) (not (string-null? line)))
-                    (map string-trim-both
-                         (string-split (math-command-text source) #\newline)))))
+  (lambda* (#:key (assumptions #f) (view 'compact) (on-error 'raise) #:rest source)
+    (let ((lines (math-source-lines (math-command-text source))))
       (math-verification->content
-        (math-check-chain lines #:assumptions (command-assumptions assumptions))))))
+        (math-check-chain lines #:assumptions (command-assumptions assumptions))
+        #:view view #:on-error on-error))))
 
 (define-public differentiate
-  (lambda* (variable #:key (assumptions #f) #:rest source)
+  (lambda* (variable #:key (assumptions #f) (view 'compact) (on-error 'raise)
+                          (max-steps 128) (max-term-size 2048) #:rest source)
     (math-completed-report->content
       (math-differentiate (math-command-text source) variable
-        #:assumptions (command-assumptions assumptions)))))
+        #:assumptions (command-assumptions assumptions)
+        #:max-steps max-steps #:max-term-size max-term-size)
+      #:view view #:on-error on-error)))
 
 (define-public search-derive
-  (lambda* (target #:key (assumptions #f) #:rest source)
+  (lambda* (target #:key (assumptions #f) (view 'compact)
+                       (max-depth 8) (max-states 256) #:rest source)
     (math-report->content
       (math-search (math-command-text source) target
-        #:assumptions (command-assumptions assumptions) #:max-results 1))))
+        #:assumptions (command-assumptions assumptions) #:max-results 1
+        #:max-depth max-depth #:max-states max-states)
+      #:view view)))
 
 (define-public (tex-math . source)
   (make-content-element 'math

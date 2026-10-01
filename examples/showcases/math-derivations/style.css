@@ -3,3 +3,6 @@
 body { max-width: 70rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; }
 .math-display { overflow-x: auto; margin: 1.5rem 0; }
 pre { overflow-x: auto; padding: 1rem; background: #eee; }
+summary { cursor: pointer; }
+.math-derivation > details { padding: 0.5rem 1rem; border-left: 2px solid #bbb; }
+.math-diagnostic { padding: 0.5rem 1rem; border-left: 3px solid #b44; margin: 1rem 0; }

@@ -8,6 +8,7 @@
   #:use-module (grove math term)
   #:use-module (grove math rewrite)
   #:use-module (grove math types)
+  #:use-module (grove math source)
   #:use-module (grove relation)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
@@ -18,7 +19,7 @@
             math-verification-derivation)
   #:re-export (math-diagnostic? math-diagnostic-step math-diagnostic-rule
             math-diagnostic-path math-diagnostic-code
-            math-diagnostic-premises math-diagnostic-message))
+            math-diagnostic-premises math-diagnostic-message math-diagnostic-source))
 
 (define-record-type <math-verification>
   (make-math-verification derivation diagnostics)
@@ -31,7 +32,7 @@
        (null? (math-verification-diagnostics verification))))
 
 (define (math-verification-errors verification)
-  (map math-diagnostic-message (math-verification-diagnostics verification)))
+  (map math-diagnostic-description (math-verification-diagnostics verification)))
 
 (define* (diagnostic index rule path code message #:optional (premises '()))
   (make-math-diagnostic index rule path code premises
@@ -105,7 +106,7 @@
   (null? (step-diagnostics 1 assumptions from to rule path
                           (math-rule-names #:mode 'check))))
 
-(define* (math-verify-derivation result #:key (rules #f))
+(define* (verify-math-certificate result #:key (rules #f))
   (unless (math-derivation? result) (error "expected a math derivation" result))
   (let* ((assumptions (math-derivation-assumptions result))
          (terms (math-derivation-terms result))
@@ -178,7 +179,7 @@
           (make-math-derivation-step from to (and hint (car hint))
                                      (if hint (cadr hint) '()))))))
 
-(define* (check-math-chain terms assumptions #:key (steps #f) (rules #f))
+(define* (check-math-chain terms assumptions #:key (steps #f) (rules #f) (sources '()))
   (unless (and (list? terms) (>= (length terms) 2) (every math-term? terms))
     (error "a handwritten math chain needs at least two valid terms" terms))
   (when (and steps (not (and (list? steps) (= (length steps) (- (length terms) 1)))))
@@ -202,5 +203,22 @@
               (else (error "expected a rule name or (rule operand-path)" spec))))
           (drop-right terms 1) (cdr terms)
           (or steps (make-list (- (length terms) 1) #f)))
-        assumptions)
+        assumptions #:sources sources)
       #:rules allowed)))
+
+(define* (math-verify-derivation certificate #:key (rules #f))
+  (let* ((verification (verify-math-certificate certificate #:rules rules))
+         (sources (math-derivation-sources certificate))
+         (sources (if (and (list? sources) (every (lambda (s) (or (not s) (math-origin? s))) sources))
+                      sources '()))
+         (fallback (find math-origin? sources)))
+    (make-math-verification certificate
+      (map (lambda (diagnostic)
+             (let* ((step (math-diagnostic-step diagnostic))
+                    (index (if step
+                               (if (eq? (math-diagnostic-code diagnostic) 'target-mismatch)
+                                   step (- step 1)) 0))
+                    (origin (and (< index (length sources)) (list-ref sources index))))
+               (math-locate-diagnostic diagnostic (or origin fallback)
+                 (if origin (math-diagnostic-path diagnostic) '()))))
+           (math-verification-diagnostics verification)))))

@@ -4,6 +4,7 @@
 
 (define-module (grove render text)
   #:use-module (grove ir)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (content->text))
 
@@ -31,6 +32,13 @@
                 (handler element body)
                 (case kind
             ((paragraph) (string-append body "\n"))
+            ((summary) (string-append body "\n"))
+            ((math-derivation)
+             (let ((children (content-element-children element)))
+               (if (and (= (length children) 2)
+                        (content-element? (cadr children))
+                        (eq? 'details (content-element-kind (cadr children))))
+                   (render (cadr children)) body)))
             ((heading)
              (string-append body "\n"
                             (make-string (string-length body) #\=) "\n"))
@@ -72,8 +80,19 @@
                               (render (cadr children)))))
             ((math-vector) (string-append body "⃗"))
             ((math-parens) (string-append "(" body ")"))
-            ((math-align) body)
-            ((math-row) (string-append body "\n"))
+            ((math-align)
+             (string-concatenate
+               (map (lambda (row) (string-append (render row) "\n"))
+                    (content-element-children element))))
+            ((math-row)
+             (let ((children (content-element-children element)))
+               (if (every (lambda (child)
+                            (and (content-element? child)
+                                 (eq? (content-element-kind child) 'math-cell)))
+                          children)
+                   (string-join (filter (lambda (text) (not (string-null? text)))
+                                        (map render children)) " ")
+                   body)))
             ((math-cell) body)
                   (else body)))))))
 

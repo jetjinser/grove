@@ -41,6 +41,11 @@
             ((code) (cons 'code children))
             ((code-block) `(pre (code ,@children)))
             ((verbatim) (cons 'pre children))
+            ((details) (cons 'details children))
+            ((summary) (cons 'summary children))
+            ((math-derivation math-diagnostics)
+             `(div (@ (class ,(symbol->string kind))) ,@children))
+            ((math-diagnostic) `(aside (@ (class "math-diagnostic")) ,@children))
                   (else
                    `(span (@ (class ,(symbol->string kind))) ,@children)))))))))
 
@@ -58,7 +63,11 @@
           (case kind
             ((math-token)
              (let ((tag (content-element-property child 'token-kind)))
-               (list tag (content-verbatim-string children))))
+               `(,tag
+                 ,@(let ((rule (content-element-property child 'rule))
+                         (path (content-element-property child 'path)))
+                     (if rule `((@ (data-rule ,rule) (data-path ,path))) '()))
+                 ,(content-verbatim-string children))))
             ((math-frac)
              (unless (= (length children) 2)
                (error "MathML fraction requires numerator and denominator" child))

@@ -252,7 +252,8 @@ Errors distinguish missing premises, invalid paths, rule-shape and target
 mismatches, unknown/disabled rules, and type failures. Checking continues after
 a failed step. Missing-premise inference is diagnostic only: it never modifies
 the certificate's assumptions or turns an unproved premise into a verified fact.
-`math-verification->content` accepts only a valid verification.
+`math-verification->content` raises for invalid verification by default;
+`#:on-error 'show` displays its diagnostics.
 
 In a `.plant` document, `@check-derive` takes the assumption string in brackets
 and one complete expression per nonempty body line:
@@ -269,3 +270,42 @@ and one complete expression per nonempty body line:
 Successful chains render the authored lines as annotated MathML. Failed chains
 stop document evaluation with the step diagnostics. Scheme-level
 `math-check-chain` provides explicit annotations and programmatic error handling.
+
+## Article presentation and source diagnostics
+
+The presentation pass in `(grove math presentation)` is independent of
+computation and certificate replay. The default `#:view 'compact` shows the
+starting expression and endpoint with a native HTML disclosure for all steps.
+`#:view 'full` displays every step immediately; `#:view 'result` shows only the
+two endpoints. Differentiation details preserve the separate differentiation
+and simplification passes. Text output retains all steps of a compact view.
+Rule labels are readable descriptions; HTML retains rule identifiers and
+operand paths as `data-rule` and `data-path` attributes.
+
+```scheme
+@with-assumptions["scalar(x)"]{
+  @differentiate["x"]{x^3 + 2*x}
+  @differentiate["x" #:view 'result]{x^3 + 2*x}
+  @check-derive[#:view 'full]{differentiate(x,x)
+1}
+}
+@check-derive[#:assumptions "scalar(x)" #:on-error 'show]{
+  differentiate(x,x)
+  2
+}
+```
+
+Failed verification or incomplete differentiation raises by default.
+`#:on-error 'show` renders diagnostics instead of claiming a completed equality.
+`@differentiate` also accepts `#:max-steps` and `#:max-term-size`;
+`@search-derive` accepts `#:max-depth` and `#:max-states`. Search reports always
+retain their stopping reason and distinguish exhaustive results from cutoffs.
+
+Located `.plant` inputs carry source metadata separately from mathematical
+terms. `math-diagnostic-source` returns a `math-location` or `#f`; its accessors
+provide `file`, one-based `line` and `column`, and a source `excerpt`.
+Article diagnostics expose the filename and position in an expandable source
+snippet; raised errors include the full source path. Authored certificates
+retain origins for independent replay. Generated expressions use the input
+location as a fallback instead of claiming an exact authored operand position.
+Computed strings without reader metadata remain unlocated.

@@ -8,7 +8,7 @@
             math-derivation-step-rule math-derivation-step-path
             make-math-derivation math-derivation?
             math-derivation-terms math-derivation-steps
-            math-derivation-assumptions))
+            math-derivation-assumptions math-derivation-sources))
 
 ;; Both generated candidates and authored chains share the same certificate.
 (define-record-type <math-derivation-step>
@@ -20,8 +20,12 @@
   (path math-derivation-step-path))
 
 (define-record-type <math-derivation>
-  (make-math-derivation terms steps assumptions)
+  (%make-math-derivation terms steps assumptions sources)
   math-derivation?
   (terms math-derivation-terms)
   (steps math-derivation-steps)
-  (assumptions math-derivation-assumptions))
+  (assumptions math-derivation-assumptions)
+  (sources math-derivation-sources))
+
+(define* (make-math-derivation terms steps assumptions #:key (sources '()))
+  (%make-math-derivation terms steps assumptions sources))
