@@ -35,7 +35,7 @@
 @heading{搜索指定结论}
 @search-derive["-laplacian(E)"]{curl(curl(E))}
 
-搜索可以组合多个规则。找到一个证书与穷尽全部路径是两件事；报告会说明搜索的停止原因。
+搜索可以组合多个规则。找到一份 derivation certificate（可独立重放核验的推导记录）与穷尽全部路径是两件事；报告会说明搜索的停止原因。
 
 @heading{核验作者选择的步骤}
 @check-derive[#:view 'full]{
@@ -52,7 +52,7 @@
    (math-search-backward "-laplacian(E)" "curl(curl(E))"
      #:max-depth 3 #:max-results 1))
 
-Scheme API 的反向搜索先给目标，再给要求恢复的起点；返回的证书仍按正常的正向推导顺序排列。
+Scheme API 的反向搜索先给目标，再给要求恢复的起点；返回的derivation certificate仍按正常的正向推导顺序排列。
 }
 
 @heading{其他向量恒等式}
@@ -108,7 +108,7 @@ y 被当作与 x 独立的坐标，关于 x 的导数为零。自然数幂的求
 @heading{只显示端点}
 @differentiate["x" #:view 'result]{x^3 + 2*x}
 
-result 视图省略步骤展示；它使用与默认视图相同的计算和证书。
+result 视图省略步骤展示；它使用与默认视图相同的计算和derivation certificate。
 
 @heading{从形式导数搜索结果}
 @search-derive["3*x^2"]{differentiate(x^3,x)}
@@ -121,7 +121,7 @@ result 视图省略步骤展示；它使用与默认视图相同的计算和证�
   3*x^2
 }
 
-@heading{六、证书可以独立重放}
+@heading{六、derivation certificate可以独立重放}
 }
 
 @(define polynomial-report
@@ -130,11 +130,11 @@ result 视图省略步骤展示；它使用与默认视图相同的计算和证�
 @(define polynomial-certificate (math-report-derivation polynomial-report))
 
 @(paragraph
-   (format #f "离开假设作用域后，独立核验证书：~a；证书保留 ~a 步以及计算时的 scalar(x) 前提。"
+   (format #f "离开假设作用域后，独立核验 derivation certificate：~a；derivation certificate保留 ~a 步以及计算时的 scalar(x) 前提。"
      (if (math-verification-valid? (math-verify-derivation polynomial-certificate)) "通过" "失败")
      (length (math-derivation-steps polynomial-certificate))))
 
-证书记录每一步的输入、输出、规则、操作路径，以及有效前提。核验器重新应用规则，不依赖当时的搜索队列或当前假设作用域。
+derivation certificate记录每一步的输入、输出、规则、操作路径，以及有效前提。核验器重新应用规则，不依赖当时的搜索队列或当前假设作用域。
 
 @heading{七、失败诊断与资源限制}
 
@@ -172,7 +172,7 @@ result 视图省略步骤展示；它使用与默认视图相同的计算和证�
 @search-derive["2" #:assumptions "scalar(x)"]{differentiate(x,x)}
 @search-derive["3*x^2" #:assumptions "scalar(x)" #:max-depth 0]{differentiate(x^3,x)}
 
-第一个例子在当前规则和前提下搜索结束但没有证书；第二个例子达到深度限制。后者不表示目标不可达。
+第一个例子在当前规则和前提下搜索结束但没有 derivation certificate；第二个例子达到深度限制。后者不表示目标不可达。
 
 @heading{除零诊断}
 @(math-completed-report->content (math-calculate "1/0") #:on-error 'show)
