@@ -577,3 +577,13 @@ The fourth field of `ruleo` queries documentation in either direction, and
 `math-rule->content` displays the explanation. Undocumented rules return `#f`;
 add `(=/= documentation #f)` to select only documented rules. Documentation is prose only;
 execution continues to use the structured schema and executable relation.
+
+Numeric coefficients may omit `*`: `6x`, `6x^2`, `6(x+1)`, `6sin(x)` and
+`-6x` lower to ordinary multiplication terms. Juxtaposition has the same
+precedence as explicit multiplication; powers bind more tightly. Whitespace
+is allowed after a coefficient. Multi-letter identifiers such as `xy` remain
+single variable names, and `f(x)` remains a function call. Ambiguous forms such
+as `1/2x` are rejected: write `(1/2)*x` or `1/(2x)` explicitly.
+Semantic rendering prefers coefficient juxtaposition, including for explicitly
+written products. Numeric products and numeric-base powers retain the
+multiplication sign; dot and cross products retain their own symbols.
