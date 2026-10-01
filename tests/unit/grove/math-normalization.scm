@@ -113,4 +113,15 @@
 (test-assert "normalization provenance is retained"
   (any math-origin-generated?
     (math-derivation-sources (math-report-derivation (math-normalize "y*x" #:assumptions facts)))))
+(for-each
+  (lambda (source)
+    (let ((report (math-simplify source #:assumptions '("coordinate(x)"))))
+      (test-assert "function-plus-constant normalization does not cycle"
+        (math-report-complete? report))
+      (test-equal "constants follow zero-degree function terms"
+        (math-source->term "sin(x)+1") (math-report-final report))
+      (test-assert "function-plus-constant normal forms are idempotent"
+        (null? (math-derivation-steps (math-report-derivation
+                 (math-simplify (math-report-result report) #:assumptions '("coordinate(x)"))))))))
+  '("sin(x)+1" "1+sin(x)" "sin(x)+2-1"))
 (test-end "stable scalar normalization")

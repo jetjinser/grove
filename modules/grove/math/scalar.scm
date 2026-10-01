@@ -77,11 +77,11 @@
           (+ n (if (eq? (caar factor) 'var) (cdr factor) 0))) 0 (cdr (product term))))
 
 (define (summand<? a b)
-  (or (> (degree a) (degree b))
-      (and (= (degree a) (degree b))
-           (or (and (not (equal? a '(num "1"))) (equal? b '(num "1")))
-               (and (not (equal? b '(num "1")))
-                    (string<? (math-term->source a) (math-term->source b)))))))
+  (cond ((> (degree a) (degree b)) #t)
+        ((< (degree a) (degree b)) #f)
+        ((equal? a '(num "1")) #f)
+        ((equal? b '(num "1")) #t)
+        (else (string<? (math-term->source a) (math-term->source b)))))
 
 (define (scalar-normalize input)
   (define result
