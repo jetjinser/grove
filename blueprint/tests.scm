@@ -35,6 +35,7 @@
     "unit/grove/math-search.scm"
     "unit/grove/math-writing.scm"
     "unit/grove/math-declarations.scm"
+    "unit/grove/math-normalization.scm"
     "unit/grove/semantic.scm"
     "unit/grove/math-interface.scm"
     "unit/grove/math-presentation.scm"

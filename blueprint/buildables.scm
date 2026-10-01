@@ -28,6 +28,8 @@
     "grove/math/differentiation.scm"
     "grove/math/arithmetic.scm"
     "grove/math/number.scm"
+    "grove/math/normalization.scm"
+    "grove/math/scalar.scm"
     "grove/math/premise.scm"
     "grove/math/derivation.scm"
     "grove/math/diagnostic.scm"

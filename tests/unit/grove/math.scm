@@ -177,7 +177,7 @@
       differentiate-negation differentiate-sum differentiate-difference
       differentiate-product differentiate-power differentiate-quotient differentiate-sin
       differentiate-cos differentiate-exp differentiate-log differentiate-function evaluate-constant collect-like-terms
-      combine-coefficients)
+      combine-coefficients normalize-scalar cancel-scalar-factors expand-scalar-product)
     (map math-rewrite-rule-name math-rewrite-rules))
   (test-assert "curl-curl side conditions are matched against typed assumptions"
     (and (math-rewrite-rule? (math-rewrite-rule-ref 'curl-curl-identity))

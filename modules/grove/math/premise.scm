@@ -3,17 +3,40 @@
 
 (define-module (grove math premise)
   #:use-module (grove math number)
+  #:use-module (grove math scalar)
   #:use-module (grove math term)
   #:use-module (grove math diagnostic)
   #:use-module (srfi srfi-1)
-  #:export (math-premise-known? math-definedness-diagnostics))
+  #:export (math-premise-known? math-definedness-diagnostics math-domain-premises math-requirement-diagnostics))
+
+(define (math-domain-premises term)
+  (delete-duplicates
+    (filter-map (lambda (path)
+                  (let ((local (math-term-at-path term path)))
+                    (case (car local)
+                      ((/) `(nonzero ,(caddr local)))
+                      ((log) `(positive ,(cadr local)))
+                      ((prime) `(smooth ,(cadr local)))
+                      (else #f)))) (math-term-paths term)) equal?))
+
+(define (math-requirement-diagnostics facts requirements)
+  (filter-map (lambda (fact)
+                (and (not (math-premise-known? facts fact))
+                     (make-math-diagnostic #f #f '() 'missing-premise (list fact)
+                       (format #f "retained domain premise: ~a" (math-term->source fact)))))
+              requirements))
 
 ;; Small, constructive entailment over real expressions. It neither guesses
 ;; variable signs nor proves arbitrary asserted equations.
+(define (asserted? facts predicate term)
+  (any (lambda (fact)
+         (and (eq? (car fact) predicate)
+              (equal? (scalar-canonical term) (scalar-canonical (cadr fact))))) facts))
+
 (define (positive? facts term)
   (let ((number (math-number-value term)))
     (or (and number (> number 0))
-        (member `(positive ,term) facts)
+        (asserted? facts 'positive term)
         (case (car term)
           ((exp) #t)
           ((*) (and (positive? facts (cadr term)) (positive? facts (caddr term))))
@@ -27,7 +50,7 @@
 (define (nonzero? facts term)
   (let ((number (math-number-value term)))
     (or (and number (not (= number 0)))
-        (member `(nonzero ,term) facts)
+        (asserted? facts 'nonzero term)
         (positive? facts term)
         (case (car term)
           ((-) (and (= (length term) 2) (nonzero? facts (cadr term))))

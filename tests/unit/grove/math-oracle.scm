@@ -101,7 +101,7 @@
           "E+zero(vector)" "zero(vector)-E" "E*1" "-(-E)"
           "x+0" "0+x" "x-0" "0-x" "x*1" "1*x" "x*0" "0*x"
           "x^0" "x^1" "-(-x)" "2*3" "1/2+1/3" "2-5" "2*(3*x)"
-          "x+x" "2*x+3*x" "x-y+x" "(1/2)*x+(1/3)*x"
+          "x+x" "2*x+3*x" "x-y+x" "(1/2)*x+(1/3)*x" "(x*2)/2" "(x+y)*x"
           "differentiate(7,x)" "differentiate(x,x)" "differentiate(y,x)"
           "differentiate(-x,x)" "differentiate(x+y,x)" "differentiate(x-y,x)"
           "differentiate(x*y,x)" "differentiate((x+y)^3,x)"))

@@ -18,11 +18,12 @@
   #:use-module (grove math source)
   #:use-module (grove math provenance)
   #:use-module (grove math presentation)
+  #:use-module (grove math premise)
   #:use-module (srfi srfi-1)
   #:export (math-source->term math-derive
             math-search math-search-backward math-simplify math-calculate math-collect
             math-check-chain
-            math-differentiate math-rewrite math-report-result)
+            math-differentiate math-rewrite math-report-result math-normalize math-expand)
   #:re-export (math-derivation->content math-verification->content
                math-report->content math-completed-report->content current-math-assumptions call-with-math-assumptions with-math-assumptions
                math-verify-step math-verify-derivation
@@ -39,7 +40,7 @@
                math-derivation-step-to math-derivation-step-rule
                math-derivation-step-path math-derivation?
                math-derivation-terms math-derivation-steps
-               math-derivation-assumptions math-derivation-sources
+               math-derivation-assumptions math-derivation-sources math-derivation-requirements
                math-report? math-report-candidates
                math-report-reason math-report-limits
                math-report-states math-report-complete? math-report-name
@@ -48,12 +49,34 @@
 (define (math-source->term source)
   (math-value-term (semantic:expression source)))
 
-(define (report-with-input report input)
-  (math-report-with-origin report (math-value-origin (semantic:expression input))))
+(define* (report-with-input report input #:optional (other-inputs '()) (assumptions #f))
+  (let* ((values (map semantic:expression (cons input other-inputs)))
+         (requirements (delete-duplicates (append-map math-value-requirements values) equal?))
+         (inherited (append-map (lambda (value)
+                                 (lset-difference equal? (math-value-requirements value)
+                                   (math-domain-premises (math-value-term value)))) values)))
+    (define (attach report)
+      (let* ((certificate (math-report-derivation report))
+             (facts (if certificate (math-derivation-assumptions certificate) (or assumptions (current-math-assumptions))))
+             (missing (math-requirement-diagnostics facts inherited)))
+        (make-math-report (math-report-name report)
+          (if (pair? missing)
+              (list (make-math-derivation (list (math-value-term (car values))) '() facts #:requirements requirements))
+              (map (lambda (c)
+                     (make-math-derivation (math-derivation-terms c) (math-derivation-steps c)
+                       (math-derivation-assumptions c) #:sources (math-derivation-sources c)
+                       #:requirements (delete-duplicates (append requirements (math-derivation-requirements c)) equal?)))
+                   (math-report-candidates report)))
+          (if (pair? missing) 'missing-premise (math-report-reason report))
+          (math-report-limits report) (if (pair? missing) 0 (math-report-states report))
+          #:diagnostics (append missing (math-report-diagnostics report))
+          #:passes (if (pair? missing) '() (map attach (math-report-passes report))))))
+    (math-report-with-origin (attach report) (math-value-origin (car values)))))
 
 (define (math-report-result report)
   (let ((term (math-report-final report)))
     (and term (make-math-value term
+                #:requirements (math-derivation-requirements (math-report-derivation report))
                 #:origin (let ((sources (math-derivation-sources (math-report-derivation report))))
                            (and (pair? sources) (last sources)))
                 #:properties `((assumptions . ,(math-derivation-assumptions (math-report-derivation report))))))))
@@ -65,7 +88,7 @@
          (facts (math-assumptions assumptions))
          (diagnostics (differentiation-input-diagnostics expression coordinate facts))
          (input `(differentiate ,expression ,coordinate)))
-    (math-report-with-origin
+    (report-with-input
       (if (null? diagnostics)
           (run-math-passes input facts
             `((differentiate . ,math-differentiation-rules)
@@ -74,8 +97,10 @@
           (run-math-pass input facts #:name 'differentiate #:rules '()
             #:max-steps max-steps #:max-term-size max-term-size
             #:validate (lambda (term) diagnostics)))
-      (math-branch-origin (list (math-value-origin (semantic:expression source))
-                               (math-value-origin (semantic:expression variable)))))))
+      (make-math-value input
+        #:requirements (math-value-requirements (semantic:expression source))
+        #:origin (math-branch-origin (list (math-value-origin (semantic:expression source))
+                                          (math-value-origin (semantic:expression variable))))))))
 
 (define* (math-rewrite source #:key (assumptions '()) (rules #f)
                         (max-steps 32) (max-term-size 2048))
@@ -112,7 +137,7 @@
       #:goal-origin (math-value-origin (semantic:expression target))
       #:rules rules #:max-depth max-depth #:max-results max-results
       #:max-states max-states #:max-term-size max-term-size)
-    source))
+    source (list target) (math-assumptions assumptions)))
 
 (define* (math-search-backward target source
                                #:key (assumptions '()) (rules #f)
@@ -126,7 +151,7 @@
       #:goal-origin (math-value-origin (semantic:expression source))
       #:rules rules #:max-depth max-depth #:max-results max-results
       #:max-states max-states #:max-term-size max-term-size)
-    source))
+    source (list target) (math-assumptions assumptions)))
 
 (define* (math-simplify source #:key (assumptions '()) (rules #f) (max-steps 32) (max-term-size 2048))
   (report-with-input
@@ -141,6 +166,20 @@
       (math-assumptions assumptions) #:max-steps max-steps #:max-term-size max-term-size)
     source))
 
+(define* (math-normalize source #:key (assumptions '()) (max-steps 32) (max-term-size 2048))
+  (report-with-input
+    (run-math-pass (math-source->term source) (math-assumptions assumptions)
+      #:name 'normalize #:rules '(normalize-scalar)
+      #:max-steps max-steps #:max-term-size max-term-size)
+    source))
+
+(define* (math-expand source #:key (assumptions '()) (max-steps 32) (max-term-size 2048))
+  (report-with-input
+    (run-math-passes (math-source->term source) (math-assumptions assumptions)
+      `((expand . (expand-scalar-product)) (simplify . ,math-simplification-rules))
+      #:name 'expand #:max-steps max-steps #:max-term-size max-term-size)
+    source))
+
 (define* (math-collect source #:key (assumptions '()) (max-steps 32) (max-term-size 2048))
   (report-with-input
     (collect-math-term (math-source->term source)
@@ -151,4 +190,6 @@
   (unless (list? sources)
     (error "handwritten math chains require a list of expressions" sources))
   (check-math-chain (map math-source->term sources)
-    (math-assumptions assumptions) #:steps steps #:rules rules #:sources (map (lambda (source) (math-value-origin (semantic:expression source))) sources)))
+    (math-assumptions assumptions) #:steps steps #:rules rules
+    #:requirements (delete-duplicates (append-map (lambda (source) (math-value-requirements (semantic:expression source))) sources) equal?)
+    #:sources (map (lambda (source) (math-value-origin (semantic:expression source))) sources)))

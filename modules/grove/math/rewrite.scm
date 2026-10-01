@@ -8,11 +8,12 @@
   #:use-module (grove math identities)
   #:use-module (grove math arithmetic)
   #:use-module (grove math differentiation)
+  #:use-module (grove math normalization)
   #:use-module (srfi srfi-1)
   #:export (rewriteo rewrite-stepo check-stepo unrewrite-rooto unrewrite-stepo
             math-rewrite-rules math-simplification-rules math-calculation-rules
             math-collection-rules math-backward-rules math-rewrite-rule-ref
-            math-rule-names
+            math-rule-names math-default-rules
             math-rule-required-facts math-selected-rules math-rewrite-answers
             rewrite-curl-curl)
   #:re-export (curl-curlo math-rewrite-rule? math-rewrite-rule-name
@@ -22,7 +23,7 @@
 
 (define math-rewrite-rules
   (append math-vector-rules math-identity-rules math-differentiation-rule-definitions
-          math-arithmetic-rules))
+          math-arithmetic-rules math-normalization-rules))
 
 (define (math-rewrite-rule-ref name)
   (find (lambda (rule) (eq? name (math-rewrite-rule-name rule))) math-rewrite-rules))
@@ -34,7 +35,10 @@
                    (or (not groups) (memq (math-rewrite-rule-group rule) groups))))
             math-rewrite-rules)))
 
-(define math-simplification-rules (math-rule-names #:groups '(identity calculate collect)))
+(define math-simplification-rules (math-rule-names #:groups '(identity calculate collect normalize cancel)))
+(define math-default-rules
+  (map math-rewrite-rule-name
+    (filter (lambda (rule) (not (eq? (math-rewrite-rule-group rule) 'expand))) math-rewrite-rules)))
 (define math-calculation-rules (math-rule-names #:groups '(calculate)))
 (define math-collection-rules (math-rule-names #:groups '(collect)))
 (define math-backward-rules

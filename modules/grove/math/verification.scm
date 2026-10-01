@@ -127,6 +127,7 @@
         ((pair? premise-diagnostics) premise-diagnostics)
         (else
           (append
+            (math-requirement-diagnostics assumptions (math-derivation-requirements result))
             (append-map
               (lambda (term)
                 (remove (lambda (item) (eq? (math-diagnostic-code item) 'type-error))
@@ -188,7 +189,7 @@
           (make-math-derivation-step from to (and hint (car hint))
                                      (if hint (cadr hint) '()))))))
 
-(define* (check-math-chain terms assumptions #:key (steps #f) (rules #f) (sources '()))
+(define* (check-math-chain terms assumptions #:key (steps #f) (rules #f) (sources '()) (requirements '()))
   (unless (and (list? terms) (>= (length terms) 2) (every math-term? terms))
     (error "a handwritten math chain needs at least two valid terms" terms))
   (when (and steps (not (and (list? steps) (= (length steps) (- (length terms) 1)))))
@@ -212,7 +213,7 @@
               (else (error "expected a rule name or (rule operand-path)" spec))))
           (drop-right terms 1) (cdr terms)
           (or steps (make-list (- (length terms) 1) #f)))
-        assumptions #:sources sources)
+        assumptions #:sources sources #:requirements requirements)
       #:rules allowed)))
 
 (define* (math-verify-derivation certificate #:key (rules #f))

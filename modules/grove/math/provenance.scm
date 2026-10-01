@@ -48,7 +48,7 @@
                   (walk (cdr steps) next (cons next sources)))))))
     (make-math-derivation (math-derivation-terms certificate)
       (math-derivation-steps certificate) (math-derivation-assumptions certificate)
-      #:sources sources)))
+      #:sources sources #:requirements (math-derivation-requirements certificate))))
 
 (define (math-report-with-origin report origin)
   (let* ((certificates (map (lambda (certificate) (math-certificate-with-origin certificate origin))

@@ -30,7 +30,7 @@
          (goal-type (require-type assumptions goal))
          (rules (math-selected-rules rules
                   (if backward? math-backward-rules
-                      (math-rule-names))
+                      math-default-rules)
                   #:mode (if backward? 'backward 'forward))))
     (unless (eq? type goal-type)
       (error "math search endpoints have different types" type goal-type))
@@ -113,7 +113,7 @@
   (check-math-bound 'max-states max-states 1)
   (check-math-bound 'max-term-size max-term-size 1)
   (math-selected-rules rules (if backward? math-backward-rules
-                               (math-rule-names))
+                               math-default-rules)
     #:mode (if backward? 'backward 'forward))
   (let* ((name (if backward? 'search-backward 'search))
          (diagnostics
@@ -140,7 +140,7 @@
                            (max-term-size 2048))
   (let ((rules (math-selected-rules rules math-simplification-rules)))
     (unless (every (lambda (rule) (memq rule math-simplification-rules)) rules)
-      (error "simplification accepts only arithmetic and collection rules" rules))
+      (error "simplification accepts only identities, arithmetic, collection, normalization and cancellation rules" rules))
     (run-math-pass input assumptions #:name 'simplify #:rules rules
       #:max-steps max-steps #:max-term-size max-term-size)))
 
