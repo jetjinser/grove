@@ -7,6 +7,8 @@
   #:use-module (grove math report)
   #:use-module (grove math term)
   #:use-module (grove math types)
+  #:use-module (grove math assumption)
+  #:use-module (grove math domain)
   #:use-module (grove math arithmetic)
   #:use-module (grove math rewrite)
   #:use-module (srfi srfi-1)
@@ -19,17 +21,20 @@
 (define (execution-diagnostic code message path)
   (make-math-diagnostic #f #f path code '() message))
 
-(define (math-execution-diagnostics assumptions term)
-  (append
-    (if (math-infer-type assumptions term) '()
-        (list (execution-diagnostic 'type-error (math-type-diagnostic assumptions term) '())))
-    (filter-map
-      (lambda (path)
-        (let ((local (math-term-at-path term path)))
-          (and (eq? (car local) '/)
-               (equal? (math-number-value (caddr local)) 0)
-               (execution-diagnostic 'division-by-zero "division by zero" path))))
-      (math-term-paths term))))
+(define* (math-execution-diagnostics assumptions term #:optional (name 'compute))
+  (let ((preconditions (append (math-assumption-diagnostics assumptions)
+                               (math-domain-diagnostics term name))))
+    (if (pair? preconditions) preconditions
+        (append
+          (if (math-infer-type assumptions term) '()
+              (list (execution-diagnostic 'type-error (math-type-diagnostic assumptions term) '())))
+          (filter-map
+            (lambda (path)
+              (let ((local (math-term-at-path term path)))
+                (and (eq? (car local) '/)
+                     (equal? (math-number-value (caddr local)) 0)
+                     (execution-diagnostic 'division-by-zero "division by zero" path))))
+            (math-term-paths term))))))
 
 ;; One deterministic forward pass. Limits never discard a valid prefix or
 ;; include an oversized/ill-typed edge. Cycle detection is independent of size.
@@ -46,8 +51,10 @@
         reason (if (memq reason '(step-limit term-size-limit)) (list reason) '()) count
         #:diagnostics diagnostics))
     (let advance ((current input) (terms (list input)) (steps '()) (count 0))
-      (let ((diagnostics (append (validate current)
-                                 (math-execution-diagnostics assumptions current))))
+      (let* ((domain-diagnostics (validate current))
+             (diagnostics (if (pair? domain-diagnostics)
+                              (append (math-assumption-diagnostics assumptions) domain-diagnostics)
+                              (math-execution-diagnostics assumptions current name))))
         (cond
           ((pair? diagnostics)
            (finish terms steps (math-diagnostic-code (car diagnostics)) count diagnostics))
@@ -64,7 +71,7 @@
                (else
                 (let* ((answer (car answers)) (next (car answer))
                        (rule (cadr answer)) (path (caddr answer))
-                       (diagnostics (math-execution-diagnostics assumptions next)))
+                       (diagnostics (math-execution-diagnostics assumptions next name)))
                   (cond
                     ((pair? diagnostics) (finish terms steps 'invalid-result count diagnostics))
                     ((> (math-term-size next) max-term-size)

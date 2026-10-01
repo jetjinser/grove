@@ -5,6 +5,7 @@
   #:use-module (grove math derivation)
   #:use-module (grove math diagnostic)
   #:use-module (grove math pass)
+  #:use-module (grove math assumption)
   #:use-module (grove math term)
   #:use-module (grove math rewrite)
   #:use-module (grove math types)
@@ -103,25 +104,32 @@
                                "rule does not apply under the supplied premises")))))))))))
 
 (define (math-verify-step assumptions from to rule path)
-  (null? (step-diagnostics 1 assumptions from to rule path
-                          (math-rule-names #:mode 'check))))
+  (and (math-term? from) (math-term? to)
+       (null? (math-execution-diagnostics assumptions from 'check))
+       (null? (math-execution-diagnostics assumptions to 'check))
+       (null? (step-diagnostics 1 assumptions from to rule path
+                               (math-rule-names #:mode 'check)))))
 
 (define* (verify-math-certificate result #:key (rules #f))
   (unless (math-derivation? result) (error "expected a math derivation" result))
   (let* ((assumptions (math-derivation-assumptions result))
          (terms (math-derivation-terms result))
          (steps (math-derivation-steps result))
+         (premise-diagnostics (math-assumption-diagnostics assumptions))
          (allowed (math-selected-rules rules (math-rule-names #:mode 'check)
                     #:mode 'check)))
     (make-math-verification result
-      (if (not (and (list? terms) (pair? terms) (every math-term? terms)
+      (cond
+        ((not (and (list? terms) (pair? terms) (every math-term? terms)
                     (list? steps) (list? assumptions)))
-          (list (diagnostic #f #f '() 'invalid-chain "malformed term chain or assumptions"))
+          (list (diagnostic #f #f '() 'invalid-chain "malformed term chain or assumptions")))
+        ((pair? premise-diagnostics) premise-diagnostics)
+        (else
           (append
             (append-map
               (lambda (term)
                 (remove (lambda (item) (eq? (math-diagnostic-code item) 'type-error))
-                        (math-execution-diagnostics assumptions term)))
+                        (math-execution-diagnostics assumptions term 'check)))
               terms)
             (if (= (length terms) (+ (length steps) 1)) '()
                 (list (diagnostic #f #f '() 'chain-length
@@ -145,7 +153,7 @@
                               (step-diagnostics index assumptions (car terms) (cadr terms)
                                 (math-derivation-step-rule step)
                                 (math-derivation-step-path step) allowed)))))
-                    (append errors (check (cdr steps) (cdr terms) (+ index 1)))))))))))
+                    (append errors (check (cdr steps) (cdr terms) (+ index 1))))))))))))
 
 ;; Missing-premise hints are found with augmented facts only to identify a rule
 ;; and path. The certificate retains the ORIGINAL assumptions and is replayed

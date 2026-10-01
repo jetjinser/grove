@@ -49,6 +49,29 @@ Mathematical terms remain the source of truth; notation is generated for
 display and is never interpreted backwards as solver input.
 `(grove math pipeline)` composes the computation passes.
 
+There are three separate contracts: `math-term?` checks representable structure;
+type inference checks scalar/vector/proposition meaning under explicit facts;
+each computation checks its supported domain. An unknown application such as
+`sin(x)` remains representable and displayable, but computation, search and
+verification return `unsupported-expression`. Missing declarations and
+incompatible operand types return `type-error`. Supported terms with no selected
+rewrite remain normal forms; that does not mean all their operators were
+numerically evaluated. Polynomial differentiation has a narrower domain and
+identifies the unsupported subexpression, including its authored location.
+
+`(grove math operator)` shares reserved arities, type signatures and infix display
+symbols between structural validation, relational typing, diagnostics and
+notation lowering. Adding a signature does not implement a calculation rule;
+algorithms and special layout remain independent passes.
+
+| Entry point | Accepted computation domain |
+| --- | --- |
+| `math-rewrite`, forward/backward search, chain verification | Typed terms in the registered expression vocabulary; selected rules determine possible transitions. |
+| `math-calculate` | The same vocabulary; rewrites supported exact arithmetic subexpressions, retaining symbolic operands. |
+| `math-collect` | The same vocabulary; collects supported scalar coefficients, retaining other subexpressions. |
+| `math-simplify` | The same vocabulary; applies the selected typed identity, arithmetic and collection rules. |
+| `math-differentiate` | Scalar polynomials over declared independent scalar coordinates, with exact constants and natural-number powers; differentiation is followed by simplification. |
+
 The semantic parser accepts identifiers, integer numerals, function calls,
 parenthesized groups, unary minus, power notation (`x^2`),
 and `=`, `+`, `-`/`−`, `*`/`×`, and `/` with conventional precedence.
@@ -98,6 +121,15 @@ contradictions are diagnosed rather than replaced. Normal and exceptional
 exits restore the parent scope. Each certificate stores the effective facts,
 so later verification does not depend on a live context. For an independent
 context, `call-with-math-assumptions` accepts `#:replace? #t`.
+
+The supported facts are `scalar(variable)`, `vector(variable)`,
+`smooth(expression)` and equations such as `div(E)=0`. Other expression shapes
+return `invalid-assumption`. Computation and certificate replay check the entire
+fact set for conflicting scalar/vector declarations, including unused variables.
+This checks fact structure and declaration consistency, not the truth or general
+logical consistency of asserted equations and smoothness. Display preferences
+never become premises, and the facts retained on a computed value for display
+are not imported into a subsequent computation.
 
 The current rules are deliberately few. `curl-curl-identity` encodes
 `curl(curl(E)) = grad(div(E)) - laplacian(E)` and requires matching

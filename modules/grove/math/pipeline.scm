@@ -58,18 +58,17 @@
   (let* ((expression (math-source->term source))
          (coordinate (math-source->term variable))
          (facts (math-assumptions assumptions))
+         (diagnostics (differentiation-input-diagnostics expression coordinate))
          (input `(differentiate ,expression ,coordinate)))
     (report-with-input
-      (if (and (eq? (car coordinate) 'var) (polynomial-term? expression))
+      (if (null? diagnostics)
           (run-math-passes input facts
             `((differentiate . ,math-differentiation-rules)
               (simplify . ,math-simplification-rules))
             #:name 'differentiate #:max-steps max-steps #:max-term-size max-term-size)
           (run-math-pass input facts #:name 'differentiate #:rules '()
             #:max-steps max-steps #:max-term-size max-term-size
-            #:validate (lambda (term)
-                         (list (make-math-diagnostic #f #f '() 'unsupported-expression '()
-                                 "differentiation requires a polynomial and a coordinate variable")))))
+            #:validate (lambda (term) diagnostics)))
       source #:prefix '(0))))
 
 (define* (math-rewrite source #:key (assumptions '()) (rules #f)

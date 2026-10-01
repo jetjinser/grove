@@ -113,8 +113,9 @@
   (math-selected-rules rules (if backward? math-backward-rules
                                (math-rule-names))
     #:mode (if backward? 'backward 'forward))
-  (let* ((diagnostics (append (math-execution-diagnostics assumptions start)
-                              (math-execution-diagnostics assumptions goal)))
+  (let* ((name (if backward? 'search-backward 'search))
+         (diagnostics (append (math-execution-diagnostics assumptions start name)
+                              (math-execution-diagnostics assumptions goal name)))
          (diagnostics
            (if (or (pair? diagnostics)
                    (eq? (math-typed-term-type (math-infer-type assumptions start))

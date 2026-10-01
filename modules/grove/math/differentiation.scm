@@ -6,10 +6,13 @@
   #:use-module ((grove relation dsl) #:select (project))
   #:use-module (grove math types)
   #:use-module (grove math arithmetic)
+  #:use-module (grove math term)
+  #:use-module (grove math diagnostic)
   #:use-module (grove math rule)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-13)
-  #:export (polynomial-term? differentiation-stepo math-differentiation-rules
+  #:use-module (srfi srfi-1)
+  #:export (polynomial-term? differentiation-input-diagnostics differentiation-stepo math-differentiation-rules
             math-differentiation-rule-definitions))
 
 (define (natural-value value)
@@ -28,6 +31,24 @@
     (('^ base ('num exponent))
      (and (polynomial-term? base) (natural-value exponent) #t))
     (_ #f))))
+
+(define (differentiation-input-diagnostics expression coordinate)
+  (cond
+    ((not (eq? (car coordinate) 'var))
+     (list (make-math-diagnostic #f #f '(1) 'unsupported-expression '()
+             "differentiation requires a coordinate variable")))
+    ((polynomial-term? expression) '())
+    (else
+     (let locate ((term expression) (path '(0)))
+       (let ((child (and (memq (car term) '(+ - * ^))
+                         (find (lambda (index)
+                                 (not (polynomial-term? (list-ref (cdr term) index))))
+                               (iota (length (cdr term)))))))
+         (if child
+             (locate (list-ref (cdr term) child) (append path (list child)))
+             (list (make-math-diagnostic #f #f path 'unsupported-expression '()
+                     (format #f "polynomial differentiation does not support ~a; expected exact constants, variables, sums, differences, products, and natural-number powers"
+                             (math-term->source term))))))))))
 
 ;; This family has a constructive forward/check mode. Independent coordinates
 ;; and natural powers are its domain; arbitrary inverse integration is absent.

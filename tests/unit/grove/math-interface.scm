@@ -81,7 +81,7 @@
   (semantic:curl (notation:vec "E")))
 (with-math-assumptions '("scalar(x); scalar(i)")
   (test-equal "an uninterpreted function cannot silently act as a type-preserving index"
-    'type-error (math-report-reason (math-simplify (semantic:expression "sub(x,i)")))))
+    'unsupported-expression (math-report-reason (math-simplify (semantic:expression "sub(x,i)")))))
 (test-assert "an uninterpreted function is not displayed as an inferred subscript"
   (string-contains (html (document:math (semantic:expression "sub(x,i)"))) "<mi>sub</mi>"))
 (test-assert "notation can display a semantic object without changing its identity"
