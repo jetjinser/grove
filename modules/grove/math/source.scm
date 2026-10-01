@@ -11,10 +11,10 @@
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
   #:export (math-location? math-location-file math-location-line math-location-column
-            math-location-excerpt math-location-label math-source-text math-source-lines math-source-slice
+            math-location-excerpt math-location-label math-source-text math-source-slice
             math-source-origin math-origin? math-origin-location math-locate-diagnostic
             math-branch-origin math-origin-with-prefix
-            math-diagnostic-description math-report-with-source math-report-with-origin))
+            math-diagnostic-description math-report-with-origin))
 
 (define-record-type <math-location>
   (make-math-location file line column excerpt)
@@ -108,20 +108,6 @@
                       (math-origin-location (list-ref branches (car path)) (cdr path))))
              (syntax-location origin (origin-syntax origin) path)))))
 
-(define (math-source-lines text)
-  (let lines ((remaining (string-split text #\newline)) (offset 0) (result '()))
-    (if (null? remaining) (reverse result)
-        (let* ((line (car remaining)) (trimmed (string-trim-both line))
-               (leading (- (string-length line) (string-length (string-trim line))))
-               (location (location-at text (+ offset leading))))
-          (when location
-            (set-source-properties! trimmed
-              `((filename . ,(math-location-file location))
-                (line . ,(- (math-location-line location) 1))
-                (column . ,(- (math-location-column location) 1)))))
-          (lines (cdr remaining) (+ offset (string-length line) 1)
-                 (if (string-null? trimmed) result (cons trimmed result)))))))
-
 (define (math-source-slice text start end)
   (let ((slice (substring text start end)) (location (location-at text start)))
     (when location
@@ -141,9 +127,6 @@
   (let ((location (math-diagnostic-source diagnostic)))
     (string-append (if location (string-append (math-location-label location) ": ") "")
                    (math-diagnostic-message diagnostic))))
-
-(define* (math-report-with-source report text #:key (prefix '()))
-  (math-report-with-origin report (math-source-origin text #:prefix prefix)))
 
 (define (math-report-with-origin report origin)
     (if (not origin) report

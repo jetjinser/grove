@@ -7,7 +7,6 @@
   #:use-module (grove math term)
   #:use-module (grove math context)
   #:use-module (grove math rewrite)
-  #:use-module (grove math types)
   #:use-module (grove math derivation)
   #:use-module (grove math strategy)
   #:use-module (grove math verification)
@@ -18,7 +17,7 @@
   #:use-module (grove math source)
   #:use-module (grove math presentation)
   #:use-module (srfi srfi-1)
-  #:export (math-source->term math-derive math-derive-curl-curl
+  #:export (math-source->term math-derive
             math-search math-search-backward math-simplify math-calculate math-collect
             math-check-chain
             math-differentiate math-rewrite math-report-result)
@@ -88,9 +87,6 @@
     (unless (pair? (math-derivation-steps (math-report-derivation report)))
       (error "no math rewrite rule applies to the expression" source))
     (car content)))
-
-(define* (math-derive-curl-curl source #:key (assumptions '()))
-  (math-derive source #:assumptions assumptions))
 
 (define* (math-search source target
                       #:key (assumptions '()) (rules #f)

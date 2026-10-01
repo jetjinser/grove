@@ -64,9 +64,9 @@
              (row (list (operand 0)
                         (operator (case (car value) ((+) "+") ((-) "−") ((*) "×") ((=) "=")))
                         (operand 1)))))
-        ((and (memq (car value) '(^ sub)) (= (length value) 3))
-         (make-content-element (if (eq? (car value) '^) 'math-sup 'math-sub)
-           (list (row (list (if (eq? (car value) '^) (operand 0) (child 0)))) (row (list (child 1))))))
+        ((and (eq? (car value) '^) (= (length value) 3))
+         (make-content-element 'math-sup
+           (list (row (list (operand 0))) (row (list (child 1))))))
         ((and (eq? (car value) '-) (= (length value) 2))
          (row (list (operator "−") (operator-argument 0))))
         (else

@@ -10,6 +10,7 @@
   #:use-module (grove math layout)
   #:use-module (grove math rewrite)
   #:use-module (grove math types)
+  #:use-module ((grove math notation) #:prefix notation:)
   #:use-module (grove math pipeline)
   #:use-module ((grove math derivation)
                 #:select (make-math-derivation make-math-derivation-step))
@@ -115,8 +116,7 @@
     (string-contains
       (sxml->html
         (content->sxml
-          (make-content-element 'math
-            (list (math-term->layout '(sub (var E) (var x)))))))
+          (notation:math (notation:sub "E" "x"))))
       "<msub>"))
   (test-equal "miniKanren relation derives curl-curl identity"
     '((- (grad (div (var E))) (laplacian (var E))) curl-curl-identity ())
@@ -223,7 +223,7 @@
                #:assumptions '("vector(E); smooth(E)")
                #:max-depth 1)))))
   (let* ((derivation
-           (math-derive-curl-curl "curl(curl(E))"
+           (math-derive "curl(curl(E))"
                                   #:assumptions
                                   '("vector(E); smooth(E)")))
          (html (sxml->html (content->sxml derivation))))
@@ -602,7 +602,8 @@
     #f
     (math-verify-step '((scalar (var x))) '(+ (var x) (num "0"))
                       '(var) 'add-zero '()))
-  (test-equal "subscript terms require both operands" #f (math-term? '(sub (var x))))
+  (test-equal "reserved unary operators reject extra operands" #f
+    (math-term? '(curl (var E) (var F))))
   (test-equal "independent replay rejects mismatched recorded endpoints"
     '(endpoints)
     (diagnostic-codes
