@@ -104,6 +104,15 @@
 (define (parse-math source)
   (parse-math-tokens (tokenize-math source)))
 
+(define (numeric-coefficient-tail? expression)
+  (case (math-expression-kind expression)
+    ((number) #t)
+    ((negate) (numeric-coefficient-tail? (car (math-expression-children expression))))
+    ((binary)
+     (and (eq? (math-expression-value expression) 'multiply)
+          (numeric-coefficient-tail? (cadr (math-expression-children expression)))))
+    (else #f)))
+
 (define (parse-math-tokens tokens)
   (let ((position 0))
     (letrec ((current (lambda () (list-ref tokens position)))
@@ -170,16 +179,21 @@
                (lambda (minimum)
                  (let loop ((left (primary)))
                    (let* ((operator (current))
-                          (priority (precedence (math-token-kind operator))))
+                          ;; Only numeric coefficients license juxtaposition;
+                          ;; identifiers remain whole names and calls.
+                          (implicit?
+                            (and (memq (math-token-kind operator) '(identifier left-paren embedded))
+                                 (numeric-coefficient-tail? left)))
+                          (priority (if implicit? 20 (precedence (math-token-kind operator)))))
                      (if (< priority minimum)
                          left
                          (begin
-                           (take!)
+                           (unless implicit? (take!))
                            (let* ((right
                                     (expression
                                       (if (eq? (math-token-kind operator) 'power)
                                           priority (+ priority 1))))
-                                  (kind (math-token-kind operator))
+                                  (kind (if implicit? 'multiply (math-token-kind operator)))
                                   (right-children
                                     (math-expression-children right))
                                   (combined
