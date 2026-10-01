@@ -10,6 +10,8 @@
   #:use-module (grove math types)
   #:use-module (grove math declaration)
   #:use-module (grove math operator)
+  #:use-module (grove math number)
+  #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
   #:export (math-partial-rule-definitions math-partial-rules))
 
@@ -92,9 +94,40 @@
     #:matcher function-chain-premises
     #:documentation "Apply the multivariate chain rule using explicit one-based argument positions. Repeated and composed arguments remain distinct; C1 permits one derivative and C2 permits two."))
 
+(define (mixed-partial-rule name operator)
+  (define (premises input)
+    (match input
+      ((outer (inner expression a) b)
+       (and (eq? outer operator) (eq? inner operator)
+            (if (eq? operator 'partial)
+                (and (eq? (car a) 'var) (eq? (car b) 'var)
+                     (string>? (symbol->string (cadr a)) (symbol->string (cadr b))))
+                (let ((i (math-number-value a)) (j (math-number-value b)))
+                  (and i j (> i j))))
+            (if (eq? operator 'partial)
+                `((c2 ,expression) (coordinate ,a) (coordinate ,b))
+                (let peel ((term expression) (order 2))
+                  (if (eq? (car term) 'darg) (peel (cadr term) (+ order 1))
+                      `((,(if (= order 2) 'c2 'smooth) (var ,(car term)))))))))
+      (_ #f)))
+  (make-math-rewrite-rule name "Exchange mixed derivatives into ascending order"
+    "C2 operand; coordinate names and argument positions have separate orders" 'partial
+    (lambda (facts input output)
+      (project (facts input)
+        (let ((required (premises input)))
+          (if required
+              (fresh ()
+                (math-typeo facts input 'scalar)
+                (math-factso facts required)
+                (== output `(,operator (,operator ,(cadadr input) ,(caddr input)) ,(caddr (cadr input)))))
+              fail))))
+    #:matcher premises))
+
 (define math-partial-rule-definitions
   (append (map partial-rule
             (filter (lambda (rule) (not (eq? (math-rewrite-rule-name rule) 'differentiate-function)))
                     math-differentiation-rule-definitions))
-          (list function-chain-rule)))
+          (list function-chain-rule
+                (mixed-partial-rule 'partial-coordinate-symmetry 'partial)
+                (mixed-partial-rule 'partial-argument-symmetry 'darg))))
 (define math-partial-rules (map math-rewrite-rule-name math-partial-rule-definitions))

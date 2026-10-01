@@ -41,4 +41,38 @@
   (test-equal "cancelling a derivative preserves its regularity premise" 'missing-premise
     (math-report-reason (math-simplify result
       #:assumptions (list (◆:space 'x 'y 'z) "function(f,scalar,scalar,scalar)")))))
+(for-each
+  (lambda (entry)
+    (let* ((local-facts (append facts '("scalar(u); c2(u)")))
+           (env (cons (cons 'u (scalar '((1 2 1 0) (3 1 2 0)))) environment))
+           (report (math-check-equation (car entry) (cadr entry) #:assumptions local-facts)))
+      (test-assert "C2 mixed derivatives establish the identity" (math-report-complete? report))
+      (test-assert "mixed derivative certificate replays"
+        (math-verification-valid? (math-verify-derivation (math-report-derivation report))))
+      (for-each (lambda (step)
+                  (test-equal "independent templates verify mixed derivative edges"
+                    (evaluate (math-derivation-step-from step) env)
+                    (evaluate (math-derivation-step-to step) env)))
+                (math-derivation-steps (math-report-derivation report)))))
+  '(("partial(partial(u,y),x)" "partial(partial(u,x),y)")
+    ("darg(darg(f(x,y),2),1)" "darg(darg(f(x,y),1),2)")
+    ("curl(grad(u))" "components(0,0,0)")
+    ("curl(grad(f(x,y)))" "components(0,0,0)")))
+(let* ((local-facts (append facts '("scalar(u); c2(u)")))
+       (report (math-compute "partial(partial(u,y),x)" #:assumptions local-facts)))
+  (test-equal "coordinate derivative order is stable" (math-source->term "partial(partial(u,x),y)")
+    (math-report-final report))
+  (test-equal "mixed derivative normal form is idempotent" (math-report-final report)
+    (math-report-final (math-compute (math-report-result report) #:assumptions local-facts)))
+  (test-equal "C1 cannot reuse a symmetry result" 'missing-premise
+    (math-report-reason (math-compute (math-report-result report)
+      #:assumptions (append facts '("scalar(u); differentiable(u)"))))))
+(test-equal "C1 cannot establish the curl-gradient identity" 'missing-premise
+  (math-report-reason (math-check-equation "curl(grad(u))" "components(0,0,0)"
+    #:assumptions (list (◆:space 'x 'y 'z) "scalar(u); differentiable(u)"))))
+(test-assert "argument symmetry does not demand C2 of the evaluated arguments"
+  (math-report-complete? (math-check-equation "darg(darg(f(g(x,y),y),2),1)"
+    "darg(darg(f(g(x,y),y),1),2)"
+    #:assumptions (list (◆:space 'x 'y 'z)
+      "function(f,scalar,scalar,scalar); function(g,scalar,scalar,scalar); c2(f); differentiable(g)"))))
 (test-end "multivariate function chain rules")
