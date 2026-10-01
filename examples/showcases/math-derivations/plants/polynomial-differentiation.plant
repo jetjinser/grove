@@ -76,7 +76,7 @@ The symbolic derivative is an ordinary mathematical term. Goal search can theref
   2
 }
 
-A claimed derivative of 2 fails replay against the variable rule. The automatic polynomial pass also rejects nonconstant division, functions such as sin(x), and negative or symbolic exponents before producing a partial derivation. Bounds limit expansion size and step count; this is not an integration engine or a general computer algebra system.
+A claimed derivative of 2 fails replay against the variable rule. Negative and symbolic exponents are outside the current computation domain. Quotients and elementary functions are demonstrated in @link["scalar-calculus"]{scalar calculus with explicit domains}. Bounds limit expansion size and step count; this is not an integration engine or a general computer algebra system.
 
 @heading{Inspect an unfinished calculation}
 @differentiate["x" #:assumptions "scalar(x)" #:max-steps 1 #:on-error 'show]{x^3}

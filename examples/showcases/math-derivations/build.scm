@@ -11,7 +11,7 @@
 (build-forester-showcase example-directory
   #:title "Checked mathematical notes"
   #:home-page "vector-analysis"
-  #:description "Vector identities and polynomial differentiation with replayable steps."
+  #:description "Vector identities and scalar calculus with replayable steps."
   #:site-url "https://math.example"
   #:output-directory output-directory
   #:cache-key "math-derivations")

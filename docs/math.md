@@ -77,11 +77,11 @@ display and is never interpreted backwards as solver input.
 There are three separate contracts: `math-term?` checks representable structure;
 type inference checks scalar/vector/proposition meaning under explicit facts;
 each computation checks its supported domain. An unknown application such as
-`sin(x)` remains representable and displayable, but computation, search and
+`opaque(x)` remains representable and displayable, but computation, search and
 verification return `unsupported-expression`. Missing declarations and
 incompatible operand types return `type-error`. Supported terms with no selected
 rewrite remain normal forms; that does not mean all their operators were
-numerically evaluated. Polynomial differentiation has a narrower domain and
+numerically evaluated. Scalar differentiation has a narrower domain and
 identifies the unsupported subexpression, including its authored location.
 
 `(grove math operator)` shares reserved arities, type signatures and infix display
@@ -95,7 +95,27 @@ algorithms and special layout remain independent passes.
 | `math-calculate` | The same vocabulary; rewrites supported exact arithmetic subexpressions, retaining symbolic operands. |
 | `math-collect` | The same vocabulary; collects supported scalar coefficients, retaining other subexpressions. |
 | `math-simplify` | The same vocabulary; applies the selected typed identity, arithmetic and collection rules. |
-| `math-differentiate` | Scalar polynomials over declared independent scalar coordinates, with exact constants and natural-number powers; differentiation is followed by simplification. |
+| `math-differentiate` | Real scalar arithmetic with natural-number powers, quotients, `sin`, `cos`, `exp`, `log`, and declared smooth unary scalar functions; differentiation is followed by simplification. |
+
+Real quotients require `nonzero(denominator)` and logarithms require
+`positive(argument)`. Exact constants, positivity implying nonzero, positive
+exponentials and nonzero products/powers discharge these small domain obligations
+without additional assertions. Premises apply to the whole source expression,
+including factors which a later simplification would discard. Contradictory
+constant sign premises and sign premises on vector expressions are rejected.
+
+For example, with `coordinate(x); parameter(a); positive(x)`, derivatives of
+`sin(x^2)`, `exp(a*x)` and `log(x)` simplify to `2*x*cos(x^2)`, `a*exp(a*x)`
+and `1/x`. The constructors `◆:sin`, `◆:cos`, `◆:exp` and `◆:log` accept
+the same embedded expressions as other Semantic commands.
+
+A declared `function(f,scalar,scalar)` additionally needs `smooth(f)` for
+differentiation. Its chain rule produces `prime(f,u)`, rendered as f′(u);
+`◆:prime` is its Semantic constructor. This is a formal derivative of the
+declared function, not an evaluation of its unknown body. Higher derivatives
+and multivariate function differentiation are currently unsupported. Natural
+power computation uses the polynomial convention u^0 = 1; negative and symbolic
+exponents remain displayable but are outside this computation domain.
 
 The semantic parser accepts identifiers, integer numerals, function calls,
 parenthesized groups, unary minus, power notation (`x^2`),
@@ -243,7 +263,7 @@ implicit reordering of symbolic multiplication is introduced.
 `math-differentiate` returns a report containing the differentiation and
 simplification pass reports, plus their joined certificate. Each pass has its
 own `#:max-steps` budget and shares `#:max-term-size`. A cutoff retains the
-completed prefix and does not run subsequent passes. Unsupported polynomial
+completed prefix and does not run subsequent passes. Unsupported differentiation
 inputs, type errors and division by zero return diagnostics; invalid API
 arguments and syntax remain errors. `math-rewrite` exposes the report used by
 the display-oriented `math-derive`. `math-completed-report->content` renders

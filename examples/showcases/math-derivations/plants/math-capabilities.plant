@@ -5,6 +5,8 @@
 
 这篇笔记展示 Grove 目前的数学能力。Semantic DSL 定义可展示、计算和核验的数学对象；Notation DSL 定义记号的外观和布局。两者都生成原生 MathML，但只有明确的数学对象参与计算。下面的失败示例也会正常显示，便于检查诊断。
 
+坐标、常数参数、函数声明，以及链式法则、商法则和初等函数的求导，见 @link["scalar-calculus"]{带明确前提的标量微积分}。
+
 @heading{一、手写公式：Maxwell 方程组}
 
 在 Notation DSL 的 math 内，普通 Unicode 文本会被扫描为数学 token。分数、向量箭头、上下标和括号可以用显式命令构造。◇:align 中的 & 指定对齐点。

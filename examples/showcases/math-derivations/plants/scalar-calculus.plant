@@ -1,0 +1,67 @@
+@; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+@; SPDX-License-Identifier: CC0-1.0
+
+@use-modules[(math-derivations commands) (grove math pipeline)
+             ((grove math semantic) #:prefix ◆:)
+             ((grove math notation) #:prefix ◇:)]
+@title{Scalar calculus with explicit domains}
+@summary{Chain and quotient rules, reusable declarations and checked real-domain premises.}
+
+@(define x (◆:coordinate 'x))
+@(define a (◆:parameter 'a))
+@(define f (◆:function 'f #:inputs '(scalar) #:result 'scalar))
+
+The bindings describe an independent coordinate, a constant parameter and a unary scalar function. Their declarations become assumptions only inside an explicit scope. A function reference is distinct from a scalar variable.
+
+@with-assumptions[(list x a f "positive(x); smooth(f)")]{
+@heading{Elementary compositions}
+@differentiate[x]{@◆:sin{x^2}}
+@differentiate[x]{@◆:exp{a*x}}
+@differentiate[x]{@◆:log{x}}
+@differentiate[x]{cos(x^3)}
+
+The first pass applies differentiation rules, and the second simplifies the generated terms. The final expressions are 2*x*cos(x^2), a*exp(a*x), 1/x and -3*x^2*sin(x^3). Each recorded step includes its rule and source locations.
+
+@heading{Quotients}
+@differentiate[x]{x/x^2}
+
+Positivity of x proves it is nonzero and discharges the denominator condition for x^2. The result need not be a canonical rational expression: cancellation and general rational normalization are separate future work.
+
+@heading{A declared function}
+@differentiate[x]{@◆:call[f]{x^2}}
+@math{@◆:prime[f]{x}}
+
+The result uses f′(x^2). Grove knows the function signature and the asserted smoothness, but does not invent an implementation for f.
+
+@heading{Authored steps}
+@check-derive[#:view 'full]{
+  differentiate(sin(x),x)
+  differentiate(x,x)*cos(x)
+  1*cos(x)
+  cos(x)
+}
+@check-derive[#:view 'full]{
+  differentiate(log(x),x)
+  differentiate(x,x)/x
+  1/x
+}
+
+@heading{Search for a chain-rule step}
+@search-derive["differentiate(x,x)*cos(x)" #:max-depth 1]{differentiate(sin(x),x)}
+}
+
+@heading{Missing and false premises}
+@differentiate[x #:assumptions (list x) #:on-error 'show]{log(x)}
+@differentiate[x #:assumptions (list x) #:on-error 'show]{1/x}
+@differentiate[x #:assumptions (list x f) #:on-error 'show]{@◆:call[f]{x}}
+@differentiate[x #:assumptions (list x) #:on-error 'show]{log(-1)}
+
+These examples report the required positive, nonzero or smoothness premise, or an invalid real logarithm argument. Facts are explicit author assertions; Grove checks their supported structure and obvious contradictions, rather than proving arbitrary hypotheses.
+
+@heading{An incorrect authored derivative}
+@check-derive[#:assumptions (list x) #:on-error 'show]{
+  differentiate(sin(x),x)
+  sin(x)
+}
+
+Natural-number powers are supported. General real powers, higher derivatives of unknown functions and integration are outside this stage. @link["polynomial-differentiation"]{Polynomial differentiation} and @link["vector-analysis"]{vector analysis} use the same derivation certificates.
