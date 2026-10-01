@@ -2,7 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math context)
-  #:use-module ((grove math formula) #:prefix formula:)
+  #:use-module ((grove math formula) #:prefix φ:)
   #:use-module (grove math term)
   #:use-module (grove math expression)
   #:use-module (srfi srfi-1)
@@ -24,7 +24,7 @@
       ((math-value? source) (math-value-declarations source))
       ((list? source) (append-map decode source))
       ((string? source)
-       (map (lambda (part) (math-value-term (formula:read-formula part)))
+       (map (lambda (part) (math-value-term (φ:read part)))
             (filter (lambda (part) (not (string-null? part)))
                     (map string-trim-both (string-split source #\;)))))
       (else (error "math assumptions require source strings or declared mathematical values" source))))

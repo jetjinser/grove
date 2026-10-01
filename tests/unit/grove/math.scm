@@ -6,7 +6,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-64)
   #:use-module (grove math syntax)
-  #:use-module (grove math formula)
+  #:use-module ((grove math formula) #:prefix φ:)
   #:use-module (grove math expression)
   #:use-module (grove math term)
   #:use-module (grove math layout)
@@ -44,14 +44,14 @@
             (math-expression-end expression)))
     (test-equal "Formula DSL reads to symbolic Scheme terms"
       '(curl (curl (var E)))
-      (math-value-term (read-formula "curl(curl(E))"))))
+      (math-value-term (φ:read "curl(curl(E))"))))
   (test-equal "precedence is resolved before term lowering"
     '(+ (var x) (* (var y) (num "2")))
     (math-source->term "x + y * 2"))
   (test-equal "underscore tokenizes as a script marker between identifiers"
     '(identifier subscript identifier eof)
     (map math-token-kind (tokenize-math "E_x")))
-  (test-error "Semantic Formula DSL rejects layout-only subscripts" #t (read-formula "E_x"))
+  (test-error "Semantic Formula DSL rejects layout-only subscripts" #t (φ:read "E_x"))
   (test-equal "unary minus, powers, and fractions have distinct term forms"
     '(+ (- (^ (var x) (num "2"))) (/ (var y) (num "3")))
     (math-source->term "-x^2 + y/3"))

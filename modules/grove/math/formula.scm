@@ -8,7 +8,7 @@
   #:use-module (grove math source)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (read-formula read-formula-lines))
+  #:export (read read-lines))
 
 ;; Formula DSL is an optional textual reader for Semantic values. Its AST is
 ;; private to this boundary; all later computation uses ordinary math terms.
@@ -52,7 +52,7 @@
        (cons operator (map formula-expression->term (math-expression-children expression)))))
     (else (error "unsupported Formula DSL syntax node" (math-expression-kind expression)))))
 
-(define-public (read-formula . values)
+(define-public (read . values)
   "Read Formula DSL fragments into a Semantic value."
   (if (and (= (length values) 1) (math-value? (car values))) (car values)
       (let collect ((remaining (fragments values)) (offset 0)
@@ -88,14 +88,14 @@
                (append (reverse run) text) embedded)))
           (else (error "Formula DSL accepts text fragments and Semantic values" (car remaining)))))))
 
-(define-public (read-formula-lines . values)
+(define-public (read-lines . values)
   "Read a handwritten sequence of Formula DSL expressions separated by newlines."
   (define (nonblank? parts)
     (any (lambda (part) (or (math-value? part) (not (string-every char-whitespace? part)))) parts))
   (let lines ((remaining (fragments values)) (pending '()) (output '()))
     (cond
       ((null? remaining)
-       (reverse (if (nonblank? pending) (cons (apply read-formula (reverse pending)) output) output)))
+       (reverse (if (nonblank? pending) (cons (apply read (reverse pending)) output) output)))
       ((math-value? (car remaining)) (lines (cdr remaining) (cons (car remaining) pending) output))
       ((or (string? (car remaining)) (content-text? (car remaining)) (content-layout? (car remaining)))
        (let ((text (math-source-text (list (car remaining)))))
@@ -104,6 +104,6 @@
              (if end
                  (let ((pending (cons (math-source-slice text start end) pending)))
                    (split (+ end 1) '()
-                     (if (nonblank? pending) (cons (apply read-formula (reverse pending)) output) output)))
+                     (if (nonblank? pending) (cons (apply read (reverse pending)) output) output)))
                  (lines (cdr remaining) (cons (math-source-slice text start (string-length text)) pending) output))))))
       (else (error "Formula DSL lines require text fragments or Semantic values" (car remaining))))))

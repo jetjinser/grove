@@ -2,10 +2,11 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (use-modules ((grove math semantic) #:prefix semantic:)
+             ((grove math formula) #:prefix φ:)
              (grove math expression) (grove math source)
              (grove math syntax) (grove math term) (srfi srfi-64))
 
-(define (term . fragments) (math-value-term (apply semantic:read fragments)))
+(define (term . fragments) (math-value-term (apply φ:read fragments)))
 (define (located text line column)
   (let ((text (string-copy text)))
     (set-source-properties! text `((filename . "formula.plant") (line . ,line) (column . ,column))) text))
@@ -53,7 +54,7 @@
   (test-equal "explicit grouping is recorded beside the term"
     #t (assq-ref (math-value-properties value) 'parenthesized?)))
 (let* ((child (semantic:divide (located "2" 4 10) (located "0" 5 8)))
-       (parent (semantic:read (located "x + " 3 2) child))
+       (parent (φ:read (located "x + " 3 2) child))
        (origin (math-value-origin parent)))
   (test-equal "embedded constructors retain a nested operand's source line"
     6 (math-location-line (math-origin-location origin '(1 1))))

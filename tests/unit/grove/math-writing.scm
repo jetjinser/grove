@@ -3,14 +3,14 @@
 
 (use-modules (grove render html) (language scribble spec) (system base language)
              (srfi srfi-13) (srfi srfi-64))
-(define imports "@use-modules[(grove math pipeline) ((grove math semantic) #:prefix semantic:)]\n")
+(define imports "@use-modules[(grove math pipeline) ((grove math formula) #:prefix φ:) ((grove math semantic) #:prefix semantic:)]\n")
 (define (article source)
   (scribble-evaluate-document (open-input-string (string-append imports source))
     (default-environment scribble) "writing.plant"))
 (define (html source) (sxml->html (content->sxml (article source))))
 (test-begin "mathematical article workflows")
 (let ((output (html
-  "@(define p @semantic:read{x^3+2*x})\n@(define report (math-differentiate p \"x\" #:assumptions '(\"scalar(x)\")))\n@(define dp (math-report-result report))\n@with-assumptions[\"scalar(x)\"]{\n@math[p]\n@differentiate[\"x\" p]\n@math[dp]\n@search-derive[p]{@semantic:add[p \"0\"]}\n@check-derive{\n  @semantic:derivative{ x }{x}\n  1\n}\n}")))
+  "@(define p @φ:read{x^3+2*x})\n@(define report (math-differentiate p \"x\" #:assumptions '(\"scalar(x)\")))\n@(define dp (math-report-result report))\n@with-assumptions[\"scalar(x)\"]{\n@math[p]\n@differentiate[\"x\" p]\n@math[dp]\n@search-derive[p]{@semantic:add[p \"0\"]}\n@check-derive{\n  @semantic:derivative{ x }{x}\n  1\n}\n}")))
   (test-assert "one defined expression serves display, computation, result reuse and search"
     (and (string-contains output "<msup>")
          (string-contains output "1 derivation found")

@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (use-modules (grove math pipeline) (grove math context) (grove math types)
+             ((grove math formula) #:prefix φ:)
              (grove math term) (grove math derivation) (grove math operator)
              (grove math assumption) (grove math layout) (grove math expression)
              ((grove math semantic) #:prefix semantic:)
@@ -12,7 +13,7 @@
 (define scalar-x '((scalar (var x))))
 (define conflict '((scalar (var y)) (vector (var y)) (scalar (var x))))
 (test-begin "mathematical expression contracts")
-(let ((value (semantic:read "x+opaque(x)")))
+(let ((value (φ:read "x+opaque(x)")))
   (test-assert "unknown function applications remain structurally valid"
     (math-term? (math-value-term value)))
   (test-assert "unknown function applications remain displayable"

@@ -4,6 +4,7 @@
 (define-module (grove math pipeline)
   #:use-module (grove ir)
   #:use-module ((grove math semantic) #:prefix semantic:)
+  #:use-module ((grove math formula) #:prefix φ:)
   #:use-module (grove math expression)
   #:use-module (grove math term)
   #:use-module (grove math context)
@@ -52,7 +53,7 @@
                math-report-diagnostics math-report-passes math-report-derivation math-report-final))
 
 (define (math-source->term source)
-  (math-value-term (semantic:read source)))
+  (math-value-term (φ:read source)))
 
 (define (derivation-premises candidate)
   (append-map
@@ -62,7 +63,7 @@
     (math-derivation-steps candidate)))
 
 (define* (report-with-input report input #:optional (other-inputs '()) (assumptions #f))
-  (let* ((values (map semantic:read (cons input other-inputs)))
+  (let* ((values (map φ:read (cons input other-inputs)))
          (requirements (delete-duplicates (append-map math-value-requirements values) equal?))
          (inherited (append-map (lambda (value)
                                  (lset-difference equal? (math-value-requirements value)
@@ -98,8 +99,8 @@
                 #:properties `((assumptions . ,(math-derivation-assumptions (math-report-derivation report))))))))
 
 (define (derivative-report name rules source variable assumptions validate max-steps max-term-size)
-  (let* ((source (semantic:read source))
-         (variable (semantic:read variable))
+  (let* ((source (φ:read source))
+         (variable (φ:read variable))
          (expression (math-value-term source))
          (coordinate (math-value-term variable))
          (facts (math-assumptions assumptions))
@@ -183,8 +184,8 @@ Declared unknown function derivatives remain explicit partial terms."
     (search-math-terms
       (math-source->term source) (math-source->term target)
       (math-assumptions assumptions) #f
-      #:start-origin (math-value-origin (semantic:read source))
-      #:goal-origin (math-value-origin (semantic:read target))
+      #:start-origin (math-value-origin (φ:read source))
+      #:goal-origin (math-value-origin (φ:read target))
       #:rules rules #:max-depth max-depth #:max-results max-results
       #:max-states max-states #:max-term-size max-term-size)
     source (list target) (math-assumptions assumptions)))
@@ -197,8 +198,8 @@ Declared unknown function derivatives remain explicit partial terms."
     (search-math-terms
       (math-source->term target) (math-source->term source)
       (math-assumptions assumptions) #t
-      #:start-origin (math-value-origin (semantic:read target))
-      #:goal-origin (math-value-origin (semantic:read source))
+      #:start-origin (math-value-origin (φ:read target))
+      #:goal-origin (math-value-origin (φ:read source))
       #:rules rules #:max-depth max-depth #:max-results max-results
       #:max-states max-states #:max-term-size max-term-size)
     source (list target) (math-assumptions assumptions)))
@@ -241,8 +242,8 @@ Declared unknown function derivatives remain explicit partial terms."
     (error "handwritten math chains require a list of expressions" sources))
   (check-math-chain (map math-source->term sources)
     (math-assumptions assumptions) #:steps steps #:rules rules
-    #:requirements (delete-duplicates (append-map (lambda (source) (math-value-requirements (semantic:read source))) sources) equal?)
-    #:sources (map (lambda (source) (math-value-origin (semantic:read source))) sources)))
+    #:requirements (delete-duplicates (append-map (lambda (source) (math-value-requirements (φ:read source))) sources) equal?)
+    #:sources (map (lambda (source) (math-value-origin (φ:read source))) sources)))
 
 (define (cartesian-passes term)
   (append

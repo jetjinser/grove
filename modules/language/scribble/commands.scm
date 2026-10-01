@@ -8,6 +8,7 @@
   #:use-module (grove math context)
   #:use-module (grove math source)
   #:use-module ((grove math semantic) #:prefix semantic:)
+  #:use-module ((grove math formula) #:prefix φ:)
   #:use-module (grove math expression)
   #:use-module (grove math layout)
   #:use-module (srfi srfi-1)
@@ -71,11 +72,11 @@
 
 (define-public (math . source)
   (make-content-element 'math
-    (list (math-value->layout (apply semantic:read source) (math-assumptions '())))))
+    (list (math-value->layout (apply φ:read source) (math-assumptions '())))))
 
 (define-public (display-math . source)
   (make-content-element 'math
-                        (list (math-value->layout (apply semantic:read source) (math-assumptions '())))
+                        (list (math-value->layout (apply φ:read source) (math-assumptions '())))
                         #:properties '((display? . #t))
                         #:flow-kind 'block))
 
@@ -98,14 +99,14 @@
 (define-public derive
   (lambda* (#:key (assumptions #f) (view 'compact) (on-error 'raise)
                  (rules #f) (max-steps 32) (max-term-size 2048) #:rest source)
-    (math-derive (apply semantic:read (math-command-fragments source))
+    (math-derive (apply φ:read (math-command-fragments source))
       #:assumptions (command-assumptions assumptions) #:view view #:on-error on-error
       #:rules rules #:max-steps max-steps #:max-term-size max-term-size)))
 
 (define-public check-derive
   (lambda* (#:key (assumptions #f) (view 'compact) (on-error 'raise)
                  (rules #f) (steps #f) #:rest source)
-    (let ((lines (apply semantic:read-lines (math-command-fragments source))))
+    (let ((lines (apply φ:read-lines (math-command-fragments source))))
       (math-verification->content
         (math-check-chain lines #:assumptions (command-assumptions assumptions) #:rules rules #:steps steps)
         #:view view #:on-error on-error))))
@@ -114,7 +115,7 @@
   (lambda* (variable #:key (assumptions #f) (view 'compact) (on-error 'raise)
                           (max-steps 128) (max-term-size 2048) #:rest source)
     (math-completed-report->content
-      (math-differentiate (apply semantic:read (math-command-fragments source)) variable
+      (math-differentiate (apply φ:read (math-command-fragments source)) variable
         #:assumptions (command-assumptions assumptions)
         #:max-steps max-steps #:max-term-size max-term-size)
       #:view view #:on-error on-error)))
@@ -124,7 +125,7 @@
                           (max-steps 128) (max-term-size 2048) #:rest source)
     "Compute and display a partial derivative in an explicit coordinate scope."
     (math-completed-report->content
-      (math-partial (apply semantic:read (math-command-fragments source)) variable
+      (math-partial (apply φ:read (math-command-fragments source)) variable
         #:assumptions (command-assumptions assumptions)
         #:max-steps max-steps #:max-term-size max-term-size)
       #:view view #:on-error on-error)))
@@ -135,7 +136,7 @@
                        (max-depth 8) (max-states 256) (max-term-size 128) #:rest source)
     (unless (boolean? backward?) (error "search direction must be boolean" backward?))
     (math-report->content
-      (let ((input (apply semantic:read (math-command-fragments source))))
+      (let ((input (apply φ:read (math-command-fragments source))))
         ((if backward? math-search-backward math-search)
           (if backward? target input) (if backward? input target)
           #:assumptions (command-assumptions assumptions) #:rules rules #:max-results max-results
@@ -170,7 +171,7 @@
                  (max-steps 256) (max-term-size 8192) #:rest source)
     "Compute Cartesian components with explicit, replayable passes."
     (math-completed-report->content
-      (math-compute (apply semantic:read (math-command-fragments source))
+      (math-compute (apply φ:read (math-command-fragments source))
         #:assumptions (command-assumptions assumptions)
         #:max-steps max-steps #:max-term-size max-term-size)
       #:view view #:on-error on-error)))
@@ -179,7 +180,7 @@
   (lambda* (coordinate #:key (assumptions #f) (view 'compact) (on-error 'raise)
                             (max-steps 128) (max-term-size 8192) #:rest source)
     (math-completed-report->content
-      (math-antiderivative (apply semantic:read (math-command-fragments source)) coordinate
+      (math-antiderivative (apply φ:read (math-command-fragments source)) coordinate
         #:assumptions (command-assumptions assumptions) #:max-steps max-steps #:max-term-size max-term-size)
       #:view view #:on-error on-error)))
 
@@ -187,7 +188,7 @@
   (lambda* (#:key (coordinate #f) (assumptions #f) (view 'compact) (on-error 'raise)
                  (max-steps 128) (max-term-size 8192) #:rest source)
     (math-completed-report->content
-      (math-solve-poisson (apply semantic:read (math-command-fragments source))
+      (math-solve-poisson (apply φ:read (math-command-fragments source))
         #:coordinate coordinate #:assumptions (command-assumptions assumptions)
         #:max-steps max-steps #:max-term-size max-term-size)
       #:view view #:on-error on-error)))
@@ -196,6 +197,6 @@
   (lambda* (target #:key (assumptions #f) (view 'compact) (on-error 'raise)
                         (max-steps 256) (max-term-size 8192) #:rest source)
     (math-completed-report->content
-      (math-check-equation (apply semantic:read (math-command-fragments source)) target
+      (math-check-equation (apply φ:read (math-command-fragments source)) target
         #:assumptions (command-assumptions assumptions) #:max-steps max-steps #:max-term-size max-term-size)
       #:view view #:on-error on-error)))

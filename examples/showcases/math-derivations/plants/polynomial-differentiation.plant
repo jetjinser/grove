@@ -2,11 +2,12 @@
 @; SPDX-License-Identifier: CC0-1.0
 
 @use-modules[(math-derivations commands) (grove math pipeline)
-             ((grove math semantic) #:prefix ◆:)]
+             ((grove math semantic) #:prefix ◆:)
+             ((grove math formula) #:prefix φ:)]
 @title{Polynomial differentiation}
 @summary{Separate differentiation and simplification passes with replayable steps.}
 
-@(define p @◆:read{x^3+2x})
+@(define p @φ:read{x^3+2x})
 @with-assumptions["scalar(x)"]{
 @differentiate["x" p]
 @differentiate["x"]{(1/2)*x^2+x*x}

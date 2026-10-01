@@ -4,25 +4,17 @@
 (define-module (grove math semantic)
   #:use-module (grove ir)
   #:use-module (grove math expression)
-  #:use-module ((grove math formula) #:prefix formula:)
+  #:use-module ((grove math formula) #:prefix φ:)
   #:use-module (grove math term)
   #:use-module (grove math source)
   #:use-module (grove math declaration)
   #:use-module (srfi srfi-1)
   #:re-export (math-value? math-value-term math-value-origin math-value-properties math-value-declarations math-value-requirements)
-  #:export (read read-lines variable coordinate parameter function field space call constant add subtract negate multiply divide power dot cross
+  #:export (variable coordinate parameter function field space call constant add subtract negate multiply divide power dot cross
             sin cos exp log prime grad divergence curl laplacian derivative partial antiderivative poisson-particular components vector-zero group styled))
 
-(define-public (read . formula-fragments)
-  "Read Formula DSL fragments into a Semantic DSL value."
-  (apply formula:read-formula formula-fragments))
-
-(define-public (read-lines . formula-fragments)
-  "Read newline-separated Formula DSL expressions into Semantic values."
-  (apply formula:read-formula-lines formula-fragments))
-
 (define-public (variable name)
-  (let ((value (read (if (symbol? name) (symbol->string name) name))))
+  (let ((value (φ:read (if (symbol? name) (symbol->string name) name))))
     (unless (eq? (car (math-value-term value)) 'var) (error "expected a variable name" name)) value))
 
 (define-public (constant value)
@@ -77,7 +69,7 @@
       #:declarations (delete-duplicates (append (math-value-declarations function) (math-value-declarations value)) equal?))))
 
 (define (operation name operands)
-  (let ((values (map (lambda (operand) (read operand)) operands)))
+  (let ((values (map (lambda (operand) (φ:read operand)) operands)))
     (make-math-value (cons name (map math-value-term values))
       #:origin (math-branch-origin (map math-value-origin values))
       #:properties (list (cons 'children (map math-value-properties values)))
@@ -123,13 +115,13 @@ The space remains a requirement, not an automatically activated assumption."
       #:requirements (cons (math-value-term space) (math-value-requirements value)))))
 (define-public (vector-zero) (make-math-value '(zero vector)))
 (define-public (group . body)
-  (let ((value (apply read body)))
+  (let ((value (apply φ:read body)))
     (math-value-with-properties value (acons 'parenthesized? #t (math-value-properties value)))))
 
 (define-public styled
   (lambda* (value #:key (variant 'normal))
     (unless (memq variant '(normal bold italic bold-italic)) (error "unsupported math variant" variant))
-    (let ((value (read value)))
+    (let ((value (φ:read value)))
       (math-value-with-properties value (acons 'variant variant (math-value-properties value))))))
 
 (define-public (antiderivative expression coordinate)

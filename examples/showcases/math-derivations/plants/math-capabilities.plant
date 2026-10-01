@@ -3,6 +3,7 @@
 
 @use-modules[(math-derivations commands) (grove math pipeline)
              ((grove math semantic) #:prefix ◆:)
+             ((grove math formula) #:prefix φ:)
              ((grove math notation) #:prefix ◇:)]
 @title{Mathematical capabilities}
 @summary{Notation, exact arithmetic, checked derivations and diagnostics.}
@@ -16,7 +17,7 @@
 
 @heading{Exact arithmetic and scalar simplification}
 @(math-completed-report->content (math-calculate "1/3+1/6"))
-@(define p @◆:read{x^3+2*x})
+@(define p @φ:read{x^3+2*x})
 @with-assumptions["scalar(x)"]{
 @(math-completed-report->content (math-simplify "-(-x)+0*x+x^1"))
 @(math-completed-report->content (math-collect "2*x+3*x"))
