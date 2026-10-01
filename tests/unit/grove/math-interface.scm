@@ -41,7 +41,9 @@
        (styled (semantic:styled plain #:variant 'bold)))
   (test-equal "style never changes a mathematical term" (math-value-term plain) (math-value-term styled))
   (test-assert "semantic styles lower to an explicit MathML style"
-    (string-contains (html (document:math styled)) "<mstyle mathvariant=\"bold\">"))
+    (let ((rendered (html (document:math styled))))
+      (and (string-contains rendered "<mstyle style=\"font-weight: bold; font-style: normal\">")
+           (string-contains rendered "<mi mathvariant=\"normal\">x</mi>"))))
   (with-math-assumptions '("scalar(x)")
     (test-equal "style never changes a derivative result"
       (math-report-final (math-differentiate plain "x"))

@@ -10,6 +10,7 @@
             sxml->html))
 
 (define* (content->sxml content #:key (handlers '()) (lazy-handlers '()))
+  (define math-variant (make-parameter #f))
   (define (render content)
     (cond
       ((string? content) content)
@@ -66,7 +67,11 @@
                `(,tag
                  ,@(let ((rule (content-element-property child 'rule))
                          (path (content-element-property child 'path)))
-                     (if rule `((@ (data-rule ,rule) (data-path ,path))) '()))
+                     (let ((attributes
+                             (append (if rule `((data-rule ,rule) (data-path ,path)) '())
+                                     (if (and (math-variant) (eq? tag 'mi))
+                                         '((mathvariant "normal")) '()))))
+                       (if (null? attributes) '() (list (cons '@ attributes)))))
                  ,(content-verbatim-string children))))
             ((math-frac)
              (unless (= (length children) 2)
@@ -107,8 +112,15 @@
                     children)))
             ((math-row math-cell) (render-math-row children))
             ((math-style)
-             `(mstyle (@ (mathvariant ,(symbol->string (content-element-property child 'variant))))
-                      ,@(render-math-children children)))
+             (let ((variant (content-element-property child 'variant)))
+               (parameterize ((math-variant variant))
+                 `(mstyle (@ (style ,(case variant
+                                       ((normal) "font-weight: normal; font-style: normal")
+                                       ((bold) "font-weight: bold; font-style: normal")
+                                       ((italic) "font-weight: normal; font-style: italic")
+                                       ((bold-italic) "font-weight: bold; font-style: italic")
+                                       (else (error "unsupported math variant" variant)))))
+                          ,@(render-math-children children)))))
             (else (error "unsupported MathML IR element" kind))))))
 
   (define (render-math element)
