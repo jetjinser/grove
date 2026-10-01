@@ -1,0 +1,18 @@
+@; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+@; SPDX-License-Identifier: CC0-1.0
+@use-modules[(math-derivations commands) (grove math pipeline)
+             ((grove math semantic) #:prefix ◆:)]
+@title{Function derivatives and parameter coefficients}
+@summary{Argument-indexed chain rules, finite regularity, and rational coefficients.}
+@(define r3 (◆:space 'x 'y 'z))
+@(define f (◆:function 'f #:inputs '(scalar scalar)))
+@with-assumptions[(list r3 f "c2(f)")]{
+  @partial["x"]{f(x,x)}
+  @compute{partial(partial(f(x^2,y),x),y)}
+  @compute[#:on-error 'show]{partial(partial(partial(f(x,y),x),y),x)}
+}
+@with-assumptions[(list r3 (◆:parameter 'a) (◆:parameter 'b) "nonzero(a); nonzero(b); nonzero(a+b)")]{
+  @antiderivative["x"]{(x/(a+b))^2}
+  @solve-poisson{y^2/(a+b)}
+  @check-equation["x*(a+b)/(a*b)"]{x/a+x/b}
+}
