@@ -9,7 +9,8 @@
   #:use-module (srfi srfi-9)
   #:export (math-polynomial? math-term->polynomial math-polynomial->term
             polynomial-add polynomial-scale polynomial-partial polynomial-integral
-            polynomial-zero? polynomial-variables polynomial-poisson polynomial-multiply))
+            polynomial-zero? polynomial-variables polynomial-poisson polynomial-multiply
+            polynomial-reduce-fraction polynomial-nonzero-factor?))
 
 ;; This IR carries a variable order and a sparse exponent-vector -> rational
 ;; coefficient map. It contains no display nodes or differentiation operators.
@@ -45,6 +46,55 @@
   (canonical (polynomial-variables a)
     (append-map (lambda (u) (map (lambda (v) (cons (map + (car u) (car v)) (* (cdr u) (cdr v))))
                                 (polynomial-terms b))) (polynomial-terms a))))
+
+(define (common-powers p)
+  (fold (lambda (entry powers) (map min powers (car entry)))
+        (caar (polynomial-terms p)) (cdr (polynomial-terms p))))
+
+(define (coefficient-content p)
+  (let ((coefficients (map cdr (polynomial-terms p))))
+    (* (if (< (car coefficients) 0) -1 1)
+       (/ (apply gcd (map (lambda (n) (abs (numerator n))) coefficients))
+          (apply lcm (map denominator coefficients))))))
+
+(define (divide-content p powers coefficient)
+  (canonical (polynomial-variables p)
+    (map (lambda (entry) (cons (map - (car entry) powers) (/ (cdr entry) coefficient)))
+         (polynomial-terms p))))
+
+(define (polynomial-reduce-fraction numerator denominator)
+  "Remove common monomial powers and make the denominator primitive and positive.
+Return numerator, denominator and the exact removed denominator factor."
+  (same-variables numerator denominator)
+  (when (polynomial-zero? denominator) (error "zero polynomial denominator"))
+  (let ((variables (polynomial-variables numerator)))
+    (if (polynomial-zero? numerator)
+        (values numerator (constant variables 1) denominator)
+        (let ((powers (map min (common-powers numerator) (common-powers denominator)))
+              (coefficient (coefficient-content denominator)))
+          (values (divide-content numerator powers coefficient)
+                  (divide-content denominator powers coefficient)
+                  (canonical variables (list (cons powers coefficient))))))))
+
+(define (polynomial-nonzero-factor? source factor)
+  "Recognize nonzero monomial factors and equal/power-related primitive cores.
+This deliberately excludes general polynomial division and GCD."
+  (same-variables source factor)
+  (and (not (polynomial-zero? source)) (not (polynomial-zero? factor))
+       (let ((source-powers (common-powers source)) (factor-powers (common-powers factor)))
+         (define (core p powers) (divide-content p powers (coefficient-content p)))
+         (define (power-related? a b)
+           (let ((ad (apply max (map (lambda (entry) (apply + (car entry))) (polynomial-terms a))))
+                 (bd (apply max (map (lambda (entry) (apply + (car entry))) (polynomial-terms b)))))
+             (and (> ad 0) (> bd 0) (zero? (modulo bd ad))
+                  (let power ((n (/ bd ad)) (p (constant (polynomial-variables a) 1)))
+                    (if (zero? n) (equal? (polynomial-terms p) (polynomial-terms b))
+                        (power (- n 1) (polynomial-multiply p a)))))))
+         (and (every (lambda (required known) (or (zero? required) (> known 0))) factor-powers source-powers)
+              (or (= (length (polynomial-terms factor)) 1)
+                  (let ((a (core source source-powers)) (b (core factor factor-powers)))
+                    (or (equal? (polynomial-terms a) (polynomial-terms b))
+                        (power-related? a b) (power-related? b a))))))))
 (define (index-of p variable)
   (or (list-index (lambda (name) (eq? name variable)) (polynomial-variables p))
       (error "coordinate not in polynomial variable order" variable)))

@@ -54,6 +54,7 @@
     "unit/grove/math-functions.scm"
     "unit/grove/math-function-calculus.scm"
     "unit/grove/math-parameters.scm"
+    "unit/grove/math-coefficient-reduction.scm"
     "unit/grove/math-integration.scm"
     "unit/grove/math-poisson.scm"
     "unit/grove/math-equations.scm"
