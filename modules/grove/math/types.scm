@@ -75,9 +75,12 @@
        (signatureo operator signature type)
        (operand-typeso assumptions operands signature)
        (conde
-         ((=/= operator 'differentiate) (=/= operator 'partial) (=/= operator 'prime))
+         ((=/= operator 'differentiate) (=/= operator 'partial)
+          (=/= operator 'antiderivative) (=/= operator 'poisson) (=/= operator 'prime))
          ((fresh (expression name)
-            (== term `(partial ,expression (var ,name)))
+            (conde ((== term `(partial ,expression (var ,name))))
+                   ((== term `(antiderivative ,expression (var ,name))))
+                   ((== term `(poisson ,expression (var ,name)))))
             (facto assumptions `(coordinate (var ,name)))))
          ((fresh (name argument)
             (== term `(prime (var ,name) ,argument))
@@ -123,7 +126,7 @@
                            (children (map types (cdr term)))
                            (allowed?
                              (case name
-                               ((partial) (and (eq? (caaddr term) 'var)
+                               ((partial antiderivative poisson) (and (eq? (caaddr term) 'var)
                                                (member `(coordinate ,(caddr term)) assumptions)))
                                ((differentiate) (and (eq? (caaddr term) 'var)
                                                  (not (eq? (math-variable-role assumptions (caddr term)) 'parameter))))

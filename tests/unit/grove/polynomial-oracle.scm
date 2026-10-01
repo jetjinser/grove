@@ -4,7 +4,7 @@
 (define-module (tests unit grove polynomial-oracle)
   #:use-module (srfi srfi-1)
   #:use-module (ice-9 match)
-  #:export (evaluate normalize scalar vector curl divergence coordinates))
+  #:export (evaluate normalize scalar vector curl divergence partial at-origin coordinates))
 
 ;; Independent sparse polynomials in three coordinates. Coefficients are exact
 ;; rationals; exponent vectors are ordinary lists, not Grove's expression IR.
@@ -30,6 +30,15 @@
                    (map (lambda (power index) (if (= index coordinate) (- power 1) power))
                         (cdr m) '(0 1 2)))))) polynomial)))
 (define (gradient scalar) (map (lambda (index) (partial scalar index)) '(0 1 2)))
+(define (integrate polynomial coordinate)
+  (normalize
+    (map (lambda (m)
+           (let ((exponent (+ 1 (list-ref (cdr m) coordinate))))
+             (cons (/ (car m) exponent)
+                   (map (lambda (power index) (if (= index coordinate) exponent power))
+                        (cdr m) '(0 1 2))))) polynomial)))
+(define (at-origin polynomial coordinate)
+  (filter (lambda (m) (zero? (list-ref (cdr m) coordinate))) polynomial))
 (define (divergence vector) (fold add '() (map partial vector '(0 1 2))))
 (define (curl vector)
   (map (lambda (i j) (add (partial (list-ref vector j) i) (scale -1 (partial (list-ref vector i) j))))
@@ -92,6 +101,9 @@
     (('div a) (scalar (divergence (cdr (go a)))))
     (('curl a) (vector (curl (cdr (go a)))))
     (('laplacian a) (map-value laplacian (go a)))
+    (('antiderivative a ('var name))
+     (map-value (lambda (p) (integrate p (or (list-index (lambda (v) (eq? v name)) '(x y z))
+                                            (error "oracle integration coordinate" name)))) (go a)))
     (((or 'differentiate 'partial) a ('var name))
      (map-value (lambda (p) (partial p (or (list-index (lambda (v) (eq? v name)) '(x y z))
                                          (error "oracle coordinate" name)))) (go a)))

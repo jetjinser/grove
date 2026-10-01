@@ -174,3 +174,28 @@
         #:assumptions (command-assumptions assumptions)
         #:max-steps max-steps #:max-term-size max-term-size)
       #:view view #:on-error on-error)))
+
+(define-public antiderivative
+  (lambda* (coordinate #:key (assumptions #f) (view 'compact) (on-error 'raise)
+                            (max-steps 128) (max-term-size 8192) #:rest source)
+    (math-completed-report->content
+      (math-antiderivative (apply semantic:expression (math-command-fragments source)) coordinate
+        #:assumptions (command-assumptions assumptions) #:max-steps max-steps #:max-term-size max-term-size)
+      #:view view #:on-error on-error)))
+
+(define-public solve-poisson
+  (lambda* (#:key (coordinate #f) (assumptions #f) (view 'compact) (on-error 'raise)
+                 (max-steps 128) (max-term-size 8192) #:rest source)
+    (math-completed-report->content
+      (math-solve-poisson (apply semantic:expression (math-command-fragments source))
+        #:coordinate coordinate #:assumptions (command-assumptions assumptions)
+        #:max-steps max-steps #:max-term-size max-term-size)
+      #:view view #:on-error on-error)))
+
+(define-public check-equation
+  (lambda* (target #:key (assumptions #f) (view 'compact) (on-error 'raise)
+                        (max-steps 256) (max-term-size 8192) #:rest source)
+    (math-completed-report->content
+      (math-check-equation (apply semantic:expression (math-command-fragments source)) target
+        #:assumptions (command-assumptions assumptions) #:max-steps max-steps #:max-term-size max-term-size)
+      #:view view #:on-error on-error)))

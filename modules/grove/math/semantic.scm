@@ -12,7 +12,7 @@
   #:use-module (srfi srfi-13)
   #:re-export (math-value? math-value-term math-value-origin math-value-properties math-value-declarations math-value-requirements)
   #:export (expression expression-lines variable coordinate parameter function field space call constant add subtract negate multiply divide power dot cross
-            sin cos exp log prime grad divergence curl laplacian derivative partial components vector-zero group styled))
+            sin cos exp log prime grad divergence curl laplacian derivative partial antiderivative poisson-particular components vector-zero group styled))
 
 (define (fragments values)
   (append-map (lambda (value) (if (list? value) (fragments value) (list value))) values))
@@ -195,3 +195,8 @@ The space remains a requirement, not an automatically activated assumption."
     (unless (memq variant '(normal bold italic bold-italic)) (error "unsupported math variant" variant))
     (let ((value (expression value)))
       (math-value-with-properties value (acons 'variant variant (math-value-properties value))))))
+
+(define-public (antiderivative expression coordinate)
+  (operation 'antiderivative (list expression coordinate)))
+(define-public (poisson-particular expression coordinate)
+  (operation 'poisson (list expression coordinate)))

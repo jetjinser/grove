@@ -63,6 +63,11 @@
         ((eq? (car value) 'num) (token 'mn (cadr value)))
         ((eq? (car value) 'components)
          (notation:column (map child '(0 1 2))))
+        ((memq (car value) '(antiderivative poisson))
+         (row (list (notation:sub
+                      (list (token 'mi (if (eq? (car value) 'antiderivative) "A" "P")))
+                      (list (child 1)))
+                    (operator "⁡") (argument 0))))
         ((and (memq (car value) '(differentiate partial)) (= (length value) 3))
          (let ((symbol (if (eq? (car value) 'partial) "∂" "d")))
            (row (list (notation:frac

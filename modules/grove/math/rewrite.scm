@@ -11,6 +11,7 @@
   #:use-module (grove math differentiation)
   #:use-module (grove math components)
   #:use-module (grove math spatial)
+  #:use-module (grove math integration)
   #:use-module (grove math partial)
   #:use-module (grove math normalization)
   #:use-module (srfi srfi-1)
@@ -28,7 +29,7 @@
 (define math-rewrite-rules
   (append math-vector-rules math-identity-rules math-differentiation-rule-definitions
           math-arithmetic-rules math-normalization-rules math-partial-rule-definitions
-          math-component-rules math-spatial-rules))
+          math-component-rules math-spatial-rules math-polynomial-rules))
 
 (define (math-rewrite-rule-ref name)
   (find (lambda (rule) (eq? name (math-rewrite-rule-name rule))) math-rewrite-rules))
@@ -43,7 +44,7 @@
 (define math-simplification-rules (math-rule-names #:groups '(identity calculate collect normalize cancel)))
 (define math-default-rules
   (map math-rewrite-rule-name
-    (filter (lambda (rule) (not (memq (math-rewrite-rule-group rule) '(expand components spatial)))) math-rewrite-rules)))
+    (filter (lambda (rule) (not (memq (math-rewrite-rule-group rule) '(expand components spatial polynomial-calculus)))) math-rewrite-rules)))
 (define math-calculation-rules (math-rule-names #:groups '(calculate)))
 (define math-collection-rules (math-rule-names #:groups '(collect)))
 (define math-backward-rules

@@ -23,6 +23,8 @@
     (laplacian ((scalar scalar) (vector vector)) #f)
     (differentiate ((scalar scalar scalar)) #f)
     (partial ((scalar scalar scalar)) #f)
+    (antiderivative ((scalar scalar scalar)) #f)
+    (poisson ((scalar scalar scalar)) #f)
     (components ((scalar scalar scalar vector)) #f)
     (sin ((scalar scalar)) #f)
     (cos ((scalar scalar)) #f)

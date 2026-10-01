@@ -30,6 +30,8 @@
     "grove/math/partial.scm"
     "grove/math/components.scm"
     "grove/math/spatial.scm"
+    "grove/math/polynomial.scm"
+    "grove/math/integration.scm"
     "grove/math/arithmetic.scm"
     "grove/math/number.scm"
     "grove/math/normalization.scm"

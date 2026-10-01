@@ -1,0 +1,131 @@
+;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+;;; SPDX-License-Identifier: GPL-3.0-or-later
+(define-module (grove math polynomial)
+  #:use-module (grove math number)
+  #:use-module (grove math term)
+  #:use-module (grove math declaration)
+  #:use-module (ice-9 match)
+  #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-9)
+  #:export (math-polynomial? math-term->polynomial math-polynomial->term
+            polynomial-add polynomial-scale polynomial-partial polynomial-integral
+            polynomial-zero? polynomial-variables polynomial-poisson))
+
+;; This IR carries a variable order and a sparse exponent-vector -> rational
+;; coefficient map. It contains no display nodes or differentiation operators.
+(define-record-type <polynomial>
+  (make-polynomial variables terms)
+  math-polynomial?
+  (variables polynomial-variables)
+  (terms polynomial-terms))
+
+(define (canonical variables terms)
+  (let ((table (make-hash-table)))
+    (for-each (lambda (entry)
+                (hash-set! table (car entry) (+ (cdr entry) (hash-ref table (car entry) 0)))) terms)
+    (let ((terms (hash-fold (lambda (powers coefficient result)
+                             (if (zero? coefficient) result (cons (cons powers coefficient) result))) '() table)))
+      (when (or (> (length terms) 256) (any (lambda (entry) (> (apply + (car entry)) 64)) terms))
+        (throw 'polynomial-limit "polynomial expansion exceeds 256 monomials or total degree 64"))
+      (make-polynomial variables
+        (sort terms (lambda (a b) (string<? (format #f "~s" (car a)) (format #f "~s" (car b)))))))))
+(define (constant variables n)
+  (canonical variables (list (cons (make-list (length variables) 0) n))))
+(define (polynomial-zero? p) (null? (polynomial-terms p)))
+(define (same-variables a b)
+  (unless (equal? (polynomial-variables a) (polynomial-variables b))
+    (error "polynomial variable orders differ")))
+(define (polynomial-add a b)
+  (same-variables a b)
+  (canonical (polynomial-variables a) (append (polynomial-terms a) (polynomial-terms b))))
+(define (polynomial-scale p n)
+  (canonical (polynomial-variables p) (map (lambda (entry) (cons (car entry) (* n (cdr entry)))) (polynomial-terms p))))
+(define (multiply a b)
+  (same-variables a b)
+  (canonical (polynomial-variables a)
+    (append-map (lambda (u) (map (lambda (v) (cons (map + (car u) (car v)) (* (cdr u) (cdr v))))
+                                (polynomial-terms b))) (polynomial-terms a))))
+(define (index-of p variable)
+  (or (list-index (lambda (name) (eq? name variable)) (polynomial-variables p))
+      (error "coordinate not in polynomial variable order" variable)))
+(define (change-power powers index delta)
+  (map (lambda (power i) (if (= i index) (+ power delta) power)) powers (iota (length powers))))
+(define (polynomial-partial p variable)
+  (let ((index (index-of p variable)))
+    (canonical (polynomial-variables p)
+      (filter-map (lambda (entry)
+                    (let ((power (list-ref (car entry) index)))
+                      (and (> power 0) (cons (change-power (car entry) index -1) (* power (cdr entry))))))
+                  (polynomial-terms p)))))
+(define (polynomial-integral p variable)
+  (let ((index (index-of p variable)))
+    (canonical (polynomial-variables p)
+      (map (lambda (entry)
+             (cons (change-power (car entry) index 1) (/ (cdr entry) (+ 1 (list-ref (car entry) index)))))
+           (polynomial-terms p)))))
+
+(define (math-term->polynomial term facts)
+  "Parse exact arithmetic and natural powers in explicit coordinates/parameters.
+Return #f outside this vocabulary; polynomial-limit bounds expansion."
+  (let* ((basis (find math-space-declaration? facts))
+         (names (delete-duplicates
+                  (append (if basis (map cadr (cdr basis)) '())
+                    (filter-map (lambda (fact) (and (memq (car fact) '(coordinate parameter)) (cadadr fact))) facts))))
+         (zero-powers (make-list (length names) 0)))
+    (define (parse term)
+      (let ((number (math-number-value term)))
+        (if number (constant names number)
+            (match term
+              (('var name)
+               (let ((index (list-index (lambda (v) (eq? name v)) names)))
+                 (and index (canonical names (list (cons (change-power zero-powers index 1) 1))))))
+              (('- a) (let ((a (parse a))) (and a (polynomial-scale a -1))))
+              (((or '+ '- '*) a b)
+               (let ((a (parse a)) (b (parse b)))
+                 (and a b (case (car term) ((+) (polynomial-add a b))
+                            ((-) (polynomial-add a (polynomial-scale b -1))) ((* ) (multiply a b))))))
+              (('/ a b)
+               (let ((a (parse a)) (n (math-number-value b)))
+                 (and a n (not (zero? n)) (polynomial-scale a (/ n)))))
+              (('^ a ('num n))
+               (let ((a (parse a)) (n (math-natural-value n)))
+                 (and a n
+                      (begin
+                        (when (> n 64) (throw 'polynomial-limit "polynomial power exceeds 64"))
+                        (let power ((n n) (result (constant names 1)))
+                          (if (zero? n) result (power (- n 1) (multiply result a))))))))
+              (_ #f)))))
+    (parse term)))
+
+(define (math-polynomial->term p)
+  (define (join operator terms identity)
+    (if (null? terms) identity
+        (fold (lambda (term result) `(,operator ,result ,term)) (car terms) (cdr terms))))
+  (join '+
+    (map (lambda (entry)
+           (let* ((coefficient (cdr entry))
+                  (factors (filter-map (lambda (name power)
+                                         (cond ((zero? power) #f) ((= power 1) `(var ,name))
+                                               (else `(^ (var ,name) (num ,(number->string power))))))
+                                       (polynomial-variables p) (car entry)))
+                  (body (join '* factors '(num "1"))))
+             (cond ((null? factors) (math-number->term coefficient))
+                   ((= coefficient 1) body) ((= coefficient -1) `(- ,body))
+                   (else `(* ,(math-number->term coefficient) ,body)))))
+         (polynomial-terms p)) '(num "0")))
+
+(define (polynomial-poisson source axes)
+  "Return a particular solution of Delta u = source, anchored in the first axis.
+Repeated transverse Laplacians terminate because their degree decreases."
+  (unless (and (= (length axes) 3) (= (length (delete-duplicates axes)) 3)
+               (every (lambda (axis) (memq axis (polynomial-variables source))) axes))
+    (error "expected three distinct polynomial coordinate axes" axes))
+  (let ((x (car axes)) (transverse (cdr axes)))
+    (define (twice p) (polynomial-integral (polynomial-integral p x) x))
+    (define (transverse-laplacian p)
+      (fold polynomial-add (polynomial-scale p 0)
+        (map (lambda (axis) (polynomial-partial (polynomial-partial p axis) axis)) transverse)))
+    (let advance ((p source) (result (polynomial-scale source 0)))
+      (if (polynomial-zero? p) result
+          (let ((next (twice p)))
+            (advance (polynomial-scale (transverse-laplacian next) -1) (polynomial-add result next)))))))

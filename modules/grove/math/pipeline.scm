@@ -13,6 +13,9 @@
   #:use-module (grove math verification)
   #:use-module (grove math differentiation)
   #:use-module (grove math partial)
+  #:use-module (grove math integration)
+  #:use-module (grove math polynomial)
+  #:use-module (grove math declaration)
   #:use-module (grove math pass)
   #:use-module (grove math report)
   #:use-module (grove math diagnostic)
@@ -25,7 +28,7 @@
   #:export (math-source->term math-derive
             math-search math-search-backward math-simplify math-calculate math-collect
             math-check-chain
-            math-compute math-differentiate math-partial math-rewrite math-report-result math-normalize math-expand)
+            math-check-equation math-antiderivative math-solve-poisson math-compute math-differentiate math-partial math-rewrite math-report-result math-normalize math-expand)
   #:re-export (math-derivation->content math-verification->content
                math-report->content math-completed-report->content current-math-assumptions call-with-math-assumptions with-math-assumptions
                math-verify-step math-verify-derivation
@@ -239,22 +242,77 @@ Declared unknown function derivatives remain explicit partial terms."
     #:requirements (delete-duplicates (append-map (lambda (source) (math-value-requirements (semantic:expression source))) sources) equal?)
     #:sources (map (lambda (source) (math-value-origin (semantic:expression source))) sources)))
 
+(define (cartesian-passes term)
+  (append
+    (if (any (lambda (path) (memq (car (math-term-at-path term path)) '(antiderivative poisson)))
+             (math-term-paths term))
+        '((polynomial-calculus . (integrate-polynomial solve-polynomial-poisson))) '())
+    `((components . ,(math-rule-names #:groups '(components spatial)))
+      (partial . ,(append math-simplification-rules math-partial-rules)))))
+
 (define* (math-compute source #:key (assumptions '()) (max-steps 256) (max-term-size 8192))
   "Lower Cartesian operators and component algebra, compute partials, then simplify.
 Unknown field derivatives remain explicit; no abstract field components are invented."
   (report-with-input
     (run-math-passes (math-source->term source) (math-assumptions assumptions)
-      `((components . ,(math-rule-names #:groups '(components spatial)))
-        (partial . ,(append math-simplification-rules math-partial-rules))
-        (simplify . ,math-simplification-rules))
+      (append (cartesian-passes (math-source->term source))
+              `((simplify . ,math-simplification-rules)))
       #:name 'compute #:order 'innermost #:max-steps max-steps #:max-term-size max-term-size
       #:validate-final
       (lambda (term)
         (filter-map
           (lambda (path)
             (let ((local (math-term-at-path term path)))
-              (and (memq (car local) '(grad div curl laplacian))
+              (and (memq (car local) '(grad div curl laplacian antiderivative poisson))
                    (make-math-diagnostic #f #f path 'unsupported-expression '()
                      "Cartesian computation requires explicit vector components for this operator"))))
           (math-term-paths term))))
     source))
+
+(define (polynomial-calculus-report name rule source coordinate assumptions max-steps max-term-size)
+  (derivative-report name (list rule) source coordinate assumptions
+    (lambda (expression coordinate facts)
+      (let ((preconditions (math-execution-diagnostics facts `(,name ,expression ,coordinate) name)))
+        (if (pair? preconditions) preconditions
+            (polynomial-calculus-diagnostics facts `(,name ,expression ,coordinate)))))
+    max-steps max-term-size))
+
+(define* (math-antiderivative source coordinate #:key (assumptions '())
+                             (max-steps 128) (max-term-size 8192))
+  "Compute the exact polynomial primitive anchored at coordinate zero."
+  (polynomial-calculus-report 'antiderivative 'integrate-polynomial source coordinate assumptions max-steps max-term-size))
+
+(define* (math-solve-poisson source #:key (coordinate #f) (assumptions '())
+                           (max-steps 128) (max-term-size 8192))
+  "Construct a polynomial particular solution of Delta u = source.
+No boundary conditions or uniqueness claim. The selected axis fixes one solution."
+  (let* ((facts (math-assumptions assumptions))
+         (basis (find math-space-declaration? facts))
+         (axis (or coordinate (and basis (symbol->string (cadadr basis))) "x")))
+    (polynomial-calculus-report 'poisson 'solve-polynomial-poisson source axis assumptions max-steps max-term-size)))
+
+(define (equation-residual-diagnostics term facts)
+  (if (member term '((num "0") (zero vector) (components (num "0") (num "0") (num "0")))) '()
+      (catch 'polynomial-limit
+        (lambda ()
+          (math-term->polynomial term facts)
+          (list (make-math-diagnostic #f #f '() 'equation-not-proven '()
+                  "The equation has a nonzero or unresolved residual; equality was not established")))
+        (lambda (key message)
+          (list (make-math-diagnostic #f #f '() 'polynomial-limit '() message))))))
+
+(define* (math-check-equation left right #:key (assumptions '())
+                             (max-steps 256) (max-term-size 8192))
+  "Check an identity by computing and expanding its residual.
+A nonzero or symbolic residual is not a completed verification."
+  (let* ((input (semantic:subtract left right))
+         (facts (math-assumptions assumptions)))
+    (report-with-input
+      (run-math-passes (math-value-term input) facts
+        (append (cartesian-passes (math-value-term input))
+                `((polynomial . (expand-polynomial))
+                  (simplify . ,math-simplification-rules)))
+        #:name 'check-equation #:order 'innermost #:max-steps max-steps #:max-term-size max-term-size
+        #:validate-final
+        (lambda (term) (equation-residual-diagnostics term facts)))
+      input)))
