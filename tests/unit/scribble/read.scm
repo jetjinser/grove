@@ -147,7 +147,7 @@
     (lambda ()
       (evaluate-document (default-environment scribble)
         "@check-derive[#:assumptions \"scalar(f)\"]{curl(grad(f))\nzero(vector)}"))
-    "step 1, curl-grad-zero at root: missing premises: smooth(f)"))
+    "step 1, curl-grad-zero at root: missing premises: c2(f)"))
 
 (test-assert "@check-derive rejects silently skipped intermediate rewrites"
   (exception-contains?

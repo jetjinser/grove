@@ -38,11 +38,11 @@
       ((differentiable (components ,a ,b ,c)))
       ((basiso facts x y z)))
     (math-rule 'laplacian-scalar-components "laplacian(f) = div(grad(f))"
-      "Smooth scalar field in Cartesian space" 'spatial
+      "C2 scalar field in Cartesian space" 'spatial
       (facts f) (laplacian ,f) (div (grad ,f))
-      ((smooth ,f)) ((math-typeo facts f 'scalar)))
+      ((c2 ,f)) ((math-typeo facts f 'scalar)))
     (math-rule 'laplacian-vector-components "laplacian((a,b,c)) = (laplacian(a),laplacian(b),laplacian(c))"
-      "Smooth Cartesian components" 'spatial
+      "C2 Cartesian components" 'spatial
       (facts a b c) (laplacian (components ,a ,b ,c))
       (components (laplacian ,a) (laplacian ,b) (laplacian ,c))
-      ((smooth (components ,a ,b ,c))) ())))
+      ((c2 (components ,a ,b ,c))) ())))

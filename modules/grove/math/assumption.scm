@@ -18,7 +18,7 @@
          ((function) (math-function-declaration? fact))
          ((field) (math-field-declaration? fact))
          ((space) (math-space-declaration? fact))
-         ((smooth differentiable nonzero positive) #t)
+         ((smooth c2 differentiable nonzero positive) #t)
          ((=) #t)
          (else #f))))
 

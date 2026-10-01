@@ -49,6 +49,7 @@
     "unit/grove/math-component-algebra.scm"
     "unit/grove/math-cartesian-oracle.scm"
     "unit/grove/math-order.scm"
+    "unit/grove/math-regularity.scm"
     "unit/grove/math-integration.scm"
     "unit/grove/math-poisson.scm"
     "unit/grove/math-equations.scm"

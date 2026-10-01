@@ -58,7 +58,7 @@
   (test-equal "repeated pattern placeholders match equal operands"
     '() ((math-rewrite-rule-required-facts rule) '(pair (var x) (var x)))))
 (test-equal "vector rule's diagnostic premises come from its relation declaration"
-  '((smooth (var E)))
+  '((c2 (var E)))
   (math-rule-required-facts 'div-curl-zero '(div (curl (var E)))))
 (test-equal "finite inverse zero identity enumerates declared fields only"
   '((div (curl (var E))))

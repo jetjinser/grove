@@ -34,9 +34,9 @@
              "Cartesian operator expansion requires an active ordered space"))
           ((and (eq? pass 'components) (memq name '(grad div curl laplacian))
                 (not (math-premise-known? assumptions
-                       `(,(if (eq? name 'laplacian) 'smooth 'differentiable) ,(cadr local)))))
+                       `(,(if (eq? name 'laplacian) 'c2 'differentiable) ,(cadr local)))))
            (make-math-diagnostic #f #f path 'missing-premise
-             (list `(,(if (eq? name 'laplacian) 'smooth 'differentiable) ,(cadr local)))
+             (list `(,(if (eq? name 'laplacian) 'c2 'differentiable) ,(cadr local)))
              "Cartesian operator expansion requires operand regularity"))
           ((and (eq? name 'components)
                 (not (any math-space-declaration? assumptions)))

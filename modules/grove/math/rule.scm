@@ -106,11 +106,19 @@
 (define (math-factso assumptions facts)
   (if (null? facts) succeed
       (fresh ()
-        (conde
-          ((facto assumptions (car facts)))
-          ((project (assumptions facts)
-             (if (and (not (member (car facts) assumptions))
-                      (math-premise-known? assumptions (car facts))) succeed fail))))
+        (project (assumptions)
+          (let ((known
+                  (delete-duplicates
+                    (append-map
+                      (lambda (fact)
+                        (cons fact (case (car fact)
+                                     ((smooth) `((c2 ,(cadr fact)) (differentiable ,(cadr fact))))
+                                     ((c2) `((differentiable ,(cadr fact)))) (else '())))) assumptions) equal?)))
+            (conde
+              ((facto known (car facts)))
+              ((project (facts)
+                 (if (and (not (member (car facts) known))
+                          (math-premise-known? assumptions (car facts))) succeed fail))))))
         (math-factso assumptions (cdr facts)))))
 
 (define-syntax math-rule

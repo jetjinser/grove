@@ -35,7 +35,7 @@
     (cross ((vector vector vector)) "×")))
 
 ;; Assertions are reserved unary forms, not expression type signatures.
-(define assertion-operators '(scalar vector smooth differentiable coordinate parameter nonzero positive))
+(define assertion-operators '(scalar vector smooth c2 differentiable coordinate parameter nonzero positive))
 (define arities
   (append (map (lambda (entry)
                  (cons (car entry)

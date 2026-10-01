@@ -513,9 +513,9 @@
     (test-equal "missing-premise diagnostic names the rule" 'curl-grad-zero
       (math-diagnostic-rule diagnostic))
     (test-equal "missing-premise diagnostic retains exact missing facts"
-      '((smooth (var f))) (math-diagnostic-premises diagnostic))
+      '((c2 (var f))) (math-diagnostic-premises diagnostic))
     (test-assert "missing premise is readable in the author's source syntax"
-      (string-contains (math-diagnostic-message diagnostic) "smooth(f)"))
+      (string-contains (math-diagnostic-message diagnostic) "c2(f)"))
     (test-equal "diagnostic hints leave stored assumptions unchanged"
       '((scalar (var f)))
       (math-derivation-assumptions (math-verification-derivation verification)))

@@ -29,23 +29,28 @@
                                            (member (cadr fact) variables))) facts)) '()))))
                 (math-term-paths term)) equal?))
 
-;; Smooth means C-infinity; differentiable requires C1 only. Spatial derivatives
-;; preserve smoothness, but C1 alone never licenses a second derivative identity.
+;; Regularity is a finite derivative budget, or C-infinity. A derivative
+;; consumes one order; a Laplacian consumes two. No C1 -> C2 promotion.
 (define (regular? facts term predicate)
-  (or (member (list predicate term) facts)
-      (and (eq? predicate 'differentiable) (regular? facts term 'smooth))
+  (define order (case predicate ((differentiable) 1) ((c2) 2) (else +inf.0)))
+  (define (at-order term order)
+    (or (any (lambda (fact)
+               (and (memq (car fact) '(differentiable c2 smooth)) (equal? (cadr fact) term)
+                    (>= (case (car fact) ((differentiable) 1) ((c2) 2) (else +inf.0)) order))) facts)
       (case (car term)
         ((num zero) #t)
         ((var) (or (member `(coordinate ,term) facts) (member `(parameter ,term) facts)
                    (any (lambda (fact) (and (math-space-declaration? fact) (member term (cdr fact)))) facts)))
         ((+ - * / ^ dot cross sin cos exp log components antiderivative poisson)
-         (every (lambda (child) (regular? facts child predicate)) (cdr term)))
-        ((grad div curl laplacian partial)
-         (and (eq? predicate 'smooth) (regular? facts (cadr term) 'smooth)))
+         (every (lambda (child) (at-order child order)) (cdr term)))
+        ((grad div curl partial) (at-order (cadr term) (+ order 1)))
+        ((laplacian) (at-order (cadr term) (+ order 2)))
+        ((prime) (and (at-order (cadr term) (+ order 1)) (at-order (caddr term) order)))
         (else
          (and (math-function-signature facts (car term))
-              (regular? facts `(var ,(car term)) predicate)
-              (every (lambda (child) (regular? facts child predicate)) (cdr term)))))))
+              (at-order `(var ,(car term)) order)
+              (every (lambda (child) (at-order child order)) (cdr term)))))))
+  (at-order term order))
 
 (define (math-domain-premises term)
   (delete-duplicates
@@ -64,7 +69,7 @@
                      (make-math-diagnostic #f #f '() 'missing-premise (list fact)
                        (format #f "~a: ~a"
                          (case (car fact)
-                           ((smooth differentiable) "retained regularity premise")
+                           ((smooth c2 differentiable) "retained regularity premise")
                            ((space) "retained coordinate space")
                            ((=) "retained identity premise")
                            (else "retained domain premise"))
@@ -112,7 +117,7 @@
            (case (car fact)
              ((positive) (positive? facts (cadr fact)))
              ((nonzero) (nonzero? facts (cadr fact)))
-             ((smooth differentiable) (regular? facts (cadr fact) (car fact)))
+             ((smooth c2 differentiable) (regular? facts (cadr fact) (car fact)))
              (else #f))) #t))
 
 (define (math-definedness-diagnostics facts term)

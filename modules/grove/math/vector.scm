@@ -10,30 +10,30 @@
 (define math-vector-rules
   (list
     (math-rule 'curl-curl-identity "curl(curl(E)) = grad(div(E)) - laplacian(E)"
-      "assumptions declare vector(E) and smooth(E)" 'vector-calculus
+      "assumptions declare vector(E) and c2(E)" 'vector-calculus
       (facts field) (curl (curl ,field)) (- (grad (div ,field)) (laplacian ,field))
-      ((smooth ,field)) ((math-typeo facts field 'vector))
+      ((c2 ,field)) ((math-typeo facts field 'vector))
       #:backward #t #:backward-default? #t
-      #:documentation "Replace the curl of a curl by the gradient of the divergence minus the vector Laplacian. The field must be smooth; declaring it divergence-free is a separate premise and a separate rewrite.")
+      #:documentation "Replace the curl of a curl by the gradient of the divergence minus the vector Laplacian. The field must be C2; declaring it divergence-free is a separate premise and a separate rewrite.")
     (math-rule 'divergence-free "grad(div(E)) = zero(vector)"
       "vector(E) and the matching fact div(E) = 0" 'vector-calculus
       (facts field) (grad (div ,field)) (zero vector)
       ((= (div ,field) (num "0"))) ((math-typeo facts field 'vector))
       #:backward #t #:backward-default? #t)
     (math-rule 'div-curl-zero "div(curl(E)) = 0"
-      "assumptions declare vector(E) and smooth(E)" 'vector-calculus
+      "assumptions declare vector(E) and c2(E)" 'vector-calculus
       (facts field) (div (curl ,field)) (num "0")
-      ((smooth ,field)) ((math-typeo facts field 'vector))
+      ((c2 ,field)) ((math-typeo facts field 'vector))
       #:backward #t #:backward-default? #t)
     (math-rule 'curl-grad-zero "curl(grad(f)) = zero(vector)"
-      "assumptions declare scalar(f) and smooth(f)" 'vector-calculus
+      "assumptions declare scalar(f) and c2(f)" 'vector-calculus
       (facts field) (curl (grad ,field)) (zero vector)
-      ((smooth ,field)) ((math-typeo facts field 'scalar))
+      ((c2 ,field)) ((math-typeo facts field 'scalar))
       #:backward #t #:backward-default? #t)
     (math-rule 'div-grad-laplacian "div(grad(f)) = laplacian(f)"
-      "assumptions declare scalar(f) and smooth(f)" 'vector-calculus
+      "assumptions declare scalar(f) and c2(f)" 'vector-calculus
       (facts field) (div (grad ,field)) (laplacian ,field)
-      ((smooth ,field)) ((math-typeo facts field 'scalar))
+      ((c2 ,field)) ((math-typeo facts field 'scalar))
       #:backward #t #:backward-default? #t)
     (math-rule 'grad-product "grad(f*g) = g*grad(f) + f*grad(g)"
       "scalar C1 fields in Cartesian space" 'vector-calculus
