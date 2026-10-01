@@ -19,3 +19,12 @@
 @with-assumptions["coordinate(x); coordinate(y); function(f,scalar,scalar,scalar); differentiable(f)"]{
   @partial["x" #:view 'result]{x*f(x,y)}
 }
+
+@with-assumptions[r3]{
+  @compute[#:view 'result]{grad(x^2+y^2+z^2)}
+  @compute[#:view 'result]{div(components(x,y,z))}
+  @compute[#:view 'result]{curl(components(-y,x,0))}
+  @compute[#:view 'result]{laplacian(x^2+y^2+z^2)}
+  @compute[#:view 'result]{dot(components(x,y,z),components(x,y,z))}
+  @compute[#:view 'result]{cross(components(1,0,0),components(0,1,0))}
+}

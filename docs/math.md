@@ -596,9 +596,8 @@ the chosen space travels as a requirement of the mathematical value, independent
 of its component terms and display properties. Construction does not activate
 that space. A raw textual `components(x,y,z)` uses the active space, and its
 computed result retains that basis too. Mixing bases or using a vector as an
-entry is diagnosed before computation. Scalar passes may simplify the entries,
-but component-wise vector operations and spatial-operator expansion are not
-implemented yet.
+entry is diagnosed before computation. Scalar passes may simplify the entries; `math-compute` additionally lowers
+component-wise vector operations and Cartesian spatial operators.
 
 ```scheme
 @(define r3 (◆:space 'x 'y 'z))
@@ -648,3 +647,16 @@ domain requirements remain attached to computed values and certificates even
 when the visible term reduces to zero or one. Reuse must satisfy those
 requirements again; documentation and retained requirements never authorize
 new assumptions.
+
+Cartesian computation uses `math-compute` and `@compute`, with an explicit
+ordered `space` premise. It lowers component addition, subtraction, negation,
+scalar multiplication/division, dot/cross products and grad/div/curl/Laplacian
+in a `components` pass, evaluates partials with local simplification in a
+`partial` pass, and finishes with `simplify`. Each pass has a separate budget;
+all edges are registered rules and replayable. First-order operators require
+C1 regularity; Laplacian currently requires smoothness. Unspecified vector
+components produce a diagnostic. Unknown scalar derivatives remain explicit.
+These are Euclidean Cartesian operations, not curvilinear-coordinate formulas.
+Results retain their ordered basis and the coordinate/parameter roles used.
+Independent sparse-polynomial tests check every Cartesian rule and every
+recorded computation edge without invoking Grove's calculus implementation.
