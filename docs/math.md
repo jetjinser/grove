@@ -14,19 +14,21 @@ every step.
 
 Automatic simplification removes a matching typed zero from either side of
 addition and the right side of subtraction, cancels double negation, and removes
-scalar one from either side of multiplication. These six rules apply to scalar
+scalar one from either side of multiplication. These rules apply to scalar
 and vector terms and strictly reduce term size. They are forward simplifications;
 backward search does not insert zero/one decorations by default. Each transition
 still records its rule and operand path.
 
 Grove keeps mathematical meaning separate from mathematical presentation.
-The current content IR nodes (`math-frac`, `math-sup`, `math-align`, and
-`math-token`) describe layout and lower to MathML. The new `(grove math ...)`
-modules provide an independent path for expressions that need structural
-processing:
+Semantic DSL in `(grove math semantic)` constructs reusable `math-value`
+objects: mathematical terms with source origins and presentation preferences
+kept alongside them. Notation DSL in `(grove math notation)` constructs
+layout nodes for display-only notation. Both render as native MathML; only
+semantic expressions enter computation. The document commands `@math` and
+`@display-math` use Semantic DSL by default:
 
 ```text
-source → tokens → syntax tree → symbolic term → relation rewrite → layout IR → MathML
+text and embedded operands → syntax tree → mathematical value → passes → layout IR → MathML
 ```
 
 `(grove math syntax)` tokenizes a deliberately small expression grammar and
@@ -38,14 +40,13 @@ search and bounded normalization; `(grove math derivation)` stores their
 certificates. `(grove math layout)` lowers terms to the existing math
 layout nodes. `(grove math pipeline)` composes these passes.
 
-The initial parser accepts identifiers, integer numerals, function calls,
-parenthesized groups, unary minus, superscripts (`x^2`), subscripts (`x_i`),
-and the operators `=`, `+`, `-`, `*`/`×`, and `/` with conventional
-precedence. Scripts attach in source order; parentheses group compound script
-expressions. It does not infer implicit multiplication or consume general
-`@math` commands. Matrices and aligned derivations remain explicit structures
-in `@math`, because their row, cell, and alignment markers carry layout
-meaning that cannot be reliably guessed from plain text.
+The semantic parser accepts identifiers, integer numerals, function calls,
+parenthesized groups, unary minus, power notation (`x^2`),
+and `=`, `+`, `-`/`−`, `*`/`×`, and `/` with conventional precedence.
+Embedded Semantic DSL objects are atomic operands, not strings to reparse.
+Implicit multiplication and ambiguous subscripts are rejected. Subscript
+layout and aligned tables belong to Notation DSL; an indexed mathematical
+operation will need its own explicit semantic definition.
 
 `@derive{...}` applies available relations repeatedly to the expression and
 shows each intermediate term, joined with equality signs. Each transition is
@@ -209,6 +210,49 @@ Other inverse arithmetic expansions are available through explicit `#:rules`,
 for example `#:rules '(add-zero)` to recover `x + 0` from `x`. Field-generating
 inverses enumerate explicit declarations, and term size plus depth bound their
 expansion. A limit is not a proof that no derivation exists.
+
+
+## One expression for display and computation
+
+```scheme
+@use-modules[((grove math semantic) #:prefix semantic:)
+             ((grove math notation) #:prefix notation:)
+             (grove math pipeline)]
+@(define p @semantic:expression{@semantic:power{x}{3} + 2*x})
+@math[p]
+@with-assumptions["scalar(x)"]{
+  @differentiate["x" p]
+  @search-derive[p]{@semantic:add[p "0"]}
+  @(math-verification->content
+     (math-check-chain (list (semantic:add p "0") p)))
+}
+@notation:math{@notation:parens[p]}
+```
+
+`expression` decodes text, embedded values, and lists of fragments. Explicit
+constructors include `variable`, exact rational `constant`, `add`, `subtract`,
+`negate`, `multiply`, `divide`, `power`, `grad`, `divergence`, `curl`, `laplacian`,
+`derivative`, and `vector-zero`. `group` preserves explicit parentheses;
+`styled` accepts `#:variant 'normal`, `'bold`, `'italic`, or `'bold-italic`.
+Neither grouping nor style changes the underlying mathematical term.
+Adjacent brace bodies form separate arguments for any at-exp command,
+including prefixed commands; each compound argument remains a fragment list.
+
+Construction and direct display never simplify expressions. The computation
+APIs accept a `math-value`, source text, or a fragment sequence through the same
+decoder. `math-report-result` returns the final term as a reusable mathematical
+value, with the certificate's assumptions retained for display. This does not
+install those assumptions into subsequent computations: use an explicit
+assumption scope for calculations involving free variables.
+
+Notation DSL provides `math`, `display-math`, `frac`, `sup`, `sub`, `vec`,
+`parens`, and `align`. It can embed a semantic value for display. Notation
+nodes cannot become mathematical operands, and decorating a variable with
+an arrow does not declare its type. A semantic function application can be
+rendered without a rule for calculating it; unsupported differentiation,
+missing type/premise information, and absent computational semantics are
+different failures. Decode errors raise before pass-level `#:on-error 'show`
+can render a diagnostic.
 
 ## Authored derivations
 

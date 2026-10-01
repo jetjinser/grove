@@ -421,37 +421,41 @@ on pages that contain math. It loads the component with `defer`; projects can
 pass `#:mathjax-src` to `make-html-renderer` to use a locally hosted
 copy or another compatible MathJax build, and can pass `#f` to disable it.
 
-For MathML Core output, `@math` and `@display-math` scan plain text into
-identifier, number, and operator tokens. Structural commands such as
-`@frac{numerator}{denominator}`, `@vec{E}`, `@sup{E}{2}`, and `@sub{E}{x}`
-build explicit MathML structure. Inside `@align`, a single `&` marks the
+`@math` and `@display-math` decode Semantic DSL expressions for both
+display and computation; see [Math processing](math.md) for reusable objects.
+For display-only notation, import
+`((grove math notation) #:prefix notation:)`. Its scanner produces identifier,
+number and operator tokens without assigning computational semantics. Commands such as
+`@notation:frac{numerator}{denominator}`, `@notation:vec{E}`, `@notation:sup{E}{2}`, and `@notation:sub{E}{x}`
+build explicit MathML structure. Inside `@notation:align`, a single `&` marks the
 alignment point and each line break starts a row:
 
 ```scheme
-@display-math{@align{
-  ∇ · @vec{D} &= ρ
-  ∇ × @vec{E} &= −@frac{∂@vec{B}}{∂t}
-  ∇ · @vec{B} &= 0
-  ∇ × @vec{H} &= @vec{J} + @frac{∂@vec{D}}{∂t}
+@use-modules[((grove math notation) #:prefix notation:)]
+@notation:display-math{@notation:align{
+  ∇ · @notation:vec{D} &= ρ
+  ∇ × @notation:vec{E} &= −@notation:frac{∂@notation:vec{B}}{∂t}
+  ∇ · @notation:vec{B} &= 0
+  ∇ × @notation:vec{H} &= @notation:vec{J} + @notation:frac{∂@notation:vec{D}}{∂t}
 }}
 ```
 
 The same commands can lay out the elimination to the wave equation. Here the
 derivation assumes a homogeneous, isotropic, charge-free conducting medium,
-`@vec{D}=ε@vec{E}`, `@vec{B}=μ@vec{H}`, and Ohm's law
-`@vec{J}=σ@vec{E}`; Gauss's law then gives `∇·@vec{E}=0`:
+`@notation:vec{D}=ε@notation:vec{E}`, `@notation:vec{B}=μ@notation:vec{H}`, and Ohm's law
+`@notation:vec{J}=σ@notation:vec{E}`; Gauss's law then gives `∇·@notation:vec{E}=0`:
 
 ```scheme
-@display-math{@align{
-  ∇ × (∇ × @vec{E}) &= −∇ × @frac{∂@vec{B}}{∂t}
-  &= −μ @frac{∂}{∂t} (∇ × @vec{H})
-  &= −μ @frac{∂}{∂t} @parens{@vec{J} + @frac{∂@vec{D}}{∂t}}
-  &= −μ @parens{@frac{∂@vec{J}}{∂t} + @frac{@sup{∂}{2}@vec{D}}{@sup{∂t}{2}}}
-  &= −μσ @frac{∂@vec{E}}{∂t} − με @frac{@sup{∂}{2}@vec{E}}{@sup{∂t}{2}}
-  ∇ × (∇ × @vec{E}) &= ∇(∇ · @vec{E}) − ∇²@vec{E}
-  &= −∇²@vec{E}
-  −∇²@vec{E} &= −μσ @frac{∂@vec{E}}{∂t} − με @frac{@sup{∂}{2}@vec{E}}{@sup{∂t}{2}}
-  ∇²@vec{E} &= μσ @frac{∂@vec{E}}{∂t} + με @frac{@sup{∂}{2}@vec{E}}{@sup{∂t}{2}}
+@notation:display-math{@notation:align{
+  ∇ × (∇ × @notation:vec{E}) &= −∇ × @notation:frac{∂@notation:vec{B}}{∂t}
+  &= −μ @notation:frac{∂}{∂t} (∇ × @notation:vec{H})
+  &= −μ @notation:frac{∂}{∂t} @notation:parens{@notation:vec{J} + @notation:frac{∂@notation:vec{D}}{∂t}}
+  &= −μ @notation:parens{@notation:frac{∂@notation:vec{J}}{∂t} + @notation:frac{@notation:sup{∂}{2}@notation:vec{D}}{@notation:sup{∂t}{2}}}
+  &= −μσ @notation:frac{∂@notation:vec{E}}{∂t} − με @notation:frac{@notation:sup{∂}{2}@notation:vec{E}}{@notation:sup{∂t}{2}}
+  ∇ × (∇ × @notation:vec{E}) &= ∇(∇ · @notation:vec{E}) − ∇²@notation:vec{E}
+  &= −∇²@notation:vec{E}
+  −∇²@notation:vec{E} &= −μσ @notation:frac{∂@notation:vec{E}}{∂t} − με @notation:frac{@notation:sup{∂}{2}@notation:vec{E}}{@notation:sup{∂t}{2}}
+  ∇²@notation:vec{E} &= μσ @notation:frac{∂@notation:vec{E}}{∂t} + με @notation:frac{@notation:sup{∂}{2}@notation:vec{E}}{@notation:sup{∂t}{2}}
 }}
 ```
 

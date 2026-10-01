@@ -1,39 +1,52 @@
-@use-modules[(math-derivations commands) (grove math pipeline)]
+@use-modules[(math-derivations commands) (grove math pipeline) ((grove math semantic) #:prefix semantic:) ((grove math notation) #:prefix notation:)]
 
 @title{数学排版、关系式推导与多项式求导}
 @summary{从 Maxwell 方程的排版，到带前提、可独立核验的自动计算。}
 
-这篇笔记展示 Grove 目前的数学能力。手写 MathML 排版与自动计算各有自己的入口：前者描述公式如何显示，后者先解析数学项，再用关系规则计算，最后生成原生 MathML。下面的失败示例也会正常显示，便于检查诊断。
+这篇笔记展示 Grove 目前的数学能力。Semantic DSL 定义可展示、计算和核验的数学对象；Notation DSL 定义记号的外观和布局。两者都生成原生 MathML，但只有明确的数学对象参与计算。下面的失败示例也会正常显示，便于检查诊断。
 
 @heading{一、手写公式：Maxwell 方程组}
 
-在 math 内，普通 Unicode 文本会被扫描为数学 token。分数、向量箭头、上下标和括号可以用显式命令构造。align 中的 & 指定对齐点。
+在 Notation DSL 的 math 内，普通 Unicode 文本会被扫描为数学 token。分数、向量箭头、上下标和括号可以用显式命令构造。notation:align 中的 & 指定对齐点。
 
-@display-math{@align{
-  ∇ · @vec{D} &= ρ
-  ∇ × @vec{E} &= −@frac{∂@vec{B}}{∂t}
-  ∇ · @vec{B} &= 0
-  ∇ × @vec{H} &= @vec{J} + @frac{∂@vec{D}}{∂t}
+@notation:display-math{@notation:align{
+  ∇ · @notation:vec{D} &= ρ
+  ∇ × @notation:vec{E} &= −@notation:frac{∂@notation:vec{B}}{∂t}
+  ∇ · @notation:vec{B} &= 0
+  ∇ × @notation:vec{H} &= @notation:vec{J} + @notation:frac{∂@notation:vec{D}}{∂t}
 }}
 
-下标示例 @math{@sub{E}{x}}，上标示例 @math{@sup{x}{3}}，显式括号示例 @math{@parens{a+b}}。这些命令提供排版结构，本身不会求导或证明等式。
+下标示例 @notation:math{@notation:sub{E}{x}}，上标示例 @notation:math{@notation:sup{x}{3}}，显式括号示例 @notation:math{@notation:parens{a+b}}。这些命令提供排版结构，本身不会求导或证明等式。
+
+@(define polynomial @semantic:expression{@semantic:power{x}{3} + 2*x})
+@(define double-curl @semantic:curl{@semantic:curl{E}})
+
+@heading{同一份数学表达式，用于展示和计算}
+
+Semantic DSL 构造数学对象，数学项与源码、展示偏好分别存储。这里用 Scheme define 定义 polynomial；后面的求导、搜索和核验都复用它，不另写一份求解器字符串。
+
+@verbatim["@(define polynomial @semantic:expression{@semantic:power{x}{3} + 2*x})"]
+@math[polynomial]
+
+直接展示不会化简：@math{@semantic:add{x}{x}} 仍显示 x+x。主动化简才会应用规则。嵌入命令是完整操作数，因此 @math{@semantic:multiply{@semantic:add{x}{y}}{2}} 会保留必要的括号。
 
 @heading{二、前提作用域与向量恒等式}
 
-@verbatim["@with-assumptions[\"vector(E); smooth(E)\"]{@derive{curl(curl(E))}}"]
+@verbatim["@with-assumptions[\"vector(E); smooth(E)\"]{@derive[double-curl]}"]
 
 @with-assumptions["vector(E); smooth(E)"]{
-@derive{curl(curl(E))}
+@math[double-curl]
+@derive[double-curl]
 
 这里 vector(E) 声明向量类型，smooth(E) 提供光滑性前提。默认展示起点与终点，展开步骤可以看到具体规则。
 
 @with-assumptions["div(E)=0"]{
-@derive{curl(curl(E))}
+@derive[double-curl]
 
 内层作用域补充散度为零的前提，得到负的向量 Laplacian。这个前提由作者声明，不是 Grove 从 Maxwell 方程中自动证明的。
 
 @heading{搜索指定结论}
-@search-derive["-laplacian(E)"]{curl(curl(E))}
+@search-derive[@semantic:negate{@semantic:laplacian{E}}]{@semantic:curl{@semantic:curl{E}}}
 
 搜索可以组合多个规则。找到一份 derivation certificate（可独立重放核验的推导记录）与穷尽全部路径是两件事；报告会说明搜索的停止原因。
 
@@ -49,19 +62,19 @@
 
 @heading{反向关系搜索}
 @(math-report->content
-   (math-search-backward "-laplacian(E)" "curl(curl(E))"
+   (math-search-backward (semantic:negate (semantic:laplacian "E")) double-curl
      #:max-depth 3 #:max-results 1))
 
-Scheme API 的反向搜索先给目标，再给要求恢复的起点；返回的derivation certificate仍按正常的正向推导顺序排列。
+Scheme API 的反向搜索先给目标，再给要求恢复的起点；返回的derivation certificate 仍按正常的正向推导顺序排列。
 }
 
 @heading{其他向量恒等式}
-@derive{div(curl(E))}
+@derive{@semantic:divergence{@semantic:curl{E}}}
 }
 
 @with-assumptions["scalar(f); smooth(f)"]{
-@derive{curl(grad(f))}
-@derive{div(grad(f))}
+@derive{@semantic:curl{@semantic:grad{f}}}
+@derive{@semantic:divergence{@semantic:grad{f}}}
 }
 
 内层前提不会泄漏到外层。标量零与向量零也是不同的数学项，规则会检查类型。
@@ -87,8 +100,8 @@ Scheme API 可分别调用 calculate、collect、simplify，并通过同一个�
 这些规则消除零项、单位因子和双重负号，并合并结构相同的标量项。它们尚不把任意多项式展开成标准形。
 
 @heading{五、多项式求导：先求导，再化简}
-@verbatim["@differentiate[\"x\"]{x^3 + 2*x}"]
-@differentiate["x"]{x^3 + 2*x}
+@verbatim["@differentiate[\"x\" polynomial]"]
+@differentiate["x" polynomial]
 
 展开后可以分别查看求导 pass 与化简 pass。每一步保留规则及操作位置，最终得到 3*x^2 + 2。
 
@@ -106,35 +119,51 @@ Scheme API 可分别调用 calculate、collect、simplify，并通过同一个�
 y 被当作与 x 独立的坐标，关于 x 的导数为零。自然数幂的求导也会继续求导其底数。
 
 @heading{只显示端点}
-@differentiate["x" #:view 'result]{x^3 + 2*x}
+@differentiate["x" polynomial #:view 'result]
 
-result 视图省略步骤展示；它使用与默认视图相同的计算和derivation certificate。
+result 视图省略步骤展示；它使用与默认视图相同的计算和derivation certificate 。
 
 @heading{从形式导数搜索结果}
 @search-derive["3*x^2"]{differentiate(x^3,x)}
 
 @heading{手写导数链的核验}
 @check-derive{
-  differentiate(x^3,x)
-  3*x^2*differentiate(x,x)
-  3*x^2*1
-  3*x^2
+  @semantic:derivative{@semantic:power{x}{3}}{x}
+  3*@semantic:power{x}{2}*@semantic:derivative{x}{x}
+  3*@semantic:power{x}{2}*1
+  3*@semantic:power{x}{2}
 }
 
-@heading{六、derivation certificate可以独立重放}
+@heading{搜索一个共享对象作为目标}
+@search-derive[polynomial]{@semantic:add[polynomial "0"]}
+
+目标和起点都引用同一个 polynomial；搜索消去附加的零项。输入变量的类型仍来自当前假设作用域。
+
+@heading{核验共享表达式的化简}
+@(math-verification->content
+   (math-check-chain (list (semantic:add polynomial "0") polynomial)))
+
+@heading{只定制外观，不改变数学对象}
+@math[(semantic:styled polynomial #:variant 'bold)]
+
+样式不会影响求导或 certificate 的核验。Notation DSL 也能嵌入这个对象：@notation:math{@notation:parens[polynomial]}。
+
+@heading{六、derivation certificate 可以独立重放}
 }
 
 @(define polynomial-report
    (with-math-assumptions '("scalar(x)")
-     (math-differentiate "x^3 + 2*x" "x")))
+     (math-differentiate polynomial "x")))
 @(define polynomial-certificate (math-report-derivation polynomial-report))
 
+@math[(math-report-result polynomial-report)]
+
 @(paragraph
-   (format #f "离开假设作用域后，独立核验 derivation certificate：~a；derivation certificate保留 ~a 步以及计算时的 scalar(x) 前提。"
+   (format #f "离开假设作用域后，独立核验 derivation certificate：~a；derivation certificate 保留 ~a 步以及计算时的 scalar(x) 前提。"
      (if (math-verification-valid? (math-verify-derivation polynomial-certificate)) "通过" "失败")
      (length (math-derivation-steps polynomial-certificate))))
 
-derivation certificate记录每一步的输入、输出、规则、操作路径，以及有效前提。核验器重新应用规则，不依赖当时的搜索队列或当前假设作用域。
+derivation certificate 记录每一步的输入、输出、规则、操作路径，以及有效前提。核验器重新应用规则，不依赖当时的搜索队列或当前假设作用域。
 
 @heading{七、失败诊断与资源限制}
 
@@ -181,9 +210,9 @@ derivation certificate记录每一步的输入、输出、规则、操作路径�
 
 在常系数介质中，用本构关系 D=εE、B=μH 和欧姆定律 J=σE，可以写出下面的波动方程。此处是作者手写的排版，并未由上述规则自动推出整条物理推导。
 
-@display-math{@align{
-  −∇²@vec{E} &= −μσ @frac{∂@vec{E}}{∂t} − με @frac{@sup{∂}{2}@vec{E}}{@sup{∂t}{2}}
-   ∇²@vec{E} &=  μσ @frac{∂@vec{E}}{∂t} + με @frac{@sup{∂}{2}@vec{E}}{@sup{∂t}{2}}
+@notation:display-math{@notation:align{
+  −∇²@notation:vec{E} &= −μσ @notation:frac{∂@notation:vec{E}}{∂t} − με @notation:frac{@notation:sup{∂}{2}@notation:vec{E}}{@notation:sup{∂t}{2}}
+   ∇²@notation:vec{E} &=  μσ @notation:frac{∂@notation:vec{E}}{∂t} + με @notation:frac{@notation:sup{∂}{2}@notation:vec{E}}{@notation:sup{∂t}{2}}
 }}
 
 目前这套系统提供明确规则下的计算、搜索和核验。它尚不具有物理建模、通用 CAS 或证明任意数学命题的能力。
