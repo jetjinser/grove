@@ -90,9 +90,20 @@ vector calculus with classical smooth fields.
 The displayed path and rule make a derivation inspectable, but do not amount to
 a formal proof that the author's declared facts hold.
 The rewrite module exposes a rule registry with each law, its side condition,
-and whether the current implementation checks that condition. The
+group and supported query modes (`forward`, `backward`, `check`). The
 curl-curl rule's type and regularity declarations are checked for presence and
 consistency by the type judgment, though their truth is not proved.
+
+Rule declarations live with their implementations: typed arithmetic identities,
+vector identities, exact arithmetic and polynomial differentiation each own a
+rule family. `math-rule` uses one quasiquoted left side and premise template
+for both its miniKanren relation and diagnostic matcher. Computed arithmetic
+rules derive their matchers from the same transform that computes the result.
+Calculation, collection, simplification and default backward selections are
+derived from the declarations, rather than maintained as parallel name lists.
+Explicit selection of an unsupported query mode is an argument error.
+Differentiation and numerical calculation support forward generation and
+checking; they do not offer inverse integration or arbitrary number generation.
 
 For target-directed queries, `(grove math pipeline)` exports `math-search`.
 It performs breadth-first search over the miniKanren one-step relation and

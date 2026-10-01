@@ -6,14 +6,11 @@
   #:use-module ((grove relation dsl) #:select (project))
   #:use-module (grove math types)
   #:use-module (grove math arithmetic)
+  #:use-module (grove math rule)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-13)
-  #:export (polynomial-term? differentiation-stepo math-differentiation-rules))
-
-(define math-differentiation-rules
-  '(differentiate-constant differentiate-variable differentiate-independent
-    differentiate-negation differentiate-sum differentiate-difference
-    differentiate-product differentiate-power))
+  #:export (polynomial-term? differentiation-stepo math-differentiation-rules
+            math-differentiation-rule-definitions))
 
 (define (natural-value value)
   (and (string? value) (> (string-length value) 0)
@@ -32,47 +29,59 @@
      (and (polynomial-term? base) (natural-value exponent) #t))
     (_ #f))))
 
-;; Constructive forward relation and result checking. The numeric bridge is
-;; deliberately ground: arbitrary inverse generation/integration is not a mode
-;; of this polynomial pass. All scalar variables are independent coordinates.
-(define (differentiation-stepo assumptions input output rule)
-  (fresh (expression variable)
-    (== input `(differentiate ,expression (var ,variable)))
-    (project (expression variable)
-      (if (and (symbol? variable) (polynomial-term? expression)) succeed fail))
-    (math-typeo assumptions expression 'scalar)
-    (math-typeo assumptions `(var ,variable) 'scalar)
-    (conde
-      ((== rule 'differentiate-constant)
-       (project (expression)
-         (if (math-number-value expression) (== output '(num "0")) fail)))
-      ((== expression `(var ,variable)) (== output '(num "1"))
-       (== rule 'differentiate-variable))
-      ((fresh (other)
-         (== expression `(var ,other)) (=/= variable other)
-         (== output '(num "0")) (== rule 'differentiate-independent)))
-      ((fresh (operand)
-         (== expression `(- ,operand))
-         (== output `(- (differentiate ,operand (var ,variable))))
-         (== rule 'differentiate-negation)))
-      ((fresh (left right operator)
-         (conde ((== operator '+) (== rule 'differentiate-sum))
-                ((== operator '-) (== rule 'differentiate-difference)))
-         (== expression `(,operator ,left ,right))
-         (== output `(,operator (differentiate ,left (var ,variable))
-                               (differentiate ,right (var ,variable))))))
-      ((fresh (left right)
-         (== expression `(* ,left ,right))
-         (== output `(+ (* (differentiate ,left (var ,variable)) ,right)
-                        (* ,left (differentiate ,right (var ,variable)))))
-         (== rule 'differentiate-product)))
-      ((fresh (base exponent)
-         (== expression `(^ ,base (num ,exponent)))
-         (== rule 'differentiate-power)
-         (project (exponent)
-           (let ((n (natural-value exponent)))
-             (if (= n 0)
-                 (== output '(num "0"))
-                 (== output `(* (* (num ,exponent)
-                                    (^ ,base (num ,(number->string (- n 1)))))
-                                 (differentiate ,base (var ,variable))))))))))))
+;; This family has a constructive forward/check mode. Independent coordinates
+;; and natural powers are its domain; arbitrary inverse integration is absent.
+(define-syntax polynomial-rule
+  (syntax-rules ()
+    ((_ name equation (facts coordinate item ...) expression result (goal ...) option ...)
+     (math-rule name equation "scalar polynomial in independent scalar coordinates" 'differentiate
+       (facts item ... coordinate)
+       (differentiate expression (var ,coordinate)) result ()
+       ((project (item ... coordinate)
+          (if (polynomial-term? (quasiquote expression)) succeed fail))
+        (math-typeo facts (quasiquote expression) 'scalar)
+        (math-typeo facts `(var ,coordinate) 'scalar)
+        goal ...) option ...))))
+
+(define math-differentiation-rule-definitions
+  (list
+    (polynomial-rule 'differentiate-constant "d(c)/dx = 0"
+      (facts coordinate expression) ,expression (num "0")
+      ((project (expression) (if (math-number-value expression) succeed fail)))
+      #:matcher (lambda (input)
+                  (match input
+                    (('differentiate expression ('var name))
+                     (and (math-number-value expression) '())) (_ #f))))
+    (polynomial-rule 'differentiate-variable "d(x)/dx = 1"
+      (facts coordinate) (var ,coordinate) (num "1") ())
+    (polynomial-rule 'differentiate-independent "d(y)/dx = 0 for independent y"
+      (facts coordinate other) (var ,other) (num "0") ((=/= other coordinate))
+      #:matcher (lambda (input)
+                  (match input
+                    (('differentiate ('var other) ('var coordinate))
+                     (and (not (eq? other coordinate)) '())) (_ #f))))
+    (polynomial-rule 'differentiate-negation "d(-f)/dx = -d(f)/dx"
+      (facts coordinate operand) (- ,operand) (- (differentiate ,operand (var ,coordinate))) ())
+    (polynomial-rule 'differentiate-sum "d(f+g)/dx = d(f)/dx+d(g)/dx"
+      (facts coordinate left right) (+ ,left ,right)
+      (+ (differentiate ,left (var ,coordinate)) (differentiate ,right (var ,coordinate))) ())
+    (polynomial-rule 'differentiate-difference "d(f-g)/dx = d(f)/dx-d(g)/dx"
+      (facts coordinate left right) (- ,left ,right)
+      (- (differentiate ,left (var ,coordinate)) (differentiate ,right (var ,coordinate))) ())
+    (polynomial-rule 'differentiate-product "d(f*g)/dx = d(f)/dx*g+f*d(g)/dx"
+      (facts coordinate left right) (* ,left ,right)
+      (+ (* (differentiate ,left (var ,coordinate)) ,right)
+         (* ,left (differentiate ,right (var ,coordinate)))) ())
+    (polynomial-rule 'differentiate-power "d(f^n)/dx = n*f^(n-1)*d(f)/dx"
+      (facts coordinate base exponent result) (^ ,base (num ,exponent)) ,result
+      ((project (exponent base coordinate)
+         (let ((n (natural-value exponent)))
+           (if (= n 0) (== result '(num "0"))
+               (== result `(* (* (num ,exponent) (^ ,base (num ,(number->string (- n 1)))))
+                              (differentiate ,base (var ,coordinate)))))))))))
+
+(define math-differentiation-rules
+  (map math-rewrite-rule-name math-differentiation-rule-definitions))
+
+(define (differentiation-stepo assumptions input output name)
+  (math-rules-stepo math-differentiation-rule-definitions assumptions input output name 'check))

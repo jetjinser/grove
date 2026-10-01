@@ -70,12 +70,17 @@
 (define (math-report->content report)
   (unless (math-report? report)
     (error "expected a math search report" report))
-  (cons (make-content-element 'paragraph
-          (list (format #f "Search stopped: ~a; ~a candidate(s); ~a states visited."
+  (append (list (make-content-element 'paragraph
+          (list (format #f "~a stopped: ~a; ~a candidate(s); ~a states visited."
+                  (string-titlecase (symbol->string (math-report-name report)))
                   (math-report-reason report)
                   (length (math-report-candidates report))
                   (math-report-states report)))
-          #:flow-kind 'block)
+          #:flow-kind 'block))
+        (map (lambda (diagnostic)
+               (make-content-element 'paragraph
+                 (list (math-diagnostic-message diagnostic)) #:flow-kind 'block))
+             (math-report-diagnostics report))
         (map math-derivation->content (math-report-candidates report))))
 
 (define (math-source->assumptions sources)

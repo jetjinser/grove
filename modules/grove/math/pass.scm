@@ -39,7 +39,7 @@
   (check-math-bound 'max-steps max-steps 0)
   (check-math-bound 'max-term-size max-term-size 1)
   (unless (math-term? input) (error "invalid math term" input))
-  (let ((rules (math-selected-rules rules (map math-rewrite-rule-name math-rewrite-rules))))
+  (let ((rules (math-selected-rules rules (math-rule-names))))
     (define (finish terms steps reason count diagnostics)
       (make-math-report name
         (list (make-math-derivation (reverse terms) (reverse steps) assumptions))

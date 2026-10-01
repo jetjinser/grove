@@ -53,6 +53,8 @@
     ("(1/2)*x+(1/3)*x" . "(5/6)*x") ("x-3*x" . "(-2)*x")))
 (test-equal "collection leaves constant-only calculations to the constant pass"
   (math-source->term "2*3") (final (math-collect "2*3")))
+(test-equal "constant-only sums also belong to the constant pass"
+  (math-source->term "2+3") (final (math-collect "2+3")))
 (test-equal "vector terms cannot enter scalar collection"
   (math-source->term "E+E")
   (final (math-collect "E+E" #:assumptions '("vector(E)"))))

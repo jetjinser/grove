@@ -91,7 +91,7 @@
          (if (pair? conditions) conditions
              (let ((answers
                      (run 1 (expected)
-                       (rewrite-stepo assumptions from expected rule path))))
+                       (check-stepo assumptions from expected rule path))))
                (cond
                  ((and (pair? answers) (equal? (car answers) to)) '())
                  ((pair? answers)
@@ -103,14 +103,15 @@
 
 (define (math-verify-step assumptions from to rule path)
   (null? (step-diagnostics 1 assumptions from to rule path
-                          (map math-rewrite-rule-name math-rewrite-rules))))
+                          (math-rule-names #:mode 'check))))
 
 (define* (math-verify-derivation result #:key (rules #f))
   (unless (math-derivation? result) (error "expected a math derivation" result))
   (let* ((assumptions (math-derivation-assumptions result))
          (terms (math-derivation-terms result))
          (steps (math-derivation-steps result))
-         (allowed (math-selected-rules rules (map math-rewrite-rule-name math-rewrite-rules))))
+         (allowed (math-selected-rules rules (math-rule-names #:mode 'check)
+                    #:mode 'check)))
     (make-math-verification result
       (if (not (and (list? terms) (pair? terms) (every math-term? terms)
                     (list? steps) (list? assumptions)))
@@ -150,7 +151,7 @@
 ;; independently below; hints never discharge a premise.
 (define (infer-step assumptions from to names)
   (let ((answer (find (lambda (answer) (equal? (car answer) to))
-                     (math-rewrite-answers assumptions from names #f))))
+                     (math-rewrite-answers assumptions from names #f #:mode 'check))))
     (if answer
         (make-math-derivation-step from to (cadr answer) (caddr answer))
         (let* ((hints
@@ -170,7 +171,8 @@
                                 (and (equal? (car answer) to)
                                      (equal? (caddr answer) (cadr hint))))
                               (math-rewrite-answers
-                                (append (caddr hint) assumptions) from (list (car hint)) #f)))
+                                (append (caddr hint) assumptions) from (list (car hint)) #f
+                                #:mode 'check)))
                        hints)
                      (and (pair? hints) (car hints)))))
           (make-math-derivation-step from to (and hint (car hint))
@@ -181,7 +183,8 @@
     (error "a handwritten math chain needs at least two valid terms" terms))
   (when (and steps (not (and (list? steps) (= (length steps) (- (length terms) 1)))))
     (error "provide one step specification per adjacent pair" steps))
-  (let ((allowed (math-selected-rules rules (map math-rewrite-rule-name math-rewrite-rules))))
+  (let ((allowed (math-selected-rules rules (math-rule-names #:mode 'check)
+                   #:mode 'check)))
     (math-verify-derivation
       (make-math-derivation terms
         (map

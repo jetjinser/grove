@@ -5,12 +5,12 @@
   #:use-module (grove relation)
   #:use-module ((grove relation dsl) #:select (project))
   #:use-module (grove math types)
+  #:use-module (grove math rule)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (math-number-value math-number->term constant-rewrite
-             collect-rewrite coefficient-rewrite arithmetic-stepo collect-stepo
-             coefficient-stepo))
+             collect-rewrite coefficient-rewrite math-arithmetic-rules))
 
 ;; Numbers retain the source IR: unsigned integers, unary signs and fractions.
 ;; Guile's exact rationals do the computation; no floating point is introduced.
@@ -73,7 +73,7 @@
   (and (pair? input) (memq (car input) '(+ -))
        (let* ((terms (summands input 1))
               (keys (delete-duplicates (map car terms) equal?)))
-         (and (< (length keys) (length terms))
+         (and (any car terms) (< (length keys) (length terms))
               (let* ((result-terms
                        (filter-map
                          (lambda (key)
@@ -91,11 +91,6 @@
                                  (fold (lambda (term sum) `(+ ,sum ,term))
                                        (car result-terms) (cdr result-terms)))))
                 (and (not (equal? input result)) result))))))
-
-(define (arithmetic-stepo assumptions input output)
-  (project (input)
-    (let ((result (constant-rewrite input)))
-      (if result (== output result) fail))))
 
 (define (coefficient-rewrite input)
   (define (factors term)
@@ -116,16 +111,18 @@
                                    (else `(* ,(math-number->term coefficient) ,body)))))
                 (and (not (equal? input result)) result))))))
 
-(define (coefficient-stepo assumptions input output)
-  (project (input)
-    (let ((result (coefficient-rewrite input)))
-      (if result
-          (fresh () (== output result) (math-typeo assumptions input 'scalar))
-          fail))))
+;; Computed rules derive their diagnostic matcher from the same transform
+;; used by the relation, and explicitly support forward/check modes only.
+(define (computed-rule name equation group transform)
+  (make-math-rewrite-rule name equation "exact scalar arithmetic" group
+    (lambda (assumptions input output)
+      (project (input)
+        (let ((result (transform input)))
+          (if result
+              (fresh () (== output result) (math-typeo assumptions input 'scalar)) fail))))
+    #:matcher (lambda (input) (and (transform input) '()))))
 
-(define (collect-stepo assumptions input output)
-  (project (input)
-    (let ((result (collect-rewrite input)))
-      (if result
-          (fresh () (== output result) (math-typeo assumptions input 'scalar))
-          fail))))
+(define math-arithmetic-rules
+  (list (computed-rule 'evaluate-constant "exact constant arithmetic" 'calculate constant-rewrite)
+        (computed-rule 'collect-like-terms "a*X + b*X = (a+b)*X" 'collect collect-rewrite)
+        (computed-rule 'combine-coefficients "a*(b*X) = (a*b)*X" 'collect coefficient-rewrite)))

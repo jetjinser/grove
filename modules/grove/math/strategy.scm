@@ -29,7 +29,8 @@
          (goal-type (require-type assumptions goal))
          (rules (math-selected-rules rules
                   (if backward? math-backward-rules
-                      (map math-rewrite-rule-name math-rewrite-rules)))))
+                      (math-rule-names))
+                  #:mode (if backward? 'backward 'forward))))
     (unless (eq? type goal-type)
       (error "math search endpoints have different types" type goal-type))
     (define (finish candidates reason limits states)
@@ -110,7 +111,8 @@
   (check-math-bound 'max-states max-states 1)
   (check-math-bound 'max-term-size max-term-size 1)
   (math-selected-rules rules (if backward? math-backward-rules
-                               (map math-rewrite-rule-name math-rewrite-rules)))
+                               (math-rule-names))
+    #:mode (if backward? 'backward 'forward))
   (let* ((diagnostics (append (math-execution-diagnostics assumptions start)
                               (math-execution-diagnostics assumptions goal)))
          (diagnostics

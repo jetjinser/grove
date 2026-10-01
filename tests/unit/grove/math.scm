@@ -170,9 +170,9 @@
     (car (run 1 (result rule path)
            (rewrite-stepo '((scalar (var x))) '(- (num "0") (var x)) result rule path))))
   (test-equal "rewrite relations expose a contract for every current rule"
-    '(curl-curl-identity divergence-free div-curl-zero subtract-zero
-      add-zero zero-add subtract-right-zero double-negation multiply-one one-multiply
-      curl-grad-zero div-grad-laplacian multiply-zero zero-multiply power-one power-zero
+    '(curl-curl-identity divergence-free div-curl-zero curl-grad-zero div-grad-laplacian
+      subtract-zero add-zero zero-add subtract-right-zero double-negation multiply-one one-multiply
+      multiply-zero zero-multiply power-one power-zero
       differentiate-constant differentiate-variable differentiate-independent
       differentiate-negation differentiate-sum differentiate-difference
       differentiate-product differentiate-power evaluate-constant collect-like-terms
@@ -465,7 +465,7 @@
   (let* ((report (math-simplify "curl(curl(E)) + zero(vector)"
                    #:assumptions '("vector(E)")))
          (candidate (car (math-report-candidates report))))
-    (test-equal "normalization only uses shrinking arithmetic rules"
+    (test-equal "normalization avoids expanding differential identities"
       '((+ (curl (curl (var E))) (zero vector)) (curl (curl (var E))))
       (math-derivation-terms candidate))
     (test-equal "normalization reports normal form"
@@ -476,7 +476,7 @@
     'step-limit
     (math-report-reason
       (math-simplify "1 * (x + 0)" #:assumptions '("scalar(x)") #:max-steps 1)))
-  (test-error "normalization rejects non-shrinking rules" #t
+  (test-error "normalization rejects rules outside its arithmetic groups" #t
     (math-simplify "x" #:assumptions '("scalar(x)") #:rules '(curl-curl-identity)))
   (let* ((sources '("curl(curl(E))" "grad(div(E)) - laplacian(E)"
                     "zero(vector) - laplacian(E)" "-laplacian(E)"))

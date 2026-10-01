@@ -1,7 +1,7 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(use-modules (grove math pipeline) (grove math term)
+(use-modules (grove math pipeline) (grove math term) (grove render html)
              (grove math pass) (srfi srfi-1) (srfi srfi-64))
 
 (define facts '("scalar(x)"))
@@ -54,4 +54,9 @@
 (test-error "rendering rejects an incomplete derivative" #t
   (math-completed-report->content
     (math-differentiate "x^3" "x" #:assumptions facts #:max-steps 1)))
+(test-assert "generic report rendering identifies the operation and its diagnostics"
+  (let ((html (sxml->html
+                `(article ,@(map content->sxml (math-report->content (math-calculate "1/0")))))))
+    (and (string-contains html "Calculate stopped:")
+         (string-contains html "division by zero"))))
 (test-end "shared math execution")
