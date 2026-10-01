@@ -63,7 +63,7 @@
   (let* ((expression (math-source->term source))
          (coordinate (math-source->term variable))
          (facts (math-assumptions assumptions))
-         (diagnostics (differentiation-input-diagnostics expression coordinate))
+         (diagnostics (differentiation-input-diagnostics expression coordinate facts))
          (input `(differentiate ,expression ,coordinate)))
     (math-report-with-origin
       (if (null? diagnostics)

@@ -28,6 +28,30 @@ semantic expressions enter computation. The document commands `@math` and
 `@display-math` use Semantic DSL by default. Examples use `◆:` for Semantic DSL
 and `◇:` for Notation DSL; these are author-chosen module import prefixes.
 
+Coordinates, constant parameters and function references may be defined as
+reusable values. Their declarations are separate from source origins and display
+preferences, and enter the context only through an explicit scope:
+
+```scheme
+@(define x (◆:coordinate 'x))
+@(define a (◆:parameter 'a))
+@(define f (◆:function 'f #:inputs '(scalar) #:result 'scalar))
+@with-assumptions[(list x a f)]{
+  @math{@◆:call[f]{x^2}}
+  @differentiate[x]{@◆:multiply[a x]}
+}
+```
+
+The equivalent facts are `coordinate(x)`, `parameter(a)` and
+`function(f,scalar,scalar)`; a function declaration lists input types followed
+by its result type. Signatures may have several scalar/vector inputs or no
+inputs. Calls use either `f(x)` or `◆:call`; typing checks their arity and operand
+types. A function reference is not a scalar variable. Plain `scalar(x)` denotes
+an independent scalar variable; `parameter(a)` explicitly holds `a` constant
+and rejects differentiation with respect to it. Declaring `f` does not supply
+its definition or a differentiation rule. Unknown undeclared calls remain
+displayable, while calculations diagnose the missing computational semantics.
+
 ```text
 text and embedded operands → syntax tree → mathematical value → passes
                                                            ↓

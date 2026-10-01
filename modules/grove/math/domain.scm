@@ -5,13 +5,14 @@
   #:use-module (grove math term)
   #:use-module (grove math operator)
   #:use-module (grove math diagnostic)
+  #:use-module (grove math declaration)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (math-domain-diagnostics))
 
 ;; Structural validity is broader than the executable vocabulary. Unknown
 ;; function applications remain representable and displayable, not computable.
-(define* (math-domain-diagnostics term #:optional (pass 'compute))
+(define* (math-domain-diagnostics term #:optional (pass 'compute) (assumptions '()))
   (filter-map
     (lambda (path)
       (let* ((local (math-term-at-path term path)) (name (car local)))
@@ -23,7 +24,8 @@
              (format #f "~a requires decimal integer literals; ~s can still be displayed" pass (cadr local))))
           ((and (not (memq name '(var num zero)))
              (not (any (lambda (signature) (eq? name (car signature)))
-                       math-operator-signatures)))
+                       math-operator-signatures))
+             (not (math-function-signature assumptions name)))
              (make-math-diagnostic #f #f path 'unsupported-expression '()
                (format #f "~a does not support operator ~a; this expression can still be displayed" pass name)))
           (else #f))))

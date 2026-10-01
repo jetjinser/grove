@@ -8,6 +8,7 @@
   #:use-module (grove math arithmetic)
   #:use-module (grove math term)
   #:use-module (grove math diagnostic)
+  #:use-module (grove math declaration)
   #:use-module (grove math rule)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-13)
@@ -32,11 +33,14 @@
      (and (polynomial-term? base) (natural-value exponent) #t))
     (_ #f))))
 
-(define (differentiation-input-diagnostics expression coordinate)
+(define* (differentiation-input-diagnostics expression coordinate #:optional (facts '()))
   (cond
     ((not (eq? (car coordinate) 'var))
      (list (make-math-diagnostic #f #f '(1) 'unsupported-expression '()
              "differentiation requires a coordinate variable")))
+    ((eq? (math-variable-role facts coordinate) 'parameter)
+     (list (make-math-diagnostic #f #f '(1) 'unsupported-expression '()
+             "a constant parameter cannot be used as a differentiation coordinate")))
     ((polynomial-term? expression) '())
     (else
      (let locate ((term expression) (path '(0)))
@@ -62,6 +66,8 @@
           (if (polynomial-term? (quasiquote expression)) succeed fail))
         (math-typeo facts (quasiquote expression) 'scalar)
         (math-typeo facts `(var ,coordinate) 'scalar)
+        (project (facts coordinate)
+          (if (eq? (math-variable-role facts `(var ,coordinate)) 'parameter) fail succeed))
         goal ...) option ...))))
 
 (define math-differentiation-rule-definitions

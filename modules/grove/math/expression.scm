@@ -5,26 +5,30 @@
   #:use-module (grove math term)
   #:use-module (grove math source)
   #:use-module (srfi srfi-9)
+  #:use-module (srfi srfi-1)
   #:export (make-math-value math-value? math-value-term math-value-origin
-            math-value-properties math-value-with-properties))
+            math-value-properties math-value-declarations math-value-with-properties))
 
 ;; Mathematical equality and rewriting concern only the term. Origins and
 ;; presentation preferences travel beside it, never inside relation patterns.
 (define-record-type <math-value>
-  (%make-math-value term origin properties)
+  (%make-math-value term origin properties declarations)
   math-value?
   (term math-value-term)
   (origin math-value-origin)
-  (properties math-value-properties))
+  (properties math-value-properties)
+  (declarations math-value-declarations))
 
-(define* (make-math-value term #:key (origin #f) (properties '()))
+(define* (make-math-value term #:key (origin #f) (properties '()) (declarations '()))
   (unless (math-term? term) (error "expected a mathematical term" term))
   (unless (or (not origin) (math-origin? origin))
     (error "expected a mathematical source origin" origin))
   (unless (list? properties) (error "expected math presentation properties" properties))
-  (%make-math-value term origin properties))
+  (unless (and (list? declarations) (every math-term? declarations))
+    (error "expected mathematical declarations" declarations))
+  (%make-math-value term origin properties declarations))
 
 (define (math-value-with-properties value properties)
   (unless (math-value? value) (error "expected a mathematical expression" value))
   (make-math-value (math-value-term value) #:origin (math-value-origin value)
-    #:properties properties))
+    #:properties properties #:declarations (math-value-declarations value)))

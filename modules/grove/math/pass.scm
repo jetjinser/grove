@@ -23,7 +23,7 @@
 
 (define* (math-execution-diagnostics assumptions term #:optional (name 'compute))
   (let ((preconditions (append (math-assumption-diagnostics assumptions)
-                               (math-domain-diagnostics term name))))
+                               (math-domain-diagnostics term name assumptions))))
     (if (pair? preconditions) preconditions
         (append
           (if (math-infer-type assumptions term) '()

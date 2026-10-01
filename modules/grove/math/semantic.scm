@@ -7,10 +7,11 @@
   #:use-module (grove math syntax)
   #:use-module (grove math term)
   #:use-module (grove math source)
+  #:use-module (grove math declaration)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:re-export (math-value? math-value-term math-value-origin math-value-properties)
-  #:export (expression expression-lines variable constant add subtract negate multiply divide power
+  #:re-export (math-value? math-value-term math-value-origin math-value-properties math-value-declarations)
+  #:export (expression expression-lines variable coordinate parameter function call constant add subtract negate multiply divide power
             grad divergence curl laplacian derivative vector-zero group styled))
 
 (define (fragments values)
@@ -46,7 +47,8 @@
              (make-math-value (math-expression->term syntax)
                #:origin (math-source-origin source #:syntax syntax
                           #:embedded (map (lambda (entry) (cons (car entry) (math-value-origin (cdr entry)))) embedded))
-               #:properties (syntax-preferences syntax embedded))))
+               #:properties (syntax-preferences syntax embedded)
+               #:declarations (delete-duplicates (append-map (lambda (entry) (math-value-declarations (cdr entry))) embedded) equal?))))
           ((math-value? (car remaining))
            (let ((value (car remaining)))
              (collect (cdr remaining) (+ offset 1)
@@ -99,11 +101,31 @@
                       `(/ (num ,(number->string (abs n))) (num ,(number->string d))))))
         (if (< n 0) `(- ,term) term)))))
 
+(define (declared-variable role name)
+  (let ((value (variable name)))
+    (make-math-value (math-value-term value) #:origin (math-value-origin value)
+      #:declarations (list (list role (math-value-term value))))))
+(define-public (coordinate name) (declared-variable 'coordinate name))
+(define-public (parameter name) (declared-variable 'parameter name))
+(define* (function name #:key (inputs '(scalar)) (result 'scalar))
+  (let* ((value (variable name))
+         (declaration `(function ,(math-value-term value) ,@(map (lambda (type) `(var ,type)) (append inputs (list result))))))
+    (unless (math-function-declaration? declaration) (error "invalid mathematical function signature" declaration))
+    (make-math-value (math-value-term value) #:origin (math-value-origin value) #:declarations (list declaration))))
+
+(define-public (call function . operands)
+  (let* ((function (variable function))
+         (value (operation (cadr (math-value-term function)) operands)))
+    (make-math-value (math-value-term value) #:origin (math-value-origin value)
+      #:properties (math-value-properties value)
+      #:declarations (delete-duplicates (append (math-value-declarations function) (math-value-declarations value)) equal?))))
+
 (define (operation name operands)
   (let ((values (map (lambda (operand) (expression operand)) operands)))
     (make-math-value (cons name (map math-value-term values))
       #:origin (math-branch-origin (map math-value-origin values))
-      #:properties (list (cons 'children (map math-value-properties values))))))
+      #:properties (list (cons 'children (map math-value-properties values)))
+      #:declarations (delete-duplicates (append-map math-value-declarations values) equal?))))
 
 (define-public (add left right) (operation '+ (list left right)))
 (define-public (subtract left right) (operation '- (list left right)))

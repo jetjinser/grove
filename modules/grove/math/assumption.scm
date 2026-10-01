@@ -4,6 +4,7 @@
 (define-module (grove math assumption)
   #:use-module (grove math term)
   #:use-module (grove math diagnostic)
+  #:use-module (grove math declaration)
   #:use-module (srfi srfi-1)
   #:export (math-assumption? math-assumption-diagnostics))
 
@@ -12,7 +13,8 @@
 (define (math-assumption? fact)
   (and (math-term? fact)
        (case (car fact)
-         ((scalar vector) (eq? (car (cadr fact)) 'var))
+         ((scalar vector coordinate parameter) (eq? (car (cadr fact)) 'var))
+         ((function) (math-function-declaration? fact))
          ((smooth) #t)
          ((=) #t)
          (else #f))))
@@ -28,14 +30,32 @@
          (lambda (fact)
            (and (not (math-assumption? fact))
                 (make-math-diagnostic #f #f '() 'invalid-assumption (list fact)
-                  (format #f "expected scalar(variable), vector(variable), smooth(expression), or an equation; got ~s" fact))))
+                  (format #f "expected a variable declaration, function signature, smoothness fact, or equation; got ~s" fact))))
          (delete-duplicates facts equal?))
        (filter-map
          (lambda (fact)
-           (and (math-assumption? fact) (eq? (car fact) 'scalar)
+           (and (math-assumption? fact) (memq (car fact) '(scalar coordinate parameter))
                 (member `(vector ,(cadr fact)) facts)
                 (make-math-diagnostic #f #f '() 'type-error
                   (list fact `(vector ,(cadr fact)))
                   (format #f "variable ~a has conflicting scalar and vector declarations"
                           (cadadr fact)))))
+         (delete-duplicates facts equal?))
+       (filter-map
+         (lambda (fact)
+           (and (math-assumption? fact) (eq? (car fact) 'coordinate)
+                (member `(parameter ,(cadr fact)) facts)
+                (make-math-diagnostic #f #f '() 'invalid-assumption
+                  (list fact `(parameter ,(cadr fact)))
+                  "a symbol cannot be both an independent coordinate and a constant parameter")))
+         (delete-duplicates facts equal?))
+       (filter-map
+         (lambda (fact)
+           (and (math-function-declaration? fact)
+                (or (math-scalar-declared? facts (cadr fact)) (member `(vector ,(cadr fact)) facts)
+                    (any (lambda (other) (and (math-function-declaration? other)
+                                             (equal? (cadr other) (cadr fact))
+                                             (not (equal? other fact)))) facts))
+                (make-math-diagnostic #f #f '() 'invalid-assumption (list fact)
+                  (format #f "function ~a has conflicting declarations" (cadadr fact)))))
          (delete-duplicates facts equal?))))))

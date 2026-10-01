@@ -74,6 +74,8 @@
     ((and (pair? term) (memq (car term) '(var num zero))) #f)
     ((not (list? term)) #f)
     ((not (pair? term)) #f)
+    ((eq? (car term) 'function)
+     (and (>= (length term) 3) (every math-term? (cdr term))))
     ((math-operator-arities (car term))
      (and (memv (length (cdr term)) (math-operator-arities (car term)))
           (every math-term? (cdr term)) #t))

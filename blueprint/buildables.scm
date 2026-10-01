@@ -18,6 +18,7 @@
     "grove/math/term.scm"
     "grove/math/operator.scm"
     "grove/math/assumption.scm"
+    "grove/math/declaration.scm"
     "grove/math/domain.scm"
     "grove/math/context.scm"
     "grove/math/types.scm"

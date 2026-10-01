@@ -24,7 +24,7 @@
     (differentiate ((scalar scalar scalar)) #f)))
 
 ;; Assertions are reserved unary forms, not expression type signatures.
-(define assertion-operators '(scalar vector smooth))
+(define assertion-operators '(scalar vector smooth coordinate parameter))
 (define arities
   (append (map (lambda (entry)
                  (cons (car entry)
