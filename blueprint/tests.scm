@@ -28,6 +28,7 @@
     "unit/grove/arithmetic.scm"
     "unit/grove/math-pass.scm"
     "unit/grove/math-rule.scm"
+    "unit/grove/math-context.scm"
     "unit/scribble/parse.scm"
     "unit/grove/build.scm"
     "unit/grove/state.scm"

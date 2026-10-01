@@ -78,7 +78,29 @@
 (test-begin "scribble read")
 
 (let* ((document (evaluate-document (default-environment scribble)
-                   "@search-derive[\"scalar(x)\" \"1\"]{differentiate(x,x)}"))
+                   "@with-assumptions[\"scalar(x)\"]{
+ @differentiate[\"x\"]{x*x}
+ @with-assumptions[\"scalar(y)\"]{@derive{x+y-x}}
+ @check-derive{differentiate(x,x)\n1}
+ @search-derive[\"1\"]{differentiate(x,x)}
+}"))
+       (html (sxml->html (content->sxml document))))
+  (test-assert "scoped assumptions reach every command before its body is evaluated"
+    (and (string-contains html "collect-like-terms")
+         (string-contains html "differentiate-variable")
+         (string-contains html "1 candidate(s)"))))
+(test-assert "a scoped document does not supply premises to the next document"
+  (exception-contains?
+    (lambda () (evaluate-document (default-environment scribble) "@derive{x+x}"))
+    "no type declaration"))
+(let* ((document (evaluate-document (default-environment scribble)
+                   "@with-assumptions[\"scalar(x)\"]{@derive[#:assumptions \"scalar(y)\"]{x+y-x}}"))
+       (html (sxml->html (content->sxml document))))
+  (test-assert "explicit command premises augment the local context"
+    (string-contains html "collect-like-terms")))
+
+(let* ((document (evaluate-document (default-environment scribble)
+                   "@search-derive[\"1\" #:assumptions \"scalar(x)\"]{differentiate(x,x)}"))
        (html (sxml->html (content->sxml document))))
   (test-assert "@search-derive presents candidates and the search stopping reason"
     (and (string-contains html "Search stopped:")
@@ -86,14 +108,14 @@
          (string-contains html "differentiate-variable"))))
 
 (let* ((document (evaluate-document (default-environment scribble)
-                   "@search-derive[\"scalar(x)\" \"2\"]{differentiate(x,x)}"))
+                   "@search-derive[\"2\" #:assumptions \"scalar(x)\"]{differentiate(x,x)}"))
        (html (sxml->html (content->sxml document))))
   (test-assert "an unsuccessful search displays its report without aborting the article"
     (and (string-contains html "exhausted; 0 candidate(s)")
          (not (string-contains html "<mtable>")))))
 
 (let* ((document (evaluate-document (default-environment scribble)
-                   "@differentiate[\"x\" \"scalar(x)\"]{x^3 + 2*x}"))
+                   "@differentiate[\"x\" #:assumptions \"scalar(x)\"]{x^3 + 2*x}"))
        (html (sxml->html (content->sxml document))))
   (test-assert "@differentiate displays both passes as native MathML"
     (and (= (substring-count html "<mtable>") 2)
@@ -105,7 +127,7 @@
 (let* ((env (default-environment scribble))
        (document
          (evaluate-document env
-           "@check-derive[\"vector(E); smooth(E); div(E)=0\"]{
+           "@check-derive[#:assumptions \"vector(E); smooth(E); div(E)=0\"]{
   curl(curl(E))
   grad(div(E)) - laplacian(E)
 
@@ -123,19 +145,19 @@
   (exception-contains?
     (lambda ()
       (evaluate-document (default-environment scribble)
-        "@check-derive[\"scalar(f)\"]{curl(grad(f))\nzero(vector)}"))
+        "@check-derive[#:assumptions \"scalar(f)\"]{curl(grad(f))\nzero(vector)}"))
     "step 1, curl-grad-zero at root: missing premises: smooth(f)"))
 
 (test-assert "@check-derive rejects silently skipped intermediate rewrites"
   (exception-contains?
     (lambda ()
       (evaluate-document (default-environment scribble)
-        "@check-derive[\"vector(E); smooth(E); div(E)=0\"]{curl(curl(E))\n-laplacian(E)}"))
+        "@check-derive[#:assumptions \"vector(E); smooth(E); div(E)=0\"]{curl(curl(E))\n-laplacian(E)}"))
     "not the supplied target"))
 
 (let* ((env (default-environment scribble))
        (document (evaluate-document env
-         "@derive[\"scalar(f); smooth(f)\"]{curl(grad(f)) + zero(vector)}"))
+         "@derive[#:assumptions \"scalar(f); smooth(f)\"]{curl(grad(f)) + zero(vector)}"))
        (html (sxml->html (content->sxml document))))
   (test-assert "@derive composes scalar-field identities and vector-zero simplification"
     (and (string-contains html "curl-grad-zero")
@@ -288,7 +310,7 @@
   (let* ((document
            (evaluate-document
              env
-             "@derive[\"vector(E); smooth(E)\"]{curl(curl(E))}"))
+             "@derive[#:assumptions \"vector(E); smooth(E)\"]{curl(curl(E))}"))
          (html (sxml->html (content->sxml document))))
     (test-assert "@derive connects parsed math, miniKanren rewriting, and MathML"
       (and (string-contains html "<mtable>")
@@ -301,7 +323,7 @@
   (let* ((document
            (evaluate-document
              env
-             "@derive[\"vector(E); smooth(E); div(E)=0\"]{curl(curl(E))}"))
+             "@derive[#:assumptions \"vector(E); smooth(E); div(E)=0\"]{curl(curl(E))}"))
          (html (sxml->html (content->sxml document))))
     (test-assert "@derive applies conditional and algebraic rewrites in sequence"
       (and (= (substring-count html "<mtr>") 4)

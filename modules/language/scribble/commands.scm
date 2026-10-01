@@ -72,30 +72,47 @@
                         #:properties '((display? . #t))
                         #:flow-kind 'block))
 
-(define-public (derive . source)
-  (let* ((has-assumption? (> (length source) 1))
-         (assumptions (if has-assumption? (list (car source)) '()))
-         (body (if has-assumption? (cdr source) source)))
-    (math-derive (content-verbatim-string body)
-                 #:assumptions assumptions)))
+;; A function would evaluate the body before installing its assumptions.
+(define-syntax-rule (with-assumptions assumptions body ...)
+  (with-math-assumptions (list assumptions) (list body ...)))
+(export with-assumptions)
 
-(define-public (check-derive assumptions . source)
-  (let ((lines
-          (filter (lambda (line) (not (string-null? line)))
-                  (map string-trim-both
-                       (string-split (content-verbatim-string source) #\newline)))))
-    (math-verification->content
-      (math-check-chain lines #:assumptions (list assumptions)))))
+;; Guile's lambda* rest argument retains keyword/value pairs. Strip them once
+;; for all math commands; lambda* owns option defaults and validation.
+(define (math-command-text fragments)
+  (let body ((remaining fragments) (text '()))
+    (cond ((null? remaining) (content-verbatim-string (reverse text)))
+          ((keyword? (car remaining)) (body (cddr remaining) text))
+          (else (body (cdr remaining) (cons (car remaining) text))))))
 
-(define-public (differentiate variable assumptions . source)
-  (math-completed-report->content
-    (math-differentiate (content-verbatim-string source) variable
-      #:assumptions (list assumptions))))
+(define (command-assumptions assumptions)
+  (if assumptions (list assumptions) '()))
 
-(define-public (search-derive assumptions target . source)
-  (math-report->content
-    (math-search (content-verbatim-string source) target
-      #:assumptions (list assumptions) #:max-results 1)))
+(define-public derive
+  (lambda* (#:key (assumptions #f) #:rest source)
+    (math-derive (math-command-text source)
+      #:assumptions (command-assumptions assumptions))))
+
+(define-public check-derive
+  (lambda* (#:key (assumptions #f) #:rest source)
+    (let ((lines
+            (filter (lambda (line) (not (string-null? line)))
+                    (map string-trim-both
+                         (string-split (math-command-text source) #\newline)))))
+      (math-verification->content
+        (math-check-chain lines #:assumptions (command-assumptions assumptions))))))
+
+(define-public differentiate
+  (lambda* (variable #:key (assumptions #f) #:rest source)
+    (math-completed-report->content
+      (math-differentiate (math-command-text source) variable
+        #:assumptions (command-assumptions assumptions)))))
+
+(define-public search-derive
+  (lambda* (target #:key (assumptions #f) #:rest source)
+    (math-report->content
+      (math-search (math-command-text source) target
+        #:assumptions (command-assumptions assumptions) #:max-results 1))))
 
 (define-public (tex-math . source)
   (make-content-element 'math

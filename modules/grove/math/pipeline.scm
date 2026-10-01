@@ -5,6 +5,7 @@
   #:use-module (grove ir)
   #:use-module (grove math syntax)
   #:use-module (grove math term)
+  #:use-module (grove math context)
   #:use-module (grove math layout)
   #:use-module (grove math rewrite)
   #:use-module (grove math types)
@@ -21,7 +22,8 @@
             math-search math-search-backward math-simplify math-calculate math-collect
             math-derivation->content math-check-chain math-verification->content
             math-differentiate math-rewrite math-report->content math-completed-report->content)
-  #:re-export (math-verify-step math-verify-derivation
+  #:re-export (current-math-assumptions call-with-math-assumptions with-math-assumptions
+               math-verify-step math-verify-derivation
                math-verification? math-verification-valid?
                math-verification-errors math-verification-diagnostics
                math-verification-derivation math-diagnostic?
@@ -44,7 +46,7 @@
                               (max-steps 128) (max-term-size 2048))
   (let* ((expression (math-source->term source))
          (coordinate (math-source->term variable))
-         (facts (math-source->assumptions assumptions))
+         (facts (math-assumptions assumptions))
          (input `(differentiate ,expression ,coordinate)))
     (if (and (eq? (car coordinate) 'var) (polynomial-term? expression))
         (run-math-passes input facts
@@ -82,14 +84,6 @@
                  (list (math-diagnostic-message diagnostic)) #:flow-kind 'block))
              (math-report-diagnostics report))
         (map math-derivation->content (math-report-candidates report))))
-
-(define (math-source->assumptions sources)
-  (append-map
-    (lambda (source)
-      (map math-source->term
-           (filter (lambda (part) (not (string-null? (string-trim-both part))))
-                   (string-split source #\;))))
-    sources))
 
 (define (math-cell contents)
   (make-content-element 'math-cell contents))
@@ -144,7 +138,7 @@
 
 (define* (math-rewrite source #:key (assumptions '()) (rules #f)
                         (max-steps 32) (max-term-size 2048))
-  (run-math-pass (math-source->term source) (math-source->assumptions assumptions)
+  (run-math-pass (math-source->term source) (math-assumptions assumptions)
     #:name 'rewrite #:rules rules #:max-steps max-steps #:max-term-size max-term-size))
 
 (define* (math-derive source #:key (assumptions '()) (rules #f)
@@ -165,7 +159,7 @@
                             (max-states 256) (max-term-size 128))
   (search-math-terms
     (math-source->term source) (math-source->term target)
-    (math-source->assumptions assumptions) #f
+    (math-assumptions assumptions) #f
     #:rules rules #:max-depth max-depth #:max-results max-results
     #:max-states max-states #:max-term-size max-term-size))
 
@@ -175,28 +169,28 @@
                                      (max-states 256) (max-term-size 128))
   (search-math-terms
     (math-source->term target) (math-source->term source)
-    (math-source->assumptions assumptions) #t
+    (math-assumptions assumptions) #t
     #:rules rules #:max-depth max-depth #:max-results max-results
     #:max-states max-states #:max-term-size max-term-size))
 
 (define* (math-simplify source #:key (assumptions '()) (rules #f) (max-steps 32) (max-term-size 2048))
   (simplify-math-term (math-source->term source)
-    (math-source->assumptions assumptions) #:rules rules #:max-steps max-steps
+    (math-assumptions assumptions) #:rules rules #:max-steps max-steps
     #:max-term-size max-term-size))
 
 (define* (math-calculate source #:key (assumptions '()) (max-steps 32) (max-term-size 2048))
   (calculate-math-term (math-source->term source)
-    (math-source->assumptions assumptions) #:max-steps max-steps #:max-term-size max-term-size))
+    (math-assumptions assumptions) #:max-steps max-steps #:max-term-size max-term-size))
 
 (define* (math-collect source #:key (assumptions '()) (max-steps 32) (max-term-size 2048))
   (collect-math-term (math-source->term source)
-    (math-source->assumptions assumptions) #:max-steps max-steps #:max-term-size max-term-size))
+    (math-assumptions assumptions) #:max-steps max-steps #:max-term-size max-term-size))
 
 (define* (math-check-chain sources #:key (assumptions '()) (steps #f) (rules #f))
   (unless (and (list? sources) (every string? sources))
     (error "handwritten math lines must be source strings" sources))
   (check-math-chain (map math-source->term sources)
-    (math-source->assumptions assumptions) #:steps steps #:rules rules))
+    (math-assumptions assumptions) #:steps steps #:rules rules))
 
 (define (math-verification->content verification)
   (unless (math-verification? verification)

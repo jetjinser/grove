@@ -52,7 +52,7 @@ shows each intermediate term, joined with equality signs. Each transition is
 annotated with the rule name and the operand path where it matched (`root`, or
 one-based operand positions). Its bracket argument declares semicolon-separated
 assumptions. For example,
-`@derive["vector(E); smooth(E); div(E)=0"]{curl(curl(E))}` declares `E` to be
+`@derive[#:assumptions "vector(E); smooth(E); div(E)=0"]{curl(curl(E))}` declares `E` to be
 a smooth vector field with zero divergence. The derivation applies the
 curl-curl identity, uses the matching divergence-free fact, and simplifies
 `0 - ΔE` to `-ΔE`. Assumptions are author-supplied facts, not inferred from a
@@ -72,6 +72,23 @@ declarations do not infer a type. The curl-curl rule additionally requires
 are present and compatible with the expression; their truth remains the
 author's responsibility.
 
+Premises may be shared in a local scope:
+
+```scheme
+@with-assumptions["scalar(x)"]{
+  @differentiate["x"]{x^3 + 2*x}
+  @check-derive{differentiate(x,x)
+1}
+}
+```
+
+The Scheme equivalent is `(with-math-assumptions '("scalar(x)") body ...)`.
+Nested scopes and a command's `#:assumptions` add to the current facts;
+contradictions are diagnosed rather than replaced. Normal and exceptional
+exits restore the parent scope. Each certificate stores the effective facts,
+so later verification does not depend on a live context. For an independent
+context, `call-with-math-assumptions` accepts `#:replace? #t`.
+
 The current rules are deliberately few. `curl-curl-identity` encodes
 `curl(curl(E)) = grad(div(E)) - laplacian(E)` and requires matching
 `vector(E)` and `smooth(E)` declarations. `divergence-free` requires a vector
@@ -82,7 +99,7 @@ identity `0 - X = -X`.
 Two scalar-field identities require matching `scalar(f)` and `smooth(f)` facts:
 `curl-grad-zero` rewrites `curl(grad(f))` to vector zero;
 `div-grad-laplacian` rewrites `div(grad(f))` to scalar `laplacian(f)`.
-For example, `@derive["scalar(f); smooth(f)"]{curl(grad(f)) + zero(vector)}`
+For example, `@derive[#:assumptions "scalar(f); smooth(f)"]{curl(grad(f)) + zero(vector)}`
 combines a differential identity with typed zero elimination. Both identities
 support bounded backward search; zero-producing inverse queries enumerate only
 explicitly declared fields. Operators describe ordinary Euclidean three-dimensional
@@ -241,7 +258,7 @@ In a `.plant` document, `@check-derive` takes the assumption string in brackets
 and one complete expression per nonempty body line:
 
 ```scheme
-@check-derive["vector(E); smooth(E); div(E)=0"]{
+@check-derive[#:assumptions "vector(E); smooth(E); div(E)=0"]{
   curl(curl(E))
   grad(div(E)) - laplacian(E)
   zero(vector) - laplacian(E)
