@@ -28,6 +28,7 @@
 @link["vector-analysis"]{Vector identities, search and authored steps}
 @link["polynomial-differentiation"]{Polynomial differentiation and certificate replay}
 @link["scalar-calculus"]{Scalar functions, declarations and domain premises}
+@link["scalar-normalization"]{Stable scalar simplification and explicit expansion}
 
 @heading{Bounded failure reports}
 @differentiate["x" #:assumptions "scalar(x)" #:max-steps 1 #:on-error 'show]{x^3}

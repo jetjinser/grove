@@ -95,6 +95,8 @@ algorithms and special layout remain independent passes.
 | `math-calculate` | The same vocabulary; rewrites supported exact arithmetic subexpressions, retaining symbolic operands. |
 | `math-collect` | The same vocabulary; collects supported scalar coefficients, retaining other subexpressions. |
 | `math-simplify` | The same vocabulary; applies the selected typed identity, arithmetic and collection rules. |
+| `math-normalize` | Real scalar sums and products: stable ordering, coefficient collection, factor powers and nested natural powers. Vector operands are not reordered. |
+| `math-expand` | Explicit distribution of scalar products over sums and differences, followed by simplification. |
 | `math-differentiate` | Real scalar arithmetic with natural-number powers, quotients, `sin`, `cos`, `exp`, `log`, and declared smooth unary scalar functions; differentiation is followed by simplification. |
 
 Real quotients require `nonzero(denominator)` and logarithms require
@@ -257,8 +259,32 @@ structurally identical scalar summands and numeric coefficients in products.
 For example, `1/3 + 1/6` becomes `1/2`, and `2*x + 3*x` becomes `5*x`.
 These are separate passes with ordinary replayable certificates; `math-simplify`
 combines them with zero/one elimination. Fractions retain the existing division
-IR, and signs retain unary minus. No floating point, product distribution, or
-implicit reordering of symbolic multiplication is introduced.
+IR, and signs retain unary minus. Arithmetic remains exact.
+
+`math-normalize` is an independent pass. It gives scalar sums and products a
+stable left-associated order, combines equal monomials and repeated factors,
+and collapses nested natural powers. Variables precede opaque function factors;
+summands are sorted by decreasing coordinate degree, then by their source
+representation, with constants last. These choices make repeated normalization
+idempotent; they do not identify every mathematically equivalent expression.
+The same rule is included in `math-simplify` and derivative simplification.
+For example, `x+2*x+x` becomes `4*x`, and `2*x*3*x^2` becomes `6*x^3`.
+
+Scalar factor cancellation requires the original denominator to be nonzero.
+Under `coordinate(x); nonzero(x)`, `x/x` becomes `1`, and differentiation of
+`x/x^2` simplifies to `-1/x^2`. Cancellation handles exact coefficients and
+structurally equal factors with natural powers; it does not factor arbitrary
+polynomials. Factored structure remains the default. `math-expand` explicitly
+distributes products over sums/differences in a separate pass and then simplifies;
+it is never enabled by default, nor does it expand arbitrary binomial powers.
+
+Computed values and derivation certificates retain domain requirements separately
+from declarations and display properties. `math-value-requirements` and
+`math-derivation-requirements` expose them. A value obtained from `x/x` retains
+`nonzero(x)` after its visible term becomes `1`, including when embedded in another
+expression, styled, differentiated, searched or used in an authored chain.
+Reusing it requires the premise again; carrying a requirement never authorizes
+that premise. Certificate replay checks the retained requirements as well.
 
 `math-differentiate` returns a report containing the differentiation and
 simplification pass reports, plus their joined certificate. Each pass has its
