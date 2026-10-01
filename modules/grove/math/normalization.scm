@@ -23,4 +23,10 @@
   (list (scalar-rule 'normalize-scalar 'normalize scalar-normalize (lambda (input) '()))
         (scalar-rule 'cancel-scalar-factors 'cancel scalar-cancel
           (lambda (input) `((nonzero ,(caddr input)))))
-        (scalar-rule 'expand-scalar-product 'expand scalar-expand (lambda (input) '()))))
+        (scalar-rule 'expand-scalar-product 'expand scalar-expand (lambda (input) '()))
+        (math-rule 'normalize-function-prime "f'(u) = partial_1 f(u)"
+          "Declared unary scalar function with one derivative" 'normalize
+          (facts name argument)
+          (prime (var ,name) ,argument) (darg (,name ,argument) (num "1"))
+          ((differentiable (var ,name)))
+          ((math-typeo facts `(prime (var ,name) ,argument) 'scalar)))))

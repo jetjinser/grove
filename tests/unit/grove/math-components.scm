@@ -144,8 +144,9 @@
                       #:assumptions '("coordinate(differentiate)"))))
 (test-equal "variable exponents remain outside the computable domain" 'unsupported-expression
   (math-report-reason (derive "x^y" "x")))
-(test-equal "the ordinary derivative API still diagnoses unknown multivariate functions" 'unsupported-expression
-  (math-report-reason (math-differentiate "f(x,y)" "x" #:assumptions unknown-facts)))
+(test-equal "ordinary differentiation uses the same multivariate function derivative"
+  (math-report-final (math-partial "f(x,y)" "x" #:assumptions unknown-facts))
+  (math-report-final (math-differentiate "f(x,y)" "x" #:assumptions unknown-facts)))
 (test-assert "an authored partial step uses the registered relation"
   (math-verification-valid? (math-check-chain '("partial(x*y,x)" "partial(x,x)*y+x*partial(y,x)")
     #:assumptions (list r3) #:steps '(partial-product))))

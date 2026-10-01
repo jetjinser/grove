@@ -122,10 +122,11 @@
                            differentiate-variable zero-multiply add-zero zero-add)
                  #:max-depth 7 #:max-results 12 #:max-states 256))
        (candidates (math-report-candidates report)))
-  (test-assert "alternative search paths exercise different regularity requirements"
-    (any (lambda (candidate) (member '(smooth (var f)) (math-derivation-requirements candidate))) candidates))
-  (test-assert "a path which avoids function differentiation does not inherit another path's premises"
-    (null? (math-derivation-requirements (car candidates))))
+  (test-assert "every search path retains the derivative's intrinsic C1 requirement"
+    (and (pair? candidates)
+         (every (lambda (candidate) (member '(differentiable (var f)) (math-derivation-requirements candidate))) candidates)))
+  (test-assert "function differentiation does not promote C1 to smooth"
+    (every (lambda (candidate) (not (member '(smooth (var f)) (math-derivation-requirements candidate)))) candidates))
   (test-assert "all paths with their own retained requirements replay"
     (every (lambda (candidate) (math-verification-valid? (math-verify-derivation candidate))) candidates)))
 (test-end "Cartesian scalar and vector fields")

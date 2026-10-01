@@ -119,7 +119,7 @@
 (let ((report (math-differentiate "f(x^2)" "x"
                 #:assumptions '("coordinate(x); function(f,scalar,scalar); smooth(f)"))))
   (test-equal "declared unary functions use the chain rule"
-    (math-source->term "2*x*prime(f,x^2)") (math-report-final report))
+    (math-source->term "2*x*darg(f(x^2),1)") (math-report-final report))
   (test-assert "function chain certificate replays"
     (math-verification-valid? (math-verify-derivation (math-report-derivation report))))
   (for-each
@@ -132,14 +132,15 @@
   (test-equal "function chain matches a separately computed derivative"
     196
     (match (math-report-final report)
-      (('* ('* ('num coefficient) ('var 'x)) ('prime ('var 'f) ('^ ('var 'x) ('num exponent))))
+      (('* ('* ('num coefficient) ('var 'x)) ('darg ('f ('^ ('var 'x) ('num exponent))) ('num "1")))
        (* (string->number coefficient) 2 (+ (* 3 (expt (expt 2 (string->number exponent)) 2)) 1))))))
 (test-equal "undeclared smoothness is diagnosed before differentiation" 'missing-premise
   (math-report-reason (math-differentiate "f(x)" "x"
                        #:assumptions '("coordinate(x); function(f,scalar,scalar)"))))
-(test-equal "higher derivatives remain an explicit unsupported domain" 'unsupported-expression
-  (math-report-reason (math-differentiate "prime(f,x)" "x"
-                       #:assumptions '("coordinate(x); function(f,scalar,scalar); smooth(f)"))))
+(test-equal "prime participates in the shared higher derivative semantics"
+  (math-source->term "darg(darg(f(x),1),1)")
+  (math-report-final (math-differentiate "prime(f,x)" "x"
+                       #:assumptions '("coordinate(x); function(f,scalar,scalar); c2(f)"))))
 (test-equal "prime requires a unary scalar function" 'type-error
   (math-report-reason (math-simplify "prime(f,x)"
                        #:assumptions '("coordinate(x); function(f,scalar,vector); smooth(f)"))))

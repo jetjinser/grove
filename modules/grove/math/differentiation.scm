@@ -10,11 +10,12 @@
   #:use-module (grove math diagnostic)
   #:use-module (grove math declaration)
   #:use-module (grove math function-derivative)
+  #:use-module (grove math premise)
   #:use-module (grove math rule)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
   #:export (polynomial-term? differentiation-input-diagnostics differentiation-stepo math-differentiation-rules
-            math-differentiation-rule-definitions))
+            math-differentiation-rule-definitions make-function-chain-rule))
 
 (define natural-value math-natural-value)
 
@@ -30,24 +31,25 @@
      (and (polynomial-term? base) (natural-value exponent) #t))
     (_ #f))))
 
-(define* (differentiable-term? term #:optional (facts '()) (symbolic? #f))
-  (define (supported? child) (differentiable-term? child facts symbolic?))
+(define* (differentiable-term? term #:optional (facts '()))
+  (define (supported? child) (differentiable-term? child facts))
   (or (polynomial-term? term)
       (match term
         (((or 'sin 'cos 'exp 'log) operand) (supported? operand))
         (('- operand) (supported? operand))
         (((or '+ '- '* '/) left right)
          (and (supported? left) (supported? right)))
-        (('darg application index)
-         (let ((info (and symbolic? (math-function-derivative-info facts term))))
+        (((or 'darg 'prime) application index)
+         (let ((info (math-function-derivative-info facts term)))
            (and info (every supported? (cadr info)))))
+        (('differentiate application ('var name)) (supported? application))
         (('^ base ('num exponent))
          (and (natural-value exponent) (supported? base)))
         ((name operand)
          (and (equal? (math-function-signature facts name) '((scalar) scalar))
               (supported? operand)))
         ((name . operands)
-         (let ((signature (and symbolic? (math-function-signature facts name))))
+         (let ((signature (math-function-signature facts name)))
            (and signature (eq? (cadr signature) 'scalar)
                 (equal? (car signature) (make-list (length operands) 'scalar))
                 (every supported? operands))))
@@ -63,13 +65,11 @@
              "a constant parameter cannot be used as a differentiation coordinate")))
     ((differentiable-term? expression facts)
      (filter-map
-       (lambda (path)
-         (let ((local (math-term-at-path expression path)))
-           (and (math-function-signature facts (car local))
-                (not (member `(smooth (var ,(car local))) facts))
-                (make-math-diagnostic #f #f (cons 0 path) 'missing-premise
-                  `((smooth (var ,(car local)))) "function differentiation requires a smoothness premise"))))
-       (math-term-paths expression)))
+       (lambda (premise)
+         (and (not (math-premise-known? facts premise))
+              (make-math-diagnostic #f #f '(0) 'missing-premise (list premise)
+                "function differentiation requires sufficient regularity")))
+       (delete-duplicates (math-function-differentiation-premises expression) equal?)))
     (else
      (let locate ((term expression) (path '(0)))
        (let ((child (and (memq (car term) '(+ - * / ^ sin cos exp log))
@@ -91,12 +91,44 @@
        (facts item ... coordinate)
        (differentiate expression (var ,coordinate)) result ()
        ((project (facts item ... coordinate)
-          (if (differentiable-term? (quasiquote expression) facts #t) succeed fail))
+          (if (differentiable-term? (quasiquote expression) facts) succeed fail))
         (math-typeo facts (quasiquote expression) 'scalar)
         (math-typeo facts `(var ,coordinate) 'scalar)
         (project (facts coordinate)
           (if (eq? (math-variable-role facts `(var ,coordinate)) 'parameter) fail succeed))
         goal ...) option ...))))
+
+(define (make-function-chain-rule operator)
+  (define (required input)
+    (let ((info (and (eq? (car input) operator) (math-function-derivative-shape (cadr input)))))
+      (and info
+           (append (list (math-function-derivative-premise info 1))
+                   (if (eq? operator 'partial)
+                       `((coordinate ,(caddr input)) (differentiable ,(cadr input))) '())))))
+  (make-math-rewrite-rule
+    (if (eq? operator 'partial) 'partial-function-chain 'differentiate-function)
+    "Derivative of f(u_1,...,u_n) = sum_i partial_i f(u_1,...,u_n) derivative of u_i"
+    "Declared scalar function and sufficient regularity for the next derivative" operator
+    (lambda (facts input output)
+      (fresh (application coordinate)
+        (== input `(,operator ,application ,coordinate))
+        (project (facts input application coordinate)
+          (let ((info (math-function-derivative-info facts application)))
+            (if info
+                (let* ((base (cons (car info) (cadr info)))
+                       (derivative (fold (lambda (index term) `(darg ,term (num ,(number->string index))))
+                                         base (caddr info)))
+                       (terms (map (lambda (arg index)
+                                     `(* (darg ,derivative (num ,(number->string index)))
+                                         (,operator ,arg ,coordinate)))
+                                   (cadr info) (iota (length (cadr info)) 1))))
+                  (fresh ()
+                    (math-typeo facts input 'scalar)
+                    (math-factso facts (required input))
+                    (== output (if (null? terms) '(num "0")
+                                   (fold (lambda (term sum) `(+ ,sum ,term)) (car terms) (cdr terms)))))) fail)))))
+    #:matcher required #:label "Function chain rule"
+    #:documentation "Apply the shared function chain rule using one-based argument positions. C1 permits one derivative, C2 permits two, and smooth permits higher derivatives."))
 
 (define math-differentiation-rule-definitions
   (list
@@ -165,17 +197,7 @@
                   (match input
                     (('differentiate ('log operand) ('var coordinate)) `((positive ,operand)))
                     (_ #f))))
-    (scalar-derivative-rule 'differentiate-function "d(f(u))/dx = u'*f'(u)"
-      (facts coordinate name operand) (,name ,operand)
-      (* (differentiate ,operand (var ,coordinate)) (prime (var ,name) ,operand))
-      ((math-factso facts `((function (var ,name) (var scalar) (var scalar)) (smooth (var ,name)))))
-      #:label "Function chain rule"
-      #:matcher (lambda (input)
-                  (match input
-                    (('differentiate (name operand) ('var coordinate))
-                     (and (symbol? name)
-                          `((function (var ,name) (var scalar) (var scalar)) (smooth (var ,name)))))
-                    (_ #f))))))
+    (make-function-chain-rule 'differentiate)))
 
 (define math-differentiation-rules
   (map math-rewrite-rule-name math-differentiation-rule-definitions))

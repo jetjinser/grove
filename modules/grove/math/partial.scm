@@ -6,18 +6,15 @@
   #:use-module ((grove relation dsl) #:select (project))
   #:use-module (grove math rule)
   #:use-module (grove math differentiation)
-  #:use-module (grove math function-derivative)
   #:use-module (grove math types)
-  #:use-module (grove math declaration)
-  #:use-module (grove math operator)
   #:use-module (grove math number)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
   #:export (math-partial-rule-definitions math-partial-rules))
 
 ;; Reuse scalar calculus relations, changing only the derivative operator.
-;; The scalar API keeps its closed input vocabulary; a partial normal form may
-;; retain derivatives of declared multivariate functions as explicit terms.
+;; Both APIs share argument-indexed function calculus. The partial API also
+;; requires explicit coordinate roles and operand regularity.
 (define (rename-derivatives term from to)
   (cond ((not (pair? term)) term)
         ((memq (car term) '(var num zero)) term)
@@ -67,33 +64,6 @@
                            '((project (facts input)
                                (if (independent-variable? facts input) succeed fail))) '()))))))
 
-(define (function-chain-premises input)
-  (and (pair? input) (eq? (car input) 'partial)
-       (or (eq? (caadr input) 'darg) (not (math-operator-arities (caadr input))))
-       `((coordinate ,(caddr input)) (differentiable ,(cadr input)))))
-
-(define function-chain-rule
-  (make-math-rewrite-rule 'partial-function-chain
-    "partial_x f(u_1,...,u_n) = sum_i partial_i f(u_1,...,u_n) partial_x u_i"
-    "Declared scalar function, explicit coordinate, and sufficient function regularity" 'partial
-    (lambda (facts input output)
-      (fresh (application coordinate)
-        (== input `(partial ,application ,coordinate))
-        (project (facts input application coordinate)
-          (let ((info (math-function-derivative-info facts application)))
-            (if info
-                (let ((terms (map (lambda (arg index)
-                                    `(* (darg ,application (num ,(number->string index)))
-                                        (partial ,arg ,coordinate)))
-                                  (cadr info) (iota (length (cadr info)) 1))))
-                  (fresh ()
-                    (math-typeo facts application 'scalar)
-                    (math-factso facts (function-chain-premises input))
-                    (== output (if (null? terms) '(num "0")
-                                   (fold (lambda (term sum) `(+ ,sum ,term)) (car terms) (cdr terms)))))) fail)))))
-    #:matcher function-chain-premises
-    #:documentation "Apply the multivariate chain rule using explicit one-based argument positions. Repeated and composed arguments remain distinct; C1 permits one derivative and C2 permits two."))
-
 (define (mixed-partial-rule name operator)
   (define (premises input)
     (match input
@@ -111,7 +81,7 @@
                       `((,(if (= order 2) 'c2 'smooth) (var ,(car term)))))))))
       (_ #f)))
   (make-math-rewrite-rule name "Exchange mixed derivatives into ascending order"
-    "C2 operand; coordinate names and argument positions have separate orders" 'partial
+    "C2 operand; coordinate names and argument positions have separate orders" 'normalize
     (lambda (facts input output)
       (project (facts input)
         (let ((required (premises input)))
@@ -127,7 +97,9 @@
   (append (map partial-rule
             (filter (lambda (rule) (not (eq? (math-rewrite-rule-name rule) 'differentiate-function)))
                     math-differentiation-rule-definitions))
-          (list function-chain-rule
+          (list (make-function-chain-rule (quote partial))
                 (mixed-partial-rule 'partial-coordinate-symmetry 'partial)
                 (mixed-partial-rule 'partial-argument-symmetry 'darg))))
-(define math-partial-rules (map math-rewrite-rule-name math-partial-rule-definitions))
+(define math-partial-rules
+  (map math-rewrite-rule-name
+    (filter (lambda (rule) (eq? (math-rewrite-rule-group rule) 'partial)) math-partial-rule-definitions)))

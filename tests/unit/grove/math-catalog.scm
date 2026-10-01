@@ -34,7 +34,7 @@
     (math-rewrite-rule-relation (math-rewrite-rule-ref 'curl-product) 'forward))
   (car (query (documentation)
          (fresh (group modes) (ruleo 'curl-product group modes documentation)))))
-(test-equal "documentation queries enumerate only documented rules" 6
+(test-equal "documentation queries enumerate only documented rules" 7
   (length (query (name documentation)
             (fresh (group modes) (ruleo name group modes documentation))
             (=/= documentation #f))))
