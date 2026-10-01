@@ -8,7 +8,9 @@
 @(define f (◆:function 'f #:inputs '(scalar scalar)))
 @with-assumptions[(list r3 f "c2(f)")]{
   @partial["x"]{f(x,x)}
+  @differentiate["x"]{f(x,x)}
   @compute{partial(partial(f(x^2,y),x),y)}
+  @check-equation["components(0,0,0)"]{curl(grad(f(x,y)))}
   @compute[#:on-error 'show]{partial(partial(partial(f(x,y),x),y),x)}
 }
 @with-assumptions[(list r3 (◆:parameter 'a) (◆:parameter 'b) "nonzero(a); nonzero(b); nonzero(a+b)")]{
