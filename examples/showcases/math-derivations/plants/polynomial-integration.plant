@@ -1,0 +1,12 @@
+@; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+@; SPDX-License-Identifier: CC0-1.0
+@use-modules[(math-derivations commands) ((grove math semantic) #:prefix ◆:)]
+@title{Polynomial antiderivatives}
+@summary{Exact primitives with zero value at the selected coordinate origin.}
+@(define r3 (◆:space 'x 'y 'z))
+@with-assumptions[r3]{
+  @antiderivative["x" #:view 'result]{x^3+2*x}
+  @antiderivative["x" #:view 'result]{x*y+z}
+  @check-equation["x^3+2*x" #:view 'result]{partial(antiderivative(x^3+2*x,x),x)}
+  @antiderivative["x" #:on-error 'show]{sin(x)}
+}

@@ -660,3 +660,43 @@ These are Euclidean Cartesian operations, not curvilinear-coordinate formulas.
 Results retain their ordered basis and the coordinate/parameter roles used.
 Independent sparse-polynomial tests check every Cartesian rule and every
 recorded computation edge without invoking Grove's calculus implementation.
+
+## Exact polynomial calculus
+
+`math-antiderivative source coordinate` / `@antiderivative["x"]{…}` returns
+the exact polynomial primitive whose value at coordinate zero is zero.
+`◆:antiderivative` constructs the term; its notation is `A_x(f)`.
+Inputs use exact rational arithmetic, natural powers, and explicit independent
+coordinates or constant parameters, with numeric nonzero denominators. A generic scalar declaration does not
+establish independence. The integration pass converts Semantic IR to a sparse
+polynomial IR, integrates exponent vectors, checks the derivative, and emits
+Semantic IR. A separate scalar pass normalizes the output. The full family of
+primitives can additionally contain a function independent of the coordinate.
+
+`math-solve-poisson source #:coordinate "x"` / `@solve-poisson{…}` constructs
+a polynomial particular solution of **Delta u = source** in the active ordered
+Cartesian space. The default axis is the first basis coordinate. The selected
+solution has zero value and zero first derivative on that axis's origin plane;
+notation `P_x(f)` identifies this selection. Repeated transverse Laplacians
+lower transverse degree, so the finite correction algorithm terminates. It
+checks its PDE residual before returning. Boundary conditions and the complete
+homogeneous solution are not solved. `◆:poisson-particular` constructs this
+semantic operation.
+
+`math-check-equation left right` / `@check-equation["right"]{left}` computes
+the residual, expands exact polynomials, and simplifies. Only a zero residual
+is a completed verification. Nonzero or unresolved residuals produce
+`equation-not-proven`; cutoffs keep their valid prefix. This can separately
+verify a Poisson candidate using existing spatial and partial rules, preserving
+a residual derivation certificate. Embedded polynomial calculus operations
+add an explicit `polynomial-calculus` pass before Cartesian computation.
+
+The sparse IR maps exponent vectors in a fixed variable order to exact rational
+coefficients. Expansion is bounded to 256 monomials and total degree 64, in
+addition to the usual AST and per-pass step bounds. Nonpolynomial expressions,
+nonnumeric denominators and non-natural powers are rejected. The domain is
+checked even for operations appearing inside otherwise simplifiable terms.
+Independent tests check primitives by differentiation and origin evaluation;
+Poisson outputs are checked by their PDE and both anchors without reproducing
+the construction algorithm. Residual edges are checked by an independent exact
+polynomial interpreter as well as normal relation replay.

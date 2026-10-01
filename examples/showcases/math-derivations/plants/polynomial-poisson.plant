@@ -1,0 +1,11 @@
+@; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+@; SPDX-License-Identifier: CC0-1.0
+@use-modules[(math-derivations commands) ((grove math semantic) #:prefix ◆:)]
+@title{Polynomial Poisson particular solutions}
+@summary{A bounded Cartesian construction for Delta u = f, with residual checking.}
+@(define r3 (◆:space 'x 'y 'z))
+@with-assumptions[r3]{
+  @solve-poisson[#:view 'result]{y^2}
+  @check-equation["y^2" #:view 'result]{laplacian(x^2*y^2/2-x^4/12)}
+  @check-equation["3" #:on-error 'show]{laplacian(x^2)}
+}
