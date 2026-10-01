@@ -38,3 +38,5 @@ The author chooses the intermediate expressions. The checker reconstructs and re
 Here the identity has the correct shape but smooth(E) is absent. The diagnostic identifies the failed step, its rule, and its missing premise. Open its source location to see the authored expression. It is displayed as data so this intentionally unsuccessful check does not abort the article build.
 
 For an algebraic pass with a different input language, see @link["polynomial-differentiation"]{polynomial differentiation}.
+
+See @link["math-capabilities"]{the complete capability tour} for exact arithmetic, collection, reverse search, source diagnostics and resource limits alongside these examples.
