@@ -37,6 +37,10 @@
   (term "x" (semantic:variable 'y)))
 (test-error "ambiguous textual subscripts do not acquire a guessed meaning" #t
   (term "E_x"))
+(test-error "reserved vector operators validate their arity" #t
+  (term "curl(E,F)"))
+(test-error "reserved differentiation validates its arity" #t
+  (term "differentiate(x)"))
 (test-equal "vector operators compose without presentation nodes"
   '(curl (curl (var E))) (math-value-term (semantic:curl (semantic:curl "E"))))
 (test-equal "a formal derivative has explicit operands"

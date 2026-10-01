@@ -78,6 +78,10 @@
                                     (= (length term) 2))
                                2 3))
           (every math-term? (cdr term))))
+    ((memq (car term) '(curl grad div laplacian scalar vector smooth))
+     (and (= (length term) 2) (every math-term? (cdr term))))
+    ((eq? (car term) 'differentiate)
+     (and (= (length term) 3) (every math-term? (cdr term))))
     ((symbol? (car term)) (every math-term? (cdr term)))
     (else #f)))
 
