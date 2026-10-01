@@ -4,6 +4,7 @@
 
 (define-module (grove math term)
   #:use-module (grove math syntax)
+  #:use-module (grove math operator)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (math-term?
@@ -73,15 +74,9 @@
     ((and (pair? term) (memq (car term) '(var num zero))) #f)
     ((not (list? term)) #f)
     ((not (pair? term)) #f)
-    ((memq (car term) '(+ - * / ^ =))
-     (and (= (length term) (if (and (eq? (car term) '-)
-                                    (= (length term) 2))
-                               2 3))
-          (every math-term? (cdr term))))
-    ((memq (car term) '(curl grad div laplacian scalar vector smooth))
-     (and (= (length term) 2) (every math-term? (cdr term))))
-    ((eq? (car term) 'differentiate)
-     (and (= (length term) 3) (every math-term? (cdr term))))
+    ((math-operator-arities (car term))
+     (and (memv (length (cdr term)) (math-operator-arities (car term)))
+          (every math-term? (cdr term)) #t))
     ((symbol? (car term)) (every math-term? (cdr term)))
     (else #f)))
 

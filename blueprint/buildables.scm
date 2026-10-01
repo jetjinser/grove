@@ -16,6 +16,8 @@
     "grove/ir.scm"
     "grove/math/syntax.scm"
     "grove/math/term.scm"
+    "grove/math/operator.scm"
+    "grove/math/assumption.scm"
     "grove/math/context.scm"
     "grove/math/types.scm"
     "grove/math/rule.scm"

@@ -2,7 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (use-modules (grove math pipeline) (grove math context)
-             (grove math term) (srfi srfi-64))
+             (grove math term) (grove math types) (srfi srfi-64))
 
 (test-begin "local math assumptions")
 (define saved #f)
@@ -38,6 +38,12 @@
   (math-verification-valid? (math-verify-derivation saved)))
 (test-equal "unscoped operations do not inherit the preceding calculation"
   'type-error (math-report-reason (math-simplify "x+x")))
+(test-equal "an unused conflicting declaration invalidates a computation"
+  'type-error
+  (math-report-reason (math-simplify "1+1" #:assumptions '("scalar(y); vector(y)"))))
+(test-equal "inference cannot choose one branch of contradictory type declarations"
+  #f (math-infer-type '((scalar (var y)) (vector (var y)) (scalar (var x)))
+                      (math-source->term "x+y")))
 (test-error "malformed context inputs are rejected" #t
   (with-math-assumptions '(3) (math-simplify "1")))
 (test-end "local math assumptions")
