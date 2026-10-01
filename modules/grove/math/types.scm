@@ -14,6 +14,7 @@
   #:use-module (srfi srfi-9)
   #:export (math-typeo
             math-infer-type
+            math-assumption-type-diagnostics
             math-type-diagnostic
             math-typed-term?
             math-typed-term-term
@@ -64,7 +65,10 @@
        (signatureo operator signature type)
        (operand-typeso assumptions operands signature)
        (conde
-         ((=/= operator 'differentiate))
+         ((=/= operator 'differentiate) (=/= operator 'prime))
+         ((fresh (name argument)
+            (== term `(prime (var ,name) ,argument))
+            (facto assumptions `(function (var ,name) (var scalar) (var scalar)))))
          ((fresh (expression name)
             (== term `(differentiate ,expression (var ,name)))
             (project (assumptions name)
@@ -98,6 +102,16 @@
                    (math-typeo assumptions term type)))))
          (and (= (length types) 1)
               (make-math-typed-term term (car types))))))
+
+(define (math-assumption-type-diagnostics assumptions)
+  (filter-map
+    (lambda (fact)
+      (and (memq (car fact) '(positive nonzero))
+           (let ((typed (math-infer-type assumptions (cadr fact))))
+             (and (or (not typed) (not (eq? (math-typed-term-type typed) 'scalar)))
+                  (make-math-diagnostic #f #f '() 'type-error (list fact)
+                    "sign and nonzero premises require a declared scalar expression")))))
+    assumptions))
 
 (define (math-type-diagnostic assumptions term)
   (define (diagnose term)

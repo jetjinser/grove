@@ -12,7 +12,7 @@
   #:use-module (srfi srfi-13)
   #:re-export (math-value? math-value-term math-value-origin math-value-properties math-value-declarations)
   #:export (expression expression-lines variable coordinate parameter function call constant add subtract negate multiply divide power
-            grad divergence curl laplacian derivative vector-zero group styled))
+            sin cos exp log prime grad divergence curl laplacian derivative vector-zero group styled))
 
 (define (fragments values)
   (append-map (lambda (value) (if (list? value) (fragments value) (list value))) values))
@@ -133,6 +133,11 @@
 (define-public (multiply left right) (operation '* (list left right)))
 (define-public (divide numerator denominator) (operation '/ (list numerator denominator)))
 (define-public (power base exponent) (operation '^ (list base exponent)))
+(define-public (sin . body) (operation 'sin (list body)))
+(define-public (cos . body) (operation 'cos (list body)))
+(define-public (exp . body) (operation 'exp (list body)))
+(define-public (log . body) (operation 'log (list body)))
+(define-public (prime function . body) (operation 'prime (list (variable function) body)))
 (define-public (grad . body) (operation 'grad (list body)))
 (define-public (divergence . body) (operation 'div (list body)))
 (define-public (curl . body) (operation 'curl (list body)))

@@ -9,7 +9,7 @@
   #:use-module (grove math types)
   #:use-module (grove math assumption)
   #:use-module (grove math domain)
-  #:use-module (grove math arithmetic)
+  #:use-module (grove math premise)
   #:use-module (grove math rewrite)
   #:use-module (srfi srfi-1)
   #:export (run-math-pass run-math-passes math-execution-diagnostics check-math-bound))
@@ -26,15 +26,10 @@
                                (math-domain-diagnostics term name assumptions))))
     (if (pair? preconditions) preconditions
         (append
+          (math-assumption-type-diagnostics assumptions)
           (if (math-infer-type assumptions term) '()
               (list (execution-diagnostic 'type-error (math-type-diagnostic assumptions term) '())))
-          (filter-map
-            (lambda (path)
-              (let ((local (math-term-at-path term path)))
-                (and (eq? (car local) '/)
-                     (equal? (math-number-value (caddr local)) 0)
-                     (execution-diagnostic 'division-by-zero "division by zero" path))))
-            (math-term-paths term))))))
+          (math-definedness-diagnostics assumptions term)))))
 
 ;; One deterministic forward pass. Limits never discard a valid prefix or
 ;; include an oversized/ill-typed edge. Cycle detection is independent of size.

@@ -52,6 +52,9 @@
          (row (list (notation:frac
                       (list (token 'mi "d")) (list (token 'mi "d") (child 1)))
                     (argument 0))))
+        ((eq? (car value) 'prime)
+         (row (list (notation:sup (list (child 0)) (list (operator "′")))
+                    (operator "⁡") (argument 1))))
         ((and (memq (car value) '(curl grad div laplacian)) (= (length value) 2))
          (row (append (case (car value)
                         ((curl) (list (operator "∇") (operator "×")))

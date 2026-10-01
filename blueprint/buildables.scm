@@ -27,6 +27,8 @@
     "grove/math/vector.scm"
     "grove/math/differentiation.scm"
     "grove/math/arithmetic.scm"
+    "grove/math/number.scm"
+    "grove/math/premise.scm"
     "grove/math/derivation.scm"
     "grove/math/diagnostic.scm"
     "grove/math/report.scm"

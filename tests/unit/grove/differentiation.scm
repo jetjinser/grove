@@ -4,6 +4,7 @@
 (use-modules (grove math pipeline) (grove math term)
              (grove math differentiation) (grove relation)
              (grove math layout) (grove ir) (grove render html)
+             (grove math source)
              (ice-9 match) (srfi srfi-1) (srfi srfi-64))
 
 (define (expansion report) (math-report-derivation (car (math-report-passes report))))
@@ -21,7 +22,24 @@
     (('num n) (cons (string->number n) 0))
     (('var 'x) (cons x 1))
     (('var 'y) (cons y 0))
+    (('differentiate operand ('var 'x)) (cons (cdr (go operand)) 0))
+    (('f operand)
+     (let ((v (go operand)))
+       (cons (+ (expt (car v) 3) (car v)) (* (cdr v) (+ (* 3 (expt (car v) 2)) 1)))))
+    (('prime ('var 'f) operand)
+     (let ((v (go operand))) (cons (+ (* 3 (expt (car v) 2)) 1) (* 6 (car v) (cdr v)))))
     (('- a) (let ((v (go a))) (cons (- (car v)) (- (cdr v)))))
+    (((or 'sin 'cos 'exp 'log) a)
+     (let* ((v (go a)) (n (car v)) (d (cdr v)))
+       (case (car term)
+         ((sin) (cons (sin n) (* d (cos n))))
+         ((cos) (cons (cos n) (- (* d (sin n)))))
+         ((exp) (cons (exp n) (* d (exp n))))
+         ((log) (cons (log n) (/ d n))))))
+    (('/ a b)
+     (let ((u (go a)) (v (go b)))
+       (cons (/ (car u) (car v))
+             (/ (- (* (cdr u) (car v)) (* (car u) (cdr v))) (* (car v) (car v))))))
     (((or '+ '- '*) a b)
      (let ((u (go a)) (v (go b)))
        (case (car term)
@@ -35,6 +53,85 @@
              (if (= n 0) 0 (* n (expt (car v) (- n 1)) (cdr v))))))))
 
 (test-begin "polynomial differentiation")
+(for-each
+  (lambda (fixture)
+    (let ((report (math-differentiate (car fixture) "x"
+                    #:assumptions '("coordinate(x); parameter(a); positive(x)"))))
+      (test-equal "elementary acceptance derivative"
+        (math-source->term (cadr fixture)) (math-report-final report))
+      (test-assert "elementary derivation certificate replays"
+        (math-verification-valid? (math-verify-derivation (math-report-derivation report))))
+      (test-assert "generated elementary steps retain their source origins"
+        (any math-origin-generated? (math-derivation-sources (math-report-derivation report))))))
+  '(("sin(x^2)" "2*x*cos(x^2)") ("exp(a*x)" "a*exp(a*x)") ("log(x)" "1/x")))
+(for-each
+  (lambda (source)
+    (let ((report (math-differentiate source "x" #:assumptions '("scalar(x); positive(x)"))))
+      (test-assert "elementary derivative completes" (math-report-complete? report))
+      (for-each
+        (lambda (point)
+          (test-assert (string-append "independent dual-number calculus oracle: " source)
+            (< (abs (- (cdr (dual (math-source->term source) point 3))
+                       (car (dual (math-report-final report) point 3)))) 1e-8)))
+        '(1/2 1 2))
+      (for-each
+        (lambda (step)
+          (test-assert "independent calculus oracle checks every raw and simplified edge"
+            (< (abs (- (car (dual (math-derivation-step-from step) 1 3))
+                       (car (dual (math-derivation-step-to step) 1 3)))) 1e-8)))
+        (math-derivation-steps (math-report-derivation report)))))
+  '("sin(x^2)" "cos(x^3)" "exp(2*x)" "log(x)" "x/x^2"
+    "sin(exp(x))/x" "log(exp(x))"))
+(test-equal "logarithm requires positivity" 'missing-premise
+  (math-report-reason (differentiate "log(x)")))
+(test-equal "quotient requires nonzero denominator" 'missing-premise
+  (math-report-reason (differentiate "x/y")))
+(test-equal "logarithm rejects a nonpositive exact argument" 'domain-error
+  (math-report-reason (differentiate "log(-1)")))
+(test-equal "undefined factors cannot be simplified away" 'missing-premise
+  (math-report-reason (math-simplify "0*(1/x)" #:assumptions '("scalar(x)"))))
+(test-equal "false constant sign premises are rejected" 'invalid-assumption
+  (math-report-reason (math-simplify "1" #:assumptions '("positive(-1)"))))
+(test-equal "vector sign premises are rejected" 'type-error
+  (math-report-reason (math-simplify "1" #:assumptions '("vector(E); positive(E)"))))
+(let ((report (math-differentiate "f(x^2)" "x"
+                #:assumptions '("coordinate(x); function(f,scalar,scalar); smooth(f)"))))
+  (test-equal "declared unary functions use the chain rule"
+    (math-source->term "2*x*prime(f,x^2)") (math-report-final report))
+  (test-assert "function chain certificate replays"
+    (math-verification-valid? (math-verify-derivation (math-report-derivation report))))
+  (for-each
+    (lambda (step)
+      (test-assert "independent function fixture checks every chain-rule edge"
+        (< (abs (- (car (dual (math-derivation-step-from step) 2 3))
+                   (car (dual (math-derivation-step-to step) 2 3)))) 1e-8)))
+    (math-derivation-steps (math-report-derivation report)))
+  ;; Independent fixture f(t)=t^3+t, so f'(t)=3*t^2+1.
+  (test-equal "function chain matches a separately computed derivative"
+    196
+    (match (math-report-final report)
+      (('* ('* ('num coefficient) ('var 'x)) ('prime ('var 'f) ('^ ('var 'x) ('num exponent))))
+       (* (string->number coefficient) 2 (+ (* 3 (expt (expt 2 (string->number exponent)) 2)) 1))))))
+(test-equal "undeclared smoothness is diagnosed before differentiation" 'missing-premise
+  (math-report-reason (math-differentiate "f(x)" "x"
+                       #:assumptions '("coordinate(x); function(f,scalar,scalar)"))))
+(test-equal "higher derivatives remain an explicit unsupported domain" 'unsupported-expression
+  (math-report-reason (math-differentiate "prime(f,x)" "x"
+                       #:assumptions '("coordinate(x); function(f,scalar,scalar); smooth(f)"))))
+(test-equal "prime requires a unary scalar function" 'type-error
+  (math-report-reason (math-simplify "prime(f,x)"
+                       #:assumptions '("coordinate(x); function(f,scalar,vector); smooth(f)"))))
+(for-each
+  (lambda (chain)
+    (test-assert "authored elementary differentiation steps verify"
+      (math-verification-valid? (math-check-chain chain
+        #:assumptions '("scalar(x); positive(x)")))))
+  '(("differentiate(sin(x),x)" "differentiate(x,x)*cos(x)" "1*cos(x)" "cos(x)")
+    ("differentiate(log(x),x)" "differentiate(x,x)/x" "1/x")
+    ("differentiate(x/x,x)" "(differentiate(x,x)*x-x*differentiate(x,x))/x^2")))
+(test-assert "bounded search can find an elementary differentiation step"
+  (pair? (math-report-candidates (math-search "differentiate(sin(x),x)"
+    "differentiate(x,x)*cos(x)" #:assumptions '("scalar(x)") #:max-depth 1))))
 (test-assert "polynomial layout preserves grouping of product and power bases"
   (let ((html (sxml->html (content->sxml
                 (make-content-element 'math
@@ -71,7 +168,7 @@
   (lambda (source)
     (test-equal "unsupported domain is diagnosed before expansion"
       'unsupported-expression (math-report-reason (differentiate source))))
-  '("sin(x)" "x/y" "x^y" "x^-1"))
+  '("opaque(x)" "x^y" "x^-1"))
 (test-equal "vector coordinates cannot be differentiated as scalar polynomials"
   'type-error (math-report-reason (math-differentiate "E" "E" #:assumptions '("vector(E)"))))
 (test-equal "undeclared variables are diagnosed" 'type-error

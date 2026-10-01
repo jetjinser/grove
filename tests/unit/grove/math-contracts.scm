@@ -12,12 +12,12 @@
 (define scalar-x '((scalar (var x))))
 (define conflict '((scalar (var y)) (vector (var y)) (scalar (var x))))
 (test-begin "mathematical expression contracts")
-(let ((value (semantic:expression "x+sin(x)")))
+(let ((value (semantic:expression "x+opaque(x)")))
   (test-assert "unknown function applications remain structurally valid"
     (math-term? (math-value-term value)))
   (test-assert "unknown function applications remain displayable"
     (string-contains (sxml->html (content->sxml
-      (make-content-element 'math (list (math-value->layout value))))) "<mi>sin</mi>"))
+      (make-content-element 'math (list (math-value->layout value))))) "<mi>opaque</mi>"))
   (for-each
     (lambda (execute)
       (let ((report (execute value #:assumptions '("scalar(x)"))))
@@ -30,10 +30,10 @@
     (list math-rewrite math-simplify math-calculate math-collect)))
 (test-equal "search uses the same executable vocabulary"
   'unsupported-expression
-  (math-report-reason (math-search "sin(x)" "sin(x)" #:assumptions '("scalar(x)"))))
+  (math-report-reason (math-search "opaque(x)" "opaque(x)" #:assumptions '("scalar(x)"))))
 (test-assert "handwritten verification rejects unsupported functions"
   (not (math-verification-valid?
-    (math-check-chain '("sin(x)+0" "sin(x)") #:assumptions '("scalar(x)") #:steps '(add-zero)))))
+    (math-check-chain '("opaque(x)+0" "opaque(x)") #:assumptions '("scalar(x)") #:steps '(add-zero)))))
 (test-equal "supported operators still diagnose missing variable declarations as type errors"
   'type-error (math-report-reason (math-simplify "x+0")))
 (test-assert "a supported expression with no applicable rule is a normal form"
@@ -45,7 +45,7 @@
     (math-diagnostic-message (first-diagnostic
       (math-simplify "x+E" #:assumptions '("scalar(x); vector(E)"))))
     "operand types (scalar vector)"))
-(let* ((source (string-copy "x+sin(x)")))
+(let* ((source (string-copy "x+opaque(x)")))
   (set-source-properties! source '((filename . "contract.plant") (line . 4) (column . 2)))
   (let* ((report (math-differentiate source "x" #:assumptions '("scalar(x)")))
          (diagnostic (first-diagnostic report)))
@@ -57,8 +57,8 @@
       (math-location-column (math-diagnostic-source diagnostic)))
     (test-equal "a specialized pass returns one domain failure"
       1 (length (math-report-diagnostics report)))))
-(test-equal "a typed quotient is still outside polynomial differentiation"
-  'unsupported-expression
+(test-equal "a typed quotient requires a nonzero denominator"
+  'missing-premise
   (math-report-reason (math-differentiate "x/y" "x" #:assumptions '("scalar(x); scalar(y)"))))
 (test-equal "differentiation identifies an invalid coordinate separately"
   '(1) (math-diagnostic-path (first-diagnostic (math-differentiate "x" "x+1"))))

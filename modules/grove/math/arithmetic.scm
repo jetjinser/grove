@@ -6,34 +6,10 @@
   #:use-module ((grove relation dsl) #:select (project))
   #:use-module (grove math types)
   #:use-module (grove math rule)
+  #:use-module (grove math number)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
-  #:export (math-number-value math-number->term constant-rewrite
-             collect-rewrite coefficient-rewrite math-arithmetic-rules))
-
-;; Numbers retain the source IR: unsigned integers, unary signs and fractions.
-;; Guile's exact rationals do the computation; no floating point is introduced.
-(define (math-number-value term)
-  (match term
-    (('num value)
-     (and (string? value) (not (string-null? value))
-          (string-every (lambda (c) (char<=? #\0 c #\9)) value)
-          (string->number value)))
-    (('- operand)
-     (let ((value (math-number-value operand))) (and value (- value))))
-    (('/ numerator denominator)
-     (let ((n (math-number-value numerator)) (d (math-number-value denominator)))
-       (and n d (not (= d 0)) (/ n d))))
-    (_ #f)))
-
-(define (math-number->term value)
-  (unless (and (rational? value) (exact? value))
-    (error "expected an exact rational" value))
-  (cond ((< value 0) `(- ,(math-number->term (- value))))
-        ((integer? value) `(num ,(number->string value)))
-        (else `(/ (num ,(number->string (numerator value)))
-                  (num ,(number->string (denominator value)))))))
+  #:export (constant-rewrite collect-rewrite coefficient-rewrite math-arithmetic-rules))
 
 (define (constant-rewrite input)
   (define (binary operator left right)

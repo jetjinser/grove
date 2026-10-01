@@ -74,7 +74,7 @@
   (string-contains (html (document:math (semantic:expression "sin(x)"))) "sin"))
 (test-equal "unsupported differentiation is distinct from missing semantics"
   'unsupported-expression
-  (math-diagnostic-code (car (math-report-diagnostics (math-differentiate (semantic:expression "sin(x)") "x")))))
+  (math-diagnostic-code (car (math-report-diagnostics (math-differentiate (semantic:expression "opaque(x)") "x")))))
 (test-error "notation operands are not interpreted by appearance" #t
   (math-calculate (notation:frac "1" "2")))
 (test-error "notation decoration does not declare a vector variable" #t

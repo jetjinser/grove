@@ -59,7 +59,7 @@
        (report (math-differentiate (located "x" 0 0) coordinate)))
   (test-equal "coordinate errors use the coordinate's own location" 9
     (math-location-line (math-diagnostic-source (car (math-report-diagnostics report))))))
-(let ((report (math-search (located "x" 0 0) (located "sin(x)" 6 2)
+(let ((report (math-search (located "x" 0 0) (located "opaque(x)" 6 2)
                 #:assumptions '("scalar(x)"))))
   (test-equal "target diagnostics are not attributed to the search's starting expression" 7
     (math-location-line (math-diagnostic-source (car (math-report-diagnostics report))))))

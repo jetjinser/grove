@@ -6,6 +6,7 @@
   #:use-module (grove math diagnostic)
   #:use-module (grove math pass)
   #:use-module (grove math assumption)
+  #:use-module (grove math premise)
   #:use-module (grove math term)
   #:use-module (grove math rewrite)
   #:use-module (grove math types)
@@ -61,7 +62,7 @@
       ((not required)
        (list (diagnostic index rule path 'rule-shape "rule does not match this operand")))
       (else
-       (let* ((missing (remove (lambda (fact) (member fact assumptions)) required))
+       (let* ((missing (remove (lambda (fact) (math-premise-known? assumptions fact)) required))
               (from-type (math-infer-type assumptions from))
               (to-type (and (math-term? to) (math-infer-type assumptions to)))
               (conditions

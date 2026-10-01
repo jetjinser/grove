@@ -21,10 +21,15 @@
     (curl ((vector vector)) #f)
     (div ((vector scalar)) #f)
     (laplacian ((scalar scalar) (vector vector)) #f)
-    (differentiate ((scalar scalar scalar)) #f)))
+    (differentiate ((scalar scalar scalar)) #f)
+    (sin ((scalar scalar)) #f)
+    (cos ((scalar scalar)) #f)
+    (exp ((scalar scalar)) #f)
+    (log ((scalar scalar)) #f)
+    (prime ((function scalar scalar)) #f)))
 
 ;; Assertions are reserved unary forms, not expression type signatures.
-(define assertion-operators '(scalar vector smooth coordinate parameter))
+(define assertion-operators '(scalar vector smooth coordinate parameter nonzero positive))
 (define arities
   (append (map (lambda (entry)
                  (cons (car entry)

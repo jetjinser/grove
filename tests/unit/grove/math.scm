@@ -175,7 +175,8 @@
       multiply-zero zero-multiply power-one power-zero
       differentiate-constant differentiate-variable differentiate-independent
       differentiate-negation differentiate-sum differentiate-difference
-      differentiate-product differentiate-power evaluate-constant collect-like-terms
+      differentiate-product differentiate-power differentiate-quotient differentiate-sin
+      differentiate-cos differentiate-exp differentiate-log differentiate-function evaluate-constant collect-like-terms
       combine-coefficients)
     (map math-rewrite-rule-name math-rewrite-rules))
   (test-assert "curl-curl side conditions are matched against typed assumptions"

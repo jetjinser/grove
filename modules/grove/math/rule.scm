@@ -3,6 +3,8 @@
 
 (define-module (grove math rule)
   #:use-module (grove relation)
+  #:use-module ((grove relation dsl) #:select (project))
+  #:use-module (grove math premise)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-1)
   #:export (make-math-rewrite-rule math-rule math-factso
@@ -93,7 +95,12 @@
 
 (define (math-factso assumptions facts)
   (if (null? facts) succeed
-      (fresh () (facto assumptions (car facts))
+      (fresh ()
+        (conde
+          ((facto assumptions (car facts)))
+          ((project (assumptions facts)
+             (if (and (not (member (car facts) assumptions))
+                      (math-premise-known? assumptions (car facts))) succeed fail))))
         (math-factso assumptions (cdr facts)))))
 
 (define-syntax math-rule

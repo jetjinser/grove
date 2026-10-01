@@ -5,6 +5,7 @@
   #:use-module (grove math term)
   #:use-module (grove math diagnostic)
   #:use-module (grove math declaration)
+  #:use-module (grove math number)
   #:use-module (srfi srfi-1)
   #:export (math-assumption? math-assumption-diagnostics))
 
@@ -15,7 +16,7 @@
        (case (car fact)
          ((scalar vector coordinate parameter) (eq? (car (cadr fact)) 'var))
          ((function) (math-function-declaration? fact))
-         ((smooth) #t)
+         ((smooth nonzero positive) #t)
          ((=) #t)
          (else #f))))
 
@@ -26,6 +27,14 @@
              "assumptions must be a list of facts")))
     (else
      (append
+       (filter-map
+         (lambda (fact)
+           (and (math-assumption? fact) (memq (car fact) '(nonzero positive))
+                (let ((value (math-number-value (cadr fact))))
+                  (and value (if (eq? (car fact) 'positive) (<= value 0) (= value 0))))
+                (make-math-diagnostic #f #f '() 'invalid-assumption (list fact)
+                  (format #f "asserted premise contradicts an exact constant: ~a" (math-term->source fact)))))
+         (delete-duplicates facts equal?))
        (filter-map
          (lambda (fact)
            (and (not (math-assumption? fact))
