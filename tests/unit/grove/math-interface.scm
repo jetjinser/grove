@@ -99,7 +99,7 @@
   (test-assert "an article defines its formula once for display and computation"
     (and (string-contains rendered "<msup>")
          (string-contains rendered "data-rule=\"differentiate-power\"")
-         (string-contains rendered "1 derivation(s)"))))
+         (string-contains rendered "1 derivation"))))
 (let ((rendered (html (page (string-append imports
   "@differentiate[\"x\" #:assumptions \"scalar(x)\" #:on-error 'show]{\n"
   "  x + @semantic:divide{x}{x+1}\n}")))))

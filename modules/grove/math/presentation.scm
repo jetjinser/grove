@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math presentation)
+  #:use-module (ice-9 format)
   #:use-module (grove ir)
   #:use-module (grove math derivation)
   #:use-module (grove math diagnostic)
@@ -68,8 +69,8 @@
             (list (chain-content certificate #t)
                   (make-content-element 'details
                     (cons (make-content-element 'summary
-                            (list (let ((count (length (math-derivation-steps certificate))))
-                                    (format #f "Show ~a step~a" count (if (= count 1) "" "s")))))
+                            (list (format #f "Show ~a step~:p"
+                                    (length (math-derivation-steps certificate)))))
                           full-content) #:flow-kind 'block))
             #:flow-kind 'block)))))
 
@@ -135,7 +136,7 @@
   (unless (math-report? report) (error "expected a math report" report))
   (append
     (list (make-content-element 'paragraph
-            (list (format #f "~a ~a: ~a derivation(s) found~a."
+            (list (format #f "~a ~a: ~a derivation~:p found~a."
                     (string-capitalize (symbol->string (math-report-name report)))
                     (reason-label (math-report-reason report))
                     (length (math-report-candidates report))

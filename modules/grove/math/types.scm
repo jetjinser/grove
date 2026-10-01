@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math types)
+  #:use-module (ice-9 format)
   #:use-module (grove relation)
   #:use-module ((grove relation dsl) #:select (project))
   #:use-module (grove math operator)
@@ -161,7 +162,7 @@
        (let* ((signature (math-function-signature assumptions (car term)))
               (expected (car signature)))
          (if (not (= (length expected) (length (cdr term))))
-             (format #f "function ~a expects ~a operand(s); received ~a" (car term) (length expected) (length (cdr term)))
+             (format #f "function ~a expects ~a operand~:p; received ~a" (car term) (length expected) (length (cdr term)))
              (let ((types (map (lambda (operand) (math-infer-type assumptions operand)) (cdr term))))
                (if (every identity types)
                    (and (not (equal? expected (map math-typed-term-type types)))

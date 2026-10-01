@@ -13,7 +13,7 @@
   "@(define p @semantic:expression{x^3+2*x})\n@(define report (math-differentiate p \"x\" #:assumptions '(\"scalar(x)\")))\n@(define dp (math-report-result report))\n@with-assumptions[\"scalar(x)\"]{\n@math[p]\n@differentiate[\"x\" p]\n@math[dp]\n@search-derive[p]{@semantic:add[p \"0\"]}\n@check-derive{\n  @semantic:derivative{ x }{x}\n  1\n}\n}")))
   (test-assert "one defined expression serves display, computation, result reuse and search"
     (and (string-contains output "<msup>")
-         (string-contains output "1 derivation(s) found")
+         (string-contains output "1 derivation found")
          (string-contains output "data-rule=\"differentiate-power\"")))
   (test-assert "computed article steps retain source locations"
     (string-contains output "data-source=\"writing.plant:")))
@@ -30,12 +30,12 @@
 (let ((output (html "@search-derive[\"x\" #:assumptions \"scalar(x)\" #:backward? #t #:rules '(add-zero) #:max-depth 1]{x+0}")))
   (test-assert "the same author command supports backward search with forward display order"
     (and (string-contains (string-downcase output) "search-backward")
-         (string-contains output "1 derivation(s) found")
+         (string-contains output "1 derivation found")
          (string-contains output "data-rule=\"add-zero\""))))
 (test-assert "search exposes result count instead of requiring Scheme report plumbing"
   (string-contains
     (html "@search-derive[\"x+y\" #:assumptions \"scalar(x); scalar(y)\" #:rules '(add-zero) #:max-results 2]{(x+0)+(y+0)}")
-    "2 derivation(s) found"))
+    "2 derivations found"))
 (test-assert "search exposes the term-size budget"
   (string-contains
     (html "@search-derive[\"x\" #:assumptions \"scalar(x)\" #:max-term-size 1]{x+0}")

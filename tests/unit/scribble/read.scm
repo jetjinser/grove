@@ -89,7 +89,7 @@
   (test-assert "scoped assumptions reach every command before its body is evaluated"
     (and (string-contains html "collect-like-terms")
          (string-contains html "differentiate-variable")
-         (string-contains html "1 derivation(s)"))))
+         (string-contains html "1 derivation"))))
 (test-assert "a scoped document does not supply premises to the next document"
   (exception-contains?
     (lambda () (evaluate-document (default-environment scribble) "@derive{x+x}"))
@@ -105,14 +105,14 @@
        (html (sxml->html (content->sxml document))))
   (test-assert "@search-derive presents candidates and the search stopping reason"
     (and (string-contains html "Search finished:")
-         (string-contains html "1 derivation(s)")
+         (string-contains html "1 derivation")
          (string-contains html "differentiate-variable"))))
 
 (let* ((document (evaluate-document (default-environment scribble)
                    "@search-derive[\"2\" #:assumptions \"scalar(x)\"]{differentiate(x,x)}"))
        (html (sxml->html (content->sxml document))))
   (test-assert "an unsuccessful search displays its report without aborting the article"
-    (and (string-contains html "Search finished: 0 derivation(s)")
+    (and (string-contains html "Search finished: 0 derivations")
          (not (string-contains html "<mtable>")))))
 
 (let* ((document (evaluate-document (default-environment scribble)
