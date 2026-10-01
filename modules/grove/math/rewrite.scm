@@ -6,6 +6,7 @@
   #:use-module (grove relation)
   #:use-module (grove math types)
   #:use-module (grove math differentiation)
+  #:use-module (grove math arithmetic)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
@@ -21,6 +22,7 @@
             math-rewrite-rule-condition-checked?
             math-rewrite-rules
             math-simplification-rules
+            math-calculation-rules math-collection-rules
             math-backward-rules
             math-rewrite-rule-ref
             math-rule-required-facts
@@ -75,7 +77,13 @@
     (map (lambda (name)
            (make-math-rewrite-rule name (symbol->string name)
              "scalar polynomial in independent scalar coordinates; natural powers" #t))
-         math-differentiation-rules)))
+         math-differentiation-rules)
+    (list (make-math-rewrite-rule 'evaluate-constant "exact constant arithmetic"
+            "integer and rational operands; divisor is nonzero" #t)
+          (make-math-rewrite-rule 'collect-like-terms "a*X + b*X = (a+b)*X"
+            "structurally identical scalar terms" #t)
+          (make-math-rewrite-rule 'combine-coefficients "a*(b*X) = (a*b)*X"
+            "exact coefficients and scalar products" #t))))
 
 (define (math-rewrite-rule-ref name)
   (find (lambda (rule) (eq? (math-rewrite-rule-name rule) name))
@@ -83,7 +91,11 @@
 
 (define math-simplification-rules
   '(subtract-zero add-zero zero-add subtract-right-zero double-negation
-    multiply-one one-multiply multiply-zero zero-multiply power-one power-zero))
+    multiply-one one-multiply multiply-zero zero-multiply power-one power-zero
+    evaluate-constant collect-like-terms combine-coefficients))
+
+(define math-calculation-rules '(evaluate-constant))
+(define math-collection-rules '(collect-like-terms combine-coefficients))
 
 ;; Inverse decoration rules are available on explicit selection, but are not
 ;; useful as default proof-search branches. Subtract-zero retains its inverse.
@@ -97,6 +109,9 @@
 (define (math-rule-required-facts name input)
   (define (zero? term) (member term '((num "0") (zero vector))))
   (match (list name input)
+    (('evaluate-constant input) (and (constant-rewrite input) '()))
+    (('collect-like-terms input) (and (collect-rewrite input) '()))
+    (('combine-coefficients input) (and (coefficient-rewrite input) '()))
     (('curl-curl-identity ('curl ('curl field))) `((smooth ,field)))
     (('divergence-free ('grad ('div field))) `((= (div ,field) (num "0"))))
     (('div-curl-zero ('div ('curl field))) `((vector ,field) (smooth ,field)))
@@ -113,7 +128,8 @@
     (('zero-multiply ('* ('num "0") term)) '())
     (('power-one ('^ term ('num "1"))) '())
     (('power-zero ('^ term ('num "0"))) '())
-    (('differentiate-constant ('differentiate ('num value) ('var variable))) '())
+    (('differentiate-constant ('differentiate expression ('var variable)))
+     (and (math-number-value expression) '()))
     (('differentiate-variable ('differentiate ('var name) ('var variable)))
      (and (eq? name variable) '()))
     (('differentiate-independent ('differentiate ('var name) ('var variable)))
@@ -238,6 +254,9 @@
 ;; Apply one named rule at INPUT, returning the rule that fired.
 (define (rewrite-rooto assumptions input output rule)
   (conde
+    ((== rule 'evaluate-constant) (arithmetic-stepo assumptions input output))
+    ((== rule 'collect-like-terms) (collect-stepo assumptions input output))
+    ((== rule 'combine-coefficients) (coefficient-stepo assumptions input output))
     ((differentiation-stepo assumptions input output rule))
     ((polynomial-simplifyo assumptions input output rule))
     ((== rule 'curl-curl-identity)

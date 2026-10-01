@@ -34,7 +34,7 @@ parses it with source spans. `(grove math term)` maps that syntax tree to
 Scheme s-expressions such as `(curl (curl (var E)))`; this is the term grammar
 used by relational rules. `(grove math rewrite)` defines miniKanren relations
 over those terms. `(grove math strategy)` selects rules and implements bounded
-search and shrinking normalization; `(grove math derivation)` stores their
+search and bounded normalization; `(grove math derivation)` stores their
 certificates. `(grove math layout)` lowers terms to the existing math
 layout nodes. `(grove math pipeline)` composes these passes.
 
@@ -124,13 +124,21 @@ is relative to the selected rules and supplied assumptions. Multiple distinct
 paths to the same term remain distinct candidates.
 
 `math-simplify` is a separate strategy: it takes a source expression and
-normalizes using shrinking arithmetic rules, with optional `#:rules` and
+normalizes using arithmetic and scalar collection rules, with optional `#:rules` and
 `#:max-steps`. It returns one candidate in the same report format, with reason
 `normal-form` or `step-limit`; a limited report retains the partial chain.
 For example, `(math-simplify "1 * (x + 0)" #:assumptions '("scalar(x)"))`
 normalizes to `x` without selecting a target or expanding differential identities.
 `math-derive` also accepts Scheme-level `#:rules` for its displayed automatic
 derivation.
+
+`math-calculate` runs exact constant arithmetic alone; `math-collect` combines
+structurally identical scalar summands and numeric coefficients in products.
+For example, `1/3 + 1/6` becomes `1/2`, and `2*x + 3*x` becomes `5*x`.
+These are separate passes with ordinary replayable certificates; `math-simplify`
+combines them with zero/one elimination. Fractions retain the existing division
+IR, and signs retain unary minus. No floating point, product distribution, or
+implicit reordering of symbolic multiplication is introduced.
 
 Search results are candidates. `math-verify-step` checks one recorded edge
 against the named miniKanren rule and its exact operand path. For an entire

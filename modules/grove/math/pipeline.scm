@@ -16,7 +16,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (math-source->term math-derive math-derive-curl-curl
-            math-search math-search-backward math-simplify
+            math-search math-search-backward math-simplify math-calculate math-collect
             math-derivation->content math-check-chain math-verification->content
             math-differentiate math-differentiation-result?
             math-differentiation-expansion math-differentiation-simplification
@@ -226,6 +226,14 @@
 (define* (math-simplify source #:key (assumptions '()) (rules #f) (max-steps 32))
   (simplify-math-term (math-source->term source)
     (math-source->assumptions assumptions) #:rules rules #:max-steps max-steps))
+
+(define* (math-calculate source #:key (assumptions '()) (max-steps 32))
+  (calculate-math-term (math-source->term source)
+    (math-source->assumptions assumptions) #:max-steps max-steps))
+
+(define* (math-collect source #:key (assumptions '()) (max-steps 32))
+  (collect-math-term (math-source->term source)
+    (math-source->assumptions assumptions) #:max-steps max-steps))
 
 (define* (math-check-chain sources #:key (assumptions '()) (steps #f) (rules #f))
   (unless (and (list? sources) (every string? sources))

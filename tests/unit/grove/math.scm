@@ -175,7 +175,8 @@
       curl-grad-zero div-grad-laplacian multiply-zero zero-multiply power-one power-zero
       differentiate-constant differentiate-variable differentiate-independent
       differentiate-negation differentiate-sum differentiate-difference
-      differentiate-product differentiate-power)
+      differentiate-product differentiate-power evaluate-constant collect-like-terms
+      combine-coefficients)
     (map math-rewrite-rule-name math-rewrite-rules))
   (test-assert "curl-curl side conditions are matched against typed assumptions"
     (and (math-rewrite-rule? (math-rewrite-rule-ref 'curl-curl-identity))

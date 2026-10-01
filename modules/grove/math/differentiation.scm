@@ -5,6 +5,7 @@
   #:use-module (grove relation)
   #:use-module ((grove relation dsl) #:select (project))
   #:use-module (grove math types)
+  #:use-module (grove math arithmetic)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-13)
   #:export (polynomial-term? differentiation-stepo math-differentiation-rules))
@@ -20,7 +21,8 @@
        (string->number value)))
 
 (define (polynomial-term? term)
-  (match term
+  (or (and (math-number-value term) #t)
+      (match term
     (('var (? symbol?)) #t)
     (('num value) (and (natural-value value) #t))
     (('- operand) (polynomial-term? operand))
@@ -28,7 +30,7 @@
      (and (polynomial-term? left) (polynomial-term? right)))
     (('^ base ('num exponent))
      (and (polynomial-term? base) (natural-value exponent) #t))
-    (_ #f)))
+    (_ #f))))
 
 ;; Constructive forward relation and result checking. The numeric bridge is
 ;; deliberately ground: arbitrary inverse generation/integration is not a mode
@@ -41,9 +43,9 @@
     (math-typeo assumptions expression 'scalar)
     (math-typeo assumptions `(var ,variable) 'scalar)
     (conde
-      ((fresh (value)
-         (== expression `(num ,value)) (== output '(num "0"))
-         (== rule 'differentiate-constant)))
+      ((== rule 'differentiate-constant)
+       (project (expression)
+         (if (math-number-value expression) (== output '(num "0")) fail)))
       ((== expression `(var ,variable)) (== output '(num "1"))
        (== rule 'differentiate-variable))
       ((fresh (other)

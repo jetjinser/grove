@@ -10,7 +10,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:export (math-selected-rules math-rewrite-answers
-            search-math-terms simplify-math-term
+            search-math-terms simplify-math-term calculate-math-term collect-math-term
             math-search-report? math-search-report-candidates
             math-search-report-reason math-search-report-limits
             math-search-report-states math-search-report-complete?))
@@ -140,7 +140,7 @@
   (check-bound 'max-steps max-steps 0)
   (let ((rules (math-selected-rules rules math-simplification-rules)))
     (unless (every (lambda (rule) (memq rule math-simplification-rules)) rules)
-      (error "simplification accepts only shrinking arithmetic rules" rules))
+      (error "simplification accepts only arithmetic and collection rules" rules))
     (require-type assumptions input)
     (let normalize ((current input) (terms (list input)) (steps '()) (count 0))
       (let* ((answers (math-rewrite-answers assumptions current rules #f))
@@ -151,9 +151,15 @@
               (if done? 'normal-form 'step-limit)
               (if done? '() '(step-limit)) count)
             (let* ((answer (car answers)) (next (car answer)))
-              (unless (< (math-term-size next) (math-term-size current))
-                (error "simplification rule did not shrink the term" (cadr answer)))
+              (when (member next terms)
+                (error "simplification entered a rewrite cycle" (cadr answer)))
               (normalize next (cons next terms)
                 (cons (make-math-derivation-step current next (cadr answer) (caddr answer))
                       steps)
                 (+ count 1))))))))
+
+(define* (calculate-math-term input assumptions #:key (max-steps 32))
+  (simplify-math-term input assumptions #:rules math-calculation-rules #:max-steps max-steps))
+
+(define* (collect-math-term input assumptions #:key (max-steps 32))
+  (simplify-math-term input assumptions #:rules math-collection-rules #:max-steps max-steps))
