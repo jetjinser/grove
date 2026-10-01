@@ -69,6 +69,8 @@
                          (path (content-element-property child 'path)))
                      (let ((attributes
                              (append (if rule `((data-rule ,rule) (data-path ,path)) '())
+                                     (let ((location (content-element-property child 'location)))
+                                       (if location `((data-source ,location) (title ,location)) '()))
                                      (if (and (math-variant) (eq? tag 'mi))
                                          '((mathvariant "normal")) '()))))
                        (if (null? attributes) '() (list (cons '@ attributes)))))

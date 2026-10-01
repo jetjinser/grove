@@ -365,7 +365,8 @@ starting expression and endpoint with a native HTML disclosure for all steps.
 two endpoints. Differentiation details preserve the separate differentiation
 and simplification passes. Text output retains all steps of a compact view.
 Rule labels are readable descriptions; HTML retains rule identifiers and
-operand paths as `data-rule` and `data-path` attributes.
+operand paths as `data-rule` and `data-path` attributes. Located step annotations
+also retain the rewritten operand's source as `data-source` and a hover title.
 
 ```scheme
 @with-assumptions["scalar(x)"]{
@@ -391,6 +392,14 @@ terms. `math-diagnostic-source` returns a `math-location` or `#f`; its accessors
 provide `file`, one-based `line` and `column`, and a source `excerpt`.
 Article diagnostics expose the filename and position in an expandable source
 snippet; raised errors include the full source path. Authored certificates
-retain origins for independent replay. Generated expressions use the input
-location as a fallback instead of claiming an exact authored operand position.
-Computed strings without reader metadata remain unlocated.
+retain origins for independent replay. `(grove math provenance)` propagates an
+origin tree through each rewrite and across pass boundaries. Unchanged operands
+keep their locations; structurally copied operands keep their matching input
+origins; new nodes record the producing rule and rewritten input. If identical
+input occurrences cannot be distinguished, `math-origin-locations` retains all
+matching locations instead of inventing a unique copy correspondence.
+`math-origin-generated?` and `math-origin-rule` identify generated nodes.
+`math-diagnostic-origin` exposes the relevant origin; generated diagnostic
+snippets explain which rule produced the term. `math-report-result` carries its
+final origin into further computations. Computed strings without reader metadata
+remain unlocated, including unlocated siblings of authored operands.

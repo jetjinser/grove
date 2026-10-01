@@ -4,17 +4,15 @@
 (define-module (grove math source)
   #:use-module (grove ir)
   #:use-module (grove math syntax)
-  #:use-module (grove math derivation)
   #:use-module (grove math diagnostic)
-  #:use-module (grove math report)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
   #:export (math-location? math-location-file math-location-line math-location-column
             math-location-excerpt math-location-label math-source-text math-source-slice
-            math-source-origin math-origin? math-origin-location math-locate-diagnostic
-            math-branch-origin math-origin-with-prefix
-            math-diagnostic-description math-report-with-origin))
+            math-source-origin math-origin? math-origin-location math-origin-locations math-locate-diagnostic
+            math-branch-origin math-origin-at-path math-generated-origin math-merge-origins
+            math-origin-generated? math-origin-rule math-diagnostic-description))
 
 (define-record-type <math-location>
   (make-math-location file line column excerpt)
@@ -25,13 +23,17 @@
   (excerpt math-location-excerpt))
 
 (define-record-type <math-origin>
-  (make-math-origin text syntax prefix embedded branches)
+  (make-math-origin text syntax embedded branches causes rule)
   math-origin?
   (text origin-text)
   (syntax origin-syntax)
-  (prefix origin-prefix)
   (embedded origin-embedded)
-  (branches origin-branches))
+  (branches origin-branches)
+  (causes origin-causes)
+  (rule math-origin-rule))
+
+(define (math-origin-generated? origin)
+  (and origin (math-origin-rule origin) #t))
 
 (define (math-location-label location)
   (format #f "~a:~a:~a" (math-location-file location)
@@ -70,16 +72,47 @@
            (make-math-location (or (assq-ref (cdr segment) 'filename) "<input>") line column
              (substring text (if before (+ before 1) 0) (or after (string-length text))))))))
 
-(define* (math-source-origin text #:key (prefix '()) (syntax #f) (embedded '()))
+(define* (math-source-origin text #:key (syntax #f) (embedded '()))
   (and (or (location-at text 0) (any cdr embedded))
-       (make-math-origin text (or syntax (parse-math text)) prefix embedded #f)))
+       (make-math-origin text (or syntax (parse-math text)) embedded #f '() #f)))
 
 (define (math-branch-origin origins)
-  (and (any identity origins) (make-math-origin #f #f '() '() origins)))
+  (and (any identity origins) (make-math-origin #f #f '() origins '() #f)))
 
-(define (math-origin-with-prefix origin prefix)
-  (and origin (make-math-origin (origin-text origin) (origin-syntax origin)
-                 prefix (origin-embedded origin) (origin-branches origin))))
+(define (math-generated-origin causes children rule)
+  (and (or (any identity causes) (any identity children))
+       (make-math-origin #f #f '() children (filter identity causes) rule)))
+
+(define (math-merge-origins origins)
+  (let ((origins (delete-duplicates (filter identity origins))))
+    (cond ((null? origins) #f)
+          ((null? (cdr origins)) (car origins))
+          (else (make-math-origin #f #f '() #f origins #f)))))
+
+(define (valid-path? path)
+  (and (list? path) (every (lambda (index) (and (exact-integer? index) (>= index 0))) path)))
+
+(define (math-origin-at-path origin path)
+  (and origin (valid-path? path)
+       (cond
+         ((and (origin-syntax origin) (eq? (math-expression-kind (origin-syntax origin)) 'embedded))
+          (math-origin-at-path (assq-ref (origin-embedded origin)
+                                (math-expression-start (origin-syntax origin))) path))
+         ((null? path) origin)
+         ((origin-branches origin)
+          (and (< (car path) (length (origin-branches origin)))
+               (math-origin-at-path (list-ref (origin-branches origin) (car path)) (cdr path))))
+         ((origin-syntax origin)
+          (let* ((syntax (origin-syntax origin)) (children (math-expression-children syntax))
+                 (group? (eq? (math-expression-kind syntax) 'group)))
+            (and (or group? (< (car path) (length children)))
+                 (math-origin-at-path
+                   (make-math-origin (origin-text origin)
+                     (list-ref children (if group? 0 (car path)))
+                     (origin-embedded origin) #f '() #f)
+                   (if group? path (cdr path))))))
+         (else (math-merge-origins
+                 (map (lambda (cause) (math-origin-at-path cause path)) (origin-causes origin)))))))
 
 (define (syntax-location origin expression path)
   (cond
@@ -92,21 +125,22 @@
      (syntax-location origin (list-ref (math-expression-children expression) (car path)) (cdr path)))
     (else (location-at (origin-text origin) 0))))
 
+(define* (math-origin-locations origin #:optional (path '()))
+  (let ((selected (math-origin-at-path origin path)))
+    (if (not selected) '()
+        (delete-duplicates
+          (cond
+            ((origin-syntax selected)
+             (let ((location (syntax-location selected (origin-syntax selected) '())))
+               (if location (list location) '())))
+            ((pair? (origin-causes selected))
+             (append-map math-origin-locations (origin-causes selected)))
+            (else (append-map math-origin-locations (or (origin-branches selected) '()))))
+          (lambda (left right) (equal? (math-location-label left) (math-location-label right)))))))
+
 (define* (math-origin-location origin #:optional (path '()))
-  (and origin
-       (let* ((path (if (and (list? path)
-                            (every (lambda (index) (and (exact-integer? index) (>= index 0))) path))
-                       path '()))
-              (prefix (origin-prefix origin))
-              (path (if (and (>= (length path) (length prefix))
-                             (equal? (take path (length prefix)) prefix))
-                        (drop path (length prefix)) '()))
-              (branches (origin-branches origin)))
-         (if branches
-             (if (null? path) (math-origin-location (find identity branches))
-                 (and (< (car path) (length branches))
-                      (math-origin-location (list-ref branches (car path)) (cdr path))))
-             (syntax-location origin (origin-syntax origin) path)))))
+  (let ((locations (math-origin-locations origin path)))
+    (and (pair? locations) (car locations))))
 
 (define (math-source-slice text start end)
   (let ((slice (substring text start end)) (location (location-at text start)))
@@ -121,31 +155,10 @@
   (make-math-diagnostic (math-diagnostic-step diagnostic) (math-diagnostic-rule diagnostic)
     (math-diagnostic-path diagnostic) (math-diagnostic-code diagnostic)
     (math-diagnostic-premises diagnostic) (math-diagnostic-message diagnostic)
-    #:source (or (math-diagnostic-source diagnostic) (math-origin-location origin path))))
+    #:source (or (math-diagnostic-source diagnostic) (math-origin-location origin path))
+    #:origin (or (math-diagnostic-origin diagnostic) (math-origin-at-path origin path))))
 
 (define (math-diagnostic-description diagnostic)
   (let ((location (math-diagnostic-source diagnostic)))
     (string-append (if location (string-append (math-location-label location) ": ") "")
                    (math-diagnostic-message diagnostic))))
-
-(define (math-report-with-origin report origin)
-    (if (not origin) report
-        (let attach ((report report) (initial? #t))
-          (make-math-report (math-report-name report)
-            (map (lambda (certificate)
-                   (make-math-derivation (math-derivation-terms certificate)
-                     (math-derivation-steps certificate) (math-derivation-assumptions certificate)
-                     #:sources (if initial?
-                                   (cons origin (make-list (- (length (math-derivation-terms certificate)) 1) #f))
-                                   '())))
-                 (math-report-candidates report))
-            (math-report-reason report) (math-report-limits report) (math-report-states report)
-            #:diagnostics
-            (map (lambda (diagnostic)
-                   (math-locate-diagnostic diagnostic origin
-                     (if (and initial? (= (math-report-states report) 0))
-                         (math-diagnostic-path diagnostic) '())))
-                 (math-report-diagnostics report))
-            #:passes (let phases ((passes (math-report-passes report)) (first? initial?))
-                       (if (null? passes) '()
-                           (cons (attach (car passes) first?) (phases (cdr passes) #f))))))))

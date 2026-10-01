@@ -15,6 +15,7 @@
   #:use-module (grove math report)
   #:use-module (grove math diagnostic)
   #:use-module (grove math source)
+  #:use-module (grove math provenance)
   #:use-module (grove math presentation)
   #:use-module (srfi srfi-1)
   #:export (math-source->term math-derive
@@ -29,7 +30,9 @@
                math-verification-derivation math-diagnostic?
                math-diagnostic-step math-diagnostic-rule math-diagnostic-path
                math-diagnostic-code math-diagnostic-premises math-diagnostic-message
-               math-diagnostic-source math-location? math-location-file math-location-line
+               math-diagnostic-source math-diagnostic-origin math-origin? math-origin-location
+               math-origin-locations math-origin-generated? math-origin-rule
+               math-location? math-location-file math-location-line
                math-location-column math-location-excerpt
                math-derivation-step? math-derivation-step-from
                math-derivation-step-to math-derivation-step-rule
@@ -44,13 +47,14 @@
 (define (math-source->term source)
   (math-value-term (semantic:expression source)))
 
-(define* (report-with-input report input #:key (prefix '()))
-  (math-report-with-origin report
-    (math-origin-with-prefix (math-value-origin (semantic:expression input)) prefix)))
+(define (report-with-input report input)
+  (math-report-with-origin report (math-value-origin (semantic:expression input))))
 
 (define (math-report-result report)
   (let ((term (math-report-final report)))
     (and term (make-math-value term
+                #:origin (let ((sources (math-derivation-sources (math-report-derivation report))))
+                           (and (pair? sources) (last sources)))
                 #:properties `((assumptions . ,(math-derivation-assumptions (math-report-derivation report))))))))
 
 (define* (math-differentiate source variable #:key (assumptions '())
@@ -60,7 +64,7 @@
          (facts (math-assumptions assumptions))
          (diagnostics (differentiation-input-diagnostics expression coordinate))
          (input `(differentiate ,expression ,coordinate)))
-    (report-with-input
+    (math-report-with-origin
       (if (null? diagnostics)
           (run-math-passes input facts
             `((differentiate . ,math-differentiation-rules)
@@ -69,7 +73,8 @@
           (run-math-pass input facts #:name 'differentiate #:rules '()
             #:max-steps max-steps #:max-term-size max-term-size
             #:validate (lambda (term) diagnostics)))
-      source #:prefix '(0))))
+      (math-branch-origin (list (math-value-origin (semantic:expression source))
+                               (math-value-origin (semantic:expression variable)))))))
 
 (define* (math-rewrite source #:key (assumptions '()) (rules #f)
                         (max-steps 32) (max-term-size 2048))
@@ -95,6 +100,8 @@
     (search-math-terms
       (math-source->term source) (math-source->term target)
       (math-assumptions assumptions) #f
+      #:start-origin (math-value-origin (semantic:expression source))
+      #:goal-origin (math-value-origin (semantic:expression target))
       #:rules rules #:max-depth max-depth #:max-results max-results
       #:max-states max-states #:max-term-size max-term-size)
     source))
@@ -107,6 +114,8 @@
     (search-math-terms
       (math-source->term target) (math-source->term source)
       (math-assumptions assumptions) #t
+      #:start-origin (math-value-origin (semantic:expression target))
+      #:goal-origin (math-value-origin (semantic:expression source))
       #:rules rules #:max-depth max-depth #:max-results max-results
       #:max-states max-states #:max-term-size max-term-size)
     source))

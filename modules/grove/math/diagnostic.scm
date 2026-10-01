@@ -5,10 +5,10 @@
   #:use-module (srfi srfi-9)
   #:export (make-math-diagnostic math-diagnostic? math-diagnostic-step
             math-diagnostic-rule math-diagnostic-path math-diagnostic-code
-            math-diagnostic-premises math-diagnostic-message math-diagnostic-source))
+            math-diagnostic-premises math-diagnostic-message math-diagnostic-source math-diagnostic-origin))
 
 (define-record-type <math-diagnostic>
-  (%make-math-diagnostic step rule path code premises message source)
+  (%make-math-diagnostic step rule path code premises message source origin)
   math-diagnostic?
   (step math-diagnostic-step)
   (rule math-diagnostic-rule)
@@ -16,7 +16,8 @@
   (code math-diagnostic-code)
   (premises math-diagnostic-premises)
   (message math-diagnostic-message)
-  (source math-diagnostic-source))
+  (source math-diagnostic-source)
+  (origin math-diagnostic-origin))
 
-(define* (make-math-diagnostic step rule path code premises message #:key (source #f))
-  (%make-math-diagnostic step rule path code premises message source))
+(define* (make-math-diagnostic step rule path code premises message #:key (source #f) (origin #f))
+  (%make-math-diagnostic step rule path code premises message source origin))

@@ -67,7 +67,7 @@
                ((null? answers) (finish terms steps 'normal-form count '()))
                ((= count max-steps)
                 (finish terms steps 'step-limit count
-                  (list (execution-diagnostic 'step-limit "step limit reached" '()))))
+                  (list (execution-diagnostic 'step-limit "step limit reached" (caddr (car answers))))))
                (else
                 (let* ((answer (car answers)) (next (car answer))
                        (rule (cadr answer)) (path (caddr answer))

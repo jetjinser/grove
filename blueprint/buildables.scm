@@ -30,6 +30,7 @@
     "grove/math/diagnostic.scm"
     "grove/math/report.scm"
     "grove/math/source.scm"
+    "grove/math/provenance.scm"
     "grove/math/expression.scm"
     "grove/math/semantic.scm"
     "grove/math/notation.scm"

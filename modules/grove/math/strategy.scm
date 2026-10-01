@@ -9,6 +9,7 @@
   #:use-module (grove math pass)
   #:use-module (grove math report)
   #:use-module (grove math diagnostic)
+  #:use-module (grove math source)
   #:use-module (srfi srfi-1)
   #:export (search-math-terms simplify-math-term calculate-math-term collect-math-term)
   #:re-export (math-selected-rules math-rewrite-answers
@@ -105,7 +106,8 @@
 
 (define* (search-math-terms start goal assumptions backward?
                             #:key (rules #f) (max-depth 8)
-                                  (max-results 5) (max-states 256) (max-term-size 128))
+                                  (max-results 5) (max-states 256) (max-term-size 128)
+                                  (start-origin #f) (goal-origin #f))
   (check-math-bound 'max-depth max-depth 0)
   (check-math-bound 'max-results max-results 1)
   (check-math-bound 'max-states max-states 1)
@@ -114,8 +116,12 @@
                                (math-rule-names))
     #:mode (if backward? 'backward 'forward))
   (let* ((name (if backward? 'search-backward 'search))
-         (diagnostics (append (math-execution-diagnostics assumptions start name)
-                              (math-execution-diagnostics assumptions goal name)))
+         (diagnostics
+           (append
+             (map (lambda (item) (math-locate-diagnostic item start-origin (math-diagnostic-path item)))
+                  (math-execution-diagnostics assumptions start name))
+             (map (lambda (item) (math-locate-diagnostic item goal-origin (math-diagnostic-path item)))
+                  (math-execution-diagnostics assumptions goal name))))
          (diagnostics
            (if (or (pair? diagnostics)
                    (eq? (math-typed-term-type (math-infer-type assumptions start))
