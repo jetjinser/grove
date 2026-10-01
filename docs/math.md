@@ -550,3 +550,21 @@ matching locations instead of inventing a unique copy correspondence.
 snippets explain which rule produced the term. `math-report-result` carries its
 final origin into further computations. Computed strings without reader metadata
 remain unlocated, including unlocated siblings of authored operands.
+
+The `(grove math catalog)` module exposes `(ruleo name group modes)` for
+finite relational queries over the complete rule registry. For example:
+
+```scheme
+(use-modules (grove math catalog) (grove relation dsl))
+(map (lambda (row) (math-rule->content (car row)))
+     (query (name group modes) (ruleo name group modes)))
+```
+
+`math-rule->content` renders an inference rule in native MathML. Declarative
+rules retain their left/right templates, premises, and executable guards from
+`math-rule`; metavariables are display placeholders, not solver inputs. Extra
+Scheme guards appear in an expandable section. Rules implemented by algorithms
+are explicitly labeled and show their description rather than an invented
+fixed rewrite schema. This catalog describes the implementation, not a formal
+proof of the rules. Types, domain checks, and scoped declarations still apply
+when executing a rule.
