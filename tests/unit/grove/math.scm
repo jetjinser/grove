@@ -171,6 +171,7 @@
            (rewrite-stepo '((scalar (var x))) '(- (num "0") (var x)) result rule path))))
   (test-equal "rewrite relations expose a contract for every current rule"
     '(curl-curl-identity divergence-free div-curl-zero curl-grad-zero div-grad-laplacian
+      grad-product div-product curl-product
       subtract-zero add-zero zero-add subtract-right-zero double-negation multiply-one one-multiply
       multiply-zero zero-multiply power-one power-zero
       differentiate-constant differentiate-variable differentiate-independent

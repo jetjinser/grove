@@ -26,17 +26,20 @@
     (cos ((scalar scalar)) #f)
     (exp ((scalar scalar)) #f)
     (log ((scalar scalar)) #f)
-    (prime ((function scalar scalar)) #f)))
+    (prime ((function scalar scalar)) #f)
+    (dot ((vector vector scalar)) "·")
+    (cross ((vector vector vector)) "×")))
 
 ;; Assertions are reserved unary forms, not expression type signatures.
-(define assertion-operators '(scalar vector smooth coordinate parameter nonzero positive))
+(define assertion-operators '(scalar vector smooth differentiable coordinate parameter nonzero positive))
 (define arities
   (append (map (lambda (entry)
                  (cons (car entry)
                        (delete-duplicates (map (lambda (signature) (- (length signature) 1))
                                                (cadr entry)))))
                operators)
-          (map (lambda (name) (list name 1)) assertion-operators)))
+          (map (lambda (name) (list name 1)) assertion-operators)
+          '((space 3) (field 5))))
 
 (define (math-operator-arities name) (assq-ref arities name))
 (define (math-operator-symbol name)

@@ -19,6 +19,7 @@
   #:use-module (grove math provenance)
   #:use-module (grove math presentation)
   #:use-module (grove math premise)
+  #:use-module (grove math assumption)
   #:use-module (srfi srfi-1)
   #:export (math-source->term math-derive
             math-search math-search-backward math-simplify math-calculate math-collect
@@ -49,6 +50,13 @@
 (define (math-source->term source)
   (math-value-term (semantic:expression source)))
 
+(define (derivation-premises candidate)
+  (append-map
+    (lambda (step)
+      (or (math-rule-required-facts (math-derivation-step-rule step)
+            (math-term-at-path (math-derivation-step-from step) (math-derivation-step-path step))) '()))
+    (math-derivation-steps candidate)))
+
 (define* (report-with-input report input #:optional (other-inputs '()) (assumptions #f))
   (let* ((values (map semantic:expression (cons input other-inputs)))
          (requirements (delete-duplicates (append-map math-value-requirements values) equal?))
@@ -58,6 +66,9 @@
     (define (attach report)
       (let* ((certificate (math-report-derivation report))
              (facts (if certificate (math-derivation-assumptions certificate) (or assumptions (current-math-assumptions))))
+             (requirements (delete-duplicates
+                             (append requirements
+                               (append-map (lambda (value) (math-field-space-premises facts (math-value-term value))) values)) equal?))
              (missing (math-requirement-diagnostics facts inherited)))
         (make-math-report (math-report-name report)
           (if (pair? missing)
@@ -65,7 +76,8 @@
               (map (lambda (c)
                      (make-math-derivation (math-derivation-terms c) (math-derivation-steps c)
                        (math-derivation-assumptions c) #:sources (math-derivation-sources c)
-                       #:requirements (delete-duplicates (append requirements (math-derivation-requirements c)) equal?)))
+                       #:requirements (delete-duplicates
+                                        (append requirements (math-derivation-requirements c) (derivation-premises c)) equal?)))
                    (math-report-candidates report)))
           (if (pair? missing) 'missing-premise (math-report-reason report))
           (math-report-limits report) (if (pair? missing) 0 (math-report-states report))
@@ -115,11 +127,32 @@
                    #:max-steps max-steps #:max-term-size max-term-size))
          (report (if (and (math-report-complete? report)
                           (null? (math-derivation-steps (math-report-derivation report))))
-                     (report-with-input
-                       (make-math-report 'rewrite (math-report-candidates report) 'no-rule '() 0
-                         #:diagnostics (list (make-math-diagnostic #f #f '() 'no-rule '()
-                                               "no selected math rewrite rule applies under the supplied premises")))
-                       source)
+                     (let* ((certificate (math-report-derivation report))
+                            (facts (math-derivation-assumptions certificate))
+                            (input (car (math-derivation-terms certificate)))
+                            (selected (math-selected-rules rules math-default-rules))
+                            (diagnostics
+                              (append-map
+                                (lambda (path)
+                                  (let ((local (math-term-at-path input path)))
+                                    (filter-map
+                                      (lambda (rule)
+                                        (let* ((required (math-rule-required-facts rule local))
+                                               (missing (and required (remove (lambda (fact) (math-premise-known? facts fact)) required))))
+                                          (and missing (pair? missing)
+                                               (null? (math-assumption-diagnostics (append facts missing)))
+                                               (pair? (math-rewrite-answers (append facts missing) local (list rule) #f))
+                                               (make-math-diagnostic #f rule path 'missing-premise missing
+                                                 (format #f "missing premises for ~a: ~s" rule (map math-term->source missing))))))
+                                      selected)))
+                                (math-term-paths input))))
+                       (report-with-input
+                         (make-math-report 'rewrite (math-report-candidates report)
+                           (if (pair? diagnostics) 'missing-premise 'no-rule) '() 0
+                           #:diagnostics (if (pair? diagnostics) diagnostics
+                                           (list (make-math-diagnostic #f #f '() 'no-rule '()
+                                                   "no selected math rewrite rule applies under the supplied premises"))))
+                         source))
                      report))
          (content (math-completed-report->content report #:view view #:on-error on-error)))
     (if (null? (cdr content)) (car content)

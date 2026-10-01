@@ -16,7 +16,9 @@
        (case (car fact)
          ((scalar vector coordinate parameter) (eq? (car (cadr fact)) 'var))
          ((function) (math-function-declaration? fact))
-         ((smooth nonzero positive) #t)
+         ((field) (math-field-declaration? fact))
+         ((space) (math-space-declaration? fact))
+         ((smooth differentiable nonzero positive) #t)
          ((=) #t)
          (else #f))))
 
@@ -27,6 +29,33 @@
              "assumptions must be a list of facts")))
     (else
      (append
+       (filter-map
+         (lambda (fact)
+           (and (math-space-declaration? fact)
+                (any (lambda (other) (and (math-space-declaration? other) (not (equal? other fact)))) facts)
+                (make-math-diagnostic #f #f '() 'invalid-assumption (list fact)
+                  "one scope must use a single ordered Cartesian coordinate space")))
+         (delete-duplicates facts equal?))
+       (filter-map
+         (lambda (fact)
+           (and (math-field-declaration? fact)
+                (or (any (lambda (other)
+                           (and (or (math-field-declaration? other) (math-function-declaration? other))
+                                (equal? (cadr other) (cadr fact)) (not (equal? other fact)))) facts)
+                    (math-scalar-declared? facts (cadr fact)) (member `(vector ,(cadr fact)) facts)
+                    (any (lambda (space) (and (math-space-declaration? space)
+                                             (not (equal? (cdr space) (cdddr fact))))) facts))
+                (make-math-diagnostic #f #f '() 'invalid-assumption (list fact)
+                  "field declaration conflicts with its type, signature or coordinate space")))
+         (delete-duplicates facts equal?))
+       (filter-map
+         (lambda (fact)
+           (and (math-space-declaration? fact)
+                (any (lambda (coordinate)
+                       (not (eq? (math-variable-role facts coordinate) 'coordinate))) (cdr fact))
+                (make-math-diagnostic #f #f '() 'invalid-assumption (list fact)
+                  "Cartesian space axes must be declared independent coordinates")))
+         (delete-duplicates facts equal?))
        (filter-map
          (lambda (fact)
            (and (math-assumption? fact) (memq (car fact) '(nonzero positive))

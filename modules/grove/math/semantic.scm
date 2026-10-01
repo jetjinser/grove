@@ -11,7 +11,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:re-export (math-value? math-value-term math-value-origin math-value-properties math-value-declarations math-value-requirements)
-  #:export (expression expression-lines variable coordinate parameter function call constant add subtract negate multiply divide power
+  #:export (expression expression-lines variable coordinate parameter function field space call constant add subtract negate multiply divide power dot cross
             sin cos exp log prime grad divergence curl laplacian derivative vector-zero group styled))
 
 (define (fragments values)
@@ -109,6 +109,27 @@
       #:declarations (list (list role (math-value-term value))))))
 (define-public (coordinate name) (declared-variable 'coordinate name))
 (define-public (parameter name) (declared-variable 'parameter name))
+
+(define-public (space x y z)
+  (when (any (lambda (axis)
+               (and (math-value? axis)
+                    (member `(parameter ,(math-value-term axis)) (math-value-declarations axis))))
+             (list x y z))
+    (error "Cartesian axes cannot be constant parameters"))
+  (let* ((coordinates (map coordinate (list x y z)))
+         (fact (cons 'space (map math-value-term coordinates))))
+    (unless (math-space-declaration? fact) (error "expected three distinct Cartesian coordinates" fact))
+    (make-math-value fact #:declarations
+      (cons fact (append-map math-value-declarations coordinates)))))
+
+(define* (field name #:key space (result 'scalar))
+  (unless (and (math-value? space) (math-space-declaration? (math-value-term space)))
+    (error "field requires a Cartesian space value" space))
+  (let* ((value (variable name))
+         (fact `(field ,(math-value-term value) (var ,result) ,@(cdr (math-value-term space)))))
+    (unless (math-field-declaration? fact) (error "invalid field declaration" fact))
+    (make-math-value (math-value-term value) #:declarations (list fact)
+      #:requirements (list (math-value-term space)))))
 (define* (function name #:key (inputs '(scalar)) (result 'scalar))
   (let* ((value (variable name))
          (declaration `(function ,(math-value-term value) ,@(map (lambda (type) `(var ,type)) (append inputs (list result))))))
@@ -136,6 +157,8 @@
 (define-public (subtract left right) (operation '- (list left right)))
 (define-public (negate operand) (operation '- (list operand)))
 (define-public (multiply left right) (operation '* (list left right)))
+(define-public (dot left right) (operation 'dot (list left right)))
+(define-public (cross left right) (operation 'cross (list left right)))
 (define-public (divide numerator denominator) (operation '/ (list numerator denominator)))
 (define-public (power base exponent) (operation '^ (list base exponent)))
 (define-public (sin . body) (operation 'sin (list body)))

@@ -33,6 +33,12 @@
   (map (lambda (i j) (add (partial (list-ref vector j) i) (scale -1 (partial (list-ref vector i) j))))
        '(1 2 0) '(2 0 1)))
 (define (laplacian scalar) (divergence (gradient scalar)))
+(define (substitute polynomial arguments)
+  (define (power polynomial exponent)
+    (if (= exponent 0) (constant 1) (multiply polynomial (power polynomial (- exponent 1)))))
+  (fold add '()
+    (map (lambda (monomial)
+           (fold multiply (constant (car monomial)) (map power arguments (cdr monomial)))) polynomial)))
 (define (scalar polynomial) (cons 'scalar polynomial))
 (define (vector field) (cons 'vector field))
 (define (map-value procedure value)
@@ -61,6 +67,14 @@
                    (if (and (= (length denominator) 1) (equal? (cdar denominator) '(0 0 0)))
                        (caar denominator) (error "oracle only accepts constant division" term)))))
        (map-value (lambda (p) (scale (/ n) p)) (go a))))
+    (('dot a b)
+     (scalar (fold add '() (map multiply (cdr (go a)) (cdr (go b))))))
+    (('cross a b)
+     (let ((u (cdr (go a))) (v (cdr (go b))))
+       (vector (map (lambda (i j)
+                      (add (multiply (list-ref u i) (list-ref v j))
+                           (scale -1 (multiply (list-ref u j) (list-ref v i)))))
+                    '(1 2 0) '(2 0 1)))))
     (('^ a ('num n))
      (let ((base (cdr (go a))))
        (scalar (let power ((n (string->number n)))
@@ -72,6 +86,10 @@
     (('differentiate a ('var name))
      (map-value (lambda (p) (partial p (or (list-index (lambda (v) (eq? v name)) '(x y z))
                                          (error "oracle coordinate" name)))) (go a)))
+    ((name a b c)
+     (let ((template (assq-ref environment name)) (arguments (map (lambda (arg) (cdr (go arg))) (list a b c))))
+       (unless template (error "oracle unknown field" name))
+       (map-value (lambda (polynomial) (substitute polynomial arguments)) template)))
     (_ (error "oracle unsupported expression" term))))
 
 (define facts '((scalar (var x)) (scalar (var y)) (scalar (var z))
@@ -98,6 +116,7 @@
            (environment (append coordinates (list (cons 'f (scalar f)) (cons 'E (vector field))))))
       (for-each (lambda (source) (check-edges source environment facts))
         '("curl(curl(E))" "div(curl(E))" "curl(grad(f))" "div(grad(f))"
+          "grad(f*f)" "div(f*E)" "curl(f*E)"
           "E+zero(vector)" "zero(vector)-E" "E*1" "-(-E)"
           "x+0" "0+x" "x-0" "0-x" "x*1" "1*x" "x*0" "0*x"
           "x^0" "x^1" "-(-x)" "2*3" "1/2+1/3" "2-5" "2*(3*x)"
@@ -105,6 +124,16 @@
           "differentiate(7,x)" "differentiate(x,x)" "differentiate(y,x)"
           "differentiate(-x,x)" "differentiate(x+y,x)" "differentiate(x-y,x)"
           "differentiate(x*y,x)" "differentiate((x+y)^3,x)"))
+      (let ((field-facts
+              '((coordinate (var x)) (coordinate (var y)) (coordinate (var z))
+                (space (var x) (var y) (var z))
+                (field (var f) (var scalar) (var x) (var y) (var z))
+                (field (var E) (var vector) (var x) (var y) (var z))
+                (smooth (var f)) (smooth (var E)))))
+        (for-each (lambda (source) (check-edges source environment field-facts))
+          '("grad(f(x,y,z)*f(y,x,z))" "div(f(x,y,z)*E(x,y,z))"
+            "curl(f(x,y,z)*E(x,y,z))" "curl(curl(E(x,y,z)))"
+            "curl(grad(f(x,y,z)))" "div(curl(E(x,y,z)))")))
       (let* ((source (format #f "(x+y)^~a+(1/2)*x*y-x*x" (abs seed)))
              (report (math-differentiate source "x" #:assumptions '("scalar(x); scalar(y)"))))
         (test-equal "composed differentiation and simplification agree with independent exact polynomials"

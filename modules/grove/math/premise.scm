@@ -4,10 +4,35 @@
 (define-module (grove math premise)
   #:use-module (grove math number)
   #:use-module (grove math scalar)
+  #:use-module (grove math declaration)
   #:use-module (grove math term)
   #:use-module (grove math diagnostic)
   #:use-module (srfi srfi-1)
-  #:export (math-premise-known? math-definedness-diagnostics math-domain-premises math-requirement-diagnostics))
+  #:export (math-premise-known? math-definedness-diagnostics math-domain-premises math-requirement-diagnostics math-field-space-premises))
+
+(define (math-field-space-premises facts term)
+  (delete-duplicates
+    (filter-map (lambda (path)
+                  (let ((axes (math-field-coordinates facts (car (math-term-at-path term path)))))
+                    (and axes (cons 'space axes)))) (math-term-paths term)) equal?))
+
+;; Smooth means C-infinity; differentiable requires C1 only. Spatial derivatives
+;; preserve smoothness, but C1 alone never licenses a second derivative identity.
+(define (regular? facts term predicate)
+  (or (member (list predicate term) facts)
+      (and (eq? predicate 'differentiable) (regular? facts term 'smooth))
+      (case (car term)
+        ((num zero) #t)
+        ((var) (or (member `(coordinate ,term) facts) (member `(parameter ,term) facts)
+                   (any (lambda (fact) (and (math-space-declaration? fact) (member term (cdr fact)))) facts)))
+        ((+ - * / ^ dot cross sin cos exp log)
+         (every (lambda (child) (regular? facts child predicate)) (cdr term)))
+        ((grad div curl laplacian)
+         (and (eq? predicate 'smooth) (regular? facts (cadr term) 'smooth)))
+        (else
+         (and (math-function-signature facts (car term))
+              (regular? facts `(var ,(car term)) predicate)
+              (every (lambda (child) (regular? facts child predicate)) (cdr term)))))))
 
 (define (math-domain-premises term)
   (delete-duplicates
@@ -23,7 +48,13 @@
   (filter-map (lambda (fact)
                 (and (not (math-premise-known? facts fact))
                      (make-math-diagnostic #f #f '() 'missing-premise (list fact)
-                       (format #f "retained domain premise: ~a" (math-term->source fact)))))
+                       (format #f "~a: ~a"
+                         (case (car fact)
+                           ((smooth differentiable) "retained regularity premise")
+                           ((space) "retained coordinate space")
+                           ((=) "retained identity premise")
+                           (else "retained domain premise"))
+                         (math-term->source fact)))))
               requirements))
 
 ;; Small, constructive entailment over real expressions. It neither guesses
@@ -67,6 +98,7 @@
            (case (car fact)
              ((positive) (positive? facts (cadr fact)))
              ((nonzero) (nonzero? facts (cadr fact)))
+             ((smooth differentiable) (regular? facts (cadr fact) (car fact)))
              (else #f))) #t))
 
 (define (math-definedness-diagnostics facts term)

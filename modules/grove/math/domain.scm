@@ -28,6 +28,11 @@
                           (string-every (lambda (c) (char<=? #\0 c #\9)) (cadr (caddr local))))))
            (make-math-diagnostic #f #f (append path '(1)) 'unsupported-expression '()
              "computation currently supports only natural-number exponents"))
+          ((and (math-field-coordinates assumptions name)
+                (not (member (cons 'space (math-field-coordinates assumptions name)) assumptions)))
+           (make-math-diagnostic #f #f path 'missing-premise
+             (list (cons 'space (math-field-coordinates assumptions name)))
+             "field computation requires its declared Cartesian coordinate space"))
           ((and (not (memq name '(var num zero)))
              (not (any (lambda (signature) (eq? name (car signature)))
                        math-operator-signatures))
