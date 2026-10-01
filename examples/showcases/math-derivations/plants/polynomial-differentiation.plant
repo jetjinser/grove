@@ -1,23 +1,48 @@
 @; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 @; SPDX-License-Identifier: CC0-1.0
 
-@use-modules[(math-derivations commands) (grove math pipeline)]
+@use-modules[(math-derivations commands) (grove math pipeline) ((grove math semantic) #:prefix semantic:)]
 @title{Differentiate a polynomial, then simplify}
 @summary{Two separate passes with independently replayable provenance.}
+
+@(define polynomial @semantic:expression{x^3 + 2*x})
+@(define derivative-report (math-differentiate polynomial "x" #:assumptions '("scalar(x)")))
+@(define derivative (math-report-result derivative-report))
 
 For a polynomial in independent scalar coordinates, Grove supports exact integer and rational constants, variables, sums, differences, products and natural-number powers. Other declared coordinates are held constant. The first pass expands differentiation rules; the second computes constants, combines identical scalar terms and removes neutral factors, zero products and trivial powers. It does not expand products into a canonical polynomial.
 
 @with-assumptions["scalar(x)"]{
 @heading{Automatic differentiation in two passes}
-@verbatim["@differentiate[\"x\"]{x^3 + 2*x}"]
-@differentiate["x"]{x^3 + 2*x}
+@verbatim["@(define polynomial @semantic:expression{x^3 + 2*x})\n@differentiate[\"x\" polynomial]"]
+@math[polynomial]
+@differentiate["x" polynomial]
 
 By default the article shows the starting expression and the result. Open the steps to inspect the raw differentiation pass and the following simplification pass, with readable rule descriptions. All expressions render as native MathML, including the derivative operator and fractions.
 
 @heading{Showing only the endpoints}
-@differentiate["x" #:view 'result]{x^3 + 2*x}
+@differentiate["x" polynomial #:view 'result]
 
 The result view omits the step display; it uses the same checked certificate.
+
+@heading{Reuse a computed value in an authored chain}
+@check-derive[#:view 'full]{
+  @semantic:derivative[polynomial "x"]
+  differentiate(x^3,x) + differentiate(2*x,x)
+  3*x^2*differentiate(x,x) + differentiate(2*x,x)
+  3*x^2*1 + differentiate(2*x,x)
+  3*x^2 + differentiate(2*x,x)
+  3*x^2 + (differentiate(2,x)*x + 2*differentiate(x,x))
+  3*x^2 + (0*x + 2*differentiate(x,x))
+  3*x^2 + (0 + 2*differentiate(x,x))
+  3*x^2 + 2*differentiate(x,x)
+  3*x^2 + 2*1
+  @|derivative|
+}
+
+The endpoints reuse the original value and its computed result; intermediate
+steps are chosen by the author. Each adjacent pair is checked as one transition.
+Generated operands retain their input locations across both passes. Step labels
+expose those locations on hover, and the result remains a normal Semantic value.
 
 @heading{A composite base and a constant coordinate}
 @with-assumptions["scalar(y)"]{

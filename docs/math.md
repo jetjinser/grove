@@ -392,8 +392,22 @@ also retain the rewritten operand's source as `data-source` and a hover title.
 
 Failed verification or incomplete differentiation raises by default.
 `#:on-error 'show` renders diagnostics instead of claiming a completed equality.
-`@differentiate` also accepts `#:max-steps` and `#:max-term-size`;
-`@search-derive` accepts `#:max-depth` and `#:max-states`. Search reports always
+`@derive` and `@differentiate` accept `#:max-steps` and `#:max-term-size`.
+`@derive` also accepts `#:rules`; it requests at least one transition and reports
+`no-rule` if none applies under the supplied premises. Use `@math` to display an
+expression without requesting a derivation.
+`@check-derive` accepts `#:rules` and optional `#:steps`, one rule or
+`(rule operand-path)` per adjacent pair.
+`@search-derive` accepts `#:rules`, `#:max-depth`, `#:max-states`,
+`#:max-term-size`, and `#:max-results` (default 1). `#:backward? #t` runs inverse
+search using the same target/body order and displays a forward certificate:
+
+```scheme
+@search-derive["x" #:backward? #t #:rules '(add-zero)
+              #:assumptions "scalar(x)" #:max-depth 1]{x+0}
+```
+
+Search reports always
 retain their stopping reason and distinguish exhaustive results from cutoffs.
 
 Located `.plant` inputs carry source metadata separately from mathematical

@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math pipeline)
+  #:use-module (grove ir)
   #:use-module ((grove math semantic) #:prefix semantic:)
   #:use-module (grove math expression)
   #:use-module (grove math term)
@@ -84,13 +85,20 @@
     source))
 
 (define* (math-derive source #:key (assumptions '()) (rules #f)
-                       (max-steps 32) (max-term-size 2048) (view 'compact))
+                       (max-steps 32) (max-term-size 2048) (view 'compact) (on-error 'raise))
   (let* ((report (math-rewrite source #:assumptions assumptions #:rules rules
                    #:max-steps max-steps #:max-term-size max-term-size))
-         (content (math-completed-report->content report #:view view)))
-    (unless (pair? (math-derivation-steps (math-report-derivation report)))
-      (error "no math rewrite rule applies to the expression" source))
-    (car content)))
+         (report (if (and (math-report-complete? report)
+                          (null? (math-derivation-steps (math-report-derivation report))))
+                     (report-with-input
+                       (make-math-report 'rewrite (math-report-candidates report) 'no-rule '() 0
+                         #:diagnostics (list (make-math-diagnostic #f #f '() 'no-rule '()
+                                               "no selected math rewrite rule applies under the supplied premises")))
+                       source)
+                     report))
+         (content (math-completed-report->content report #:view view #:on-error on-error)))
+    (if (null? (cdr content)) (car content)
+        (make-content-element 'math-diagnostics content #:flow-kind 'block))))
 
 (define* (math-search source target
                       #:key (assumptions '()) (rules #f)

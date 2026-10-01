@@ -1,32 +1,41 @@
 @; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 @; SPDX-License-Identifier: CC0-1.0
 
-@use-modules[(math-derivations commands) (grove math pipeline)]
+@use-modules[(math-derivations commands) (grove math pipeline) ((grove math semantic) #:prefix semantic:)]
 @title{The curl of a curl in a divergence-free field}
 @summary{A vector identity derived, searched, and independently checked.}
+
+@(define double-curl @semantic:curl{@semantic:curl{E}})
+@(define conclusion @semantic:negate{@semantic:laplacian{E}})
 
 Let E be a smooth vector field with zero divergence. Its double curl is the negative vector Laplacian. Grove uses explicit facts: the declaration vector(E) determines the type, smooth(E) permits the differential identity, and div(E)=0 is an assumed equation. These facts are premises, not conclusions proved by the system.
 
 @with-assumptions["vector(E); smooth(E); div(E)=0"]{
 @heading{Automatic derivation}
-@derive{curl(curl(E))}
+@derive[double-curl]
 
 Expand the steps to inspect each intermediate equality. Every equality records the rule and operand where it was applied. Vector zero is distinct from scalar zero, so the intermediate subtraction stays well typed.
 
 @heading{Searching for a specified conclusion}
-@search-derive["-laplacian(E)"]{curl(curl(E))}
+@search-derive[conclusion double-curl]
 
 The search is bounded. Its report retains the stopping reason alongside the candidate; finding one derivation does not imply that all possible derivations have been enumerated.
 
 @heading{Checking an authored chain}
 @check-derive[#:view 'full]{
-  curl(curl(E))
+  @|double-curl|
   grad(div(E)) - laplacian(E)
   zero(vector) - laplacian(E)
-  -laplacian(E)
+  @|conclusion|
 }
 
 The author chooses the intermediate expressions. The checker reconstructs and replays one registered rule per adjacent pair; it does not silently fill in missing steps.
+
+@heading{Use the same search command backwards}
+@search-derive[conclusion double-curl #:backward? #t #:max-depth 3]
+
+The target and source keep the same writing order. The search runs backwards,
+while the displayed certificate remains in ordinary forward order.
 }
 
 @heading{When a premise is missing}
@@ -37,6 +46,12 @@ The author chooses the intermediate expressions. The checker reconstructs and re
 
 Here the identity has the correct shape but smooth(E) is absent. The diagnostic identifies the failed step, its rule, and its missing premise. Open its source location to see the authored expression. It is displayed as data so this intentionally unsuccessful check does not abort the article build.
 
-For an algebraic pass with a different input language, see @link["polynomial-differentiation"]{polynomial differentiation}.
+@heading{A bounded automatic derivation}
+@derive[double-curl #:assumptions "vector(E); smooth(E)" #:max-steps 0 #:on-error 'show]
+
+A cutoff is shown as a diagnostic, rather than an equality that claims a
+completed result. The same view and error options apply to differentiation.
+
+For an algebraic pass using the same Semantic values, see @link["polynomial-differentiation"]{polynomial differentiation}.
 
 See @link["math-capabilities"]{the complete capability tour} for exact arithmetic, collection, reverse search, source diagnostics and resource limits alongside these examples.

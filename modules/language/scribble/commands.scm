@@ -96,15 +96,18 @@
   (if assumptions (list assumptions) '()))
 
 (define-public derive
-  (lambda* (#:key (assumptions #f) (view 'compact) #:rest source)
+  (lambda* (#:key (assumptions #f) (view 'compact) (on-error 'raise)
+                 (rules #f) (max-steps 32) (max-term-size 2048) #:rest source)
     (math-derive (apply semantic:expression (math-command-fragments source))
-      #:assumptions (command-assumptions assumptions) #:view view)))
+      #:assumptions (command-assumptions assumptions) #:view view #:on-error on-error
+      #:rules rules #:max-steps max-steps #:max-term-size max-term-size)))
 
 (define-public check-derive
-  (lambda* (#:key (assumptions #f) (view 'compact) (on-error 'raise) #:rest source)
+  (lambda* (#:key (assumptions #f) (view 'compact) (on-error 'raise)
+                 (rules #f) (steps #f) #:rest source)
     (let ((lines (apply semantic:expression-lines (math-command-fragments source))))
       (math-verification->content
-        (math-check-chain lines #:assumptions (command-assumptions assumptions))
+        (math-check-chain lines #:assumptions (command-assumptions assumptions) #:rules rules #:steps steps)
         #:view view #:on-error on-error))))
 
 (define-public differentiate
@@ -118,11 +121,15 @@
 
 (define-public search-derive
   (lambda* (target #:key (assumptions #f) (view 'compact)
-                       (max-depth 8) (max-states 256) #:rest source)
+                       (rules #f) (backward? #f) (max-results 1)
+                       (max-depth 8) (max-states 256) (max-term-size 128) #:rest source)
+    (unless (boolean? backward?) (error "search direction must be boolean" backward?))
     (math-report->content
-      (math-search (apply semantic:expression (math-command-fragments source)) target
-        #:assumptions (command-assumptions assumptions) #:max-results 1
-        #:max-depth max-depth #:max-states max-states)
+      (let ((input (apply semantic:expression (math-command-fragments source))))
+        ((if backward? math-search-backward math-search)
+          (if backward? target input) (if backward? input target)
+          #:assumptions (command-assumptions assumptions) #:rules rules #:max-results max-results
+          #:max-depth max-depth #:max-states max-states #:max-term-size max-term-size))
       #:view view)))
 
 (define-public (tex-math . source)
