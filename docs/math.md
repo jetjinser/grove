@@ -241,6 +241,15 @@ assumptions, checks the term chain and type judgments, and rejects rules whose
 registered conditions are not marked as checked. It checks structural use of
 author-supplied assumptions; it does not prove those assumptions true.
 
+Rule regression tests also compare every registered forward rule with an
+independent exact sparse-polynomial interpreter in three coordinates. This
+checks arithmetic, differentiation and vector identities without calling Grove's
+rewriting or differentiation implementation. The divergence-free fixtures first
+establish their premise independently. These finite tests supplement replay;
+they are not a proof over all smooth fields. Search tests independently enumerate
+a small graph, check reproducibility and all budget boundaries, and exercise
+cycles with an independently supplied transition graph.
+
 This searches forward from a known expression to a target. The inverse query
 `math-search-backward` takes the target first and a required source expression
 second; it returns candidates as ordinary forward derivations. For example,
