@@ -1,11 +1,11 @@
 @; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 @; SPDX-License-Identifier: CC0-1.0
 
-@use-modules[(math-derivations commands) (grove math pipeline) ((grove math semantic) #:prefix semantic:)]
+@use-modules[(math-derivations commands) (grove math pipeline) ((grove math semantic) #:prefix ◆:)]
 @title{Differentiate a polynomial, then simplify}
 @summary{Two separate passes with independently replayable provenance.}
 
-@(define polynomial @semantic:expression{x^3 + 2*x})
+@(define polynomial @◆:expression{x^3 + 2*x})
 @(define derivative-report (math-differentiate polynomial "x" #:assumptions '("scalar(x)")))
 @(define derivative (math-report-result derivative-report))
 
@@ -13,7 +13,7 @@ For a polynomial in independent scalar coordinates, Grove supports exact integer
 
 @with-assumptions["scalar(x)"]{
 @heading{Automatic differentiation in two passes}
-@verbatim["@(define polynomial @semantic:expression{x^3 + 2*x})\n@differentiate[\"x\" polynomial]"]
+@verbatim["@(define polynomial @◆:expression{x^3 + 2*x})\n@differentiate[\"x\" polynomial]"]
 @math[polynomial]
 @differentiate["x" polynomial]
 
@@ -26,7 +26,7 @@ The result view omits the step display; it uses the same checked certificate.
 
 @heading{Reuse a computed value in an authored chain}
 @check-derive[#:view 'full]{
-  @semantic:derivative[polynomial "x"]
+  @◆:derivative[polynomial "x"]
   differentiate(x^3,x) + differentiate(2*x,x)
   3*x^2*differentiate(x,x) + differentiate(2*x,x)
   3*x^2*1 + differentiate(2*x,x)

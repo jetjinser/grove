@@ -1,12 +1,12 @@
 @; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 @; SPDX-License-Identifier: CC0-1.0
 
-@use-modules[(math-derivations commands) (grove math pipeline) ((grove math semantic) #:prefix semantic:)]
+@use-modules[(math-derivations commands) (grove math pipeline) ((grove math semantic) #:prefix ◆:)]
 @title{The curl of a curl in a divergence-free field}
 @summary{A vector identity derived, searched, and independently checked.}
 
-@(define double-curl @semantic:curl{@semantic:curl{E}})
-@(define conclusion @semantic:negate{@semantic:laplacian{E}})
+@(define double-curl @◆:curl{@◆:curl{E}})
+@(define conclusion @◆:negate{@◆:laplacian{E}})
 
 Let E be a smooth vector field with zero divergence. Its double curl is the negative vector Laplacian. Grove uses explicit facts: the declaration vector(E) determines the type, smooth(E) permits the differential identity, and div(E)=0 is an assumed equation. These facts are premises, not conclusions proved by the system.
 

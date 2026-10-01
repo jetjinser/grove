@@ -1,4 +1,4 @@
-@use-modules[(math-derivations commands) (grove math pipeline) ((grove math semantic) #:prefix semantic:) ((grove math notation) #:prefix notation:)]
+@use-modules[(math-derivations commands) (grove math pipeline) ((grove math semantic) #:prefix ◆:) ((grove math notation) #:prefix ◇:)]
 
 @title{数学排版、关系式推导与多项式求导}
 @summary{从 Maxwell 方程的排版，到带前提、可独立核验的自动计算。}
@@ -7,28 +7,28 @@
 
 @heading{一、手写公式：Maxwell 方程组}
 
-在 Notation DSL 的 math 内，普通 Unicode 文本会被扫描为数学 token。分数、向量箭头、上下标和括号可以用显式命令构造。notation:align 中的 & 指定对齐点。
+在 Notation DSL 的 math 内，普通 Unicode 文本会被扫描为数学 token。分数、向量箭头、上下标和括号可以用显式命令构造。◇:align 中的 & 指定对齐点。
 
-@notation:display-math{@notation:align{
-  ∇ · @notation:vec{D} &= ρ
-  ∇ × @notation:vec{E} &= −@notation:frac{∂@notation:vec{B}}{∂t}
-  ∇ · @notation:vec{B} &= 0
-  ∇ × @notation:vec{H} &= @notation:vec{J} + @notation:frac{∂@notation:vec{D}}{∂t}
+@◇:display-math{@◇:align{
+  ∇ · @◇:vec{D} &= ρ
+  ∇ × @◇:vec{E} &= −@◇:frac{∂@◇:vec{B}}{∂t}
+  ∇ · @◇:vec{B} &= 0
+  ∇ × @◇:vec{H} &= @◇:vec{J} + @◇:frac{∂@◇:vec{D}}{∂t}
 }}
 
-下标示例 @notation:math{@notation:sub{E}{x}}，上标示例 @notation:math{@notation:sup{x}{3}}，显式括号示例 @notation:math{@notation:parens{a+b}}。这些命令提供排版结构，本身不会求导或证明等式。
+下标示例 @◇:math{@◇:sub{E}{x}}，上标示例 @◇:math{@◇:sup{x}{3}}，显式括号示例 @◇:math{@◇:parens{a+b}}。这些命令提供排版结构，本身不会求导或证明等式。
 
-@(define polynomial @semantic:expression{@semantic:power{x}{3} + 2*x})
-@(define double-curl @semantic:curl{@semantic:curl{E}})
+@(define polynomial @◆:expression{@◆:power{x}{3} + 2*x})
+@(define double-curl @◆:curl{@◆:curl{E}})
 
 @heading{同一份数学表达式，用于展示和计算}
 
 Semantic DSL 构造数学对象，数学项与源码、展示偏好分别存储。这里用 Scheme define 定义 polynomial；后面的求导、搜索和核验都复用它，不另写一份求解器字符串。
 
-@verbatim["@(define polynomial @semantic:expression{@semantic:power{x}{3} + 2*x})"]
+@verbatim["@(define polynomial @◆:expression{@◆:power{x}{3} + 2*x})"]
 @math[polynomial]
 
-直接展示不会化简：@math{@semantic:add{x}{x}} 仍显示 x+x。主动化简才会应用规则。嵌入命令是完整操作数，因此 @math{@semantic:multiply{@semantic:add{x}{y}}{2}} 会保留必要的括号。
+直接展示不会化简：@math{@◆:add{x}{x}} 仍显示 x+x。主动化简才会应用规则。嵌入命令是完整操作数，因此 @math{@◆:multiply{@◆:add{x}{y}}{2}} 会保留必要的括号。
 
 @heading{二、前提作用域与向量恒等式}
 
@@ -46,7 +46,7 @@ Semantic DSL 构造数学对象，数学项与源码、展示偏好分别存储�
 内层作用域补充散度为零的前提，得到负的向量 Laplacian。这个前提由作者声明，不是 Grove 从 Maxwell 方程中自动证明的。
 
 @heading{搜索指定结论}
-@search-derive[@semantic:negate{@semantic:laplacian{E}}]{@semantic:curl{@semantic:curl{E}}}
+@search-derive[@◆:negate{@◆:laplacian{E}}]{@◆:curl{@◆:curl{E}}}
 
 搜索可以组合多个规则。找到一份 derivation certificate（可独立重放核验的推导记录）与穷尽全部路径是两件事；报告会说明搜索的停止原因。
 
@@ -61,18 +61,18 @@ Semantic DSL 构造数学对象，数学项与源码、展示偏好分别存储�
 每一对相邻表达式必须能通过一个规则连接，核验器不会补入省略的步骤。这里用 full 视图直接展开完整链。
 
 @heading{反向关系搜索}
-@search-derive[@semantic:negate{@semantic:laplacian{E}} double-curl #:backward? #t #:max-depth 3]
+@search-derive[@◆:negate{@◆:laplacian{E}} double-curl #:backward? #t #:max-depth 3]
 
 反向搜索使用同一个 search-derive 命令，目标和起点的写作顺序不变；返回的 derivation certificate 仍按正常的正向推导顺序排列。
 }
 
 @heading{其他向量恒等式}
-@derive{@semantic:divergence{@semantic:curl{E}}}
+@derive{@◆:divergence{@◆:curl{E}}}
 }
 
 @with-assumptions["scalar(f); smooth(f)"]{
-@derive{@semantic:curl{@semantic:grad{f}}}
-@derive{@semantic:divergence{@semantic:grad{f}}}
+@derive{@◆:curl{@◆:grad{f}}}
+@derive{@◆:divergence{@◆:grad{f}}}
 }
 
 内层前提不会泄漏到外层。标量零与向量零也是不同的数学项，规则会检查类型。
@@ -126,25 +126,25 @@ result 视图省略步骤展示；它使用与默认视图相同的计算和deri
 
 @heading{手写导数链的核验}
 @check-derive{
-  @semantic:derivative{@semantic:power{x}{3}}{x}
-  3*@semantic:power{x}{2}*@semantic:derivative{x}{x}
-  3*@semantic:power{x}{2}*1
-  3*@semantic:power{x}{2}
+  @◆:derivative{@◆:power{x}{3}}{x}
+  3*@◆:power{x}{2}*@◆:derivative{x}{x}
+  3*@◆:power{x}{2}*1
+  3*@◆:power{x}{2}
 }
 
 @heading{搜索一个共享对象作为目标}
-@search-derive[polynomial]{@semantic:add[polynomial "0"]}
+@search-derive[polynomial]{@◆:add[polynomial "0"]}
 
 目标和起点都引用同一个 polynomial；搜索消去附加的零项。输入变量的类型仍来自当前假设作用域。
 
 @heading{核验共享表达式的化简}
 @(math-verification->content
-   (math-check-chain (list (semantic:add polynomial "0") polynomial)))
+   (math-check-chain (list (◆:add polynomial "0") polynomial)))
 
 @heading{只定制外观，不改变数学对象}
-@math[(semantic:styled polynomial #:variant 'bold)]
+@math[(◆:styled polynomial #:variant 'bold)]
 
-样式不会影响求导或 certificate 的核验。Notation DSL 也能嵌入这个对象：@notation:math{@notation:parens[polynomial]}。
+样式不会影响求导或 certificate 的核验。Notation DSL 也能嵌入这个对象：@◇:math{@◇:parens[polynomial]}。
 
 @heading{六、derivation certificate 可以独立重放}
 }
@@ -218,9 +218,9 @@ derive 也支持同样的诊断选项和步骤限制：
 
 在常系数介质中，用本构关系 D=εE、B=μH 和欧姆定律 J=σE，可以写出下面的波动方程。此处是作者手写的排版，并未由上述规则自动推出整条物理推导。
 
-@notation:display-math{@notation:align{
-  −∇²@notation:vec{E} &= −μσ @notation:frac{∂@notation:vec{E}}{∂t} − με @notation:frac{@notation:sup{∂}{2}@notation:vec{E}}{@notation:sup{∂t}{2}}
-   ∇²@notation:vec{E} &=  μσ @notation:frac{∂@notation:vec{E}}{∂t} + με @notation:frac{@notation:sup{∂}{2}@notation:vec{E}}{@notation:sup{∂t}{2}}
+@◇:display-math{@◇:align{
+  −∇²@◇:vec{E} &= −μσ @◇:frac{∂@◇:vec{E}}{∂t} − με @◇:frac{@◇:sup{∂}{2}@◇:vec{E}}{@◇:sup{∂t}{2}}
+   ∇²@◇:vec{E} &=  μσ @◇:frac{∂@◇:vec{E}}{∂t} + με @◇:frac{@◇:sup{∂}{2}@◇:vec{E}}{@◇:sup{∂t}{2}}
 }}
 
 目前这套系统提供明确规则下的计算、搜索和核验。它尚不具有物理建模、通用 CAS 或证明任意数学命题的能力。

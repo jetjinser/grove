@@ -25,7 +25,8 @@ objects: mathematical terms with source origins and presentation preferences
 kept alongside them. Notation DSL in `(grove math notation)` constructs
 layout nodes for display-only notation. Both render as native MathML; only
 semantic expressions enter computation. The document commands `@math` and
-`@display-math` use Semantic DSL by default:
+`@display-math` use Semantic DSL by default. Examples use `◆:` for Semantic DSL
+and `◇:` for Notation DSL; these are author-chosen module import prefixes.
 
 ```text
 text and embedded operands → syntax tree → mathematical value → passes
@@ -265,18 +266,18 @@ expansion. A limit is not a proof that no derivation exists.
 ## One expression for display and computation
 
 ```scheme
-@use-modules[((grove math semantic) #:prefix semantic:)
-             ((grove math notation) #:prefix notation:)
+@use-modules[((grove math semantic) #:prefix ◆:)
+             ((grove math notation) #:prefix ◇:)
              (grove math pipeline)]
-@(define p @semantic:expression{@semantic:power{x}{3} + 2*x})
+@(define p @◆:expression{@◆:power{x}{3} + 2*x})
 @math[p]
 @with-assumptions["scalar(x)"]{
   @differentiate["x" p]
-  @search-derive[p]{@semantic:add[p "0"]}
+  @search-derive[p]{@◆:add[p "0"]}
   @(math-verification->content
-     (math-check-chain (list (semantic:add p "0") p)))
+     (math-check-chain (list (◆:add p "0") p)))
 }
-@notation:math{@notation:parens[p]}
+@◇:math{@◇:parens[p]}
 ```
 
 `expression` decodes text, embedded values, and lists of fragments. Explicit
