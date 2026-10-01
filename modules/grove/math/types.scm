@@ -107,14 +107,41 @@
        (operand-typeso assumptions rest remaining)))))
 
 (define (math-infer-type assumptions term)
+  ;; Ground validation is bottom-up and memoized. The relational API remains
+  ;; available for synthesis; both use the same operator signature registry.
+  (define cache (make-hash-table))
+  (define (types term)
+    (or (hash-ref cache term #f)
+        (let ((result
+                (if (memq (car term) '(var num zero))
+                    (delete-duplicates (run* (type) (math-typeo assumptions term type)))
+                    (let* ((name (car term))
+                           (declared (math-function-signature assumptions name))
+                           (signatures (append
+                                         (filter (lambda (s) (eq? (car s) name)) math-operator-signatures)
+                                         (if declared (list (cons name declared)) '())))
+                           (children (map types (cdr term)))
+                           (allowed?
+                             (case name
+                               ((partial) (and (eq? (caaddr term) 'var)
+                                               (member `(coordinate ,(caddr term)) assumptions)))
+                               ((differentiate) (and (eq? (caaddr term) 'var)
+                                                 (not (eq? (math-variable-role assumptions (caddr term)) 'parameter))))
+                               ((prime) (and (eq? (caadr term) 'var)
+                                             (member `(function ,(cadr term) (var scalar) (var scalar)) assumptions)))
+                               (else #t))))
+                      (if allowed?
+                          (delete-duplicates
+                            (filter-map
+                              (lambda (signature)
+                                (and (= (length children) (length (cadr signature)))
+                                     (every (lambda (choices expected) (memq expected choices)) children (cadr signature))
+                                     (caddr signature))) signatures)) '())))))
+          (hash-set! cache term result) result)))
   (and (math-term? term)
        (null? (math-assumption-diagnostics assumptions))
-       (let ((types
-               (delete-duplicates
-                 (run* (type)
-                   (math-typeo assumptions term type)))))
-         (and (= (length types) 1)
-              (make-math-typed-term term (car types))))))
+       (let ((choices (types term)))
+         (and (= (length choices) 1) (make-math-typed-term term (car choices))))))
 
 (define (math-assumption-type-diagnostics assumptions)
   (filter-map

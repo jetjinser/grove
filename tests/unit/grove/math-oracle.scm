@@ -67,6 +67,8 @@
   ;; Elementary real calculus is independently checked by the dual-number
   ;; interpreter in differentiation.scm; this interpreter is exact polynomial.
   (lset-difference eq? (math-rule-names)
+    ;; Cartesian rules have their own independent edge and coverage suites.
+    (math-rule-names #:groups '(components spatial))
     '(differentiate-quotient differentiate-sin differentiate-cos differentiate-exp differentiate-log differentiate-function
       partial-sin partial-cos partial-exp partial-log partial-function)))
 (for-each

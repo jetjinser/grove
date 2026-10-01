@@ -25,7 +25,7 @@
   #:export (math-source->term math-derive
             math-search math-search-backward math-simplify math-calculate math-collect
             math-check-chain
-            math-differentiate math-partial math-rewrite math-report-result math-normalize math-expand)
+            math-compute math-differentiate math-partial math-rewrite math-report-result math-normalize math-expand)
   #:re-export (math-derivation->content math-verification->content
                math-report->content math-completed-report->content current-math-assumptions call-with-math-assumptions with-math-assumptions
                math-verify-step math-verify-derivation
@@ -238,3 +238,23 @@ Declared unknown function derivatives remain explicit partial terms."
     (math-assumptions assumptions) #:steps steps #:rules rules
     #:requirements (delete-duplicates (append-map (lambda (source) (math-value-requirements (semantic:expression source))) sources) equal?)
     #:sources (map (lambda (source) (math-value-origin (semantic:expression source))) sources)))
+
+(define* (math-compute source #:key (assumptions '()) (max-steps 256) (max-term-size 8192))
+  "Lower Cartesian operators and component algebra, compute partials, then simplify.
+Unknown field derivatives remain explicit; no abstract field components are invented."
+  (report-with-input
+    (run-math-passes (math-source->term source) (math-assumptions assumptions)
+      `((components . ,(math-rule-names #:groups '(components spatial)))
+        (partial . ,(append math-simplification-rules math-partial-rules))
+        (simplify . ,math-simplification-rules))
+      #:name 'compute #:max-steps max-steps #:max-term-size max-term-size
+      #:validate-final
+      (lambda (term)
+        (filter-map
+          (lambda (path)
+            (let ((local (math-term-at-path term path)))
+              (and (memq (car local) '(grad div curl laplacian))
+                   (make-math-diagnostic #f #f path 'unsupported-expression '()
+                     "Cartesian computation requires explicit vector components for this operator"))))
+          (math-term-paths term))))
+    source))

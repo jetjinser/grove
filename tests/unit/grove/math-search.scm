@@ -65,7 +65,7 @@
   (dynamic-wind
     (lambda ()
       (module-set! (resolve-module '(grove math rewrite)) 'math-rewrite-answers
-        (lambda (facts term rules backward?)
+        (lambda* (facts term rules backward? #:key (max-results #f))
           (cond ((equal? term '(var x)) '(((var y) test-flip ())))
                 ((equal? term '(var y)) '(((var x) test-flip ())))
                 (else '())))))

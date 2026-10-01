@@ -164,3 +164,13 @@
                                   source))
                         #:properties '((tex? . #t) (display? . #t))
                         #:flow-kind 'block))
+
+(define-public compute
+  (lambda* (#:key (assumptions #f) (view 'compact) (on-error 'raise)
+                 (max-steps 256) (max-term-size 8192) #:rest source)
+    "Compute Cartesian components with explicit, replayable passes."
+    (math-completed-report->content
+      (math-compute (apply semantic:expression (math-command-fragments source))
+        #:assumptions (command-assumptions assumptions)
+        #:max-steps max-steps #:max-term-size max-term-size)
+      #:view view #:on-error on-error)))

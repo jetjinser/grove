@@ -17,11 +17,11 @@
                          (axes (math-field-coordinates facts (car local))))
                     (append
                       (cond (axes (list (cons 'space axes)))
-                            ((eq? (car local) 'components)
+                            ((memq (car local) '(components grad div curl laplacian))
                              (let ((space (find math-space-declaration? facts)))
                                (if space (list space) '())))
                             (else '()))
-                      (if (eq? (car local) 'partial)
+                      (if (memq (car local) '(partial grad div curl laplacian))
                           (let ((variables (map (lambda (path) (math-term-at-path local path))
                                                 (math-term-paths local))))
                             (filter (lambda (fact)

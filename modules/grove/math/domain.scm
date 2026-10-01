@@ -6,6 +6,7 @@
   #:use-module (grove math operator)
   #:use-module (grove math diagnostic)
   #:use-module (grove math declaration)
+  #:use-module (grove math premise)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (math-domain-diagnostics))
@@ -17,6 +18,16 @@
     (lambda (path)
       (let* ((local (math-term-at-path term path)) (name (car local)))
         (cond
+          ((and (eq? pass 'components) (memq name '(grad div curl laplacian))
+                (not (any math-space-declaration? assumptions)))
+           (make-math-diagnostic #f #f path 'missing-premise '()
+             "Cartesian operator expansion requires an active ordered space"))
+          ((and (eq? pass 'components) (memq name '(grad div curl laplacian))
+                (not (math-premise-known? assumptions
+                       `(,(if (eq? name 'laplacian) 'smooth 'differentiable) ,(cadr local)))))
+           (make-math-diagnostic #f #f path 'missing-premise
+             (list `(,(if (eq? name 'laplacian) 'smooth 'differentiable) ,(cadr local)))
+             "Cartesian operator expansion requires operand regularity"))
           ((and (eq? name 'components)
                 (not (any math-space-declaration? assumptions)))
            (make-math-diagnostic #f #f path 'missing-premise '()

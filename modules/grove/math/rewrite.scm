@@ -8,6 +8,8 @@
   #:use-module (grove math identities)
   #:use-module (grove math arithmetic)
   #:use-module (grove math differentiation)
+  #:use-module (grove math components)
+  #:use-module (grove math spatial)
   #:use-module (grove math partial)
   #:use-module (grove math normalization)
   #:use-module (srfi srfi-1)
@@ -24,7 +26,8 @@
 
 (define math-rewrite-rules
   (append math-vector-rules math-identity-rules math-differentiation-rule-definitions
-          math-arithmetic-rules math-normalization-rules math-partial-rule-definitions))
+          math-arithmetic-rules math-normalization-rules math-partial-rule-definitions
+          math-component-rules math-spatial-rules))
 
 (define (math-rewrite-rule-ref name)
   (find (lambda (rule) (eq? name (math-rewrite-rule-name rule))) math-rewrite-rules))
@@ -39,7 +42,7 @@
 (define math-simplification-rules (math-rule-names #:groups '(identity calculate collect normalize cancel)))
 (define math-default-rules
   (map math-rewrite-rule-name
-    (filter (lambda (rule) (not (eq? (math-rewrite-rule-group rule) 'expand))) math-rewrite-rules)))
+    (filter (lambda (rule) (not (memq (math-rewrite-rule-group rule) '(expand components spatial)))) math-rewrite-rules)))
 (define math-calculation-rules (math-rule-names #:groups '(calculate)))
 (define math-collection-rules (math-rule-names #:groups '(collect)))
 (define math-backward-rules
@@ -49,9 +52,9 @@
   (let ((rule (math-rewrite-rule-ref name)))
     (and rule ((math-rewrite-rule-required-facts rule) input))))
 
-(define (step-in-modeo assumptions input output rule path mode)
+(define* (step-in-modeo assumptions input output rule path mode #:optional (rules math-rewrite-rules))
   (conde
-    ((math-rules-stepo math-rewrite-rules assumptions input output rule mode)
+    ((math-rules-stepo rules assumptions input output rule mode)
      (== path '()))
     ((fresh (operator arguments rewritten child-path)
        ;; An inverse query walks the known right side, a forward/check query
@@ -59,22 +62,22 @@
        (if (eq? mode 'backward)
            (== `(,operator . ,arguments) output)
            (== `(,operator . ,arguments) input))
-       (children-in-modeo assumptions arguments 0 rewritten rule child-path mode)
+       (children-in-modeo assumptions arguments 0 rewritten rule child-path mode rules)
        (if (eq? mode 'backward)
            (== `(,operator . ,rewritten) input)
            (== `(,operator . ,rewritten) output))
        (== path child-path)))))
 
-(define (children-in-modeo assumptions inputs index outputs rule path mode)
+(define (children-in-modeo assumptions inputs index outputs rule path mode rules)
   (fresh (child rest rewritten child-path)
     (== `(,child . ,rest) inputs)
     (conde
       ((if (eq? mode 'backward)
-           (step-in-modeo assumptions rewritten child rule child-path mode)
-           (step-in-modeo assumptions child rewritten rule child-path mode))
+           (step-in-modeo assumptions rewritten child rule child-path mode rules)
+           (step-in-modeo assumptions child rewritten rule child-path mode rules))
        (== `(,rewritten . ,rest) outputs) (== path `(,index . ,child-path)))
       ((fresh (rewritten-rest rest-path)
-         (children-in-modeo assumptions rest (+ index 1) rewritten-rest rule rest-path mode)
+         (children-in-modeo assumptions rest (+ index 1) rewritten-rest rule rest-path mode rules)
          (== `(,child . ,rewritten-rest) outputs) (== path rest-path))))))
 
 (define (rewrite-stepo assumptions input output rule path)
@@ -99,18 +102,12 @@
           (error "math rule does not support the requested mode" name mode))) names)
     (delete-duplicates names)))
 
-(define (allowed-ruleo names rule)
-  (if (null? names) fail
-      (conde ((== rule (car names))) ((allowed-ruleo (cdr names) rule)))))
-
 (define* (math-rewrite-answers assumptions term rules backward?
-                              #:key (mode (if backward? 'backward 'forward)))
-  (run* (next rule path)
-    (allowed-ruleo rules rule)
+                              #:key (mode (if backward? 'backward 'forward)) (max-results #f))
+  (run max-results (next rule path)
     (case mode
-      ((backward) (unrewrite-stepo assumptions next term rule path))
-      ((check) (check-stepo assumptions term next rule path))
-      ((forward) (rewrite-stepo assumptions term next rule path))
+      ((backward) (step-in-modeo assumptions next term rule path mode (map math-rewrite-rule-ref rules)))
+      ((check forward) (step-in-modeo assumptions term next rule path mode (map math-rewrite-rule-ref rules)))
       (else (error "unknown math query mode" mode)))))
 
 (define* (rewrite-curl-curl term #:key (assumptions '()))

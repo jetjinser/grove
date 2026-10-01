@@ -1,0 +1,27 @@
+;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+;;; SPDX-License-Identifier: GPL-3.0-or-later
+(define-module (tests unit grove cartesian-fixtures)
+  #:use-module (grove math pipeline)
+  #:use-module (grove math context)
+  #:use-module (tests unit grove polynomial-oracle)
+  #:use-module ((grove math semantic) #:prefix ◆:)
+  #:use-module (srfi srfi-64)
+  #:export (basis facts check))
+(define basis (◆:space 'x 'y 'z))
+(define facts (math-assumptions (list basis)))
+(define (check fixture)
+  (let* ((source (car fixture)) (report (math-compute source #:assumptions (list basis)))
+         (certificate (math-report-derivation report)))
+    (test-assert source (math-report-complete? report))
+    (test-equal "computed result" (math-source->term (cadr fixture)) (math-report-final report))
+    (test-equal "explicit passes" '(components partial simplify) (map math-report-name (math-report-passes report)))
+    (test-assert "certificate replays" (math-verification-valid? (math-verify-derivation certificate)))
+    (test-assert "basis retained on scalar and vector results"
+      (member (math-source->term basis) (math-derivation-requirements certificate)))
+    (test-equal "independent polynomial result" (evaluate (math-source->term source) coordinates)
+      (evaluate (math-report-final report) coordinates))
+    (for-each (lambda (step)
+                (test-equal "independent polynomial edge"
+                  (evaluate (math-derivation-step-from step) coordinates)
+                  (evaluate (math-derivation-step-to step) coordinates)))
+              (math-derivation-steps certificate))))
