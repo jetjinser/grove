@@ -85,6 +85,7 @@
   (unless (math-expression? expression)
     (error "expected a parsed math expression" expression))
   (case (math-expression-kind expression)
+    ((embedded) (math-expression-value expression))
     ((identifier) `(var ,(math-expression-value expression)))
     ((number) `(num ,(math-expression-value expression)))
     ((group) (math-expression->term (car (math-expression-children expression))))

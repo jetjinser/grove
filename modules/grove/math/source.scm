@@ -13,7 +13,8 @@
   #:export (math-location? math-location-file math-location-line math-location-column
             math-location-excerpt math-location-label math-source-text math-source-lines
             math-source-origin math-origin? math-origin-location math-locate-diagnostic
-            math-diagnostic-description math-report-with-source))
+            math-branch-origin math-origin-with-prefix
+            math-diagnostic-description math-report-with-source math-report-with-origin))
 
 (define-record-type <math-location>
   (make-math-location file line column excerpt)
@@ -24,11 +25,13 @@
   (excerpt math-location-excerpt))
 
 (define-record-type <math-origin>
-  (make-math-origin text syntax prefix)
+  (make-math-origin text syntax prefix embedded branches)
   math-origin?
   (text origin-text)
   (syntax origin-syntax)
-  (prefix origin-prefix))
+  (prefix origin-prefix)
+  (embedded origin-embedded)
+  (branches origin-branches))
 
 (define (math-location-label location)
   (format #f "~a:~a:~a" (math-location-file location)
@@ -67,16 +70,27 @@
            (make-math-location (or (assq-ref (cdr segment) 'filename) "<input>") line column
              (substring text (if before (+ before 1) 0) (or after (string-length text))))))))
 
-(define* (math-source-origin text #:key (prefix '()))
-  (and (location-at text 0) (make-math-origin text (parse-math text) prefix)))
+(define* (math-source-origin text #:key (prefix '()) (syntax #f) (embedded '()))
+  (and (or (location-at text 0) (any cdr embedded))
+       (make-math-origin text (or syntax (parse-math text)) prefix embedded #f)))
 
-(define (expression-at expression path)
-  (cond ((null? path) expression)
-        ((eq? (math-expression-kind expression) 'group)
-         (expression-at (car (math-expression-children expression)) path))
-        ((< (car path) (length (math-expression-children expression)))
-         (expression-at (list-ref (math-expression-children expression) (car path)) (cdr path)))
-        (else #f)))
+(define (math-branch-origin origins)
+  (and (any identity origins) (make-math-origin #f #f '() '() origins)))
+
+(define (math-origin-with-prefix origin prefix)
+  (and origin (make-math-origin (origin-text origin) (origin-syntax origin)
+                 prefix (origin-embedded origin) (origin-branches origin))))
+
+(define (syntax-location origin expression path)
+  (cond
+    ((eq? (math-expression-kind expression) 'embedded)
+     (math-origin-location (assq-ref (origin-embedded origin) (math-expression-start expression)) path))
+    ((null? path) (location-at (origin-text origin) (math-expression-start expression)))
+    ((eq? (math-expression-kind expression) 'group)
+     (syntax-location origin (car (math-expression-children expression)) path))
+    ((< (car path) (length (math-expression-children expression)))
+     (syntax-location origin (list-ref (math-expression-children expression) (car path)) (cdr path)))
+    (else (location-at (origin-text origin) 0))))
 
 (define* (math-origin-location origin #:optional (path '()))
   (and origin
@@ -87,9 +101,12 @@
               (path (if (and (>= (length path) (length prefix))
                              (equal? (take path (length prefix)) prefix))
                         (drop path (length prefix)) '()))
-              (expression (expression-at (origin-syntax origin) path)))
-         (location-at (origin-text origin)
-                      (if expression (math-expression-start expression) 0)))))
+              (branches (origin-branches origin)))
+         (if branches
+             (if (null? path) (math-origin-location (find identity branches))
+                 (and (< (car path) (length branches))
+                      (math-origin-location (list-ref branches (car path)) (cdr path))))
+             (syntax-location origin (origin-syntax origin) path)))))
 
 (define (math-source-lines text)
   (let lines ((remaining (string-split text #\newline)) (offset 0) (result '()))
@@ -117,7 +134,9 @@
                    (math-diagnostic-message diagnostic))))
 
 (define* (math-report-with-source report text #:key (prefix '()))
-  (let ((origin (math-source-origin text #:prefix prefix)))
+  (math-report-with-origin report (math-source-origin text #:prefix prefix)))
+
+(define (math-report-with-origin report origin)
     (if (not origin) report
         (let attach ((report report) (initial? #t))
           (make-math-report (math-report-name report)
@@ -137,4 +156,4 @@
                  (math-report-diagnostics report))
             #:passes (let phases ((passes (math-report-passes report)) (first? initial?))
                        (if (null? passes) '()
-                           (cons (attach (car passes) first?) (phases (cdr passes) #f)))))))))
+                           (cons (attach (car passes) first?) (phases (cdr passes) #f))))))))

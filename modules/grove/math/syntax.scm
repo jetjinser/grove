@@ -19,6 +19,7 @@
             math-expression-start
             math-expression-end
             tokenize-math
+            parse-math-tokens
             parse-math))
 
 (define-record-type <math-token>
@@ -82,7 +83,7 @@
               (else
                (let ((kind (case char
                              ((#\+) 'plus)
-                             ((#\-) 'minus)
+                             ((#\- #\−) 'minus)
                              ((#\* #\×) 'multiply)
                              ((#\/ #\÷) 'divide)
                              ((#\^) 'power)
@@ -101,8 +102,10 @@
                             char position))))))))))
 
 (define (parse-math source)
-  (let ((tokens (tokenize-math source))
-        (position 0))
+  (parse-math-tokens (tokenize-math source)))
+
+(define (parse-math-tokens tokens)
+  (let ((position 0))
     (letrec ((current (lambda () (list-ref tokens position)))
              (take! (lambda ()
                       (let ((token (current)))
@@ -126,6 +129,9 @@
                (lambda ()
                  (let ((token (take!)))
                    (case (math-token-kind token)
+                     ((embedded)
+                      (make-math-expression 'embedded (math-token-value token) '()
+                        (math-token-start token) (math-token-end token)))
                      ((identifier)
                       (let ((name (string->symbol (math-token-value token))))
                         (if (eq? (math-token-kind (current)) 'left-paren)

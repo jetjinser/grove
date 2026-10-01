@@ -27,6 +27,8 @@
     "grove/math/diagnostic.scm"
     "grove/math/report.scm"
     "grove/math/source.scm"
+    "grove/math/expression.scm"
+    "grove/math/semantic.scm"
     "grove/math/presentation.scm"
     "grove/math/pass.scm"
     "grove/math/strategy.scm"
