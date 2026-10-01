@@ -1,0 +1,26 @@
+@; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+@; SPDX-License-Identifier: CC0-1.0
+
+@use-modules[(math-derivations commands) ((grove math semantic) #:prefix ◆:)]
+@title{Cartesian field products}
+@summary{Coordinate dependencies, dot and cross products, and checked product rules.}
+
+@(define r3 (◆:space 'x 'y 'z))
+@(define f (◆:field 'f #:space r3))
+@(define g (◆:field 'g #:space r3))
+@(define e (◆:field 'E #:space r3 #:result 'vector))
+@with-assumptions[(list r3 f g e "differentiable(f); differentiable(g); differentiable(E)")]{
+@derive{grad(f(x,y,z)*g(x,y,z))}
+@derive{div(f(x,y,z)*E(x,y,z))}
+@derive{curl(f(x,y,z)*E(x,y,z))}
+@math{@◆:dot[@◆:call[e "x" "y" "z"] @◆:call[e "x" "y" "z"]]}
+@check-derive[#:view 'full]{
+  curl(f(x,y,z)*E(x,y,z))
+  cross(grad(f(x,y,z)),E(x,y,z))+f(x,y,z)*curl(E(x,y,z))
+}
+@search-derive["dot(grad(f(x,y,z)),E(x,y,z))+f(x,y,z)*div(E(x,y,z))" #:max-depth 1]{div(f(x,y,z)*E(x,y,z))}
+}
+
+@derive[#:assumptions (list r3 f e) #:on-error 'show]{div(f(x,y,z)*E(x,y,z))}
+@derive[#:assumptions (list r3 e "smooth(E)")]{curl(curl(E(x,y,z)))}
+@link["vector-analysis"]{Coordinate-free vector identities}

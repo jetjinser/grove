@@ -169,8 +169,9 @@ exits restore the parent scope. Each certificate stores the effective facts,
 so later verification does not depend on a live context. For an independent
 context, `call-with-math-assumptions` accepts `#:replace? #t`.
 
-The supported facts are `scalar(variable)`, `vector(variable)`,
-`smooth(expression)` and equations such as `div(E)=0`. Other expression shapes
+The supported facts include variable roles and function signatures, Cartesian
+spaces and fields, `smooth(expression)`, `differentiable(expression)`, scalar
+sign/domain premises and equations such as `div(E)=0`. Other expression shapes
 return `invalid-assumption`. Computation and certificate replay check the entire
 fact set for conflicting scalar/vector declarations, including unused variables.
 This checks fact structure and declaration consistency, not the truth or general
@@ -185,7 +186,7 @@ declaration and an explicit structurally matching assumption such as `div(E)=0`.
 `div-curl-zero` encodes `div(curl(E)) = 0` and requires matching vector and
 smoothness declarations. `subtract-zero` applies the typed algebraic
 identity `0 - X = -X`.
-Two scalar-field identities require matching `scalar(f)` and `smooth(f)` facts:
+Two scalar-field identities require a scalar operand and its smoothness:
 `curl-grad-zero` rewrites `curl(grad(f))` to vector zero;
 `div-grad-laplacian` rewrites `div(grad(f))` to scalar `laplacian(f)`.
 For example, `@derive[#:assumptions "scalar(f); smooth(f)"]{curl(grad(f)) + zero(vector)}`
@@ -193,6 +194,58 @@ combines a differential identity with typed zero elimination. Both identities
 support bounded backward search; zero-producing inverse queries enumerate only
 explicitly declared fields. Operators describe ordinary Euclidean three-dimensional
 vector calculus with classical smooth fields.
+
+Explicit fields use an ordered Cartesian space with three independent coordinate
+axes. A field's declaration records that coordinate order and its scalar or
+vector result. This is the standard oriented Euclidean R3 model, not arbitrary
+dimension, a curved coordinate chart or a manifold.
+
+```scheme
+@(define r3 (◆:space 'x 'y 'z))
+@(define f (◆:field 'f #:space r3))
+@(define e (◆:field 'E #:space r3 #:result 'vector))
+@with-assumptions[(list r3 f e "differentiable(f); differentiable(E)")]{
+  @derive{div(f(x,y,z)*E(x,y,z))}
+}
+```
+
+The corresponding facts are `space(x,y,z)`, `field(f,scalar,x,y,z)` and
+`field(E,vector,x,y,z)`. A space value carries the coordinate declarations;
+a field value carries its field declaration. Explicit scope activation remains
+necessary. Field references have function type; applications take three scalar
+arguments and return their declared result. `◆:call` constructs applications,
+and textual calls may compose the arguments, such as `f(y,x,z)` or `f(x^2,y,z)`.
+Constant parameters remain distinct from coordinates and fields. Conflicting
+spaces, duplicate axes, parameter axes, mismatched signatures and use of a bare
+field reference as a scalar/vector value are diagnosed. Field computations and
+reused computed values retain their declared spatial context and the premises
+actually used by their derivation. A result of a C1 product rule cannot silently
+be reused in a scope lacking that regularity. Each search candidate retains only
+its own rule premises; alternative search paths do not impose extra requirements.
+
+`differentiable` asserts C1 regularity. `smooth` asserts C-infinity regularity,
+which implies C1. Regularity propagates from a declared function reference to
+its application when its arguments have the required regularity, and through
+supported algebraic/elementary compositions. A C1 declaration does not license
+the second derivative identities. Smooth spatial derivatives remain smooth;
+C1 spatial derivatives are not automatically C1 themselves.
+
+The first-order product rules are:
+
+```text
+grad(f*g) -> g*grad(f) + f*grad(g)
+div(f*E)  -> dot(grad(f),E) + f*div(E)
+curl(f*E) -> cross(grad(f),E) + f*curl(E)
+```
+
+They require typed C1 operands, and support forward rewriting, target search
+and step checking. Missing assumptions are diagnostic suggestions only; they
+never enable a transition. `dot` maps two vectors to a scalar, and `cross` maps
+two vectors to a vector with the declared orientation. `◆:dot` and `◆:cross`
+render through Notation constructors, with grouped operands as needed.
+Ordinary `*` retains scalar multiplication semantics; multiplying two vectors
+is a type error. There is no vector component expansion, coordinate partial
+derivative solver, PDE solving or physical-model inference in this stage.
 The displayed path and rule make a derivation inspectable, but do not amount to
 a formal proof that the author's declared facts hold.
 The rewrite module exposes a rule registry with each law, its side condition,
