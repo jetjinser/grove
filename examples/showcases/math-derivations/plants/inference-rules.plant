@@ -5,4 +5,4 @@
 @title{Inference rule catalog}
 
 @(map (lambda (row) (math-rule->content (car row)))
-      (query (name modes) (ruleo name 'vector-calculus modes)))
+      (query (name modes documentation) (ruleo name 'vector-calculus modes documentation)))

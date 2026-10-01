@@ -18,11 +18,14 @@
   (make-relation
     (map (lambda (rule)
            (list (math-rewrite-rule-name rule) (math-rewrite-rule-group rule)
-                 (math-rewrite-rule-modes rule))) math-rewrite-rules)
-    #:arity 3))
+                 (math-rewrite-rule-modes rule)
+                 (math-rewrite-rule-documentation rule))) math-rewrite-rules)
+    #:arity 4))
 
-(define-public (ruleo name group modes)
-  (relationo catalog name group modes))
+(define-public (ruleo name group modes documentation)
+  "Relate rule names, groups, mode lists and Guile docstrings (#f if absent).
+Every argument may be unknown."
+  (relationo catalog name group modes documentation))
 
 ;; Metavariables are display placeholders, never concrete solver inputs.
 (define (template-term template)
@@ -56,6 +59,7 @@
     (_ (text (format #f "~s" goal)))))
 
 (define-public (math-rule->content name)
+  "Render the named rule's schema, documentation and executable guards as content."
   (let ((rule (math-rewrite-rule-ref name)))
     (unless rule (error "unknown math rule" name))
     (let* ((schema (math-rewrite-rule-schema rule))
@@ -77,8 +81,12 @@
                  (list (text (math-rewrite-rule-equation rule))))))
       (make-content-element 'math-derivation
         (append
-          (list (make-content-element 'paragraph (list (symbol->string name)) #:flow-kind 'block)
-                (notation:display-math
+          (list (make-content-element 'paragraph (list (symbol->string name)) #:flow-kind 'block))
+          (let ((documentation (math-rewrite-rule-documentation rule)))
+            (if documentation
+                (list (make-content-element 'paragraph (list documentation) #:flow-kind 'block))
+                '()))
+          (list (notation:display-math
                   (list (notation:frac (if (null? numerator) (list (text "—")) (separate numerator)) conclusion)
                         (text (format #f "  [~a]" name))))
                 (make-content-element 'paragraph

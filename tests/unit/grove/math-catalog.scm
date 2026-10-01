@@ -7,11 +7,11 @@
 (define (html name) (sxml->html (content->sxml (math-rule->content name))))
 (test-equal "enumeration preserves the complete registry"
   (map math-rewrite-rule-name math-rewrite-rules)
-  (map car (query (name group modes) (ruleo name group modes))))
+  (map car (query (name group modes documentation) (ruleo name group modes documentation))))
 (test-equal "group filtering queries actual registry facts" 8
-  (length (query (name modes) (ruleo name 'vector-calculus modes))))
+  (length (query (name modes documentation) (ruleo name 'vector-calculus modes documentation))))
 (test-equal "unknown names have no catalog answers" '()
-  (query (group modes) (ruleo 'missing-rule group modes)))
+  (query (group modes documentation) (ruleo 'missing-rule group modes documentation)))
 (test-equal "schema retains premises and executable type guards"
   '(((differentiable (unquote f)) (differentiable (unquote e)))
     ((math-typeo facts f 'scalar) (math-typeo facts e 'vector)))
@@ -29,4 +29,24 @@
        (string-contains (html 'curl-product) "vector")
        (string-contains (html 'curl-product) "→")))
 (test-error "unknown rule rendering is rejected" #t (math-rule->content 'missing-rule))
+(test-equal "rule documentation is the execution procedure's native docstring"
+  (procedure-documentation
+    (math-rewrite-rule-relation (math-rewrite-rule-ref 'curl-product) 'forward))
+  (car (query (documentation)
+         (fresh (group modes) (ruleo 'curl-product group modes documentation)))))
+(test-equal "documentation queries enumerate only documented rules" 5
+  (length (query (name documentation)
+            (fresh (group modes) (ruleo name group modes documentation))
+            (=/= documentation #f))))
+(test-equal "undocumented rules remain queryable with #f documentation" '(#f)
+  (query (documentation)
+    (fresh (group modes) (ruleo 'add-zero group modes documentation))))
+(test-assert "explanations appear alongside inference rules"
+  (string-contains (html 'curl-product) "reversing it changes the sign"))
+(test-equal "native lambda docstrings need no separate metadata"
+  "Native documentation."
+  (math-rewrite-rule-documentation
+    (make-math-rewrite-rule 'documented "X = X" "none" 'identity
+      (lambda (facts input output) "Native documentation." #t)
+      #:matcher (lambda (input) '()))))
 (test-end "inference rule catalog")

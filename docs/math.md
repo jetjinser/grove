@@ -551,13 +551,13 @@ snippets explain which rule produced the term. `math-report-result` carries its
 final origin into further computations. Computed strings without reader metadata
 remain unlocated, including unlocated siblings of authored operands.
 
-The `(grove math catalog)` module exposes `(ruleo name group modes)` for
+The `(grove math catalog)` module exposes `(ruleo name group modes documentation)` for
 finite relational queries over the complete rule registry. For example:
 
 ```scheme
 (use-modules (grove math catalog) (grove relation dsl))
 (map (lambda (row) (math-rule->content (car row)))
-     (query (name group modes) (ruleo name group modes)))
+     (query (name group modes documentation) (ruleo name group modes documentation)))
 ```
 
 `math-rule->content` renders an inference rule in native MathML. Declarative
@@ -568,3 +568,12 @@ are explicitly labeled and show their description rather than an invented
 fixed rewrite schema. This catalog describes the implementation, not a formal
 proof of the rules. Types, domain checks, and scoped declarations still apply
 when executing a rule.
+
+Rules may supply `#:documentation` to `math-rule` or
+`make-math-rewrite-rule`. The string becomes the execution procedure's native
+Guile docstring; existing lambda docstrings also work without this keyword.
+`math-rewrite-rule-documentation` reads it through `procedure-documentation`.
+The fourth field of `ruleo` queries documentation in either direction, and
+`math-rule->content` displays the explanation. Undocumented rules return `#f`;
+add `(=/= documentation #f)` to select only documented rules. Documentation is prose only;
+execution continues to use the structured schema and executable relation.

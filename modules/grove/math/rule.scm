@@ -14,7 +14,8 @@
             math-rewrite-rule-condition math-rewrite-rule-condition-checked?
             math-rewrite-rule-group math-rewrite-rule-modes
             math-rewrite-rule-relation math-rewrite-rule-required-facts
-            math-rewrite-rule-backward-default? math-rewrite-rule-schema))
+            math-rewrite-rule-backward-default? math-rewrite-rule-schema
+            math-rewrite-rule-documentation))
 
 (define-record-type <math-rewrite-rule>
   (%make-math-rewrite-rule name equation label condition checked? group relation modes backward matcher default? schema)
@@ -56,15 +57,19 @@
 (define* (make-math-rewrite-rule name equation condition group relation
                                #:key (pattern #f) (premises '()) (matcher #f)
                                (forward? #t) (backward #f) (backward-default? #f)
-                               (condition-checked? #t) (label #f) (schema #f))
+                               (condition-checked? #t) (label #f) (schema #f)
+                               (documentation #f))
   (unless (and (symbol? name) (string? equation) (string? condition)
                (or (not label) (string? label))
                (symbol? group) (procedure? relation)
+               (or (not documentation) (string? documentation))
                (boolean? forward?) (boolean? backward-default?) (boolean? condition-checked?)
                (or matcher pattern) (or (not matcher) (procedure? matcher))
                (or (not backward) (eq? backward #t) (procedure? backward))
                (or (not backward-default?) backward))
     (error "invalid math rule declaration" name))
+  (when documentation
+    (set-procedure-property! relation 'documentation documentation))
   (%make-math-rewrite-rule name equation
     (or label (string-capitalize (string-map (lambda (c) (if (char=? c #\-) #\space c))
                                              (symbol->string name))))
@@ -75,6 +80,10 @@
                   (let ((bindings (match-pattern pattern term '())))
                     (and bindings (instantiate premises bindings)))))
     backward-default? schema))
+
+(define (math-rewrite-rule-documentation rule)
+  "Return the execution relation's Guile docstring, or #f if absent."
+  (procedure-documentation (rule-relation rule)))
 
 (define (math-rewrite-rule-relation rule mode)
   (and (memq mode (math-rewrite-rule-modes rule))

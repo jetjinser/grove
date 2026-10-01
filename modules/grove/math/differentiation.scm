@@ -118,7 +118,8 @@
       (facts coordinate left right) (* ,left ,right)
       (+ (* (differentiate ,left (var ,coordinate)) ,right)
          (* ,left (differentiate ,right (var ,coordinate)))) ()
-      #:label "Product rule")
+      #:label "Product rule"
+      #:documentation "Generate the derivative of each factor separately and sum the two products. This rule constructs derivative terms; subsequent differentiation and simplification steps compute and reduce them.")
     (scalar-derivative-rule 'differentiate-power "d(f^n)/dx = n*f^(n-1)*d(f)/dx"
       (facts coordinate base exponent result) (^ ,base (num ,exponent)) ,result
       ((project (exponent base coordinate)
@@ -133,6 +134,7 @@
             (* ,left (differentiate ,right (var ,coordinate))))
          (^ ,right (num "2")))
       ((math-factso facts `((nonzero ,right)))) #:label "Quotient rule"
+      #:documentation "Apply the quotient rule on the domain where the denominator is nonzero. The derivative remains a symbolic term until later passes process its operands and simplify the result."
       #:matcher (lambda (input)
                   (match input
                     (('differentiate ('/ left right) ('var coordinate)) `((nonzero ,right)))
