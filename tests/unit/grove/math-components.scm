@@ -109,7 +109,7 @@
 (define unknown-facts '("coordinate(x); coordinate(y); function(f,scalar,scalar,scalar); differentiable(f)"))
 (let ((report (math-partial "x*f(x,y)" "x" #:assumptions unknown-facts)))
   (test-equal "unknown multivariate derivatives remain explicit in computed products"
-    (math-source->term "x*partial(f(x,y),x)+f(x,y)") (math-report-final report))
+    (math-source->term "x*darg(f(x,y),1)+f(x,y)") (math-report-final report))
   (test-assert "symbolic partial results still replay"
     (math-verification-valid? (math-verify-derivation (math-report-derivation report))))
   (test-assert "symbolic results preserve C1 requirements"
@@ -132,11 +132,11 @@
   (test-equal "reusing zero cannot silently reinterpret a parameter as a field" 'missing-premise
     (math-report-reason (math-simplify result #:assumptions '("coordinate(x); scalar(a); differentiable(a)")))))
 (test-equal "declared field derivatives stay symbolic in their space"
-  (math-source->term "partial(f(x,y,z),x)")
+  (math-source->term "darg(f(x,y,z),1)")
   (math-report-final (math-partial "f(x,y,z)" "x"
     #:assumptions (list r3 (◆:field 'f #:space r3) "differentiable(f)"))))
 (test-equal "elementary chain rules can retain an unknown inner partial"
-  (math-source->term "cos(f(x,y))*partial(f(x,y),x)")
+  (math-source->term "cos(f(x,y))*darg(f(x,y),1)")
   (math-report-final (math-partial "sin(f(x,y))" "x" #:assumptions unknown-facts)))
 (test-equal "operator-named coordinates are not renamed by the partial adapter"
   '(num "1")

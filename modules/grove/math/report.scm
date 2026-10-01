@@ -43,7 +43,7 @@
   (let ((term (math-report-final report)))
     (if term
         (filter (lambda (path)
-                  (memq (car (math-term-at-path term path)) '(differentiate partial prime)))
+                  (memq (car (math-term-at-path term path)) '(differentiate partial prime darg)))
                 (math-term-paths term)) '())))
 
 (define (math-report-status report)

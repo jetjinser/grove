@@ -175,6 +175,11 @@
   "Construct an explicit partial derivative; evaluation requires an independent coordinate."
   (operation 'partial (list operand (variable coordinate))))
 
+(define-public (function-partial application index)
+  "Differentiate the applied function in argument position INDEX (one-based)."
+  (unless (and (exact-integer? index) (> index 0)) (error "expected a positive argument index" index))
+  (operation 'darg (list application (constant index))))
+
 (define* (components x y z #:key space)
   "Construct three scalar components in SPACE's ordered Cartesian basis.
 The space remains a requirement, not an automatically activated assumption."

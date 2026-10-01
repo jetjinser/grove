@@ -28,6 +28,8 @@
        (cons (+ (expt (car v) 3) (car v)) (* (cdr v) (+ (* 3 (expt (car v) 2)) 1)))))
     (('prime ('var 'f) operand)
      (let ((v (go operand))) (cons (+ (* 3 (expt (car v) 2)) 1) (* 6 (car v) (cdr v)))))
+    (('darg ('f operand) ('num "1"))
+     (let ((v (go operand))) (cons (+ (* 3 (expt (car v) 2)) 1) (* 6 (car v) (cdr v)))))
     (('- a) (let ((v (go a))) (cons (- (car v)) (- (cdr v)))))
     (((or 'sin 'cos 'exp 'log) a)
      (let* ((v (go a)) (n (car v)) (d (cdr v)))

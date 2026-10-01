@@ -28,6 +28,7 @@
     "grove/math/vector.scm"
     "grove/math/differentiation.scm"
     "grove/math/partial.scm"
+    "grove/math/function-derivative.scm"
     "grove/math/components.scm"
     "grove/math/spatial.scm"
     "grove/math/polynomial.scm"

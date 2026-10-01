@@ -6,6 +6,10 @@
   #:use-module ((grove relation dsl) #:select (project))
   #:use-module (grove math rule)
   #:use-module (grove math differentiation)
+  #:use-module (grove math function-derivative)
+  #:use-module (grove math types)
+  #:use-module (grove math declaration)
+  #:use-module (grove math operator)
   #:use-module (srfi srfi-1)
   #:export (math-partial-rule-definitions math-partial-rules))
 
@@ -61,5 +65,36 @@
                            '((project (facts input)
                                (if (independent-variable? facts input) succeed fail))) '()))))))
 
-(define math-partial-rule-definitions (map partial-rule math-differentiation-rule-definitions))
+(define (function-chain-premises input)
+  (and (pair? input) (eq? (car input) 'partial)
+       (or (eq? (caadr input) 'darg) (not (math-operator-arities (caadr input))))
+       `((coordinate ,(caddr input)) (differentiable ,(cadr input)))))
+
+(define function-chain-rule
+  (make-math-rewrite-rule 'partial-function-chain
+    "partial_x f(u_1,...,u_n) = sum_i partial_i f(u_1,...,u_n) partial_x u_i"
+    "Declared scalar function, explicit coordinate, and sufficient function regularity" 'partial
+    (lambda (facts input output)
+      (fresh (application coordinate)
+        (== input `(partial ,application ,coordinate))
+        (project (facts input application coordinate)
+          (let ((info (math-function-derivative-info facts application)))
+            (if info
+                (let ((terms (map (lambda (arg index)
+                                    `(* (darg ,application (num ,(number->string index)))
+                                        (partial ,arg ,coordinate)))
+                                  (cadr info) (iota (length (cadr info)) 1))))
+                  (fresh ()
+                    (math-typeo facts application 'scalar)
+                    (math-factso facts (function-chain-premises input))
+                    (== output (if (null? terms) '(num "0")
+                                   (fold (lambda (term sum) `(+ ,sum ,term)) (car terms) (cdr terms)))))) fail)))))
+    #:matcher function-chain-premises
+    #:documentation "Apply the multivariate chain rule using explicit one-based argument positions. Repeated and composed arguments remain distinct; C1 permits one derivative and C2 permits two."))
+
+(define math-partial-rule-definitions
+  (append (map partial-rule
+            (filter (lambda (rule) (not (eq? (math-rewrite-rule-name rule) 'differentiate-function)))
+                    math-differentiation-rule-definitions))
+          (list function-chain-rule)))
 (define math-partial-rules (map math-rewrite-rule-name math-partial-rule-definitions))

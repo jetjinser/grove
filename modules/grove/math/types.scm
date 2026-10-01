@@ -11,6 +11,7 @@
   #:use-module (grove math term)
   #:use-module (grove math diagnostic)
   #:use-module (grove math declaration)
+  #:use-module (grove math function-derivative)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:export (math-typeo
@@ -76,7 +77,11 @@
        (operand-typeso assumptions operands signature)
        (conde
          ((=/= operator 'differentiate) (=/= operator 'partial)
-          (=/= operator 'antiderivative) (=/= operator 'poisson) (=/= operator 'prime))
+          (=/= operator 'antiderivative) (=/= operator 'poisson) (=/= operator 'prime)
+          (=/= operator 'darg))
+         ((== operator 'darg)
+          (project (assumptions term)
+            (if (math-function-derivative-info assumptions term) succeed fail)))
          ((fresh (expression name)
             (conde ((== term `(partial ,expression (var ,name))))
                    ((== term `(antiderivative ,expression (var ,name))))
@@ -126,6 +131,7 @@
                            (children (map types (cdr term)))
                            (allowed?
                              (case name
+                               ((darg) (math-function-derivative-info assumptions term))
                                ((partial antiderivative poisson) (and (eq? (caaddr term) 'var)
                                                (member `(coordinate ,(caddr term)) assumptions)))
                                ((differentiate) (and (eq? (caaddr term) 'var)

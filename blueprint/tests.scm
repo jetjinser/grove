@@ -51,6 +51,7 @@
     "unit/grove/math-order.scm"
     "unit/grove/math-regularity.scm"
     "unit/grove/math-report.scm"
+    "unit/grove/math-functions.scm"
     "unit/grove/math-integration.scm"
     "unit/grove/math-poisson.scm"
     "unit/grove/math-equations.scm"

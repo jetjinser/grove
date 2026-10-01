@@ -300,7 +300,7 @@ No boundary conditions or uniqueness claim. The selected axis fixes one solution
           (math-term->polynomial term facts)
           (list (make-math-diagnostic #f #f
                   (or (find (lambda (path)
-                              (memq (car (math-term-at-path term path)) '(differentiate partial prime)))
+                              (memq (car (math-term-at-path term path)) '(differentiate partial prime darg)))
                             (math-term-paths term)) '()) 'equation-not-proven '()
                   "The equation has a nonzero or unresolved residual; equality was not established")))
         (lambda (key message)

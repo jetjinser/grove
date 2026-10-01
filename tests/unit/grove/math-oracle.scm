@@ -70,7 +70,7 @@
     ;; Cartesian rules have their own independent edge and coverage suites.
     (math-rule-names #:groups '(components spatial polynomial-calculus))
     '(differentiate-quotient differentiate-sin differentiate-cos differentiate-exp differentiate-log differentiate-function
-      partial-sin partial-cos partial-exp partial-log partial-function)))
+      partial-sin partial-cos partial-exp partial-log partial-function-chain)))
 (for-each
   (lambda (fixture)
     (test-equal "missing regularity or equation premises cannot produce a vector identity"

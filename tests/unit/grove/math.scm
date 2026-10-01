@@ -180,7 +180,7 @@
       differentiate-cos differentiate-exp differentiate-log differentiate-function evaluate-constant collect-like-terms
       combine-coefficients normalize-scalar cancel-scalar-factors expand-scalar-product
       partial-constant partial-variable partial-independent partial-negation partial-sum partial-difference
-      partial-product partial-power partial-quotient partial-sin partial-cos partial-exp partial-log partial-function
+      partial-product partial-power partial-quotient partial-sin partial-cos partial-exp partial-log partial-function-chain
       components-sum components-difference components-negation components-scale-left components-scale-right
       components-quotient components-dot components-cross components-zero
       gradient-components divergence-components curl-components laplacian-scalar-components laplacian-vector-components integrate-polynomial solve-polynomial-poisson expand-polynomial)
