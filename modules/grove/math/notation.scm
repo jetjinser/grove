@@ -3,6 +3,7 @@
 
 (define-module (grove math notation)
   #:use-module (grove ir)
+  #:use-module ((grove math notation core) #:prefix notation:)
   #:use-module (grove math expression)
   #:use-module (grove math layout)
   #:use-module (grove math context)
@@ -11,14 +12,11 @@
 
 ;; Notation nodes carry layout, never mathematical assertions.
 (define-public (math . source)
-  (make-content-element 'math (decode-math-fragments source)))
+  (notation:math (decode-math-fragments source)))
 (define-public (display-math . source)
-  (make-content-element 'math (decode-math-fragments source)
-    #:properties '((display? . #t)) #:flow-kind 'block))
+  (notation:display-math (decode-math-fragments source)))
 
-(define (math-token kind value)
-  (make-content-element 'math-token (list value)
-                        #:properties `((token-kind . ,kind))))
+(define math-token notation:token)
 
 (define math-letters '(Lu Ll Lt Lm Lo Mn Mc))
 (define math-numbers '(Nd Nl No))
@@ -83,31 +81,23 @@
 (define (decode-math-fragments values)
   (append-map decode-math-fragment values))
 
-(define (math-argument-row value)
-  (make-content-element
-    'math-row
-    (decode-math-fragments (if (list? value) value (list value)))))
+(define (math-argument value)
+  (decode-math-fragments (if (list? value) value (list value))))
 
 (define-public (frac numerator denominator)
-  (make-content-element 'math-frac
-                        (list (math-argument-row numerator)
-                              (math-argument-row denominator))))
+  (notation:frac (math-argument numerator) (math-argument denominator)))
 
 (define-public (vec . body)
-  (make-content-element 'math-vector (decode-math-fragments body)))
+  (notation:vec (decode-math-fragments body)))
 
 (define-public (sup base exponent)
-  (make-content-element 'math-sup
-                        (list (math-argument-row base)
-                              (math-argument-row exponent))))
+  (notation:sup (math-argument base) (math-argument exponent)))
 
 (define-public (sub base index)
-  (make-content-element 'math-sub
-                        (list (math-argument-row base)
-                              (math-argument-row index))))
+  (notation:sub (math-argument base) (math-argument index)))
 
 (define-public (parens . body)
-  (make-content-element 'math-parens (decode-math-fragments body)))
+  (notation:parens (decode-math-fragments body)))
 
 (define (align-fragment-events fragment)
   (cond
@@ -149,11 +139,9 @@
 (define (make-align-row cell cells)
   (let ((all-cells (reverse (cons (reverse cell) cells))))
     (and (not (every null? all-cells))
-         (make-content-element
-           'math-row
+         (notation:row
            (map (lambda (contents)
-                  (make-content-element
-                    'math-cell (decode-math-fragments contents)))
+                  (notation:cell (decode-math-fragments contents)))
                 all-cells)))))
 
 (define (align-lines fragments)
@@ -174,5 +162,4 @@
        (loop (cdr events) (cons (cadar events) cell) cells rows)))))
 
 (define-public (align . fragments)
-  (make-content-element 'math-align (align-lines fragments)
-                        #:flow-kind 'block))
+  (notation:align (align-lines fragments)))

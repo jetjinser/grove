@@ -3,6 +3,7 @@
 
 (use-modules ((grove math semantic) #:prefix semantic:)
              ((grove math notation) #:prefix notation:)
+             ((grove math notation core) #:prefix core:)
              ((language scribble commands) #:prefix document:)
              (grove math pipeline) (grove math context) (grove math expression)
              (grove math layout) (grove math source)
@@ -17,6 +18,20 @@
 (define polynomial (semantic:expression (semantic:power "x" "3") "+" (semantic:multiply "2" "x")))
 
 (test-begin "unified mathematical writing interface")
+(test-equal "semantic division uses the same notation as an authored fraction"
+  (content->sxml (notation:frac "x" "2"))
+  (content->sxml (math-value->layout (semantic:divide "x" "2"))))
+(test-equal "semantic powers use the shared pure notation constructors"
+  (content->sxml (core:sup (list (core:token 'mi "x"))
+                         (list (core:token 'mn "3"))))
+  (content->sxml (math-value->layout (semantic:power "x" "3"))))
+(test-equal "vector assumptions lower through notation accents"
+  (content->sxml (notation:vec "E"))
+  (content->sxml (math-value->layout (semantic:variable "E") '((vector (var E))))))
+(test-equal "semantic preferences use the shared notation style and grouping"
+  (content->sxml (core:style (list (notation:parens "x")) 'bold))
+  (content->sxml (math-value->layout
+    (semantic:styled (semantic:group "x") #:variant 'bold))))
 (with-math-assumptions '("scalar(x)")
   (let* ((report (math-differentiate polynomial "x")) (result (math-report-result report)))
     (test-equal "a constructed expression enters polynomial differentiation"

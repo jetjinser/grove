@@ -28,7 +28,9 @@ semantic expressions enter computation. The document commands `@math` and
 `@display-math` use Semantic DSL by default:
 
 ```text
-text and embedded operands → syntax tree → mathematical value → passes → layout IR → MathML
+text and embedded operands → syntax tree → mathematical value → passes
+                                                           ↓
+                                             Notation constructors → layout IR → MathML
 ```
 
 `(grove math syntax)` tokenizes a deliberately small expression grammar and
@@ -37,8 +39,15 @@ Scheme s-expressions such as `(curl (curl (var E)))`; this is the term grammar
 used by relational rules. `(grove math rewrite)` defines miniKanren relations
 over those terms. `(grove math strategy)` selects rules and implements bounded
 search and bounded normalization; `(grove math derivation)` stores their
-certificates. `(grove math layout)` lowers terms to the existing math
-layout nodes. `(grove math pipeline)` composes these passes.
+certificates. `(grove math layout)` lowers terms through the pure Notation
+constructors in `(grove math notation core)`. This layer depends only on the
+content IR: it does not parse text or inspect mathematical meaning. The
+author-facing `(grove math notation)` adapter decodes text and embeds semantic
+values through the layout pass, then calls those same constructors. Thus both
+entry points share one presentation vocabulary without a dependency cycle.
+Mathematical terms remain the source of truth; notation is generated for
+display and is never interpreted backwards as solver input.
+`(grove math pipeline)` composes the computation passes.
 
 The semantic parser accepts identifiers, integer numerals, function calls,
 parenthesized groups, unary minus, power notation (`x^2`),
