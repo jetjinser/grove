@@ -61,10 +61,13 @@
         ((equal? value '(zero vector))
          (notation:vec (list (token 'mn "0"))))
         ((eq? (car value) 'num) (token 'mn (cadr value)))
-        ((and (eq? (car value) 'differentiate) (= (length value) 3))
-         (row (list (notation:frac
-                      (list (token 'mi "d")) (list (token 'mi "d") (child 1)))
-                    (argument 0))))
+        ((eq? (car value) 'components)
+         (notation:column (map child '(0 1 2))))
+        ((and (memq (car value) '(differentiate partial)) (= (length value) 3))
+         (let ((symbol (if (eq? (car value) 'partial) "∂" "d")))
+           (row (list (notation:frac
+                        (list (token 'mi symbol)) (list (token 'mi symbol) (child 1)))
+                      (argument 0)))))
         ((eq? (car value) 'prime)
          (row (list (notation:sup (list (child 0)) (list (operator "′")))
                     (operator "⁡") (argument 1))))

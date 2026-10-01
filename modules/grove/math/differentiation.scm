@@ -29,8 +29,8 @@
      (and (polynomial-term? base) (natural-value exponent) #t))
     (_ #f))))
 
-(define* (differentiable-term? term #:optional (facts '()))
-  (define (supported? child) (differentiable-term? child facts))
+(define* (differentiable-term? term #:optional (facts '()) (symbolic? #f))
+  (define (supported? child) (differentiable-term? child facts symbolic?))
   (or (polynomial-term? term)
       (match term
         (((or 'sin 'cos 'exp 'log) operand) (supported? operand))
@@ -42,6 +42,11 @@
         ((name operand)
          (and (equal? (math-function-signature facts name) '((scalar) scalar))
               (supported? operand)))
+        ((name . operands)
+         (let ((signature (and symbolic? (math-function-signature facts name))))
+           (and signature (eq? (cadr signature) 'scalar)
+                (equal? (car signature) (make-list (length operands) 'scalar))
+                (every supported? operands))))
         (_ #f))))
 
 (define* (differentiation-input-diagnostics expression coordinate #:optional (facts '()))
@@ -82,7 +87,7 @@
        (facts item ... coordinate)
        (differentiate expression (var ,coordinate)) result ()
        ((project (facts item ... coordinate)
-          (if (differentiable-term? (quasiquote expression) facts) succeed fail))
+          (if (differentiable-term? (quasiquote expression) facts #t) succeed fail))
         (math-typeo facts (quasiquote expression) 'scalar)
         (math-typeo facts `(var ,coordinate) 'scalar)
         (project (facts coordinate)

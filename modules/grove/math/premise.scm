@@ -8,13 +8,26 @@
   #:use-module (grove math term)
   #:use-module (grove math diagnostic)
   #:use-module (srfi srfi-1)
-  #:export (math-premise-known? math-definedness-diagnostics math-domain-premises math-requirement-diagnostics math-field-space-premises))
+  #:export (math-premise-known? math-definedness-diagnostics math-domain-premises math-requirement-diagnostics math-context-premises))
 
-(define (math-field-space-premises facts term)
+(define (math-context-premises facts term)
   (delete-duplicates
-    (filter-map (lambda (path)
-                  (let ((axes (math-field-coordinates facts (car (math-term-at-path term path)))))
-                    (and axes (cons 'space axes)))) (math-term-paths term)) equal?))
+    (append-map (lambda (path)
+                  (let* ((local (math-term-at-path term path))
+                         (axes (math-field-coordinates facts (car local))))
+                    (append
+                      (cond (axes (list (cons 'space axes)))
+                            ((eq? (car local) 'components)
+                             (let ((space (find math-space-declaration? facts)))
+                               (if space (list space) '())))
+                            (else '()))
+                      (if (eq? (car local) 'partial)
+                          (let ((variables (map (lambda (path) (math-term-at-path local path))
+                                                (math-term-paths local))))
+                            (filter (lambda (fact)
+                                      (and (memq (car fact) '(coordinate parameter))
+                                           (member (cadr fact) variables))) facts)) '()))))
+                (math-term-paths term)) equal?))
 
 ;; Smooth means C-infinity; differentiable requires C1 only. Spatial derivatives
 ;; preserve smoothness, but C1 alone never licenses a second derivative identity.
@@ -25,9 +38,9 @@
         ((num zero) #t)
         ((var) (or (member `(coordinate ,term) facts) (member `(parameter ,term) facts)
                    (any (lambda (fact) (and (math-space-declaration? fact) (member term (cdr fact)))) facts)))
-        ((+ - * / ^ dot cross sin cos exp log)
+        ((+ - * / ^ dot cross sin cos exp log components)
          (every (lambda (child) (regular? facts child predicate)) (cdr term)))
-        ((grad div curl laplacian)
+        ((grad div curl laplacian partial)
          (and (eq? predicate 'smooth) (regular? facts (cadr term) 'smooth)))
         (else
          (and (math-function-signature facts (car term))
@@ -42,6 +55,7 @@
                       ((/) `(nonzero ,(caddr local)))
                       ((log) `(positive ,(cadr local)))
                       ((prime) `(smooth ,(cadr local)))
+                      ((partial) `(differentiable ,(cadr local)))
                       (else #f)))) (math-term-paths term)) equal?))
 
 (define (math-requirement-diagnostics facts requirements)
@@ -121,5 +135,6 @@
                    "real logarithm requires a positive argument")
                  (missing `(positive ,(cadr local)) (append path '(0))))))
           ((prime) (missing `(smooth ,(cadr local)) (append path '(0))))
+          ((partial) (missing `(differentiable ,(cadr local)) (append path '(0))))
           (else #f))))
     (math-term-paths term)))

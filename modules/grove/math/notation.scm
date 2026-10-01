@@ -57,7 +57,7 @@
   (and (content-element? value)
        (memq (content-element-kind value)
              '(math-token math-frac math-vector math-sup math-sub math-parens
-               math-row math-cell math-align math-style))))
+               math-row math-cell math-align math-column math-style))))
 
 (define (decode-math-fragment value)
   (cond
@@ -163,3 +163,7 @@
 
 (define-public (align . fragments)
   (notation:align (align-lines fragments)))
+
+(define-public (column . entries)
+  "Lay out entries as a column; this notation does not assert vector semantics."
+  (notation:column (map (lambda (entry) (notation:row (decode-math-fragments (list entry)))) entries)))

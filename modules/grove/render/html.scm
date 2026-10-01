@@ -92,6 +92,10 @@
                     (mo "→")))
             ((math-parens)
              `(mrow (mo "(") ,@(render-math-children children) (mo ")")))
+            ((math-column)
+             `(mrow (mo (@ (stretchy "true")) "(")
+                    (mtable ,@(map (lambda (entry) `(mtr (mtd ,(render-math-child entry)))) children))
+                    (mo (@ (stretchy "true")) ")")))
             ((math-align)
              `(mtable
                 ,@(map

@@ -27,6 +27,7 @@
     "grove/math/identities.scm"
     "grove/math/vector.scm"
     "grove/math/differentiation.scm"
+    "grove/math/partial.scm"
     "grove/math/arithmetic.scm"
     "grove/math/number.scm"
     "grove/math/normalization.scm"

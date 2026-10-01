@@ -75,7 +75,10 @@
        (signatureo operator signature type)
        (operand-typeso assumptions operands signature)
        (conde
-         ((=/= operator 'differentiate) (=/= operator 'prime))
+         ((=/= operator 'differentiate) (=/= operator 'partial) (=/= operator 'prime))
+         ((fresh (expression name)
+            (== term `(partial ,expression (var ,name)))
+            (facto assumptions `(coordinate (var ,name)))))
          ((fresh (name argument)
             (== term `(prime (var ,name) ,argument))
             (facto assumptions `(function (var ,name) (var scalar) (var scalar)))))

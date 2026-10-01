@@ -12,7 +12,7 @@
   #:use-module (srfi srfi-13)
   #:re-export (math-value? math-value-term math-value-origin math-value-properties math-value-declarations math-value-requirements)
   #:export (expression expression-lines variable coordinate parameter function field space call constant add subtract negate multiply divide power dot cross
-            sin cos exp log prime grad divergence curl laplacian derivative vector-zero group styled))
+            sin cos exp log prime grad divergence curl laplacian derivative partial components vector-zero group styled))
 
 (define (fragments values)
   (append-map (lambda (value) (if (list? value) (fragments value) (list value))) values))
@@ -171,6 +171,20 @@
 (define-public (curl . body) (operation 'curl (list body)))
 (define-public (laplacian . body) (operation 'laplacian (list body)))
 (define-public (derivative operand coordinate) (operation 'differentiate (list operand (variable coordinate))))
+(define-public (partial operand coordinate)
+  "Construct an explicit partial derivative; evaluation requires an independent coordinate."
+  (operation 'partial (list operand (variable coordinate))))
+
+(define* (components x y z #:key space)
+  "Construct three scalar components in SPACE's ordered Cartesian basis.
+The space remains a requirement, not an automatically activated assumption."
+  (unless (and (math-value? space) (math-space-declaration? (math-value-term space)))
+    (error "components require a Cartesian space value" space))
+  (let ((value (operation 'components (list x y z))))
+    (make-math-value (math-value-term value)
+      #:origin (math-value-origin value) #:properties (math-value-properties value)
+      #:declarations (math-value-declarations value)
+      #:requirements (cons (math-value-term space) (math-value-requirements value)))))
 (define-public (vector-zero) (make-math-value '(zero vector)))
 (define-public (group . body)
   (let ((value (apply expression body)))

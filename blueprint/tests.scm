@@ -42,6 +42,8 @@
     "unit/grove/math-presentation.scm"
     "unit/grove/math-catalog.scm"
     "unit/grove/math-coefficients.scm"
+    "unit/grove/math-components.scm"
+    "unit/grove/math-partial-oracle.scm"
     "unit/scribble/parse.scm"
     "unit/grove/build.scm"
     "unit/grove/state.scm"

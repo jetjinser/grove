@@ -119,6 +119,16 @@
         #:max-steps max-steps #:max-term-size max-term-size)
       #:view view #:on-error on-error)))
 
+(define-public partial
+  (lambda* (variable #:key (assumptions #f) (view 'compact) (on-error 'raise)
+                          (max-steps 128) (max-term-size 2048) #:rest source)
+    "Compute and display a partial derivative in an explicit coordinate scope."
+    (math-completed-report->content
+      (math-partial (apply semantic:expression (math-command-fragments source)) variable
+        #:assumptions (command-assumptions assumptions)
+        #:max-steps max-steps #:max-term-size max-term-size)
+      #:view view #:on-error on-error)))
+
 (define-public search-derive
   (lambda* (target #:key (assumptions #f) (view 'compact)
                        (rules #f) (backward? #f) (max-results 1)

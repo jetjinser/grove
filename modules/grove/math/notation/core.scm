@@ -11,6 +11,8 @@
                         #:properties `((token-kind . ,kind))))
 (define-public (row children)
   (make-content-element 'math-row children))
+(define-public (column entries)
+  (make-content-element 'math-column entries))
 (define-public (frac numerator denominator)
   (make-content-element 'math-frac (list (row numerator) (row denominator))))
 (define-public (sup base exponent)

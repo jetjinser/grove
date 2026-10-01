@@ -80,6 +80,8 @@
                               (render (cadr children)))))
             ((math-vector) (string-append body "⃗"))
             ((math-parens) (string-append "(" body ")"))
+            ((math-column)
+             (string-append "(" (string-join (map render (content-element-children element)) ", ") ")"))
             ((math-align)
              (string-concatenate
                (map (lambda (row) (string-append (render row) "\n"))

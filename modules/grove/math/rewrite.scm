@@ -8,6 +8,7 @@
   #:use-module (grove math identities)
   #:use-module (grove math arithmetic)
   #:use-module (grove math differentiation)
+  #:use-module (grove math partial)
   #:use-module (grove math normalization)
   #:use-module (srfi srfi-1)
   #:export (rewriteo rewrite-stepo check-stepo unrewrite-rooto unrewrite-stepo
@@ -23,7 +24,7 @@
 
 (define math-rewrite-rules
   (append math-vector-rules math-identity-rules math-differentiation-rule-definitions
-          math-arithmetic-rules math-normalization-rules))
+          math-arithmetic-rules math-normalization-rules math-partial-rule-definitions))
 
 (define (math-rewrite-rule-ref name)
   (find (lambda (rule) (eq? name (math-rewrite-rule-name rule))) math-rewrite-rules))

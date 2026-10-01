@@ -12,6 +12,7 @@
   #:use-module (grove math strategy)
   #:use-module (grove math verification)
   #:use-module (grove math differentiation)
+  #:use-module (grove math partial)
   #:use-module (grove math pass)
   #:use-module (grove math report)
   #:use-module (grove math diagnostic)
@@ -24,7 +25,7 @@
   #:export (math-source->term math-derive
             math-search math-search-backward math-simplify math-calculate math-collect
             math-check-chain
-            math-differentiate math-rewrite math-report-result math-normalize math-expand)
+            math-differentiate math-partial math-rewrite math-report-result math-normalize math-expand)
   #:re-export (math-derivation->content math-verification->content
                math-report->content math-completed-report->content current-math-assumptions call-with-math-assumptions with-math-assumptions
                math-verify-step math-verify-derivation
@@ -68,7 +69,7 @@
              (facts (if certificate (math-derivation-assumptions certificate) (or assumptions (current-math-assumptions))))
              (requirements (delete-duplicates
                              (append requirements
-                               (append-map (lambda (value) (math-field-space-premises facts (math-value-term value))) values)) equal?))
+                               (append-map (lambda (value) (math-context-premises facts (math-value-term value))) values)) equal?))
              (missing (math-requirement-diagnostics facts inherited)))
         (make-math-report (math-report-name report)
           (if (pair? missing)
@@ -93,26 +94,37 @@
                            (and (pair? sources) (last sources)))
                 #:properties `((assumptions . ,(math-derivation-assumptions (math-report-derivation report))))))))
 
-(define* (math-differentiate source variable #:key (assumptions '())
-                              (max-steps 128) (max-term-size 2048))
+(define (derivative-report name rules source variable assumptions validate max-steps max-term-size)
   (let* ((expression (math-source->term source))
          (coordinate (math-source->term variable))
          (facts (math-assumptions assumptions))
-         (diagnostics (differentiation-input-diagnostics expression coordinate facts))
-         (input `(differentiate ,expression ,coordinate)))
+         (diagnostics (validate expression coordinate facts))
+         (input `(,name ,expression ,coordinate)))
     (report-with-input
       (if (null? diagnostics)
           (run-math-passes input facts
-            `((differentiate . ,math-differentiation-rules)
+            `((,name . ,rules)
               (simplify . ,math-simplification-rules))
-            #:name 'differentiate #:max-steps max-steps #:max-term-size max-term-size)
-          (run-math-pass input facts #:name 'differentiate #:rules '()
+            #:name name #:max-steps max-steps #:max-term-size max-term-size)
+          (run-math-pass input facts #:name name #:rules '()
             #:max-steps max-steps #:max-term-size max-term-size
             #:validate (lambda (term) diagnostics)))
       (make-math-value input
         #:requirements (math-value-requirements (semantic:expression source))
         #:origin (math-branch-origin (list (math-value-origin (semantic:expression source))
                                           (math-value-origin (semantic:expression variable))))))))
+
+(define* (math-differentiate source variable #:key (assumptions '())
+                              (max-steps 128) (max-term-size 2048))
+  (derivative-report 'differentiate math-differentiation-rules source variable assumptions
+    differentiation-input-diagnostics max-steps max-term-size))
+
+(define* (math-partial source variable #:key (assumptions '())
+                      (max-steps 128) (max-term-size 2048))
+  "Compute a scalar partial derivative, then simplify in a separate pass.
+Declared unknown function derivatives remain explicit partial terms."
+  (derivative-report 'partial math-partial-rules source variable assumptions
+    (lambda (expression coordinate facts) '()) max-steps max-term-size))
 
 (define* (math-rewrite source #:key (assumptions '()) (rules #f)
                         (max-steps 32) (max-term-size 2048))

@@ -22,7 +22,7 @@
     (('num n) (cons (string->number n) 0))
     (('var 'x) (cons x 1))
     (('var 'y) (cons y 0))
-    (('differentiate operand ('var 'x)) (cons (cdr (go operand)) 0))
+    (((or 'differentiate 'partial) operand ('var 'x)) (cons (cdr (go operand)) 0))
     (('f operand)
      (let ((v (go operand)))
        (cons (+ (expt (car v) 3) (car v)) (* (cdr v) (+ (* 3 (expt (car v) 2)) 1)))))
@@ -82,6 +82,26 @@
         (math-derivation-steps (math-report-derivation report)))))
   '("sin(x^2)" "cos(x^3)" "exp(2*x)" "log(x)" "x/x^2"
     "sin(exp(x))/x" "log(exp(x))"))
+(for-each
+  (lambda (source)
+    (let ((report (math-partial source "x"
+                    #:assumptions '("coordinate(x); coordinate(y); positive(x); function(f,scalar,scalar); smooth(f)"))))
+      (test-assert "elementary partial derivative completes" (math-report-complete? report))
+      (test-assert "elementary partial certificate independently replays"
+        (math-verification-valid? (math-verify-derivation (math-report-derivation report))))
+      (for-each
+        (lambda (point)
+          (test-assert "independent dual-number oracle checks partial results"
+            (< (abs (- (cdr (dual (math-source->term source) point 3))
+                       (car (dual (math-report-final report) point 3)))) 1e-8)))
+        '(1/2 1 2))
+      (for-each
+        (lambda (step)
+          (test-assert "independent dual-number oracle checks every partial edge"
+            (< (abs (- (car (dual (math-derivation-step-from step) 1 3))
+                       (car (dual (math-derivation-step-to step) 1 3)))) 1e-8)))
+        (math-derivation-steps (math-report-derivation report)))))
+  '("sin(x*y)" "cos(x^3)" "exp(2x)" "log(x)" "x/x^2" "f(x^2)"))
 (test-equal "logarithm requires positivity" 'missing-premise
   (math-report-reason (differentiate "log(x)")))
 (test-equal "quotient requires nonzero denominator" 'missing-premise
