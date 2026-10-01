@@ -27,6 +27,7 @@
 @heading{Derivations}
 @link["vector-analysis"]{Vector identities, search and authored steps}
 @link["vector-fields"]{Cartesian fields and product rules}
+@link["vector-components"]{Vector components and partial derivatives}
 @link["polynomial-differentiation"]{Polynomial differentiation and certificate replay}
 @link["scalar-calculus"]{Scalar functions, declarations and domain premises}
 @link["scalar-normalization"]{Stable scalar simplification and explicit expansion}

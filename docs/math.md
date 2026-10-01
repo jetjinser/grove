@@ -587,3 +587,64 @@ as `1/2x` are rejected: write `(1/2)*x` or `1/(2x)` explicitly.
 Semantic rendering prefers coefficient juxtaposition, including for explicitly
 written products. Numeric products and numeric-base powers retain the
 multiplication sign; dot and cross products retain their own symbols.
+
+## Cartesian components and partial derivatives
+
+`◆:components` constructs a vector with exactly three scalar entries in an
+explicit ordered Cartesian space. Its IR is `(components x-term y-term z-term)`;
+the chosen space travels as a requirement of the mathematical value, independently
+of its component terms and display properties. Construction does not activate
+that space. A raw textual `components(x,y,z)` uses the active space, and its
+computed result retains that basis too. Mixing bases or using a vector as an
+entry is diagnosed before computation. Scalar passes may simplify the entries,
+but component-wise vector operations and spatial-operator expansion are not
+implemented yet.
+
+```scheme
+@(define r3 (◆:space 'x 'y 'z))
+@(define v (◆:components "x^2" "y" "sin(z)" #:space r3))
+@with-assumptions[r3]{@math[v]}
+```
+
+Semantic components lower through the Notation DSL's column constructor to
+native MathML `mtable` rows enclosed in parentheses. `◇:column{a}{b}{c}` is
+available for layout only, with no vector semantics. Text output separates
+component entries with commas.
+
+`◆:partial` constructs `(partial expression coordinate)` without evaluating it.
+`math-partial` computes the scalar derivative in a dedicated pass and runs
+scalar simplification as a second pass. The article command is
+`@partial["x"]{x^3+2x*y}`. Both use explicit `coordinate(x)` declarations;
+a generic `scalar(x)` declaration does not establish an independent coordinate.
+Other declared coordinates and constant parameters differentiate to zero.
+A bare scalar field without either role remains a symbolic partial, rather
+than being silently treated as an independent coordinate.
+
+```scheme
+(math-partial "x^3+2x*y+a" "x"
+  #:assumptions '("coordinate(x); coordinate(y); parameter(a)"))
+;; final term: 3*x^2 + 2*y
+```
+
+Partial rules adapt the same scalar calculus relations used for ordinary
+polynomials, natural-number powers, quotients, elementary functions and smooth
+unary function composition. They are registered as `partial-*`, with forward
+and check modes. Search, authored checking, inference-rule rendering and
+certificate replay use these registered relations. Each pass has its own step
+budget; term-size limits and source provenance follow the existing pipeline.
+
+Declared unknown multivariate scalar functions remain differentiable symbolic
+terms, provided their C1 premise is supplied. For example, under
+`function(f,scalar,scalar,scalar); differentiable(f)` and independent `x,y`,
+`math-partial "x*f(x,y)" "x"` produces
+`x*partial(f(x,y),x)+f(x,y)`. This is a symbolic normal form, not a calculated
+component of the unknown function. No multivariate function chain rule or
+argument-index derivative is inferred. C1 alone does not authorize second
+unknown derivatives. Undeclared operators, missing regularity, invalid types
+and missing domains produce diagnostics instead of symbolic success.
+
+Coordinate and parameter roles, field/component spaces, regularity and real
+domain requirements remain attached to computed values and certificates even
+when the visible term reduces to zero or one. Reuse must satisfy those
+requirements again; documentation and retained requirements never authorize
+new assumptions.
