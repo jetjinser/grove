@@ -5,8 +5,11 @@
              (grove math rewrite) (grove relation) (ice-9 match)
              (srfi srfi-1) (srfi srfi-64))
 
+(define (expansion report) (math-report-derivation (car (math-report-passes report))))
+(define (simplification report) (math-report-derivation (cadr (math-report-passes report))))
+
 (define facts '("scalar(x); scalar(y)"))
-(define (certificate report) (car (math-search-report-candidates report)))
+(define (certificate report) (car (math-report-candidates report)))
 (define (final report) (last (math-derivation-terms (certificate report))))
 (define (value term environment)
   (match term
@@ -55,15 +58,15 @@
   (final (math-collect "E+E" #:assumptions '("vector(E)"))))
 (let ((result (math-differentiate "(1/2)*x^2" "x" #:assumptions facts)))
   (test-equal "rational coefficients participate in polynomial differentiation"
-    (math-source->term "x") (math-differentiation-final result))
+    (math-source->term "x") (math-report-final result))
   (test-assert "rational differentiation expansion replays"
     (math-verification-valid?
-      (math-verify-derivation (math-differentiation-expansion result)))))
+      (math-verify-derivation (expansion result)))))
 (test-equal "differentiate and collect x*x"
   (math-source->term "2*x")
-  (math-differentiation-final (math-differentiate "x*x" "x" #:assumptions facts)))
+  (math-report-final (math-differentiate "x*x" "x" #:assumptions facts)))
 (test-assert "search can use constant computation"
-  (pair? (math-search-report-candidates (math-search "2*3" "6"))))
+  (pair? (math-report-candidates (math-search "2*3" "6"))))
 (test-assert "authored exact rational computation is verified"
   (math-verification-valid? (math-check-chain '("1/3+1/6" "1/2"))))
 (test-assert "incorrect arithmetic is rejected"

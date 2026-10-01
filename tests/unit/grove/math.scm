@@ -19,10 +19,10 @@
   #:export (run-math-tests))
 
 (define (search-candidates . arguments)
-  (math-search-report-candidates (apply math-search arguments)))
+  (math-report-candidates (apply math-search arguments)))
 
 (define (backward-candidates . arguments)
-  (math-search-report-candidates (apply math-search-backward arguments)))
+  (math-report-candidates (apply math-search-backward arguments)))
 
 (define (diagnostic-codes verification)
   (map math-diagnostic-code (math-verification-diagnostics verification)))
@@ -301,7 +301,7 @@
         (math-verification-valid? (math-verify-derivation backward-result))))
     (test-equal "goal search reports a finite state budget"
       'state-limit
-      (math-search-report-reason (math-search
+      (math-report-reason (math-search
         "curl(curl(E))" "-laplacian(E)"
         #:assumptions '("vector(E); smooth(E); div(E)=0")
         #:max-depth 3 #:max-states 1))))
@@ -420,61 +420,61 @@
                    #:assumptions '("scalar(x); scalar(y)")
                    #:rules '(add-zero) #:max-states 4)))
     (test-equal "state-limited search preserves candidates already found"
-      1 (length (math-search-report-candidates report)))
+      1 (length (math-report-candidates report)))
     (test-equal "state-limited report states why it stopped"
-      'state-limit (math-search-report-reason report))
-    (test-equal "search counts explored states" 4 (math-search-report-states report))
+      'state-limit (math-report-reason report))
+    (test-equal "search counts explored states" 4 (math-report-states report))
     (test-assert "partial candidates still verify"
       (every (lambda (candidate)
                (math-verification-valid? (math-verify-derivation candidate)))
-             (math-search-report-candidates report)))
+             (math-report-candidates report)))
     (test-assert "limited report does not claim completeness"
-      (not (math-search-report-complete? report))))
+      (not (math-report-complete? report))))
   (test-equal "depth cutoff differs from exhausted search"
     'depth-limit
-    (math-search-report-reason
+    (math-report-reason
       (math-search "x + 0" "x" #:assumptions '("scalar(x)") #:max-depth 0)))
   (test-equal "an exhausted dead end is a complete search"
     'exhausted
-    (math-search-report-reason
+    (math-report-reason
       (math-search "x" "y" #:assumptions '("scalar(x); scalar(y)")
         #:rules '() #:max-depth 0)))
   (test-equal "result limit remains visible in the report"
     'result-limit
-    (math-search-report-reason
+    (math-report-reason
       (math-search "(x + 0) + (y + 0)" "x + y"
         #:assumptions '("scalar(x); scalar(y)") #:rules '(add-zero)
         #:max-results 1)))
   (test-equal "inverse generation respects the explicit term size bound"
     'term-size-limit
-    (math-search-report-reason
+    (math-report-reason
       (math-search-backward "x" "y" #:assumptions '("scalar(x); scalar(y)")
         #:rules '(add-zero) #:max-term-size 3)))
   (test-equal "explicit inverse arithmetic rule selection enables bounded expansion"
     '((+ (var x) (num "0")) (var x))
     (math-derivation-terms
-      (car (math-search-report-candidates
+      (car (math-report-candidates
              (math-search-backward "x" "x + 0" #:assumptions '("scalar(x)")
                #:rules '(add-zero) #:max-depth 1)))))
   (test-equal "rule selection excludes other applicable rules"
     '()
-    (math-search-report-candidates
+    (math-report-candidates
       (math-search "x + 0" "x" #:assumptions '("scalar(x)") #:rules '(multiply-one))))
   (test-error "unknown selected rules are rejected" #t
     (math-search "x" "x" #:assumptions '("scalar(x)") #:rules '(unknown-rule)))
   (let* ((report (math-simplify "curl(curl(E)) + zero(vector)"
                    #:assumptions '("vector(E)")))
-         (candidate (car (math-search-report-candidates report))))
+         (candidate (car (math-report-candidates report))))
     (test-equal "normalization only uses shrinking arithmetic rules"
       '((+ (curl (curl (var E))) (zero vector)) (curl (curl (var E))))
       (math-derivation-terms candidate))
     (test-equal "normalization reports normal form"
-      'normal-form (math-search-report-reason report))
+      'normal-form (math-report-reason report))
     (test-assert "normalization candidate verifies"
       (math-verification-valid? (math-verify-derivation candidate))))
   (test-equal "normalization retains a partially simplified chain at its step limit"
     'step-limit
-    (math-search-report-reason
+    (math-report-reason
       (math-simplify "1 * (x + 0)" #:assumptions '("scalar(x)") #:max-steps 1)))
   (test-error "normalization rejects non-shrinking rules" #t
     (math-simplify "x" #:assumptions '("scalar(x)") #:rules '(curl-curl-identity)))

@@ -6,6 +6,9 @@
              (grove math layout) (grove ir) (grove render html)
              (ice-9 match) (srfi srfi-1) (srfi srfi-64))
 
+(define (expansion report) (math-report-derivation (car (math-report-passes report))))
+(define (simplification report) (math-report-derivation (cadr (math-report-passes report))))
+
 (define facts '("scalar(x); scalar(y)"))
 (define (differentiate source)
   (math-differentiate source "x" #:assumptions facts))
@@ -40,22 +43,22 @@
          (string-contains html "<mo>(</mo>"))))
 (let ((result (differentiate "x^3 + 2*x")))
   (test-equal "acceptance polynomial has the expected simplified derivative"
-    (math-source->term "3*x^2 + 2") (math-differentiation-final result))
+    (math-source->term "3*x^2 + 2") (math-report-final result))
   (for-each
     (lambda (pass)
       (test-assert "each pass independently replays its certificate"
         (math-verification-valid? (math-verify-derivation pass))))
-    (list (math-differentiation-expansion result)
-          (math-differentiation-simplification result)))
+    (list (expansion result)
+          (simplification result)))
   (test-assert "expansion contains only differentiation provenance"
     (every (lambda (step) (memq (math-derivation-step-rule step) math-differentiation-rules))
-           (math-derivation-steps (math-differentiation-expansion result))))
+           (math-derivation-steps (expansion result))))
   (test-equal "passes share exactly their boundary term"
-    (last (math-derivation-terms (math-differentiation-expansion result)))
-    (car (math-derivation-terms (math-differentiation-simplification result)))))
+    (last (math-derivation-terms (expansion result)))
+    (car (math-derivation-terms (simplification result)))))
 (for-each
   (lambda (source)
-    (let ((answer (math-differentiation-final (differentiate source))))
+    (let ((answer (math-report-final (differentiate source))))
       (for-each
         (lambda (point)
           (test-equal (string-append "dual-number oracle: " source)
@@ -66,17 +69,19 @@
     "(x-y)*(x+y)" "-(x^2+x)" "x^3+2*x"))
 (for-each
   (lambda (source)
-    (test-error "unsupported domain is rejected before expansion" #t (differentiate source)))
+    (test-equal "unsupported domain is diagnosed before expansion"
+      'unsupported-expression (math-report-reason (differentiate source))))
   '("sin(x)" "x/y" "x^y" "x^-1"))
-(test-error "vector coordinates cannot be differentiated as scalar polynomials" #t
-  (math-differentiate "E" "E" #:assumptions '("vector(E)")))
-(test-error "undeclared variables are diagnosed" #t (math-differentiate "x" "x"))
-(test-error "expansion budget is enforced" #t
-  (math-differentiate "x^3" "x" #:assumptions facts #:max-steps 0))
-(test-error "term-size budget is enforced" #t
-  (math-differentiate "x^3" "x" #:assumptions facts #:max-term-size 2))
-(test-error "simplification budget is enforced" #t
-  (math-differentiate "x^1" "x" #:assumptions facts #:max-steps 2))
+(test-equal "vector coordinates cannot be differentiated as scalar polynomials"
+  'type-error (math-report-reason (math-differentiate "E" "E" #:assumptions '("vector(E)"))))
+(test-equal "undeclared variables are diagnosed" 'type-error
+  (math-report-reason (math-differentiate "x" "x")))
+(test-equal "expansion budget is enforced" 'step-limit
+  (math-report-reason (math-differentiate "x^3" "x" #:assumptions facts #:max-steps 0)))
+(test-equal "term-size budget is enforced" 'term-size-limit
+  (math-report-reason (math-differentiate "x^3" "x" #:assumptions facts #:max-term-size 2)))
+(test-equal "simplification budget is enforced" 'step-limit
+  (math-report-reason (math-differentiate "x^1" "x" #:assumptions facts #:max-steps 2)))
 (test-equal "relation can verify a proposed derivative step"
   '(differentiate-product)
   (run* (rule)
@@ -98,7 +103,7 @@
            (math-check-chain '("differentiate(x,x)" "2") #:assumptions facts)))))
 (test-assert "target search finds and verifies derivative steps"
   (let ((report (math-search "differentiate(x,x)" "1" #:assumptions facts)))
-    (and (pair? (math-search-report-candidates report))
+    (and (pair? (math-report-candidates report))
          (math-verification-valid?
-           (math-verify-derivation (car (math-search-report-candidates report)))))))
+           (math-verify-derivation (car (math-report-candidates report)))))))
 (test-end "polynomial differentiation")

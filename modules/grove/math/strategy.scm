@@ -6,63 +6,25 @@
   #:use-module (grove math term)
   #:use-module (grove math rewrite)
   #:use-module (grove math types)
-  #:use-module (grove relation)
+  #:use-module (grove math pass)
+  #:use-module (grove math report)
+  #:use-module (grove math diagnostic)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-9)
-  #:export (math-selected-rules math-rewrite-answers
-            search-math-terms simplify-math-term calculate-math-term collect-math-term
-            math-search-report? math-search-report-candidates
-            math-search-report-reason math-search-report-limits
-            math-search-report-states math-search-report-complete?))
-
-(define-record-type <math-search-report>
-  (make-math-search-report candidates reason limits states)
-  math-search-report?
-  (candidates math-search-report-candidates)
-  (reason math-search-report-reason)
-  (limits math-search-report-limits)
-  (states math-search-report-states))
-
-(define (math-search-report-complete? report)
-  (and (memq (math-search-report-reason report) '(exhausted normal-form)) #t))
-
-(define (math-selected-rules selection defaults)
-  (let ((names (if selection selection defaults)))
-    (unless (and (list? names) (every math-rewrite-rule-ref names))
-      (error "expected a list of registered math rule names" names))
-    (delete-duplicates names)))
-
-(define (allowed-ruleo names rule)
-  (if (null? names)
-      fail
-      (conde
-        ((== rule (car names)))
-        ((allowed-ruleo (cdr names) rule)))))
-
-(define (math-rewrite-answers assumptions term rules backward?)
-  (run* (next rule path)
-    (allowed-ruleo rules rule)
-    (if backward?
-        (unrewrite-stepo assumptions next term rule path)
-        (rewrite-stepo assumptions term next rule path))))
-
-(define (check-bound name value minimum)
-  (unless (and (exact-integer? value) (>= value minimum))
-    (error "invalid math strategy bound" name value minimum)))
+  #:export (search-math-terms simplify-math-term calculate-math-term collect-math-term)
+  #:re-export (math-selected-rules math-rewrite-answers
+            math-report? math-report-candidates
+            math-report-reason math-report-limits
+            math-report-states math-report-complete?))
 
 (define (require-type assumptions term)
   (let ((typed (math-infer-type assumptions term)))
     (unless typed (error (math-type-diagnostic assumptions term)))
     (math-typed-term-type typed)))
 
-(define* (search-math-terms start goal assumptions backward?
+(define* (search-typed-math-terms start goal assumptions backward?
                             #:key (rules #f) (max-depth 8)
                                   (max-results 5) (max-states 256)
                                   (max-term-size 128))
-  (check-bound 'max-depth max-depth 0)
-  (check-bound 'max-results max-results 1)
-  (check-bound 'max-states max-states 1)
-  (check-bound 'max-term-size max-term-size 1)
   (let* ((type (require-type assumptions start))
          (goal-type (require-type assumptions goal))
          (rules (math-selected-rules rules
@@ -71,8 +33,11 @@
     (unless (eq? type goal-type)
       (error "math search endpoints have different types" type goal-type))
     (define (finish candidates reason limits states)
-      (make-math-search-report (reverse candidates) reason
-                              (delete-duplicates limits) states))
+      (make-math-report (if backward? 'search-backward 'search) (reverse candidates) reason
+                              (delete-duplicates limits) states
+        #:diagnostics (if (eq? reason 'exhausted) '()
+                          (list (make-math-diagnostic #f #f '() reason '()
+                                  (format #f "search stopped at ~a" reason))))))
     (if (or (> (math-term-size start) max-term-size)
             (> (math-term-size goal) max-term-size))
         (finish '() 'term-size-limit '(term-size-limit) 0)
@@ -110,6 +75,7 @@
                                 (let* ((next (car answer))
                                        (typed (math-infer-type assumptions next)))
                                   (and (not (member next terms)) typed
+                                       (null? (math-execution-diagnostics assumptions next))
                                        (eq? (math-typed-term-type typed) type))))
                               (math-rewrite-answers assumptions current rules backward?)))
                           (within-size
@@ -136,30 +102,43 @@
                                   within-size))
                            (+ states 1) candidates limits)))))))))))
 
-(define* (simplify-math-term input assumptions #:key (rules #f) (max-steps 32))
-  (check-bound 'max-steps max-steps 0)
+(define* (search-math-terms start goal assumptions backward?
+                            #:key (rules #f) (max-depth 8)
+                                  (max-results 5) (max-states 256) (max-term-size 128))
+  (check-math-bound 'max-depth max-depth 0)
+  (check-math-bound 'max-results max-results 1)
+  (check-math-bound 'max-states max-states 1)
+  (check-math-bound 'max-term-size max-term-size 1)
+  (math-selected-rules rules (if backward? math-backward-rules
+                               (map math-rewrite-rule-name math-rewrite-rules)))
+  (let* ((diagnostics (append (math-execution-diagnostics assumptions start)
+                              (math-execution-diagnostics assumptions goal)))
+         (diagnostics
+           (if (or (pair? diagnostics)
+                   (eq? (math-typed-term-type (math-infer-type assumptions start))
+                        (math-typed-term-type (math-infer-type assumptions goal))))
+               diagnostics
+               (list (make-math-diagnostic #f #f '() 'type-change '()
+                       "math search endpoints have different types")))))
+    (if (pair? diagnostics)
+        (make-math-report (if backward? 'search-backward 'search) '()
+          (math-diagnostic-code (car diagnostics)) '() 0 #:diagnostics diagnostics)
+        (search-typed-math-terms start goal assumptions backward?
+          #:rules rules #:max-depth max-depth #:max-results max-results
+          #:max-states max-states #:max-term-size max-term-size))))
+
+(define* (simplify-math-term input assumptions #:key (rules #f) (max-steps 32)
+                           (max-term-size 2048))
   (let ((rules (math-selected-rules rules math-simplification-rules)))
     (unless (every (lambda (rule) (memq rule math-simplification-rules)) rules)
       (error "simplification accepts only arithmetic and collection rules" rules))
-    (require-type assumptions input)
-    (let normalize ((current input) (terms (list input)) (steps '()) (count 0))
-      (let* ((answers (math-rewrite-answers assumptions current rules #f))
-             (done? (null? answers)))
-        (if (or done? (= count max-steps))
-            (make-math-search-report
-              (list (make-math-derivation (reverse terms) (reverse steps) assumptions))
-              (if done? 'normal-form 'step-limit)
-              (if done? '() '(step-limit)) count)
-            (let* ((answer (car answers)) (next (car answer)))
-              (when (member next terms)
-                (error "simplification entered a rewrite cycle" (cadr answer)))
-              (normalize next (cons next terms)
-                (cons (make-math-derivation-step current next (cadr answer) (caddr answer))
-                      steps)
-                (+ count 1))))))))
+    (run-math-pass input assumptions #:name 'simplify #:rules rules
+      #:max-steps max-steps #:max-term-size max-term-size)))
 
-(define* (calculate-math-term input assumptions #:key (max-steps 32))
-  (simplify-math-term input assumptions #:rules math-calculation-rules #:max-steps max-steps))
+(define* (calculate-math-term input assumptions #:key (max-steps 32) (max-term-size 2048))
+  (run-math-pass input assumptions #:name 'calculate #:rules math-calculation-rules
+    #:max-steps max-steps #:max-term-size max-term-size))
 
-(define* (collect-math-term input assumptions #:key (max-steps 32))
-  (simplify-math-term input assumptions #:rules math-collection-rules #:max-steps max-steps))
+(define* (collect-math-term input assumptions #:key (max-steps 32) (max-term-size 2048))
+  (run-math-pass input assumptions #:name 'collect #:rules math-collection-rules
+    #:max-steps max-steps #:max-term-size max-term-size))

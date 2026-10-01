@@ -112,14 +112,19 @@ MathML IR. For example:
     #:assumptions '("vector(E); smooth(E); div(E)=0")
     #:rules '(curl-curl-identity divergence-free subtract-zero)
     #:max-depth 3))
-(math-search-report-reason report)
-(map math-derivation->content (math-search-report-candidates report))
+(math-report-reason report)
+(map math-derivation->content (math-report-candidates report))
 ```
 
 Report accessors expose `candidates`, `reason`, `limits`, and `states`.
+The shared `(grove math report)` record also exposes the operation `name`,
+structured `diagnostics`, named `passes`, and the retained `final` term.
+Search, rewriting, calculation, collection, simplification and differentiation
+all use this record. `(grove math pass)` owns deterministic execution, bounds,
+cycle detection and certificate composition; search retains its BFS scheduler.
 Reasons are `exhausted`, `depth-limit`, `term-size-limit`, `state-limit`, or
 `result-limit`. The `limits` list retains all encountered cutoffs, and
-`math-search-report-complete?` is true only for exhaustive search. Exhaustion
+`math-report-complete?` is true only for exhaustive search. Exhaustion
 is relative to the selected rules and supplied assumptions. Multiple distinct
 paths to the same term remain distinct candidates.
 
@@ -140,6 +145,16 @@ combines them with zero/one elimination. Fractions retain the existing division
 IR, and signs retain unary minus. No floating point, product distribution, or
 implicit reordering of symbolic multiplication is introduced.
 
+`math-differentiate` returns a report containing the differentiation and
+simplification pass reports, plus their joined certificate. Each pass has its
+own `#:max-steps` budget and shares `#:max-term-size`. A cutoff retains the
+completed prefix and does not run subsequent passes. Unsupported polynomial
+inputs, type errors and division by zero return diagnostics; invalid API
+arguments and syntax remain errors. `math-rewrite` exposes the report used by
+the display-oriented `math-derive`. `math-completed-report->content` renders
+only completed computations, which prevents `.plant` commands from presenting
+a partial derivative as a completed result.
+
 Search results are candidates. `math-verify-step` checks one recorded edge
 against the named miniKanren rule and its exact operand path. For an entire
 candidate, `math-verify-derivation` returns a verification record; inspect it
@@ -147,7 +162,7 @@ with `math-verification-valid?`, `math-verification-errors`, and
 `math-verification-derivation`:
 
 ```scheme
-(let ((candidate (car (math-search-report-candidates report))))
+(let ((candidate (car (math-report-candidates report))))
   (math-verification-valid? (math-verify-derivation candidate)))
 ```
 

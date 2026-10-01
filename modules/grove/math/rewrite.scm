@@ -26,6 +26,7 @@
             math-backward-rules
             math-rewrite-rule-ref
             math-rule-required-facts
+            math-selected-rules math-rewrite-answers
             rewrite-curl-curl))
 
 (define-record-type <math-rewrite-rule>
@@ -339,3 +340,20 @@
           (run 1 (result)
             (curl-curlo assumptions term result))))
     (and (pair? answers) (car answers))))
+
+(define (math-selected-rules selection defaults)
+  (let ((names (if selection selection defaults)))
+    (unless (and (list? names) (every math-rewrite-rule-ref names))
+      (error "expected a list of registered math rule names" names))
+    (delete-duplicates names)))
+
+(define (allowed-ruleo names rule)
+  (if (null? names) fail
+      (conde ((== rule (car names))) ((allowed-ruleo (cdr names) rule)))))
+
+(define (math-rewrite-answers assumptions term rules backward?)
+  (run* (next rule path)
+    (allowed-ruleo rules rule)
+    (if backward?
+        (unrewrite-stepo assumptions next term rule path)
+        (rewrite-stepo assumptions term next rule path))))

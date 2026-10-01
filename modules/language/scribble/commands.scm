@@ -88,12 +88,12 @@
       (math-check-chain lines #:assumptions (list assumptions)))))
 
 (define-public (differentiate variable assumptions . source)
-  (math-differentiation->content
+  (math-completed-report->content
     (math-differentiate (content-verbatim-string source) variable
       #:assumptions (list assumptions))))
 
 (define-public (search-derive assumptions target . source)
-  (math-search-report->content
+  (math-report->content
     (math-search (content-verbatim-string source) target
       #:assumptions (list assumptions) #:max-results 1)))
 

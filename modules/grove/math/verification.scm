@@ -3,10 +3,11 @@
 
 (define-module (grove math verification)
   #:use-module (grove math derivation)
+  #:use-module (grove math diagnostic)
+  #:use-module (grove math pass)
   #:use-module (grove math term)
   #:use-module (grove math rewrite)
   #:use-module (grove math types)
-  #:use-module (grove math strategy)
   #:use-module (grove relation)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
@@ -14,20 +15,10 @@
   #:export (math-verify-step math-verify-derivation check-math-chain
             math-verification? math-verification-valid?
             math-verification-errors math-verification-diagnostics
-            math-verification-derivation
-            math-diagnostic? math-diagnostic-step math-diagnostic-rule
+            math-verification-derivation)
+  #:re-export (math-diagnostic? math-diagnostic-step math-diagnostic-rule
             math-diagnostic-path math-diagnostic-code
             math-diagnostic-premises math-diagnostic-message))
-
-(define-record-type <math-diagnostic>
-  (make-math-diagnostic step rule path code premises message)
-  math-diagnostic?
-  (step math-diagnostic-step)
-  (rule math-diagnostic-rule)
-  (path math-diagnostic-path)
-  (code math-diagnostic-code)
-  (premises math-diagnostic-premises)
-  (message math-diagnostic-message))
 
 (define-record-type <math-verification>
   (make-math-verification derivation diagnostics)
@@ -125,6 +116,11 @@
                     (list? steps) (list? assumptions)))
           (list (diagnostic #f #f '() 'invalid-chain "malformed term chain or assumptions"))
           (append
+            (append-map
+              (lambda (term)
+                (remove (lambda (item) (eq? (math-diagnostic-code item) 'type-error))
+                        (math-execution-diagnostics assumptions term)))
+              terms)
             (if (= (length terms) (+ (length steps) 1)) '()
                 (list (diagnostic #f #f '() 'chain-length
                         "term and step counts do not form a complete chain")))

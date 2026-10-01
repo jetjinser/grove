@@ -26,6 +26,7 @@
     "unit/grove/math.scm"
     "unit/grove/differentiation.scm"
     "unit/grove/arithmetic.scm"
+    "unit/grove/math-pass.scm"
     "unit/scribble/parse.scm"
     "unit/grove/build.scm"
     "unit/grove/state.scm"

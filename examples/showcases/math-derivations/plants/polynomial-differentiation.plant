@@ -5,7 +5,7 @@
 @title{Differentiate a polynomial, then simplify}
 @summary{Two separate passes with independently replayable provenance.}
 
-For a polynomial in independent scalar coordinates, Grove supports constants, variables, sums, differences, products and natural-number powers. Other declared coordinates are held constant. The first pass expands differentiation rules; the second removes neutral factors, zero products and trivial powers. It does not collect like terms or expand products into a canonical polynomial.
+For a polynomial in independent scalar coordinates, Grove supports exact integer and rational constants, variables, sums, differences, products and natural-number powers. Other declared coordinates are held constant. The first pass expands differentiation rules; the second computes constants, combines identical scalar terms and removes neutral factors, zero products and trivial powers. It does not expand products into a canonical polynomial.
 
 @heading{Automatic differentiation in two passes}
 @verbatim["@differentiate[\"x\" \"scalar(x)\"]{x^3 + 2*x}"]
@@ -17,6 +17,11 @@ The first table ends with the raw derivative. The second begins with exactly tha
 @differentiate["x" "scalar(x); scalar(y)"]{(x+y)^3}
 
 The power rule differentiates its base as well. Since y is an independent coordinate, its derivative with respect to x is zero. Parentheses around a sum used as a power base are preserved during rendering.
+
+@heading{Exact coefficients and repeated terms}
+@differentiate["x" "scalar(x)"]{(1/2)*x^2 + x*x}
+
+Rational coefficients remain exact. The product rule produces two copies of x; collection and coefficient calculation reduce the final expression to 3*x.
 
 @heading{Search from a derivative term to a target}
 @search-derive["scalar(x)" "3*x^2"]{differentiate(x^3,x)}
@@ -37,6 +42,14 @@ The symbolic derivative is an ordinary mathematical term. Goal search can theref
      (math-check-chain '("differentiate(x,x)" "2")
        #:assumptions '("scalar(x)"))))
 
-A claimed derivative of 2 fails replay against the variable rule. The automatic polynomial pass also rejects division, functions such as sin(x), and negative or symbolic exponents before producing a partial derivation. Bounds limit expansion size and step count; this is not an integration engine or a general computer algebra system.
+A claimed derivative of 2 fails replay against the variable rule. The automatic polynomial pass also rejects nonconstant division, functions such as sin(x), and negative or symbolic exponents before producing a partial derivation. Bounds limit expansion size and step count; this is not an integration engine or a general computer algebra system.
+
+@heading{Inspect an unfinished calculation}
+@(map paragraph
+   (map math-diagnostic-message
+     (math-report-diagnostics
+       (math-differentiate "x^3" "x" #:assumptions '("scalar(x)") #:max-steps 1))))
+
+The report preserves the first power-rule step and marks its step limit. Scheme code can inspect that partial certificate; the document command refuses to display it as a completed derivative.
 
 The same certificate machinery checks @link["vector-analysis"]{vector identities}.
