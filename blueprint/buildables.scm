@@ -23,6 +23,7 @@
     "grove/math/context.scm"
     "grove/math/types.scm"
     "grove/math/rule.scm"
+    "grove/math/catalog.scm"
     "grove/math/identities.scm"
     "grove/math/vector.scm"
     "grove/math/differentiation.scm"

@@ -1,0 +1,94 @@
+;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+;;; SPDX-License-Identifier: GPL-3.0-or-later
+
+(define-module (grove math catalog)
+  #:use-module (grove relation)
+  #:use-module (grove math rewrite)
+  #:use-module (grove math rule)
+  #:use-module (grove math layout)
+  #:use-module (grove math term)
+  #:use-module (grove ir)
+  #:use-module ((grove math notation core) #:prefix notation:)
+  #:use-module (ice-9 format)
+  #:use-module (ice-9 match)
+  #:use-module (srfi srfi-1))
+
+;; Query the finite registry without running a rewrite or inventing operands.
+(define catalog
+  (make-relation
+    (map (lambda (rule)
+           (list (math-rewrite-rule-name rule) (math-rewrite-rule-group rule)
+                 (math-rewrite-rule-modes rule))) math-rewrite-rules)
+    #:arity 3))
+
+(define-public (ruleo name group modes)
+  (relationo catalog name group modes))
+
+;; Metavariables are display placeholders, never concrete solver inputs.
+(define (template-term template)
+  (match template
+    (('unquote name) `(var ,name))
+    (('var ('unquote name)) `(var ,name))
+    (('num ('unquote name)) `(var ,name))
+    ((head . tail) (cons (template-term head) (template-term tail)))
+    (_ template)))
+
+(define (text value) (notation:token 'mtext value))
+(define (operator value) (notation:token 'mo value))
+(define (template-layout template)
+  (let ((term (template-term template)))
+    (if (math-term? term) (math-term->layout term)
+        (text (format #f "~s" template)))))
+
+(define (separate layouts)
+  (append-map (lambda (layout index)
+                (append (if (zero? index) '() (list (text "   "))) (list layout)))
+              layouts (iota (length layouts))))
+
+(define (type-guard? goal)
+  (and (pair? goal) (eq? (car goal) 'math-typeo) (= (length goal) 4)))
+
+(define (guard-layout goal)
+  (match goal
+    (('math-typeo facts operand ('quote type))
+     (notation:row (list (template-layout (list 'unquote operand))
+                         (operator ":") (text (symbol->string type)))))
+    (_ (text (format #f "~s" goal)))))
+
+(define-public (math-rule->content name)
+  (let ((rule (math-rewrite-rule-ref name)))
+    (unless rule (error "unknown math rule" name))
+    (let* ((schema (math-rewrite-rule-schema rule))
+           (premises (if schema (list-ref schema 2) '()))
+           (guards (if schema (list-ref schema 3) '()))
+           (types (filter type-guard? guards))
+           (checks (remove type-guard? guards))
+           (numerator
+             (append (map template-layout premises) (map guard-layout types)
+               (if (or (not schema) (and (null? premises) (null? types)))
+                   (list (text (math-rewrite-rule-condition rule))) '())
+               (cond ((not schema) (list (text "; algorithm applicability checked")))
+                     ((pair? checks) (list (text "; executable guards apply")))
+                     (else '()))))
+           (conclusion
+             (if schema
+                 (list (template-layout (car schema)) (operator "→")
+                       (template-layout (cadr schema)))
+                 (list (text (math-rewrite-rule-equation rule))))))
+      (make-content-element 'math-derivation
+        (append
+          (list (make-content-element 'paragraph (list (symbol->string name)) #:flow-kind 'block)
+                (notation:display-math
+                  (list (notation:frac (if (null? numerator) (list (text "—")) (separate numerator)) conclusion)
+                        (text (format #f "  [~a]" name))))
+                (make-content-element 'paragraph
+                  (list (format #f "Group: ~a. Modes: ~a. ~a Condition: ~a"
+                          (math-rewrite-rule-group rule) (math-rewrite-rule-modes rule)
+                          (if schema "Rewrite schema; metavariables denote terms."
+                              "Algorithm rule; this description is not a fixed rewrite schema.")
+                          (math-rewrite-rule-condition rule))) #:flow-kind 'block))
+          (if (null? checks) '()
+              (list (make-content-element 'details
+                      (list (make-content-element 'summary (list "Executable guards"))
+                            (make-content-element 'verbatim (list (format #f "~s" checks)) #:flow-kind 'block))
+                      #:flow-kind 'block)))) #:flow-kind 'block))))

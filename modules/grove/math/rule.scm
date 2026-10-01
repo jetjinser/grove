@@ -14,10 +14,10 @@
             math-rewrite-rule-condition math-rewrite-rule-condition-checked?
             math-rewrite-rule-group math-rewrite-rule-modes
             math-rewrite-rule-relation math-rewrite-rule-required-facts
-            math-rewrite-rule-backward-default?))
+            math-rewrite-rule-backward-default? math-rewrite-rule-schema))
 
 (define-record-type <math-rewrite-rule>
-  (%make-math-rewrite-rule name equation label condition checked? group relation modes backward matcher default?)
+  (%make-math-rewrite-rule name equation label condition checked? group relation modes backward matcher default? schema)
   math-rewrite-rule?
   (name math-rewrite-rule-name)
   (equation math-rewrite-rule-equation)
@@ -29,7 +29,8 @@
   (modes math-rewrite-rule-modes)
   (backward rule-backward)
   (matcher math-rewrite-rule-required-facts)
-  (default? math-rewrite-rule-backward-default?))
+  (default? math-rewrite-rule-backward-default?)
+  (schema math-rewrite-rule-schema))
 
 ;; The same quasiquoted left side used by the relation is its diagnostic
 ;; pattern. Repeated placeholders must bind structurally identical terms.
@@ -55,7 +56,7 @@
 (define* (make-math-rewrite-rule name equation condition group relation
                                #:key (pattern #f) (premises '()) (matcher #f)
                                (forward? #t) (backward #f) (backward-default? #f)
-                               (condition-checked? #t) (label #f))
+                               (condition-checked? #t) (label #f) (schema #f))
   (unless (and (symbol? name) (string? equation) (string? condition)
                (or (not label) (string? label))
                (symbol? group) (procedure? relation)
@@ -73,7 +74,7 @@
     (or matcher (lambda (term)
                   (let ((bindings (match-pattern pattern term '())))
                     (and bindings (instantiate premises bindings)))))
-    backward-default?))
+    backward-default? schema))
 
 (define (math-rewrite-rule-relation rule mode)
   (and (memq mode (math-rewrite-rule-modes rule))
@@ -114,4 +115,5 @@
            (== output (quasiquote right))
            (math-factso assumptions (quasiquote premises))
            goal ...))
-       #:pattern (quote left) #:premises (quote premises) option ...))))
+       #:pattern (quote left) #:premises (quote premises)
+       #:schema (quote (left right premises (goal ...))) option ...))))
