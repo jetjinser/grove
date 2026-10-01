@@ -48,6 +48,7 @@
     "unit/grove/math-laplacian.scm"
     "unit/grove/math-component-algebra.scm"
     "unit/grove/math-cartesian-oracle.scm"
+    "unit/grove/math-order.scm"
     "unit/scribble/parse.scm"
     "unit/grove/build.scm"
     "unit/grove/state.scm"

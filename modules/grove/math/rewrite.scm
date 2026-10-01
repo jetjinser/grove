@@ -4,6 +4,7 @@
 (define-module (grove math rewrite)
   #:use-module (grove relation)
   #:use-module (grove math rule)
+  #:use-module (grove math term)
   #:use-module (grove math vector)
   #:use-module (grove math identities)
   #:use-module (grove math arithmetic)
@@ -16,7 +17,7 @@
   #:export (rewriteo rewrite-stepo check-stepo unrewrite-rooto unrewrite-stepo
             math-rewrite-rules math-simplification-rules math-calculation-rules
             math-collection-rules math-backward-rules math-rewrite-rule-ref
-            math-rule-names math-default-rules
+            math-rule-names math-default-rules math-rewrite-innermost
             math-rule-required-facts math-selected-rules math-rewrite-answers
             rewrite-curl-curl)
   #:re-export (curl-curlo math-rewrite-rule? math-rewrite-rule-name
@@ -109,6 +110,36 @@
       ((backward) (step-in-modeo assumptions next term rule path mode (map math-rewrite-rule-ref rules)))
       ((check forward) (step-in-modeo assumptions term next rule path mode (map math-rewrite-rule-ref rules)))
       (else (error "unknown math query mode" mode)))))
+
+(define (math-rewrite-innermost assumptions term names)
+  "Choose one innermost forward edge, using the ordinary checked relations."
+  (define rules (map math-rewrite-rule-ref names))
+  (define (paths term)
+    (append
+      (if (memq (car term) '(var num zero)) '()
+          (append-map (lambda (child index)
+                        (map (lambda (path) (cons index path)) (paths child)))
+                      (cdr term) (iota (length (cdr term)))))
+      '(())))
+  (define (replace term path replacement)
+    (if (null? path) replacement
+        (cons (car term)
+          (map (lambda (child index)
+                 (if (= index (car path)) (replace child (cdr path) replacement) child))
+               (cdr term) (iota (length (cdr term)))))))
+  (let visit ((remaining (paths term)))
+    (and (pair? remaining)
+         (let* ((path (car remaining)) (local (math-term-at-path term path))
+                (answer
+                  (any
+                    (lambda (rule)
+                      (and ((math-rewrite-rule-required-facts rule) local)
+                           (let ((results (run 1 (output)
+                                            ((math-rewrite-rule-relation rule 'forward) assumptions local output))))
+                             (and (pair? results)
+                                  (list (replace term path (car results)) (math-rewrite-rule-name rule) path)))))
+                    rules)))
+           (or answer (visit (cdr remaining)))))))
 
 (define* (rewrite-curl-curl term #:key (assumptions '()))
   (let ((answers (run 1 (result) (curl-curlo assumptions term result))))

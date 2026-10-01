@@ -247,7 +247,7 @@ Unknown field derivatives remain explicit; no abstract field components are inve
       `((components . ,(math-rule-names #:groups '(components spatial)))
         (partial . ,(append math-simplification-rules math-partial-rules))
         (simplify . ,math-simplification-rules))
-      #:name 'compute #:max-steps max-steps #:max-term-size max-term-size
+      #:name 'compute #:order 'innermost #:max-steps max-steps #:max-term-size max-term-size
       #:validate-final
       (lambda (term)
         (filter-map

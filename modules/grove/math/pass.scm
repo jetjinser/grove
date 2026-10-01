@@ -35,10 +35,12 @@
 ;; include an oversized/ill-typed edge. Cycle detection is independent of size.
 (define* (run-math-pass input assumptions #:key name rules
                         (max-steps 32) (max-term-size 2048)
+                        (order 'relational)
                         (validate (lambda (term) '())))
   (check-math-bound 'max-steps max-steps 0)
   (check-math-bound 'max-term-size max-term-size 1)
   (unless (math-term? input) (error "invalid math term" input))
+  (unless (memq order '(relational innermost)) (error "unknown rewrite order" order))
   (let ((rules (math-selected-rules rules math-default-rules)))
     (define (finish terms steps reason count diagnostics)
       (make-math-report name
@@ -57,7 +59,10 @@
            (finish terms steps 'term-size-limit count
              (list (execution-diagnostic 'term-size-limit "term-size limit reached" '()))))
           (else
-           (let ((answers (math-rewrite-answers assumptions current rules #f #:max-results 1)))
+           (let ((answers (if (eq? order 'innermost)
+                              (let ((answer (math-rewrite-innermost assumptions current rules)))
+                                (if answer (list answer) '()))
+                              (math-rewrite-answers assumptions current rules #f #:max-results 1))))
              (cond
                ((null? answers) (finish terms steps 'normal-form count '()))
                ((= count max-steps)
@@ -85,6 +90,7 @@
 ;; the aggregate certificate joins boundaries without inventing transitions.
 (define* (run-math-passes input assumptions stages #:key name
                           (max-steps 32) (max-term-size 2048)
+                          (order 'relational)
                           (validate-final (lambda (term) '())))
   (check-math-bound 'max-steps max-steps 0)
   (check-math-bound 'max-term-size max-term-size 1)
@@ -97,6 +103,7 @@
             '() count #:passes (reverse passes) #:diagnostics diagnostics))
         (let* ((stage (car stages))
                (report (run-math-pass current assumptions #:name (car stage) #:rules (cdr stage)
+                         #:order order
                          #:max-steps max-steps #:max-term-size max-term-size))
                (certificate (math-report-derivation report))
                (terms (append terms (cdr (math-derivation-terms certificate))))
