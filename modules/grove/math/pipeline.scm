@@ -48,7 +48,7 @@
                math-derivation-assumptions math-derivation-sources math-derivation-requirements
                math-report? math-report-candidates
                math-report-reason math-report-limits
-               math-report-states math-report-complete? math-report-name
+               math-report-states math-report-complete? math-report-status math-report-unresolved math-report-name
                math-report-diagnostics math-report-passes math-report-derivation math-report-final))
 
 (define (math-source->term source)
@@ -91,15 +91,17 @@
 
 (define (math-report-result report)
   (let ((term (math-report-final report)))
-    (and term (make-math-value term
+    (and (math-report-complete? report) term (make-math-value term
                 #:requirements (math-derivation-requirements (math-report-derivation report))
                 #:origin (let ((sources (math-derivation-sources (math-report-derivation report))))
                            (and (pair? sources) (last sources)))
                 #:properties `((assumptions . ,(math-derivation-assumptions (math-report-derivation report))))))))
 
 (define (derivative-report name rules source variable assumptions validate max-steps max-term-size)
-  (let* ((expression (math-source->term source))
-         (coordinate (math-source->term variable))
+  (let* ((source (semantic:expression source))
+         (variable (semantic:expression variable))
+         (expression (math-value-term source))
+         (coordinate (math-value-term variable))
          (facts (math-assumptions assumptions))
          (diagnostics (validate expression coordinate facts))
          (input `(,name ,expression ,coordinate)))
@@ -113,9 +115,9 @@
             #:max-steps max-steps #:max-term-size max-term-size
             #:validate (lambda (term) diagnostics)))
       (make-math-value input
-        #:requirements (math-value-requirements (semantic:expression source))
-        #:origin (math-branch-origin (list (math-value-origin (semantic:expression source))
-                                          (math-value-origin (semantic:expression variable))))))))
+        #:requirements (math-value-requirements source)
+        #:origin (math-branch-origin (list (math-value-origin source)
+                                          (math-value-origin variable)))))))
 
 (define* (math-differentiate source variable #:key (assumptions '())
                               (max-steps 128) (max-term-size 2048))
@@ -296,7 +298,10 @@ No boundary conditions or uniqueness claim. The selected axis fixes one solution
       (catch 'polynomial-limit
         (lambda ()
           (math-term->polynomial term facts)
-          (list (make-math-diagnostic #f #f '() 'equation-not-proven '()
+          (list (make-math-diagnostic #f #f
+                  (or (find (lambda (path)
+                              (memq (car (math-term-at-path term path)) '(differentiate partial prime)))
+                            (math-term-paths term)) '()) 'equation-not-proven '()
                   "The equation has a nonzero or unresolved residual; equality was not established")))
         (lambda (key message)
           (list (make-math-diagnostic #f #f '() 'polynomial-limit '() message))))))

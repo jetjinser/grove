@@ -121,7 +121,11 @@
                        (list (make-content-element 'paragraph
                                (list (string-capitalize (symbol->string (math-report-name pass)))) #:flow-kind 'block)
                              (chain-content (math-report-derivation pass) #f))) passes)))))
-        (list (display-certificate certificate view full-content)))))
+        (append (list (display-certificate certificate view full-content))
+          (if (eq? (math-report-status report) 'symbolic)
+              (list (make-content-element 'paragraph
+                      '("Symbolic result: unevaluated derivatives remain.") #:flow-kind 'block))
+              '())))))
 
 (define (reason-label reason)
   (case reason ((exhausted) "finished") ((normal-form) "complete")
