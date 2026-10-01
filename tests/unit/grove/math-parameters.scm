@@ -39,7 +39,7 @@
                           (evaluate (math-derivation-step-to step) env)))
                       (math-derivation-steps (math-report-derivation primitive)))))
         '((2 3) (-2 5) (1/2 -3/4)))))
-  '("x^2/a" "y^2/(a+b)" "x/a+y/b" "x/(a/b)" "(x/a+y/b)^2"))
+  '("x^2/a" "y^2/(a+b)" "x/a+y/b" "x/(a/b)" "(x/a+y/b)^2" "(x/(a+b))^2"))
 (test-equal "parameter rational equality verifies by exact residual" 'complete
   (math-report-status (math-check-equation "x/a+x/b" "x*(a+b)/(a*b)" #:assumptions facts)))
 (for-each (lambda (source)
