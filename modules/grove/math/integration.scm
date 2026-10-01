@@ -77,6 +77,6 @@
     (lambda ()
       (if (polynomial-result facts input) '()
           (list (make-math-diagnostic #f #f '() 'unsupported-expression '()
-                  "This pass requires an exact scalar polynomial in explicit coordinates/parameters and numeric nonzero denominators; Poisson also requires a Cartesian space containing the selected coordinate"))))
+                  "This pass requires an exact scalar polynomial in explicit coordinates/parameters and nonzero parameter-only denominators; Poisson also requires a Cartesian space containing the selected coordinate"))))
     (lambda (key message)
       (list (make-math-diagnostic #f #f '() 'polynomial-limit '() message)))))

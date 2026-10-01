@@ -22,7 +22,7 @@
                              (let ((space (find math-space-declaration? facts)))
                                (if space (list space) '())))
                             (else '()))
-                      (if (memq (car local) '(partial antiderivative poisson grad div curl laplacian))
+                      (if (memq (car local) '(partial darg antiderivative poisson grad div curl laplacian /))
                           (let ((variables (map (lambda (path) (math-term-at-path local path))
                                                 (math-term-paths local))))
                             (filter (lambda (fact)

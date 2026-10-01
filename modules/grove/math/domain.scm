@@ -17,7 +17,7 @@
     (lambda ()
       (and (not (math-term->polynomial (cadr term) assumptions))
            (make-math-diagnostic #f #f path 'unsupported-expression '()
-             "Polynomial calculus requires exact scalar polynomials in independent coordinates/parameters and numeric nonzero denominators")))
+             "Polynomial calculus requires exact scalar polynomials in independent coordinates/parameters and nonzero parameter-only denominators")))
     (lambda (key message)
       (make-math-diagnostic #f #f path 'polynomial-limit '() message))))
 
