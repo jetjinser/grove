@@ -4,9 +4,12 @@
 (use-modules (grove math proof)
              ((grove math formula) #:prefix φ:)
              (grove math derivation)
+             (grove math pipeline)
              (grove math rewrite)
+             ((grove math semantic) #:prefix ◆:)
              (grove math semantic-check)
              (grove math verification)
+             (srfi srfi-1)
              (srfi srfi-64))
 
 (test-begin "math proof IR and checker")
@@ -84,10 +87,17 @@
                         #:assumptions '("scalar(x)") #:steps '(add-zero)))
          (derivation (math-verification-derivation verification))
          (proof (math-proof-from-derivation derivation))
+         (elaboration (math-proof-elaborate-derivation derivation))
+         (step-report (car (math-proof-derivation-report-steps elaboration)))
          (checked (and proof
                        (math-proof-check proof
                          (math-derivation-assumptions derivation)))))
     (and (math-verification-valid? verification)
+         (eq? 'checked (math-proof-derivation-report-status elaboration))
+         (eq? 'add-zero (math-proof-step-report-rule step-report))
+         (eq? 'semantically-checked
+              (math-proof-step-report-theorem-status step-report))
+         (eq? 'checked (math-proof-step-report-status step-report))
          (math-proof-result-valid? checked)
          (equal? (math-proof-result-left checked) '(+ (var x) (num "0")))
          (equal? (math-proof-result-right checked) '(var x)))))
@@ -99,10 +109,15 @@
              #:steps '(cancel-common-factor)))
          (derivation (math-verification-derivation verification))
          (proof (math-proof-from-derivation derivation))
+         (elaboration (math-proof-elaborate-derivation derivation))
+         (step-report (car (math-proof-derivation-report-steps elaboration)))
          (checked (and proof
                        (math-proof-check proof
                          (math-derivation-assumptions derivation)))))
     (and (math-verification-valid? verification)
+         (eq? 'checked (math-proof-step-report-status step-report))
+         (equal? (math-proof-step-report-premises step-report)
+                 '((nonzero (var a))))
          (math-proof-result-valid? checked)
          (equal? (math-proof-result-left checked)
                  '(/ (* (var x) (var a)) (var a)))
@@ -114,5 +129,45 @@
       (math-proof-rule-instance 'cancel-common-factor
         '((value . (var x)) (factor . (var a))) '())
       '((scalar (var x)) (scalar (var a))))))
+
+(test-equal "elaboration keeps theorem failures visible for algorithm steps"
+  'unsupported
+  (let* ((x (◆:coordinate 'x))
+         (p (◆:add (◆:power x (◆:constant 3))
+                   (◆:multiply (◆:constant 2) x)))
+         (calculation (math-differentiate p x #:assumptions (list x)))
+         (elaboration
+           (math-proof-elaborate-derivation
+             (math-report-derivation calculation)))
+         (steps (math-proof-derivation-report-steps elaboration))
+         (status-of
+           (lambda (name)
+             (let ((step (find (lambda (candidate)
+                                 (eq? name (math-proof-step-report-rule candidate)))
+                         steps)))
+               (and step
+                    (list (math-proof-step-report-theorem-status step)
+                          (math-proof-step-report-status step)))))))
+    (and (math-report-complete? calculation)
+         (equal? (map status-of '(differentiate-power multiply-one normalize-scalar))
+                 '((unsupported unsupported)
+                   (semantically-checked checked)
+                   (unsupported unsupported)))
+         (eq? 'unsupported (math-proof-derivation-report-status elaboration))
+         (not (math-proof-derivation-report-proof elaboration))
+         (math-proof-derivation-report-status elaboration))))
+(test-equal "a forged derivation edge is rejected with its step location"
+  '(rejected 0)
+  (let* ((source (φ:term "x+0"))
+         (target (φ:term "y"))
+         (derivation
+           (make-math-derivation
+             (list source target)
+             (list (make-math-derivation-step source target 'add-zero '()))
+             scalar-x))
+         (report (math-proof-elaborate-derivation derivation))
+         (step (car (math-proof-derivation-report-steps report))))
+    (list (math-proof-derivation-report-status report)
+          (math-proof-step-report-index step))))
 
 (test-end "math proof IR and checker")

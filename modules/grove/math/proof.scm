@@ -16,7 +16,15 @@
             math-proof-congruence
             math-proof-result? math-proof-result-status math-proof-result-valid?
             math-proof-result-left math-proof-result-right math-proof-result-errors
-            math-proof-check math-proof-from-derivation))
+            math-proof-check math-proof-from-derivation
+            math-proof-elaborate-derivation
+            math-proof-step-report? math-proof-step-report-index
+            math-proof-step-report-rule math-proof-step-report-premises
+            math-proof-step-report-theorem-status math-proof-step-report-status
+            math-proof-step-report-errors math-proof-step-report-proof
+            math-proof-derivation-report? math-proof-derivation-report-status
+            math-proof-derivation-report-steps math-proof-derivation-report-proof
+            math-proof-derivation-report-errors))
 
 ;; Proof nodes record just the inference being justified. They are distinct
 ;; from math-derivation, which records how a search or rewrite pass proceeded.
@@ -56,6 +64,25 @@
   (and (math-proof-result? result)
        (eq? (math-proof-result-status result) 'checked)))
 
+(define-record-type <math-proof-step-report>
+  (make-math-proof-step-report index rule premises theorem-status status errors proof)
+  math-proof-step-report?
+  (index math-proof-step-report-index)
+  (rule math-proof-step-report-rule)
+  (premises math-proof-step-report-premises)
+  (theorem-status math-proof-step-report-theorem-status)
+  (status math-proof-step-report-status)
+  (errors math-proof-step-report-errors)
+  (proof math-proof-step-report-proof))
+
+(define-record-type <math-proof-derivation-report>
+  (make-math-proof-derivation-report status steps proof errors)
+  math-proof-derivation-report?
+  (status math-proof-derivation-report-status)
+  (steps math-proof-derivation-report-steps)
+  (proof math-proof-derivation-report-proof)
+  (errors math-proof-derivation-report-errors))
+
 (define (proof-error status message)
   (throw 'math-proof-error status message))
 
@@ -83,7 +110,7 @@
                                     (car remaining))
                                 result)))))))))
 
-(define (guard-type-bindings guards substitution)
+(define (guard-type-bindings guards substitution assumptions)
   (filter-map
     (lambda (guard)
       (match guard
@@ -92,6 +119,11 @@
            (cond ((equal? value '(num "0")) (cons type 'scalar))
                  ((equal? value '(zero vector)) (cons type 'vector))
                  (else #f))))
+        (('math-typeo _ term type)
+         (and (symbol? type)
+              (let* ((value (substitution-ref substitution term))
+                     (inferred (and value (math-infer-type assumptions value))))
+                (and inferred (cons type (math-typed-term-type inferred))))))
         (_ #f)))
     guards))
 
@@ -116,6 +148,8 @@
     (('=/= left right)
      (not (equal? (instantiate-guard left substitution)
                   (instantiate-guard right substitution))))
+    (('conde ((== type ('quote first))) ((== type ('quote second))))
+     (memq (assq-ref type-bindings type) (list first second)))
     (_ (proof-error 'unsupported (format #f "opaque rule guard: ~s" guard)))))
 
 (define (check-rule-instance fields assumptions)
@@ -150,7 +184,7 @@
                            (proof-error 'rejected
                              (format #f "missing rule premise: ~s" premise))))
                      premises))
-              (type-bindings (guard-type-bindings guards substitution)))
+              (type-bindings (guard-type-bindings guards substitution assumptions)))
          (unless (and (every (lambda (name) (memq name actual-names)) expected-names)
                       (every (lambda (name) (memq name expected-names)) actual-names))
            (proof-error 'rejected "substitution does not match the rule's metavariables"))
@@ -243,61 +277,128 @@
     ((head . tail) (append (template-variables head) (template-variables tail)))
     (_ '())))
 
-(define (build-step-proof step assumptions)
-  (unless (math-derivation-step? step) (throw 'math-proof-build-failed))
-  (let* ((from (math-derivation-step-from step))
-         (to (math-derivation-step-to step))
-         (path (math-derivation-step-path step))
-         (name (math-derivation-step-rule step))
-         (rule (and (symbol? name) (math-rewrite-rule-ref name)))
-         (spec (and rule (math-rewrite-rule-spec rule)))
-         (local (and (math-term? from) (math-term-at-path from path)))
-         (substitution (and spec local (math-rule-spec-match spec local))))
-    (unless (and spec substitution (math-term? to)) (throw 'math-proof-build-failed))
-    (unless (math-semantic-check-valid? (math-polynomial-check-rule name))
-      (throw 'math-proof-build-failed))
-    (let* ((expected-names (delete-duplicates
-                             (template-variables (math-rule-spec-left spec))))
-           (actual-names (delete-duplicates (map car substitution)))
-           (right (math-rule-spec-instantiate spec (math-rule-spec-right spec) substitution))
-           (premises (math-rule-spec-instantiate spec (math-rule-spec-premises spec) substitution))
-           (premise-proofs
-             (map (lambda (premise)
-                    (let ((index (list-index (lambda (fact) (equal? fact premise)) assumptions)))
-                      (unless index (throw 'math-proof-build-failed))
-                      (math-proof-premise index))) premises))
-           (rule-proof (math-proof-rule-instance name substitution premise-proofs)))
-      (unless (and (every (lambda (name) (memq name actual-names)) expected-names)
-                   (every (lambda (name) (memq name expected-names)) actual-names)
-                   (equal? (math-term-at-path to path) right)
-                   (equal? (replace-at-path from path right) to))
-        (throw 'math-proof-build-failed))
-      (math-proof-congruence from to path rule-proof))))
+(define (failed-step-report index step theorem-status status message)
+  (make-math-proof-step-report index
+    (and (math-derivation-step? step) (math-derivation-step-rule step))
+    '() theorem-status status (list message) #f))
 
-(define (math-proof-from-derivation derivation)
-  "Elaborate a fixed-RuleSpec rewrite trace as a candidate proof tree.
-Unsupported algorithm steps return #f and require another proof frontend."
+(define (elaborate-step index step from to assumptions)
+  (if (not (and (math-derivation-step? step)
+                (equal? from (math-derivation-step-from step))
+                (equal? to (math-derivation-step-to step))))
+      (failed-step-report index step 'rejected 'rejected
+        "derivation step endpoints do not match the surrounding chain")
+      (let* ((path (math-derivation-step-path step))
+             (name (math-derivation-step-rule step))
+             (rule (and (symbol? name) (math-rewrite-rule-ref name)))
+             (spec (and rule (math-rewrite-rule-spec rule))))
+        (cond
+          ((not rule)
+           (failed-step-report index step 'rejected 'rejected "unknown rewrite rule"))
+          ((not spec)
+           (failed-step-report index step 'unsupported 'unsupported
+             "rule has no fixed RuleSpec to elaborate"))
+          (else
+           (let* ((theorem-check (math-polynomial-check-rule name))
+                  (theorem-status (math-semantic-check-status theorem-check))
+                  (local (and (math-term? from) (list? path)
+                              (math-term-at-path from path)))
+                  (substitution (and local (math-rule-spec-match spec local)))
+                  (premises (and substitution
+                                 (math-rule-spec-instantiate
+                                   spec (math-rule-spec-premises spec) substitution)))
+                  (expected-names
+                    (delete-duplicates (template-variables (math-rule-spec-left spec))))
+                  (actual-names (if substitution (delete-duplicates (map car substitution)) '())))
+             (cond
+               ((not (math-semantic-check-valid? theorem-check))
+                (make-math-proof-step-report index name (or premises '()) theorem-status
+                  (if (eq? theorem-status 'rejected) 'rejected 'unsupported)
+                  (math-semantic-check-diagnostics theorem-check) #f))
+               ((not substitution)
+                (make-math-proof-step-report index name '() theorem-status 'rejected
+                  (list "step input does not match the registered RuleSpec") #f))
+               ((not (and (every (lambda (variable) (memq variable actual-names)) expected-names)
+                          (every (lambda (variable) (memq variable expected-names)) actual-names)))
+                (make-math-proof-step-report index name premises theorem-status 'rejected
+                  (list "RuleSpec metavariables do not match the instantiated step") #f))
+               (else
+                (let* ((application-check
+                         (math-polynomial-check-step assumptions from to name path))
+                       (premise-proofs
+                         (map (lambda (premise)
+                                (let ((position
+                                        (list-index (lambda (fact) (equal? fact premise))
+                                          assumptions)))
+                                  (and position (math-proof-premise position))))
+                           premises)))
+                  (cond
+                    ((not (math-semantic-check-valid? application-check))
+                     (make-math-proof-step-report index name premises theorem-status
+                       (if (eq? (math-semantic-check-status application-check) 'rejected)
+                           'rejected 'unsupported)
+                       (math-semantic-check-diagnostics application-check) #f))
+                    ((any not premise-proofs)
+                     (make-math-proof-step-report index name premises theorem-status 'rejected
+                       (list "a declared rule premise is absent from the derivation assumptions") #f))
+                    (else
+                     (let* ((rule-proof
+                              (math-proof-rule-instance name substitution premise-proofs))
+                            (proof (math-proof-congruence from to path rule-proof))
+                            (checked (math-proof-check proof assumptions)))
+                       (make-math-proof-step-report index name premises theorem-status
+                         (math-proof-result-status checked)
+                         (math-proof-result-errors checked)
+                         (and (math-proof-result-valid? checked) proof))))))))))))))
+
+(define (combine-report-status reports)
+  (cond ((any (lambda (report) (eq? 'rejected (math-proof-step-report-status report))) reports)
+         'rejected)
+        ((any (lambda (report) (eq? 'unsupported (math-proof-step-report-status report))) reports)
+         'unsupported)
+        (else 'checked)))
+
+(define (math-proof-elaborate-derivation derivation)
+  "Elaborate and check each derivation step, retaining partial status and dependencies."
   (unless (math-derivation? derivation)
     (error "expected a math derivation" derivation))
-  (catch 'math-proof-build-failed
-    (lambda ()
-      (let ((terms (math-derivation-terms derivation))
-            (steps (math-derivation-steps derivation))
-            (assumptions (math-derivation-assumptions derivation)))
-        (unless (and (list? terms) (pair? terms) (every math-term? terms)
-                     (list? steps) (list? assumptions)
-                     (= (length terms) (+ (length steps) 1)))
-          (throw 'math-proof-build-failed))
-        (let ((proofs
-                (map (lambda (step from to)
-                       (unless (and (math-derivation-step? step)
-                                    (equal? from (math-derivation-step-from step))
-                                    (equal? to (math-derivation-step-to step)))
-                         (throw 'math-proof-build-failed))
-                       (build-step-proof step assumptions))
-                     steps (drop-right terms 1) (cdr terms))))
-          (if (null? proofs) (math-proof-reflexivity (car terms))
-              (fold (lambda (next accumulated)
-                      (math-proof-transitivity accumulated next))
-                    (car proofs) (cdr proofs))))))
-    (lambda _ #f)))
+  (let ((terms (math-derivation-terms derivation))
+        (steps (math-derivation-steps derivation))
+        (assumptions (math-derivation-assumptions derivation)))
+    (if (not (and (list? terms) (pair? terms) (every math-term? terms)
+                  (list? steps) (list? assumptions)
+                  (= (length terms) (+ (length steps) 1))))
+        (make-math-proof-derivation-report 'rejected '() #f
+          (list "malformed derivation structure"))
+        (let* ((assumption-errors (math-assumption-diagnostics assumptions))
+               (reports
+                 (map elaborate-step (iota (length steps)) steps
+                   (drop-right terms 1) (cdr terms)
+                   (make-list (length steps) assumptions)))
+               (status (combine-report-status reports)))
+          (cond
+            ((pair? assumption-errors)
+             (make-math-proof-derivation-report 'rejected reports #f
+               (list (format #f "invalid derivation assumptions: ~s" assumption-errors))))
+            ((not (eq? 'checked status))
+             (make-math-proof-derivation-report status reports #f
+               (append-map math-proof-step-report-errors reports)))
+            (else
+             (let* ((proofs (map math-proof-step-report-proof reports))
+                    (proof (if (null? proofs)
+                               (math-proof-reflexivity (car terms))
+                               (fold (lambda (next accumulated)
+                                       (math-proof-transitivity accumulated next))
+                                 (car proofs) (cdr proofs)))))
+               (let ((checked (math-proof-check proof assumptions)))
+                 (if (math-proof-result-valid? checked)
+                     (make-math-proof-derivation-report 'checked reports proof '())
+                     (make-math-proof-derivation-report
+                       (math-proof-result-status checked) reports #f
+                        (math-proof-result-errors checked)))))))))))
+
+(define (math-proof-from-derivation derivation)
+  "Return the checked proof for a fully supported derivation, or #f."
+  (let ((report (math-proof-elaborate-derivation derivation)))
+    (and (eq? 'checked (math-proof-derivation-report-status report))
+         (math-proof-derivation-report-proof report))))
