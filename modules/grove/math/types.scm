@@ -115,8 +115,8 @@
        (operand-typeso assumptions rest remaining)))))
 
 (define (math-infer-type assumptions term)
-  ;; Ground validation is bottom-up and memoized. The relational API remains
-  ;; available for synthesis; both use the same operator signature registry.
+  ;; Ground validation is bottom-up and memoized; math-typeo also supports
+  ;; relational synthesis. Parity tests keep these evaluation paths aligned.
   (define cache (make-hash-table))
   (define (types term)
     (or (hash-ref cache term #f)

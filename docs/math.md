@@ -130,9 +130,10 @@ Formula DSL accepts identifiers, integer numerals, function calls,
 parenthesized groups, unary minus, power notation (`x^2`),
 and `=`, `+`, `-`/`−`, `*`/`×`, and `/` with conventional precedence.
 Embedded Semantic DSL objects are atomic operands, not strings to reparse.
-Implicit multiplication and ambiguous subscripts are rejected. Subscript
-layout and aligned tables belong to Notation DSL; an indexed mathematical
-operation will need its own explicit semantic definition.
+Numeric-coefficient juxtaposition is the only implicit multiplication form;
+the details and ambiguous cases are described below. Subscript layout and
+aligned tables belong to Notation DSL; an indexed mathematical operation
+needs its own explicit semantic definition.
 
 `@derive{...}` applies available relations repeatedly to the expression and
 shows each intermediate term, joined with equality signs. Each transition is
