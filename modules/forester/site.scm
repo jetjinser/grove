@@ -313,7 +313,7 @@
 
 (define-record-type <forest>
   (%make-forest site pages reference-index heading-index reference-relation
-                composition page-relation content-node-relation
+                composition page-index page-relation content-node-relation
                 content-node-index)
   forest?
   (site site)
@@ -322,6 +322,7 @@
   (heading-index heading-index)
   (reference-relation reference-relation)
   (composition composition)
+  (page-index page-index)
   (page-relation page-relation)
   (content-node-relation content-node-relation)
   (content-node-index content-node-index))
@@ -436,6 +437,10 @@
                        #:title (site-title site)
                        #:description (site-description site)
                        #:sources (site-sources site)))
+         (page-index (make-hash-table))
+         (_ (for-each (lambda (page)
+                        (hash-set! page-index (site-page-id page) page))
+                      pages))
          (heading-index
            (map (lambda (page)
                   (let* ((elements
@@ -467,11 +472,7 @@
                                 (page-id-from-link target))
                               (fragment (fragment-from-link target))
                               (target-page
-                                (find
-                                  (lambda (page)
-                                    (equal? target-page-id
-                                            (site-page-id page)))
-                                  pages)))
+                                (hash-ref page-index target-page-id)))
                          (unless target-page
                            (error
                              (format #f
@@ -528,10 +529,7 @@
                              (format #f
                                "invalid Forester transclusion ~a in tree ~a (~a): ~s"
                                transclusion-id source-id source-path target-id)))
-                         (unless (find
-                                   (lambda (page)
-                                     (equal? target-id (site-page-id page)))
-                                   pages)
+                         (unless (hash-ref page-index target-id)
                            (error
                              (format #f
                                "unresolved Forester transclusion ~a in tree ~a (~a): target ~a"
@@ -579,13 +577,12 @@
              (append-map cdr transclusion-index)))
          (_ (validate-composition-cycles! pages composition)))
     (%make-forest site pages reference-index heading-index
-                  reference-relation composition page-relation
+                  reference-relation composition page-index page-relation
                   (car content-node-state)
                   (cadr content-node-state))))
 
 (define (find-page forest id)
-  (or (find (lambda (page) (equal? id (site-page-id page)))
-            (pages forest))
+  (or (hash-ref (page-index forest) id)
       (error "unknown forest page" id)))
 
 (define (subtree-definitions forest)
