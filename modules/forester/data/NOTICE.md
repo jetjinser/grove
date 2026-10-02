@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 # Lorem Ipsum text
 
 `lipsum-la.txt` is redistributed unchanged from the `lipsum` LaTeX package:
