@@ -25,7 +25,7 @@
   #:use-module (grove site))
 
 (define project-root
-  (format #f "/tmp/forester-project-test-~a" (getpid)))
+  (mkdtemp "/tmp/forester-project-test-XXXXXX"))
 (define source-directory (string-append project-root "/source"))
 (define module-directory (string-append project-root "/modules"))
 (define mathematics-directory (string-append source-directory "/mathematics"))
@@ -54,7 +54,6 @@
 
 (dynamic-wind
   (lambda ()
-    (mkdir project-root)
     (mkdir source-directory)
     (mkdir module-directory)
     (mkdir mathematics-directory)
