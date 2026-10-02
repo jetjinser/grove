@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math formula)
+  #:use-module (grove ir)
   #:use-module ((grove math formula reader) #:prefix reader:)
   #:use-module ((grove math semantic) #:prefix semantic:)
   #:use-module ((grove math pipeline) #:prefix core:)
@@ -99,11 +100,14 @@
 (define-public derive
   (lambda* (source #:key (assumptions '()) (rules #f) (max-steps 32)
                    (max-term-size 2048) (view 'compact) (on-error 'raise))
-    (math-completed-report->content
-      (core:math-derive (read source)
-        #:assumptions (parse-assumptions (list assumptions)) #:rules rules
-        #:max-steps max-steps #:max-term-size max-term-size)
-      #:view view #:on-error on-error)))
+    (let ((content
+            (math-completed-report->content
+              (core:math-derive (read source)
+                #:assumptions (parse-assumptions (list assumptions)) #:rules rules
+                #:max-steps max-steps #:max-term-size max-term-size)
+              #:view view #:on-error on-error)))
+      (if (null? (cdr content)) (car content)
+          (make-content-element 'math-diagnostics content #:flow-kind 'block)))))
 
 (define-public rewrite
   (lambda* (source #:key (assumptions '()) (rules #f) (max-steps 32) (max-term-size 2048))
