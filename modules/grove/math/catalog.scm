@@ -4,6 +4,7 @@
 (define-module (grove math catalog)
   #:use-module (grove relation)
   #:use-module (grove math rewrite)
+  #:use-module (grove math semantic-check)
   #:use-module (grove math rule)
   #:use-module (grove math layout)
   #:use-module (grove math term)
@@ -39,6 +40,19 @@ Every argument may be unknown."
 (define-public (rule-modeo name mode)
   "Relate a registered rule to each execution mode it supports."
   (relationo mode-catalog name mode))
+
+(define semantic-check-catalog
+  (make-relation
+    (map (lambda (rule)
+           (list (math-rewrite-rule-name rule)
+                 (math-semantic-check-status
+                   (math-polynomial-check-rule (math-rewrite-rule-name rule)))))
+         math-rewrite-rules)
+    #:arity 2))
+
+(define-public (rule-semantic-checko name status)
+  "Relate each registered rule to its scalar-polynomial checker status."
+  (relationo semantic-check-catalog name status))
 
 (define (schema-operators term)
   (if (not (pair? term)) '()
@@ -130,7 +144,9 @@ Every argument may be unknown."
              (if schema
                  (list (template-layout (car schema)) (operator "→")
                        (template-layout (cadr schema)))
-                 (list (text (math-rewrite-rule-equation rule))))))
+                 (list (text (math-rewrite-rule-equation rule)))))
+           (semantic-status
+             (math-semantic-check-status (math-polynomial-check-rule name))))
       (make-content-element 'math-derivation
         (append
           (list (make-content-element 'paragraph (list (symbol->string name)) #:flow-kind 'block))
@@ -147,6 +163,9 @@ Every argument may be unknown."
                           (if schema "Rewrite schema; metavariables denote terms."
                               "Algorithm rule; this description is not a fixed rewrite schema.")
                           (math-rewrite-rule-condition rule))) #:flow-kind 'block))
+          (list (make-content-element 'paragraph
+                  (list (format #f "Scalar-polynomial semantic check: ~a."
+                          semantic-status)) #:flow-kind 'block))
           (if (null? checks) '()
               (list (make-content-element 'details
                       (list (make-content-element 'summary (list "Executable guards"))

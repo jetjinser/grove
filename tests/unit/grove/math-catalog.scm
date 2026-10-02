@@ -26,6 +26,10 @@
          (== name 'differentiate-polynomial)))
 (test-equal "unknown names have no catalog answers" '()
   (query (group modes documentation) (ruleo 'missing-rule group modes documentation)))
+(test-equal "the catalog distinguishes checker-covered laws from algorithms"
+  '(semantically-checked unsupported)
+  (list (car (query (status) (rule-semantic-checko 'add-commutative status)))
+        (car (query (status) (rule-semantic-checko 'differentiate-power status)))))
 (test-equal "schema retains premises and executable type guards"
   '(((differentiable (unquote f)) (differentiable (unquote e)))
     ((math-typeo facts f 'scalar) (math-typeo facts e 'vector)))
@@ -42,6 +46,11 @@
   (and (string-contains (html 'curl-product) "differentiable")
        (string-contains (html 'curl-product) "vector")
        (string-contains (html 'curl-product) "→")))
+(test-assert "rule pages state the limited semantic-check coverage"
+  (and (string-contains (html 'add-commutative)
+                        "Scalar-polynomial semantic check: semantically-checked")
+       (string-contains (html 'differentiate-power)
+                        "Scalar-polynomial semantic check: unsupported")))
 (test-error "unknown rule rendering is rejected" #t (math-rule->content 'missing-rule))
 (test-equal "rule documentation is the execution procedure's native docstring"
   (procedure-documentation

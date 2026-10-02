@@ -17,7 +17,10 @@
             derivative partial-expression antiderivative-expression poisson-particular
             call components
             derive rewrite search search-backward simplify calculate normalize expand collect
-            check-chain compute check-equation solve-poisson differentiate partial partial-derivative))
+            check-chain check-polynomial-rule check-polynomial-derivation
+            check-polynomial-step check-polynomial-derivative
+            polynomial-check->content
+            compute check-equation solve-poisson differentiate partial partial-derivative))
 
 ;; Public Formula helpers are adapters: parse fragments once, then call the
 ;; Semantic API. The parser itself lives in `formula reader` so Semantic
@@ -157,6 +160,32 @@
   (lambda* (sources #:key (assumptions '()) (steps #f) (rules #f))
     (core:math-check-chain (map read sources)
       #:assumptions (parse-assumptions (list assumptions)) #:steps steps #:rules rules)))
+
+(define-public (check-polynomial-rule name)
+  (core:math-polynomial-check-rule name))
+
+(define-public (check-polynomial-derivation derivation)
+  (core:math-polynomial-check-derivation derivation))
+
+(define-public (polynomial-check->content check)
+  (core:math-semantic-check->content check))
+
+(define-public check-polynomial-step
+  (lambda* (from to rule path #:key (assumptions '()))
+    (core:math-polynomial-check-step
+      (parse-assumptions (list assumptions))
+      (math-value-term (read from)) (math-value-term (read to)) rule path)))
+
+(define-public (check-polynomial-derivative expression coordinate result)
+  (let* ((coordinate-term (and (not (symbol? coordinate))
+                               (math-value-term (read coordinate))))
+         (variable (if (symbol? coordinate) coordinate
+                       (and (pair? coordinate-term)
+                            (eq? (car coordinate-term) 'var)
+                            (cadr coordinate-term)))))
+    (core:math-polynomial-check-derivative
+      (math-value-term (read expression)) variable
+      (math-value-term (read result)))))
 
 (define-public compute
   (lambda* (source #:key (assumptions '()) (max-steps 256) (max-term-size 8192))

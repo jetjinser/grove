@@ -24,7 +24,7 @@
   #:re-export (curl-curlo math-rewrite-rule? math-rewrite-rule-name
                math-rewrite-rule-equation math-rewrite-rule-condition
                math-rewrite-rule-condition-checked? math-rewrite-rule-group
-               math-rewrite-rule-modes))
+               math-rewrite-rule-modes math-rewrite-rule-semantic-law))
 
 (define math-rewrite-rules
   (append math-vector-rules math-identity-rules math-differentiation-rule-definitions
@@ -44,7 +44,9 @@
 (define math-simplification-rules (math-rule-names #:groups '(identity calculate collect normalize cancel)))
 (define math-default-rules
   (map math-rewrite-rule-name
-    (filter (lambda (rule) (not (memq (math-rewrite-rule-group rule) '(expand components spatial polynomial-calculus)))) math-rewrite-rules)))
+    (filter (lambda (rule) (not (memq (math-rewrite-rule-group rule)
+                                      '(expand components spatial polynomial-calculus polynomial-algebra))))
+            math-rewrite-rules)))
 (define math-calculation-rules (math-rule-names #:groups '(calculate)))
 (define math-collection-rules (math-rule-names #:groups '(collect)))
 (define math-backward-rules

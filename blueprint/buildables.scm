@@ -52,6 +52,7 @@
     "grove/math/pass.scm"
     "grove/math/strategy.scm"
     "grove/math/verification.scm"
+    "grove/math/semantic-check.scm"
     "grove/math/layout.scm"
     "grove/math/rewrite.scm"
     "grove/math/pipeline.scm"

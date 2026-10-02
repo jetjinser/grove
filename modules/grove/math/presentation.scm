@@ -13,10 +13,12 @@
   #:use-module (grove math rule)
   #:use-module (grove math rewrite)
   #:use-module (grove math verification)
+  #:use-module (grove math semantic-check)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (math-derivation->content math-completed-report->content
-            math-report->content math-verification->content))
+            math-report->content math-verification->content
+            math-semantic-check->content))
 
 (define (check-view view)
   (unless (memq view '(compact full result)) (error "unknown math presentation view" view)))
@@ -156,3 +158,30 @@
       (if (eq? on-error 'raise) (error (string-join (math-verification-errors verification) "\n"))
           (make-content-element 'math-diagnostics
             (map diagnostic-content (math-verification-diagnostics verification)) #:flow-kind 'block))))
+
+(define (semantic-check-label check)
+  (case (math-semantic-check-status check)
+    ((semantically-checked) "Semantically checked in the exact rational-polynomial model.")
+    ((rejected) "Semantic check rejected the supplied claim.")
+    ((unsupported) "Semantic check is unsupported for this expression or rule.")))
+
+(define (math-semantic-check->content check)
+  "Present the scope and result of an independent semantic check."
+  (unless (math-semantic-check? check)
+    (error "expected a semantic check" check))
+  (make-content-element 'math-semantic-check
+    (append
+      (list (make-content-element 'paragraph
+              (list (semantic-check-label check)) #:flow-kind 'block))
+      (if (symbol? (math-semantic-check-subject check))
+          (list (make-content-element 'paragraph
+                  (list (format #f "Rule: ~a" (math-semantic-check-subject check)))
+                  #:flow-kind 'block))
+          '())
+      (if (math-derivation? (math-semantic-check-subject check))
+          (list (math-derivation->content (math-semantic-check-subject check)))
+          '())
+      (map (lambda (message)
+             (make-content-element 'paragraph (list message) #:flow-kind 'block))
+           (math-semantic-check-diagnostics check)))
+    #:flow-kind 'block))

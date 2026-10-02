@@ -11,6 +11,7 @@
   #:use-module (grove math derivation)
   #:use-module (grove math strategy)
   #:use-module (grove math verification)
+  #:use-module (grove math semantic-check)
   #:use-module (grove math differentiation)
   #:use-module (grove math partial)
   #:use-module (grove math integration)
@@ -30,7 +31,8 @@
             math-check-chain
             math-check-equation math-antiderivative math-solve-poisson math-compute math-differentiate math-partial math-rewrite math-report-result math-normalize math-expand)
   #:re-export (math-derivation->content math-verification->content
-               math-report->content math-completed-report->content current-math-assumptions call-with-math-assumptions with-math-assumptions
+               math-report->content math-completed-report->content
+               math-semantic-check->content current-math-assumptions call-with-math-assumptions with-math-assumptions
                math-verify-step math-verify-derivation
                math-verification? math-verification-valid?
                math-verification-errors math-verification-diagnostics
@@ -46,6 +48,13 @@
                math-derivation-step-path math-derivation?
                math-derivation-terms math-derivation-steps
                math-derivation-assumptions math-derivation-sources math-derivation-requirements
+               math-rewrite-rule-semantic-law
+               math-semantic-check? math-semantic-check-status
+               math-semantic-check-valid? math-semantic-check-subject
+               math-semantic-check-diagnostics
+               math-polynomial-normal-form math-polynomial-equivalent?
+               math-polynomial-check-rule math-polynomial-check-step
+               math-polynomial-check-derivation math-polynomial-check-derivative
                math-report? math-report-candidates
                math-report-reason math-report-limits
                math-report-states math-report-complete? math-report-status math-report-unresolved math-report-name

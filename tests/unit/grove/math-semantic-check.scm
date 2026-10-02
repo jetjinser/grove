@@ -1,0 +1,102 @@
+;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+;;;
+;;; SPDX-License-Identifier: GPL-3.0-or-later
+
+(use-modules ((grove math formula) #:prefix φ:)
+             (grove math pipeline)
+             (grove math rewrite)
+             (grove math derivation)
+             (grove ir)
+             (grove render html)
+             (srfi srfi-1)
+             (srfi srfi-64))
+
+(test-begin "independent scalar-polynomial semantic checker")
+
+(test-assert "exact sparse polynomials collect and multiply independently"
+  (math-polynomial-equivalent?
+    (φ:term "(x+y)^2")
+    (φ:term "x^2+2*x*y+y^2")))
+(test-assert "rational constants are normalized exactly"
+  (math-polynomial-equivalent? (φ:term "x/2+x/2") (φ:term "x")))
+(test-assert "expression denominators remain outside this checker"
+  (not (math-polynomial-equivalent? (φ:term "x/x") (φ:term "1"))))
+(test-assert "normalization limits report unsupported instead of expanding without bound"
+  (not (math-polynomial-normal-form (φ:term "(x+y)^65"))))
+
+(for-each
+  (lambda (rule)
+    (test-assert (format #f "universal polynomial law checks: ~a" rule)
+      (math-semantic-check-valid? (φ:check-polynomial-rule rule))))
+  '(add-zero zero-add multiply-one one-multiply
+    add-commutative multiply-associative))
+(test-equal "algorithm rules are not presented as checked polynomial laws"
+  'unsupported
+  (math-semantic-check-status (φ:check-polynomial-rule 'differentiate-power)))
+
+(let* ((checked (φ:check-chain '("x+0" "x")
+                 #:assumptions '("scalar(x)") #:steps '(add-zero)))
+       (derivation (math-verification-derivation checked)))
+  (test-assert "independent checker validates a concrete polynomial rewrite"
+    (math-semantic-check-valid? (math-polynomial-check-derivation derivation)))
+  (test-assert "semantic checker rejects a forged local conclusion"
+    (not (math-semantic-check-valid?
+           (φ:check-polynomial-step "x+0" "x+1" 'add-zero '()
+             #:assumptions '("scalar(x)")))))
+  (test-assert "semantic checker rejects a forged path"
+    (not (math-semantic-check-valid?
+           (φ:check-polynomial-step "x+0" "x" 'add-zero '(0)
+             #:assumptions '("scalar(x)")))))
+  (test-assert "scalar law cannot certify a vector rewrite"
+    (not (math-semantic-check-valid?
+           (φ:check-polynomial-step "E+0" "E" 'add-zero '()
+             #:assumptions '("vector(E)"))))))
+
+(test-assert "check-only algebra law supports handwritten verification"
+  (let* ((checked (φ:check-chain '("x+y" "y+x")
+                   #:assumptions '("scalar(x); scalar(y)")
+                   #:steps '(add-commutative)))
+         (derivation (math-verification-derivation checked)))
+    (and (math-verification-valid? checked)
+         (math-semantic-check-valid?
+           (math-polynomial-check-derivation derivation)))))
+(test-error "check-only algebra laws cannot be selected for rewrite search" #t
+  (math-selected-rules '(add-commutative) math-default-rules #:mode 'forward))
+(test-assert "derivation checker rejects forged certificate endpoints"
+  (not
+    (math-semantic-check-valid?
+      (math-polynomial-check-derivation
+        (make-math-derivation
+          (list (φ:term "x+0") (φ:term "x"))
+          (list (make-math-derivation-step
+                  (φ:term "x+0") (φ:term "y") 'add-zero '()))
+          '((scalar (var x))))))))
+
+(test-assert "derivative checker validates the expected polynomial result"
+  (math-semantic-check-valid?
+    (φ:check-polynomial-derivative "x^3+2*x" 'x "3*x^2+2")))
+(test-assert "derivative checker accepts a Formula variable expression"
+  (math-semantic-check-valid?
+    (φ:check-polynomial-derivative "x^3+2*x" "x" "3*x^2+2")))
+(test-assert "derivative checker rejects an incorrect result"
+  (not (math-semantic-check-valid?
+         (φ:check-polynomial-derivative "x^3+2*x" "x" "x^2+2"))))
+(test-assert "derivative checker handles independent variables"
+  (math-semantic-check-valid?
+    (φ:check-polynomial-derivative "x^2+y" "x" "2*x")))
+(test-equal "non-polynomial differentiation is explicitly unsupported"
+  'unsupported
+  (math-semantic-check-status
+    (φ:check-polynomial-derivative "sin(x)" "x" "cos(x)")))
+(test-assert "check summaries lower to ordinary block content"
+  (content-element?
+    (φ:polynomial-check->content
+      (φ:check-polynomial-rule 'add-zero))))
+(test-assert "a universal-law summary identifies the rule it checked"
+  (string-contains
+    (sxml->html
+      (content->sxml (φ:polynomial-check->content
+                       (φ:check-polynomial-rule 'add-zero))))
+    "Rule: add-zero"))
+
+(test-end "independent scalar-polynomial semantic checker")
