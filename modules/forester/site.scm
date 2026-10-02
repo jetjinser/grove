@@ -19,6 +19,7 @@
             content-node
             topic-pages
             related-pages
+            reference-pages
             find-page
             links
             backlinks
@@ -348,6 +349,23 @@
                  (delete-duplicates
                    (map reference-target-page-id
                         (outgoing-references forest page-id))
+                   string=?)))))
+
+(define* (reference-pages forest page-id
+                          #:optional (reference-taxon-id "Reference"))
+  "Return reference-taxon pages linked from this tree and its composition."
+  (let ((reference-page-ids
+          (map site-page-id
+               (topic-pages forest reference-taxon-id 'taxon))))
+    (map (lambda (target-id) (find-page forest target-id))
+         (filter (lambda (target-id)
+                   (member target-id reference-page-ids string=?))
+                 (delete-duplicates
+                   (append-map
+                     (lambda (tree-id)
+                       (map reference-target-page-id
+                            (outgoing-references forest tree-id)))
+                     (included-tree-ids forest page-id))
                    string=?)))))
 
 (define (validate-topic-facts! facts)
@@ -906,10 +924,13 @@
                   (filter-map site-page-source
                               (transcluding-pages forest
                                                   (site-page-id page)))
-                  (filter-map
-                    (lambda (reference)
-                      (site-page-source
-                        (find-page forest
-                                   (reference-target-page-id reference))))
-                    (outgoing-references forest (site-page-id page))))
+                  (append-map
+                    (lambda (tree-id)
+                      (filter-map
+                        (lambda (reference)
+                          (site-page-source
+                            (find-page forest
+                              (reference-target-page-id reference))))
+                        (outgoing-references forest tree-id)))
+                    included))
           string=?))))

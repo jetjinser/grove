@@ -868,12 +868,17 @@
          (make-site-page "idea" "A related idea"
            (evaluate-document "@paragraph{An idea.}")
            "plants/idea.plant"))
+       (support
+         (make-site-page "support" "Supporting note"
+           (evaluate-document
+             "@paragraph{See @link[\"citation\"]{the citation}.}")
+           "plants/support.plant"))
        (source
          (make-site-page "source" "Source"
            (evaluate-document
-             "@paragraph{@link[\"citation\"]{the citation}; @link[\"idea\"]{the idea}.}")
+             "@paragraph{@link[\"idea\"]{the idea}.} @transclude[\"support\"]")
            "plants/source.plant"))
-       (forest (make-forest (make-site (list source citation idea))))
+       (forest (make-forest (make-site (list source support citation idea))))
        (html (render-test-html forest #:mathjax-src #f))
        (text (site->text forest)))
   (test-equal "Related excludes pages in the Reference taxon"
@@ -882,19 +887,27 @@
   (test-assert "HTML Related lists linked non-reference pages"
     (and (string-contains (assoc-ref html "source") "<h2>Related</h2>")
          (string-contains (assoc-ref html "source")
-                          "href=\"/idea.html\">A related idea</a>")
-         (not (string-contains (assoc-ref html "source")
-                               "href=\"/citation.html\">A citation</a>"))))
+                          "href=\"/idea.html\">A related idea</a>")))
   (test-assert "text Related lists linked non-reference pages"
     (and (string-contains (assoc-ref text "source") "Related:")
-         (string-contains (assoc-ref text "source") "A related idea (idea.txt)")
-         (not (string-contains (assoc-ref text "source") "A citation"))))
+         (string-contains (assoc-ref text "source") "A related idea (idea.txt)")))
+  (test-equal "References includes citations from transcluded content"
+    '("citation")
+    (map site-page-id (reference-pages forest "source")))
+  (test-assert "HTML References shows the transcluded tree's citation"
+    (and (string-contains (assoc-ref html "source") "<h2>References</h2>")
+         (string-contains (assoc-ref html "source")
+                          "href=\"/citation.html\">A citation</a>")))
+  (test-assert "text References shows the transcluded tree's citation"
+    (and (string-contains (assoc-ref text "source") "References:")
+         (string-contains (assoc-ref text "source")
+                          "A citation (citation.txt)")))
   (test-assert "related targets are included in source artifact dependencies"
     (and (member "plants/idea.plant" (page-source-paths forest source) string=?)
          (member "plants/citation.plant" (page-source-paths forest source)
                  string=?)))
   (test-equal "Related can use a project-specific reference taxon ID"
-    '("citation" "idea")
+    '("idea")
     (map site-page-id
       (related-pages forest "source" "Bibliography")))
   (test-error "empty reference taxon IDs are rejected" #t

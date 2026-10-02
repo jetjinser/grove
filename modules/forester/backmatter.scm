@@ -11,21 +11,22 @@
             check-backmatter-labels
             check-reference-taxon-id))
 
-(define default-backmatter-sections '(context backlinks related))
+(define default-backmatter-sections '(context references backlinks related))
 (define default-reference-taxon-id "Reference")
 (define default-backmatter-labels
   '((context . "Context")
+    (references . "References")
     (backlinks . "Backlinks")
     (related . "Related")))
 
 (define (check-backmatter-sections sections)
   (unless (and (list? sections)
                (every (lambda (section)
-                        (memq section '(context backlinks related)))
+                        (memq section '(context references backlinks related)))
                       sections)
                (= (length sections)
                   (length (delete-duplicates sections eq?))))
-    (error "Forester backmatter must be a list of unique sections: context, backlinks, related"
+    (error "Forester backmatter must be a list of unique sections: context, references, backlinks, related"
            sections))
   sections)
 
@@ -33,7 +34,8 @@
   (unless (and (list? labels)
                (every (lambda (entry)
                         (and (pair? entry)
-                             (memq (car entry) '(context backlinks related))
+                             (memq (car entry)
+                                   '(context references backlinks related))
                              (string? (cdr entry))
                              (not (string-null? (cdr entry)))))
                       labels)

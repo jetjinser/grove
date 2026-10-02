@@ -212,12 +212,10 @@
                       (h2 ,label)
                       (ul ,@items))))))
 
-(define (related-sxml forest page routes reference-taxon-id label)
-  (let ((targets (related-pages forest (site-page-id page)
-                                reference-taxon-id)))
+(define (page-list-backmatter-sxml routes class label targets)
     (if (null? targets)
         '()
-        (list `(aside (@ (class "backmatter related"))
+        (list `(aside (@ (class ,(string-append "backmatter " class)))
                       (h2 ,label)
                       (ul
                         ,@(map (lambda (target)
@@ -228,7 +226,17 @@
                                          (html-page-url
                                            routes (site-page-id target))))
                                      (site-page-title target))))
-                               targets)))))))
+                               targets))))))
+
+(define (related-sxml forest page routes reference-taxon-id label)
+  (page-list-backmatter-sxml
+    routes "related" label
+    (related-pages forest (site-page-id page) reference-taxon-id)))
+
+(define (references-sxml forest page routes reference-taxon-id label)
+  (page-list-backmatter-sxml
+    routes "references" label
+    (reference-pages forest (site-page-id page) reference-taxon-id)))
 
 (define (backmatter-sxml forest page routes sections labels
                          reference-taxon-id)
@@ -237,6 +245,8 @@
       (case section
         ((context) (context-sxml forest page routes
                                  (assq-ref labels 'context)))
+        ((references) (references-sxml forest page routes reference-taxon-id
+                                       (assq-ref labels 'references)))
         ((backlinks) (backlinks-sxml forest page routes
                                      (assq-ref labels 'backlinks)))
         ((related) (related-sxml forest page routes reference-taxon-id
@@ -515,7 +525,7 @@
     (if cache-key
         (make-cached-renderer
           render
-          #:cache-key (string-append "forester-html-v15:" cache-key ":home="
+          #:cache-key (string-append "forester-html-v16:" cache-key ":home="
                                      (html-home-page routes) ":backmatter="
                                      (format #f "~s" backmatter)
                                      ":labels="

@@ -86,13 +86,14 @@ transcluded tree invalidate the pages that embed it.
 ## Backmatter
 
 HTML and text renderers can show incoming composition and link relationships
-after a page's body. The default order is `context`, `backlinks`, then
-`related`; empty sections are omitted. Context lists pages that transclude the
-current tree. Backlinks lists authored links to the current page or its
-headings. Related lists pages linked from the current page, excluding pages
-with the configured reference taxon. These sections remain separate because
-embedding, incoming links, and outgoing related links express different
-relationships.
+after a page's body. The default order is `context`, `references`,
+`backlinks`, then `related`; empty sections are omitted. Context lists pages
+that transclude the current tree. References lists pages in the configured
+reference taxon linked from the current tree or its subtrees and transcluded
+trees. Backlinks lists authored links to the current page or its headings.
+Related lists non-reference pages linked directly from the current page.
+These sections remain separate because embedding, incoming links, citations,
+and outgoing related links express different relationships.
 
 Configure the sections on either renderer with `#:backmatter`. The list order
 sets the display order, and an empty list disables generated backmatter:
@@ -112,8 +113,9 @@ omitted labels keep their defaults:
 ```scheme
 (make-html-renderer
   #:routes routes
-  #:backmatter '(context backlinks related)
+  #:backmatter '(context references backlinks related)
   #:backmatter-labels '((context . "Embedded in")
+                       (references . "Citations")
                        (backlinks . "Linked from")
                        (related . "See also"))
   #:reference-taxon-id "Bibliography")

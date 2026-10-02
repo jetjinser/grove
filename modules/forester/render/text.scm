@@ -182,21 +182,29 @@
                      "\n"))
                  sources))))))
 
+(define (page-list-backmatter-text page routes label targets)
+  (if (null? targets)
+      ""
+      (string-append
+        (string-append "\n\n" label ":\n")
+        (string-concatenate
+          (map (lambda (target)
+                 (string-append "- "
+                   (page-reference routes
+                     (text-page-path routes (site-page-id page))
+                     target)
+                   "\n"))
+               targets)))))
+
 (define (related-text forest page routes reference-taxon-id label)
-  (let ((targets (related-pages forest (site-page-id page)
-                                reference-taxon-id)))
-    (if (null? targets)
-        ""
-        (string-append
-          (string-append "\n\n" label ":\n")
-          (string-concatenate
-            (map (lambda (target)
-                   (string-append "- "
-                     (page-reference routes
-                       (text-page-path routes (site-page-id page))
-                       target)
-                     "\n"))
-                 targets))))))
+  (page-list-backmatter-text
+    page routes label
+    (related-pages forest (site-page-id page) reference-taxon-id)))
+
+(define (references-text forest page routes reference-taxon-id label)
+  (page-list-backmatter-text
+    page routes label
+    (reference-pages forest (site-page-id page) reference-taxon-id)))
 
 (define (backmatter-text forest page routes sections labels
                          reference-taxon-id)
@@ -205,6 +213,9 @@
            (case section
              ((context) (context-text forest page routes
                                       (assq-ref labels 'context)))
+             ((references) (references-text forest page routes
+                                            reference-taxon-id
+                                            (assq-ref labels 'references)))
              ((backlinks) (backlinks-text forest page routes
                                           (assq-ref labels 'backlinks)))
              ((related) (related-text forest page routes reference-taxon-id
@@ -368,7 +379,7 @@
     (if cache-key
         (make-cached-renderer
           render
-          #:cache-key (string-append "forester-text-v4:" cache-key
+          #:cache-key (string-append "forester-text-v5:" cache-key
                                      ":backmatter="
                                      (format #f "~s" backmatter)
                                      ":labels="
