@@ -5,6 +5,7 @@
   #:use-module ((grove math formula reader) #:prefix reader:)
   #:use-module ((grove math semantic) #:prefix semantic:)
   #:use-module ((grove math pipeline) #:prefix core:)
+  #:use-module (grove math presentation)
   #:use-module (grove math expression)
   #:use-module (grove math assumption)
   #:use-module (srfi srfi-1)
@@ -98,8 +99,11 @@
 (define-public derive
   (lambda* (source #:key (assumptions '()) (rules #f) (max-steps 32)
                    (max-term-size 2048) (view 'compact) (on-error 'raise))
-    (core:math-derive (read source) #:assumptions (parse-assumptions (list assumptions)) #:rules rules
-      #:max-steps max-steps #:max-term-size max-term-size #:view view #:on-error on-error)))
+    (math-completed-report->content
+      (core:math-derive (read source)
+        #:assumptions (parse-assumptions (list assumptions)) #:rules rules
+        #:max-steps max-steps #:max-term-size max-term-size)
+      #:view view #:on-error on-error)))
 
 (define-public rewrite
   (lambda* (source #:key (assumptions '()) (rules #f) (max-steps 32) (max-term-size 2048))

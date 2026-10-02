@@ -5,6 +5,7 @@
 (define-module (language scribble commands)
   #:use-module (grove ir)
   #:use-module (grove math pipeline)
+  #:use-module (grove math presentation)
   #:use-module (grove math context)
   #:use-module (grove math source)
   #:use-module ((grove math semantic) #:prefix semantic:)
@@ -99,9 +100,11 @@
 (define-public derive
   (lambda* (#:key (assumptions #f) (view 'compact) (on-error 'raise)
                  (rules #f) (max-steps 32) (max-term-size 2048) #:rest source)
-    (math-derive (apply φ:read (math-command-fragments source))
-      #:assumptions (command-assumptions assumptions) #:view view #:on-error on-error
-      #:rules rules #:max-steps max-steps #:max-term-size max-term-size)))
+    (math-completed-report->content
+      (math-derive (apply φ:read (math-command-fragments source))
+        #:assumptions (command-assumptions assumptions)
+        #:rules rules #:max-steps max-steps #:max-term-size max-term-size)
+      #:view view #:on-error on-error)))
 
 (define-public check-derive
   (lambda* (#:key (assumptions #f) (view 'compact) (on-error 'raise)

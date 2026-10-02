@@ -5,6 +5,9 @@
              (srfi srfi-1) (srfi srfi-64))
 (test-begin "computation result contracts")
 (define facts (list (◆:space 'x 'y 'z) "scalar(u); c2(u)"))
+(test-assert "math-derive returns a computation report"
+  (math-report?
+    (math-derive (φ:read "x+0") #:assumptions (φ:assumptions "scalar(x)"))))
 (let ((report (φ:compute "x^2+x*0" #:assumptions facts)))
   (test-equal "concrete result is complete" 'complete (math-report-status report))
   (test-equal "concrete result has no unresolved derivatives" '() (math-report-unresolved report))

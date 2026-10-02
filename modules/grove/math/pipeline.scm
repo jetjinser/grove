@@ -140,7 +140,7 @@ Declared unknown function derivatives remain explicit partial terms."
     source))
 
 (define* (math-derive source #:key (assumptions '()) (rules #f)
-                       (max-steps 32) (max-term-size 2048) (view 'compact) (on-error 'raise))
+                       (max-steps 32) (max-term-size 2048))
   (let* ((report (math-rewrite source #:assumptions assumptions #:rules rules
                    #:max-steps max-steps #:max-term-size max-term-size))
          (report (if (and (math-report-complete? report)
@@ -171,10 +171,8 @@ Declared unknown function derivatives remain explicit partial terms."
                                            (list (make-math-diagnostic #f #f '() 'no-rule '()
                                                    "no selected math rewrite rule applies under the supplied premises"))))
                          source))
-                     report))
-         (content (math-completed-report->content report #:view view #:on-error on-error)))
-    (if (null? (cdr content)) (car content)
-        (make-content-element 'math-diagnostics content #:flow-kind 'block))))
+                     report)))
+    report))
 
 (define* (math-search source target
                       #:key (assumptions '()) (rules #f)
