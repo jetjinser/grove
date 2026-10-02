@@ -11,6 +11,7 @@
   #:use-module (grove math verification)
   #:use-module (grove math term)
   #:use-module (grove math types)
+  #:use-module (grove math polynomial contract)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
@@ -21,7 +22,8 @@
             math-polynomial-check-rule math-polynomial-check-rule-spec
             math-polynomial-check-step
             math-polynomial-check-derivation math-polynomial-check-derivative
-            math-polynomial-check-antiderivative))
+            math-polynomial-check-antiderivative
+            math-check-derivative-evidence math-check-antiderivative-evidence))
 
 ;; A polynomial is a canonical list of (monomial . exact-rational) pairs.
 ;; Monomials are sorted lists of (variable . natural-power) pairs.
@@ -442,17 +444,19 @@ natural powers. Division is accepted only by a nonzero rational constant."
 
 (define (check-polynomial-derivative-derivation certificate expression variable terms)
   (let* ((replay (math-verify-derivation certificate))
-         (contract (polynomial-derivative-contract expression variable))
+         (evidence (polynomial-derivative-evidence expression variable))
+         (check (and evidence (math-check-derivative-evidence evidence)))
          (actual (math-polynomial-normal-form (last terms))))
     (cond
       ((not (math-verification-valid? replay))
        (semantic-check 'rejected certificate
          (string-join (math-verification-errors replay) "; ")))
-      ((or (not contract) (not actual))
+      ((or (not evidence) (not actual))
        (semantic-check 'unsupported certificate
          "the derivative chain is outside the scalar-polynomial checker"))
-      ((equal? actual (car contract))
-       (semantic-check 'semantically-checked (cdr contract) #f))
+      ((and (math-semantic-check-valid? check)
+            (equal? actual (math-derivative-evidence-result evidence)))
+       (semantic-check 'semantically-checked evidence #f))
       (else
        (semantic-check 'rejected certificate
          "the replayed derivative chain has an incorrect polynomial result")))))
@@ -480,60 +484,57 @@ natural powers. Division is accepted only by a nonzero rational constant."
       (else
        (check-polynomial-rewrite-derivation certificate terms steps assumptions)))))
 
-(define (polynomial-derivative-contract term variable)
-  "Return the recursive derivative denotation and its structural proof tree.
-
-The tree records the induction case at each source constructor. Its leaves are
-constants and variables; compound nodes use the sum, product, quotient-by-
-constant, or natural-power contract. The executable differentiation pass is
-checked against the denotation produced by this independent recursion."
+(define (polynomial-derivative-evidence term variable)
+  "Construct case-shaped evidence for the recursive polynomial derivative."
   (match term
     (('num text)
      (let ((value (math-natural-value text)))
-       (and value (cons '() (list 'constant term variable '() '())))))
+       (and value (make-math-derivative-evidence 'constant term variable '() '()))))
     (('var name)
      (let ((result (constant-polynomial (if (eq? name variable) 1 0))))
-       (cons result
-         (list (if (eq? name variable) 'coordinate 'independent-variable)
-               term variable result '()))))
+       (make-math-derivative-evidence
+         (if (eq? name variable) 'coordinate 'independent-variable)
+         term variable result '())))
     (('- operand)
-     (let ((child (polynomial-derivative-contract operand variable)))
+     (let ((child (polynomial-derivative-evidence operand variable)))
        (and child
-            (let ((result (polynomial-scale (car child) -1)))
-              (cons result (list 'negation term variable result (list (cdr child))))))))
+            (let ((result (polynomial-scale (math-derivative-evidence-result child) -1)))
+              (make-math-derivative-evidence 'negation term variable result (list child))))))
     (((or '+ '-) left right)
-     (let ((left-proof (polynomial-derivative-contract left variable))
-           (right-proof (polynomial-derivative-contract right variable)))
+     (let ((left-proof (polynomial-derivative-evidence left variable))
+           (right-proof (polynomial-derivative-evidence right variable)))
        (and left-proof right-proof
-            (let ((result (polynomial-add (car left-proof)
-                            (polynomial-scale (car right-proof)
+            (let ((result (polynomial-add (math-derivative-evidence-result left-proof)
+                            (polynomial-scale (math-derivative-evidence-result right-proof)
                               (if (eq? (car term) '+) 1 -1)))))
-              (cons result (list (if (eq? (car term) '+) 'sum 'difference)
-                term variable result (list (cdr left-proof) (cdr right-proof))))))))
+              (make-math-derivative-evidence
+                (if (eq? (car term) '+) 'sum 'difference)
+                term variable result (list left-proof right-proof))))))
     (('* left right)
      (let* ((left-value (parse-polynomial left))
             (right-value (parse-polynomial right))
-            (left-proof (polynomial-derivative-contract left variable))
-            (right-proof (polynomial-derivative-contract right variable)))
+            (left-proof (polynomial-derivative-evidence left variable))
+            (right-proof (polynomial-derivative-evidence right variable)))
        (and left-value right-value left-proof right-proof
             (let ((result
                     (polynomial-add
-                      (polynomial-multiply (car left-proof) right-value)
-                      (polynomial-multiply left-value (car right-proof)))))
-              (cons result (list 'product term variable result
-                (list (cdr left-proof) (cdr right-proof))))))))
+                      (polynomial-multiply (math-derivative-evidence-result left-proof) right-value)
+                      (polynomial-multiply left-value (math-derivative-evidence-result right-proof)))))
+              (make-math-derivative-evidence 'product term variable result
+                (list left-proof right-proof))))))
     (('/ numerator denominator)
      (let* ((value (parse-polynomial denominator))
             (constant (and value (polynomial-constant-value value)))
-            (numerator-proof (polynomial-derivative-contract numerator variable)))
+            (numerator-proof (polynomial-derivative-evidence numerator variable)))
        (and constant (not (zero? constant)) numerator-proof
-            (let ((result (polynomial-scale (car numerator-proof) (/ 1 constant))))
-              (cons result (list 'constant-quotient term variable result
-                (list (cdr numerator-proof))))))))
+            (let ((result (polynomial-scale
+                            (math-derivative-evidence-result numerator-proof) (/ 1 constant))))
+              (make-math-derivative-evidence 'constant-quotient term variable result
+                (list numerator-proof))))))
     (('^ base ('num exponent-text))
      (let* ((exponent (math-natural-value exponent-text))
             (base-value (parse-polynomial base))
-            (base-proof (polynomial-derivative-contract base variable)))
+            (base-proof (polynomial-derivative-evidence base variable)))
        (and exponent (<= exponent 128) base-value base-proof
             (let ((result
                     (if (zero? exponent)
@@ -541,27 +542,111 @@ checked against the denotation produced by this independent recursion."
                         (polynomial-scale
                           (polynomial-multiply
                             (polynomial-power base-value (- exponent 1))
-                            (car base-proof))
+                            (math-derivative-evidence-result base-proof))
                           exponent))))
-              (cons result (list 'natural-power term variable result
-                (list (cdr base-proof))))))))
+              (make-math-derivative-evidence 'natural-power term variable result
+                (list base-proof))))))
     (_ #f)))
+
+(define (math-check-derivative-evidence evidence)
+  "Independently check a derivative evidence tree, including every local case."
+  (define (valid? evidence)
+    (and (math-derivative-evidence? evidence)
+         (symbol? (math-derivative-evidence-coordinate evidence))
+         (list? (math-derivative-evidence-children evidence))
+         (let* ((term (math-derivative-evidence-expression evidence))
+                (coordinate (math-derivative-evidence-coordinate evidence))
+                (result (math-derivative-evidence-result evidence))
+                (children (math-derivative-evidence-children evidence)))
+           (and (list? result)
+                (equal? result (canonical-polynomial result))
+                (match (list (math-derivative-evidence-case evidence) term children)
+                  (('constant ('num text) '())
+                   (and (math-natural-value text) (null? result)))
+                  (('coordinate ('var name) '())
+                   (and (eq? name coordinate)
+                        (equal? result (constant-polynomial 1))))
+                  (('independent-variable ('var name) '())
+                   (and (not (eq? name coordinate)) (null? result)))
+                  (('negation ('- operand) (child))
+                   (and (valid? child)
+                        (equal? (math-derivative-evidence-expression child) operand)
+                        (eq? (math-derivative-evidence-coordinate child) coordinate)
+                        (equal? result
+                          (polynomial-scale (math-derivative-evidence-result child) -1))))
+                  (('sum ('+ left right) (left-proof right-proof))
+                   (and (valid? left-proof) (valid? right-proof)
+                        (equal? (math-derivative-evidence-expression left-proof) left)
+                        (equal? (math-derivative-evidence-expression right-proof) right)
+                        (eq? (math-derivative-evidence-coordinate left-proof) coordinate)
+                        (eq? (math-derivative-evidence-coordinate right-proof) coordinate)
+                        (equal? result
+                          (polynomial-add (math-derivative-evidence-result left-proof)
+                            (math-derivative-evidence-result right-proof)))))
+                  (('difference ('- left right) (left-proof right-proof))
+                   (and (valid? left-proof) (valid? right-proof)
+                        (equal? (math-derivative-evidence-expression left-proof) left)
+                        (equal? (math-derivative-evidence-expression right-proof) right)
+                        (eq? (math-derivative-evidence-coordinate left-proof) coordinate)
+                        (eq? (math-derivative-evidence-coordinate right-proof) coordinate)
+                        (equal? result
+                          (polynomial-add (math-derivative-evidence-result left-proof)
+                            (polynomial-scale (math-derivative-evidence-result right-proof) -1)))))
+                  (('product ('* left right) (left-proof right-proof))
+                   (and (valid? left-proof) (valid? right-proof)
+                        (equal? (math-derivative-evidence-expression left-proof) left)
+                        (equal? (math-derivative-evidence-expression right-proof) right)
+                        (eq? (math-derivative-evidence-coordinate left-proof) coordinate)
+                        (eq? (math-derivative-evidence-coordinate right-proof) coordinate)
+                        (let ((left-value (parse-polynomial left))
+                              (right-value (parse-polynomial right)))
+                          (and left-value right-value
+                            (equal? result
+                              (polynomial-add
+                                (polynomial-multiply (math-derivative-evidence-result left-proof) right-value)
+                                (polynomial-multiply left-value (math-derivative-evidence-result right-proof))))))))
+                  (('constant-quotient ('/ numerator denominator) (child))
+                   (and (valid? child)
+                        (equal? (math-derivative-evidence-expression child) numerator)
+                        (eq? (math-derivative-evidence-coordinate child) coordinate)
+                        (let* ((denominator-value (parse-polynomial denominator))
+                               (constant (and denominator-value (polynomial-constant-value denominator-value))))
+                          (and constant (not (zero? constant))
+                               (equal? result
+                                 (polynomial-scale (math-derivative-evidence-result child) (/ 1 constant)))))))
+                  (('natural-power ('^ base ('num exponent-text)) (child))
+                   (and (valid? child)
+                        (equal? (math-derivative-evidence-expression child) base)
+                        (eq? (math-derivative-evidence-coordinate child) coordinate)
+                        (let ((exponent (math-natural-value exponent-text))
+                              (base-value (parse-polynomial base)))
+                          (and exponent (<= exponent 128) base-value
+                            (equal? result
+                              (if (zero? exponent) '()
+                                  (polynomial-scale
+                                    (polynomial-multiply (polynomial-power base-value (- exponent 1))
+                                      (math-derivative-evidence-result child)) exponent)))))))
+                  (_ #f))))))
+  (if (catch #t (lambda () (valid? evidence)) (lambda _ #f))
+      (semantic-check 'semantically-checked evidence #f)
+      (semantic-check 'rejected evidence "malformed or invalid derivative contract evidence")))
 
 (define (math-polynomial-check-derivative expression variable result)
   "Check a derivative by recursively interpreting its source constructors."
-  (let ((contract (and (symbol? variable)
-                       (polynomial-derivative-contract expression variable)))
+  (let* ((evidence (and (symbol? variable)
+                        (polynomial-derivative-evidence expression variable)))
+         (check (and evidence (math-check-derivative-evidence evidence)))
         (output (math-polynomial-normal-form result)))
     (cond
       ((not (symbol? variable))
        (semantic-check 'rejected (list expression variable result)
          "the differentiation variable must be a symbol"))
-      ((or (not contract) (not output))
+      ((or (not evidence) (not output))
        (semantic-check 'unsupported (list expression variable result)
          "the input or result is outside the scalar-polynomial checker"))
-      ((equal? output (car contract))
-       (semantic-check 'semantically-checked
-         (list 'derivative-contract (cdr contract) 'actual-result output) #f))
+      ((and (math-semantic-check-valid? check)
+            (equal? output (math-derivative-evidence-result evidence)))
+       (semantic-check 'semantically-checked evidence #f))
       (else
        (semantic-check 'rejected (list expression variable result)
          "the supplied result differs from the exact polynomial derivative")))))
@@ -577,74 +662,106 @@ checked against the denotation produced by this independent recursion."
                      (string<? (symbol->string (car left))
                                (symbol->string (car right))))))
          (result (cons raised (/ (cdr entry) (+ exponent 1)))))
-    (list 'integrate-monomial entry variable result)))
+    (make-math-integral-monomial-evidence entry result)))
 
-(define (polynomial-contract-term polynomial)
-  (define (monomial-term monomial)
-    (let ((factors
-            (map (lambda (factor)
-                   (if (= (cdr factor) 1)
-                       `(var ,(car factor))
-                       `(^ (var ,(car factor)) (num ,(number->string (cdr factor))))))
-              monomial)))
-      (if (null? factors) '(num "1")
-          (fold (lambda (factor product) `(* ,product ,factor)) (car factors) (cdr factors)))))
-  (define (entry-term entry)
-    (let ((coefficient (math-number->term (cdr entry)))
-          (monomial (monomial-term (car entry))))
-      (cond ((equal? monomial '(num "1")) coefficient)
-            ((equal? coefficient '(num "1")) monomial)
-            (else `(* ,coefficient ,monomial)))))
-  (let ((terms (map entry-term polynomial)))
-    (if (null? terms) '(num "0")
-        (fold (lambda (term sum) `(+ ,sum ,term)) (car terms) (cdr terms)))))
+(define (polynomial-antiderivative-evidence expression variable result)
+  "Construct typed per-monomial evidence for a proposed primitive."
+  (let ((input (math-polynomial-normal-form expression))
+        (output (math-polynomial-normal-form result)))
+    (and input output
+      (make-math-antiderivative-evidence
+        expression variable input output
+        (map (lambda (entry) (integrate-monomial entry variable)) input)
+        (polynomial-derivative-evidence result variable)))))
 
-(define (polynomial-antiderivative-contract expression variable)
-  "Build the monomial induction evidence for the zero-at-origin primitive."
-  (let ((input (math-polynomial-normal-form expression)))
-    (and input
-      (let* ((evidence (map (lambda (entry) (integrate-monomial entry variable)) input))
-             (expected (canonical-polynomial (map (lambda (item) (cadddr item)) evidence)))
-             (origin-zero?
-               (every (lambda (entry) (assq variable (car entry))) expected))
-             (expected-term (polynomial-contract-term expected))
-             (derivative (polynomial-derivative-contract expected-term variable)))
-        (and origin-zero? derivative (equal? (car derivative) input)
-          (list expected
-            (list 'polynomial-antiderivative expression variable
-                  evidence
-                  (list 'zero-at-coordinate-origin variable #t)
-                  (list 'differentiate-result (cdr derivative)))))))))
+(define (valid-integral-monomial-evidence? variable entry step)
+  (catch #t
+    (lambda ()
+      (and (math-integral-monomial-evidence? step)
+           (equal? entry (math-integral-monomial-evidence-input step))
+           (let* ((factor (assq variable (car entry)))
+                  (exponent (if factor (cdr factor) 0))
+                  (powers
+                    (sort
+                      (cons (cons variable (+ exponent 1))
+                        (filter (lambda (power) (not (eq? (car power) variable)))
+                          (car entry)))
+                      (lambda (left right)
+                        (string<? (symbol->string (car left))
+                                  (symbol->string (car right))))))
+                  (expected (cons powers (/ (cdr entry) (+ exponent 1)))))
+             (equal? (math-integral-monomial-evidence-output step) expected))))
+    (lambda _ #f)))
+
+(define (check-antiderivative-evidence/internal evidence)
+  "Check monomial recurrence, zero-origin normalization, and derivative evidence."
+  (let* ((expression (and (math-antiderivative-evidence? evidence)
+                          (math-antiderivative-evidence-expression evidence)))
+         (variable (and (math-antiderivative-evidence? evidence)
+                        (math-antiderivative-evidence-coordinate evidence)))
+         (input (and expression (math-polynomial-normal-form expression)))
+         (claimed-input (and (math-antiderivative-evidence? evidence)
+                             (math-antiderivative-evidence-input evidence)))
+         (result (and (math-antiderivative-evidence? evidence)
+                      (math-antiderivative-evidence-result evidence)))
+         (monomials (and (math-antiderivative-evidence? evidence)
+                         (math-antiderivative-evidence-monomials evidence)))
+         (derivative (and (math-antiderivative-evidence? evidence)
+                          (math-antiderivative-evidence-derivative evidence))))
+    (cond
+      ((not (math-antiderivative-evidence? evidence))
+       (semantic-check 'rejected evidence "expected polynomial antiderivative evidence"))
+      ((not (and (symbol? variable) input (list? result) (list? monomials)
+                 (equal? claimed-input input)
+                 (equal? result (canonical-polynomial result))))
+       (semantic-check 'rejected evidence "malformed or unsupported integration evidence"))
+      ((not (= (length input) (length monomials)))
+       (semantic-check 'rejected evidence "integration evidence omits or adds a monomial"))
+      ((not (every (lambda (entry step)
+                     (valid-integral-monomial-evidence? variable entry step))
+                   input monomials))
+       (semantic-check 'rejected evidence "a monomial evidence node has an invalid coefficient or exponent"))
+      ((not (equal? result
+              (canonical-polynomial
+                (map math-integral-monomial-evidence-output monomials))))
+       (semantic-check 'rejected evidence "the claimed primitive differs from the monomial results"))
+      ((not (every (lambda (entry) (assq variable (car entry))) result))
+       (semantic-check 'rejected evidence
+         "the primitive is not normalized to zero at the coordinate origin"))
+      ((not (and (math-derivative-evidence? derivative)
+                 (equal? (parse-polynomial
+                           (math-derivative-evidence-expression derivative))
+                   result)
+                 (eq? (math-derivative-evidence-coordinate derivative) variable)
+                 (math-semantic-check-valid? (math-check-derivative-evidence derivative))
+                 (equal? (math-derivative-evidence-result derivative) input)))
+       (semantic-check 'rejected evidence "differentiating the primitive evidence does not recover the input"))
+      (else
+       (semantic-check 'semantically-checked evidence #f)))))
+
+(define (math-check-antiderivative-evidence evidence)
+  "Independently check typed integration evidence; malformed data is rejected."
+  (catch #t
+    (lambda () (check-antiderivative-evidence/internal evidence))
+    (lambda _
+      (semantic-check 'rejected evidence "malformed polynomial integration contract evidence"))))
 
 (define (math-polynomial-check-antiderivative expression variable result)
   "Check the termwise polynomial integration contract and its normalization."
-  (let* ((contract (and (symbol? variable)
+  (let* ((evidence (and (symbol? variable)
                         (catch 'semantic-polynomial-limit
-                          (lambda () (polynomial-antiderivative-contract expression variable))
+                          (lambda () (polynomial-antiderivative-evidence expression variable result))
                           (lambda _ #f))))
-         (actual (math-polynomial-normal-form result))
-         (actual-derivative (and actual
-                            (polynomial-derivative-contract result variable))))
+         (input (math-polynomial-normal-form expression))
+         (actual (math-polynomial-normal-form result)))
     (cond
       ((not (symbol? variable))
        (semantic-check 'rejected (list expression variable result)
          "the integration coordinate must be a symbol"))
-      ((or (not contract) (not actual))
+      ((or (not evidence) (not input) (not actual))
        (semantic-check 'unsupported (list expression variable result)
          "the input or result is outside the scalar-polynomial integration checker"))
-      ((not (and actual-derivative
-                 (equal? (car actual-derivative)
-                   (math-polynomial-normal-form expression))))
-       (semantic-check 'rejected (list expression variable result)
-         "differentiating the supplied primitive does not recover the integrand"))
-      ((not (every (lambda (entry) (assq variable (car entry))) actual))
-       (semantic-check 'rejected (list expression variable result)
-         "the primitive is not normalized to zero at the coordinate origin"))
-      ((equal? actual (car contract))
-       (semantic-check 'semantically-checked (cadr contract) #f))
-      (else
-       (semantic-check 'rejected (list expression variable result)
-         "the primitive does not follow the termwise integration contract")))))
+      (else (math-check-antiderivative-evidence evidence)))))
 
 (define (check-polynomial-antiderivative-derivation certificate expression variable terms)
   (let ((replay (math-verify-derivation certificate))
@@ -654,7 +771,5 @@ checked against the denotation produced by this independent recursion."
        (semantic-check 'rejected certificate
          (string-join (math-verification-errors replay) "; ")))
       ((math-semantic-check-valid? check)
-       (semantic-check 'semantically-checked
-         (list 'replayed-derivation certificate
-               'integration-contract (math-semantic-check-subject check)) #f))
+       (semantic-check 'semantically-checked (math-semantic-check-subject check) #f))
       (else check))))

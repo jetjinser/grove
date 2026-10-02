@@ -3,6 +3,7 @@
 (use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math expression) (grove math polynomial)
              (grove math types) (grove math context) (grove relation)
              (grove math derivation)
+             (grove math polynomial contract)
              ((grove math semantic) #:prefix ◆:)
              (tests unit grove polynomial-oracle) (tests unit grove cartesian-fixtures)
              (srfi srfi-1) (srfi srfi-64))
@@ -38,13 +39,30 @@
 (let* ((report (φ:antiderivative "x^3+2*x" "x" #:assumptions (list basis)))
        (check (φ:check-polynomial-antiderivative
                 "x^3+2*x" 'x (math-report-result report)))
-       (proof (format #f "~s" (math-semantic-check-subject check))))
+       (proof (math-semantic-check-subject check)))
   (test-assert "integration proof records each monomial recurrence and its normalization checks"
-    (and (string-contains proof "integrate-monomial")
-         (string-contains proof "zero-at-coordinate-origin")
-         (string-contains proof "differentiate-result")))
+    (and (math-antiderivative-evidence? proof)
+         (= (length (math-antiderivative-evidence-monomials proof)) 2)
+         (math-derivative-evidence? (math-antiderivative-evidence-derivative proof))))
   (test-assert "integration checker accepts the actual pass result"
     (math-semantic-check-valid? check))
+  (let* ((step (car (math-antiderivative-evidence-monomials proof)))
+         (bad-step
+           (make-math-integral-monomial-evidence
+             (math-integral-monomial-evidence-input step)
+             '(((x . 4)) . 99)))
+         (bad-proof
+           (make-math-antiderivative-evidence
+             (math-antiderivative-evidence-expression proof)
+             (math-antiderivative-evidence-coordinate proof)
+             (math-antiderivative-evidence-input proof)
+             (math-antiderivative-evidence-result proof)
+             (cons bad-step (cdr (math-antiderivative-evidence-monomials proof)))
+             (math-antiderivative-evidence-derivative proof))))
+    (test-eq "integration evidence rejects a forged monomial result" 'rejected
+      (math-semantic-check-status (math-check-antiderivative-evidence bad-proof))))
+  (test-eq "integration evidence rejects an untyped list" 'rejected
+    (math-semantic-check-status (math-check-antiderivative-evidence '(primitive))))
   (test-equal "a wrong monomial coefficient is diagnosed by differentiating the candidate"
     'rejected
     (math-semantic-check-status

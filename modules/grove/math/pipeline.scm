@@ -12,6 +12,7 @@
   #:use-module (grove math strategy)
   #:use-module (grove math verification)
   #:use-module (grove math semantic-check)
+  #:use-module (grove math polynomial contract)
   #:use-module (grove math differentiation)
   #:use-module (grove math partial)
   #:use-module (grove math integration)
@@ -55,6 +56,17 @@
                math-polynomial-check-rule math-polynomial-check-step
                math-polynomial-check-derivation math-polynomial-check-derivative
                math-polynomial-check-antiderivative
+               math-check-derivative-evidence math-check-antiderivative-evidence
+               math-derivative-evidence? make-math-derivative-evidence
+               math-derivative-evidence-case math-derivative-evidence-expression
+               math-derivative-evidence-coordinate math-derivative-evidence-result
+               math-derivative-evidence-children
+               math-integral-monomial-evidence? make-math-integral-monomial-evidence
+               math-integral-monomial-evidence-input math-integral-monomial-evidence-output
+               math-antiderivative-evidence? make-math-antiderivative-evidence
+               math-antiderivative-evidence-expression math-antiderivative-evidence-coordinate
+               math-antiderivative-evidence-input math-antiderivative-evidence-result
+               math-antiderivative-evidence-monomials math-antiderivative-evidence-derivative
                math-report? math-report-candidates
                math-report-reason math-report-limits
                math-report-states math-report-complete? math-report-status math-report-unresolved math-report-name

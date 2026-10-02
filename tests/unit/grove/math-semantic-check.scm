@@ -7,6 +7,7 @@
              (grove math rewrite)
              (grove math rule)
              (grove math semantic-check)
+             (grove math polynomial contract)
              (grove math derivation)
              (ice-9 match)
              (grove ir)
@@ -180,12 +181,40 @@
 (test-assert "derivative checker validates the expected polynomial result"
   (math-semantic-check-valid?
     (φ:check-polynomial-derivative "x^3+2*x" 'x "3*x^2+2")))
-(test-assert "derivative contract records recursive power, product, and sum cases"
-  (let ((subject (math-semantic-check-subject
-                   (φ:check-polynomial-derivative "x^3+2*x" 'x "3*x^2+2"))))
-    (and (string-contains (format #f "~s" subject) "natural-power")
-         (string-contains (format #f "~s" subject) "product")
-         (string-contains (format #f "~s" subject) "sum"))))
+(let ((proof (math-semantic-check-subject
+               (φ:check-polynomial-derivative "x^3+2*x" 'x "3*x^2+2"))))
+  (test-assert "derivative contract records recursive power, product, and sum cases"
+    (and (math-derivative-evidence? proof)
+         (eq? (math-derivative-evidence-case proof) 'sum)
+         (eq? (math-derivative-evidence-case
+                (car (math-derivative-evidence-children proof))) 'natural-power)
+         (math-semantic-check-valid? (math-check-derivative-evidence proof))))
+  (let ((bad-root
+          (make-math-derivative-evidence
+            (math-derivative-evidence-case proof)
+            (math-derivative-evidence-expression proof)
+            (math-derivative-evidence-coordinate proof)
+            '() (math-derivative-evidence-children proof))))
+    (test-eq "derivative evidence rejects a forged root result" 'rejected
+      (math-semantic-check-status (math-check-derivative-evidence bad-root))))
+  (let* ((left (car (math-derivative-evidence-children proof)))
+         (bad-child
+           (make-math-derivative-evidence
+             (math-derivative-evidence-case left)
+             (math-derivative-evidence-expression left)
+             (math-derivative-evidence-coordinate left)
+             '() (math-derivative-evidence-children left)))
+         (bad-tree
+           (make-math-derivative-evidence
+             (math-derivative-evidence-case proof)
+             (math-derivative-evidence-expression proof)
+             (math-derivative-evidence-coordinate proof)
+             (math-derivative-evidence-result proof)
+             (cons bad-child (cdr (math-derivative-evidence-children proof))))))
+    (test-eq "derivative evidence recursively rejects a forged child" 'rejected
+      (math-semantic-check-status (math-check-derivative-evidence bad-tree)))))
+(test-eq "derivative evidence rejects an untyped list" 'rejected
+  (math-semantic-check-status (math-check-derivative-evidence '(sum))))
 (test-assert "derivative checker accepts a Formula variable expression"
   (math-semantic-check-valid?
     (φ:check-polynomial-derivative "x^3+2*x" "x" "3*x^2+2")))
