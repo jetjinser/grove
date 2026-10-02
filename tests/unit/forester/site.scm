@@ -570,6 +570,24 @@
     (string-contains (assoc-ref html "root") "[#0]"))
   (test-assert "inline trees render as initially open disclosure blocks"
     (string-contains (assoc-ref html "root") "<details open=\"open\">"))
+  (test-assert "inline subtree can be initially collapsed"
+    (let* ((collapsed-root
+             (make-site-page
+               "collapsed" "Collapsed"
+               (make-content-document
+                 (list (make-content-element
+                         'subtree
+                         (list (make-content-element 'paragraph '("Hidden until opened.")))
+                         #:properties '((title . "Collapsed") (open? . #f))
+                         #:flow-kind 'block)))))
+           (collapsed-html
+             (assoc-ref (render-test-html
+                          (make-forest (make-site (list collapsed-root)))
+                          #:mathjax-src #f)
+                        "collapsed")))
+      (and (string-contains collapsed-html "<summary>")
+           (not (string-contains collapsed-html "<details open=\"open\">"))
+           (string-contains collapsed-html "Hidden until opened."))))
   (test-assert "inline tree title is a native disclosure control"
     (string-contains (assoc-ref html "root") "<summary>"))
   (test-assert "site->html embeds the Forester stylesheet"

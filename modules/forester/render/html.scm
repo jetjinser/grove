@@ -83,7 +83,10 @@
                         (html-page-url routes id)
                         (subtree-content-sxml
                           forest routes target
-                          (string-append anchor-prefix "tree-" id "--"))))))
+                          (string-append anchor-prefix "tree-" id "--"))
+                        (if (assq 'open? (content-element-properties element))
+                            (content-element-property element 'open?)
+                            #t)))))
           (cons 'transclude (lambda (element _render)
                        (let* ((id (content-element-property element 'target))
                               (transclusion (car transclusions))
@@ -104,10 +107,10 @@
       (string-append "#" (substring id (string-length "unstable-")))
       id))
 
-(define (tree-block-sxml kind id title page-url content)
+(define* (tree-block-sxml kind id title page-url content #:optional (open? #t))
   `(section (@ (class ,(string-append "forest-tree-block " kind))
                (data-tree-id ,id))
-     (details (@ (open "open"))
+     (details ,@(if open? '((@ (open "open"))) '())
        (summary
          (span (@ (class "forest-tree-title")) ,title)
          (a (@ (class "forest-tree-id")

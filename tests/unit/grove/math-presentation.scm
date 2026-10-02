@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math source)
+             (grove ir)
              (grove render html) (grove render text)
              (language scribble spec) (system base language)
              (language scribble parser)
@@ -30,6 +31,13 @@
 (define certificate (math-report-derivation report))
 (define (display-report view)
   (car (math-completed-report->content report #:view view)))
+(let* ((presented (display-report 'compact))
+       (steps (cadr (content-element-children presented))))
+  (test-assert "compact derivation steps use a collapsed subtree"
+    (and (eq? (content-element-kind steps) 'subtree)
+         (string-prefix? "Show "
+                         (content-element-property steps 'title))
+         (not (content-element-property steps 'open?)))))
 (let ((compact (html (display-report 'compact)))
       (full (html (display-report 'full)))
       (result (html (display-report 'result))))

@@ -33,11 +33,15 @@
                 (case kind
             ((paragraph) (string-append body "\n"))
             ((summary) (string-append body "\n"))
+            ((subtree)
+             (string-append (content-element-property element 'title)
+                            "\n" body))
             ((math-derivation)
              (let ((children (content-element-children element)))
                (if (and (= (length children) 2)
                         (content-element? (cadr children))
-                        (eq? 'details (content-element-kind (cadr children))))
+                        (memq (content-element-kind (cadr children))
+                              '(details subtree)))
                    (render (cadr children)) body)))
             ((heading)
              (string-append body "\n"
