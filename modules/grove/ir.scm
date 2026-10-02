@@ -10,6 +10,8 @@
             make-content-text
             content-text-value
             content-text-source
+            content-text-location
+            content-with-source-location
             content-layout?
             make-content-layout
             content-layout-kind
@@ -31,15 +33,17 @@
             content-document-source))
 
 (define-record-type <content-text>
-  (%make-content-text value source)
+  (%make-content-text value source location)
   content-text?
   (value content-text-value)
-  (source content-text-source))
+  (source content-text-source)
+  (location content-text-location))
 
-(define* (make-content-text value #:optional (source #f))
+(define* (make-content-text value #:optional (source #f)
+                            #:key (location #f))
   (unless (string? value)
     (error "content text must be a string" value))
-  (%make-content-text value source))
+  (%make-content-text value source location))
 
 (define-record-type <content-layout>
   (%make-content-layout kind raw source)
@@ -135,6 +139,33 @@
       (error "content children must contain only content values"
              'document children))
     (%make-content-document children source)))
+
+(define (content-with-source-location content location)
+  "Attach a source start alist with file, one-based line and column fields."
+  (cond
+    ((content-text? content)
+     (%make-content-text (content-text-value content)
+                         (or (content-text-source content)
+                             (assq-ref location 'file))
+                         location))
+    ((content-element? content)
+     (let* ((properties (content-element-properties content))
+            (properties (filter (lambda (entry)
+                                  (not (eq? (car entry) 'source-location)))
+                                properties)))
+       (%make-content-element
+         (content-element-kind content)
+         (content-element-children content)
+         `((source-location . ,location) ,@properties)
+         (content-element-source content)
+         (content-element-flow-kind content))))
+    ((content-document? content)
+     (make-content-document (content-document-children content)
+                           (content-document-source content)))
+    ((and (list? content) (every content-child? content))
+     (map (lambda (child) (content-with-source-location child location))
+          content))
+    (else content)))
 
 (define (content-verbatim-string fragments)
   (string-concatenate

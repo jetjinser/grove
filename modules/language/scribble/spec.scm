@@ -12,6 +12,22 @@
   #:export (scribble
             scribble-evaluate-document))
 
+(define (fragment-source-location fragment)
+  (let* ((properties (source-properties fragment))
+         (filename (assq-ref properties 'filename))
+         (line (assq-ref properties 'line))
+         (column (assq-ref properties 'column)))
+    (and (string? filename) (integer? line) (integer? column)
+         `((file . ,filename)
+           (line . ,(+ line 1))
+           (column . ,(+ column 1))))))
+
+(define (locate-expression expression fragment)
+  (let ((location (fragment-source-location fragment)))
+    (if location
+        `(content-with-source-location ,expression ',location)
+        expression)))
+
 (define* (fragment->expression fragment #:optional (top-level? #t))
   (cond
     ((string? fragment)
@@ -22,11 +38,11 @@
        (else fragment)))
     ((pair? fragment)
      (let ((expression (cons (car fragment)
-           (map (lambda (child)
-                  (fragment->expression child #f))
-                (cdr fragment)))))
+                       (map (lambda (child)
+                              (fragment->expression child #f))
+                            (cdr fragment)))))
        (set-source-properties! expression (source-properties fragment))
-       expression))
+       (if top-level? expression (locate-expression expression fragment))))
     (else fragment)))
 
 (define (scribble-language-reader port env)
@@ -85,26 +101,44 @@
 
 (define flow-newline (list 'flow-newline))
 
-(define (text-flow-events text source)
+(define (location-on-next-line location offset)
+  (and location
+       (let ((line (assq-ref location 'line)))
+         (map (lambda (entry)
+                (case (car entry)
+                  ((line) (cons 'line (+ line offset)))
+                  ((column) (cons 'column 1))
+                  (else entry)))
+              location))))
+
+(define (text-flow-events text source location)
   (let loop ((lines (string-split text #\newline))
+             (line-offset 0)
              (events '()))
     (if (null? lines)
         (reverse events)
         (let* ((line (car lines))
                (events (if (string-null? line)
                            events
-                           (cons (make-content-text line source) events))))
-          (loop (cdr lines)
+                           (cons (make-content-text
+                                   line source
+                                   #:location
+                                   (and location
+                                        (location-on-next-line
+                                          location line-offset)))
+                                 events))))
+          (loop (cdr lines) (1+ line-offset)
                 (if (null? (cdr lines))
                     events
                     (cons flow-newline events)))))))
 
 (define (flow-events value)
   (cond
-    ((string? value) (text-flow-events value #f))
+    ((string? value) (text-flow-events value #f #f))
     ((content-text? value)
      (text-flow-events (content-text-value value)
-                       (content-text-source value)))
+                       (content-text-source value)
+                       (content-text-location value)))
     ((content-layout? value)
      (if (eq? (content-layout-kind value) 'newline)
          (list flow-newline)
@@ -138,9 +172,21 @@
                  (reverse (drop-while flow-whitespace? (reverse contents)))))
           (if (null? contents)
               output
-              (cons (make-content-element 'paragraph contents
-                                          #:flow-kind 'block)
-                    output)))))
+              (let* ((paragraph
+                       (make-content-element 'paragraph contents
+                                             #:flow-kind 'block))
+                     (first (car contents))
+                     (location
+                       (cond
+                         ((content-text? first)
+                          (content-text-location first))
+                         ((content-element? first)
+                          (content-element-property first 'source-location))
+                         (else #f))))
+                (cons (if location
+                          (content-with-source-location paragraph location)
+                          paragraph)
+                      output))))))
   (let loop ((events (append-map flow-events values))
              (pending '())
              (newlines 0)
@@ -186,9 +232,14 @@
                  (form-number 1))
         (if (null? fragments)
             (make-content-document (decode-flow (reverse children)) source)
-            (let* ((value (evaluate-with-context
-                            (fragment->expression (car fragments))
+            (let* ((fragment (car fragments))
+                   (value (evaluate-with-context
+                            (fragment->expression fragment)
                             source form-number))
+                   (location (fragment-source-location fragment))
+                   (value (if location
+                              (content-with-source-location value location)
+                              value))
                    (module (current-module)))
               ;; define-module changes Guile's current module while evaluating
               ;; the form. Preserve the language's default bindings there too.

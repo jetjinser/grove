@@ -1132,4 +1132,44 @@
              (contains-texto nodes node-id "Nested note")))
       string=?)))
 
+(define source-projection-math
+  (make-content-element
+    'math
+    (list
+      (make-content-element
+        'math-sup
+        (list (make-content-element 'math-row (list "x"))
+              (make-content-element 'math-row (list "2"))))
+      (make-content-element 'math-token (list "+")
+                            #:properties '((token-kind . mo)))
+      (make-content-element
+        'math-frac
+        (list (make-content-element 'math-row (list "a"))
+              (make-content-element 'math-row (list "b")))))))
+
+(let* ((location '((file . "query-article.plant") (line . 7) (column . 3)))
+       (paragraph
+         (content-with-source-location
+           (make-content-element
+             'paragraph (list "Formula: " source-projection-math "."))
+           location))
+       (page
+         (make-site-page "query-article" "Query article"
+                         (make-content-document (list paragraph))
+                         "query-article.plant"))
+       (forest (make-forest (make-site (list page))))
+       (nodes (content-node-relation forest)))
+  (test-equal "math text projection keeps powers and fractions legible"
+    '("Formula: x^(2) + (a)/(b).")
+    (query (text)
+      (fresh (node-id)
+        (math-containing-paragrapho nodes node-id)
+        (nodeo nodes (node-id node-id) (text text)))))
+  (test-equal "source-locationo returns the paragraph's source position"
+    '(("query-article.plant" 7 3))
+    (query (file line column)
+      (fresh (node-id)
+        (math-containing-paragrapho nodes node-id)
+        (source-locationo nodes node-id file line column)))))
+
 (test-end "forester site")

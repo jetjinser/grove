@@ -520,4 +520,25 @@
               (content-verbatim-string
                 (content-element-children paragraph)))))))))
 
+(let ((read-document (make-scribble-document-reader)))
+  (call-with-temporary-source
+    "\nFirst paragraph.\n\nSecond @bold{paragraph}.\n"
+    (lambda (path)
+      (let* ((document (read-document path))
+             (paragraphs (content-document-children document))
+             (first-paragraph (car paragraphs))
+             (second-paragraph (cadr paragraphs))
+             (first-text (car (content-element-children first-paragraph))))
+        (test-equal "paragraph IR records its first source line and column"
+          `((file . ,path) (line . 2) (column . 1))
+          (content-element-property first-paragraph 'source-location))
+        (test-equal "text IR retains its source position"
+          `((file . ,path) (line . 2) (column . 1))
+          (content-text-location first-text))
+        (test-equal "inline commands retain the command source position"
+          `((file . ,path) (line . 4) (column . 8))
+          (content-element-property
+            (cadr (content-element-children second-paragraph))
+            'source-location))))))
+
 (test-end "scribble read")

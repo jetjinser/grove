@@ -18,6 +18,7 @@
             make-content-node-relation
             nodeo
             node-propertyo
+            source-locationo
             childo
             ancestoro
             descendanto
@@ -60,6 +61,14 @@
            (properties properties))
     (list-membero entry properties)
     (== `(,key . ,value) entry)))
+
+(define-relation (source-locationo relation node-id file line column)
+  (exists (properties location)
+    (nodeo relation (node-id node-id) (properties properties))
+    (list-membero `(source-location . ,location) properties)
+    (list-membero `(file . ,file) location)
+    (list-membero `(line . ,line) location)
+    (list-membero `(column . ,column) location)))
 
 (define-relation (page-metadatao relation page-id key value)
   (exists (metadata entry)
