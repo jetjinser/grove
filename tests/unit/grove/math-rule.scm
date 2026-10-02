@@ -42,6 +42,13 @@
     '((smooth (var x))) ((math-rewrite-rule-required-facts rule) input))
   (test-equal "a declaration excludes unrelated left-side shapes"
     #f ((math-rewrite-rule-required-facts rule) '(other (var x))))
+  (test-assert "a declaration normalizes to one inspectable RuleSpec"
+    (let ((spec (math-rewrite-rule-spec rule)))
+      (and (math-rule-spec? spec)
+           (equal? (math-rule-spec-left spec) '(custom (unquote field)))
+           (equal? (math-rule-spec-right spec) '(unquote field))
+           (equal? (math-rule-spec-premises spec) '((smooth (unquote field))))
+           (null? (math-rule-spec-opaque-guards spec)))))
   (test-equal "a check-only rule verifies its named premise"
     '((var x))
     (run* (output)
@@ -51,12 +58,27 @@
     (run* (output) ((math-rewrite-rule-relation rule 'check) '() input output)))
   (test-equal "the same rule has no forward generation callback"
     #f (math-rewrite-rule-relation rule 'forward)))
+(test-assert "unrecognized procedural guards remain explicitly opaque"
+  (pair? (math-rule-spec-opaque-guards
+           (math-rewrite-rule-spec (math-rewrite-rule-ref 'differentiate-power)))))
 (let ((rule (math-rule 'cancel "pair(X,X) = X" "same X twice" 'example
               (facts term) (pair ,term ,term) ,term () ())))
   (test-equal "repeated pattern placeholders constrain diagnostics"
     #f ((math-rewrite-rule-required-facts rule) '(pair (var x) (var y))))
   (test-equal "repeated pattern placeholders match equal operands"
     '() ((math-rewrite-rule-required-facts rule) '(pair (var x) (var x)))))
+(let ((spec (make-math-rule-spec '(pair (unquote x) (unquote x))
+                '(unquote x) '((smooth (unquote x))) '())))
+  (test-equal "RuleSpec owns repeated-variable matching"
+    '((x . (var x))) (math-rule-spec-match spec '(pair (var x) (var x))))
+  (test-equal "RuleSpec rejects inconsistent repeated variables"
+    #f (math-rule-spec-match spec '(pair (var x) (var y))))
+  (test-equal "RuleSpec instantiates its own premise templates"
+    '((smooth (var x)))
+    (math-rule-spec-instantiate spec (math-rule-spec-premises spec)
+      (math-rule-spec-match spec '(pair (var x) (var x))))))
+(test-error "malformed RuleSpecs are rejected at construction"
+  #t (make-math-rule-spec '(+ x 0) 'x 'not-a-list '()))
 (test-equal "vector rule's diagnostic premises come from its relation declaration"
   '((c2 (var E)))
   (math-rule-required-facts 'div-curl-zero '(div (curl (var E)))))

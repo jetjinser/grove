@@ -5,6 +5,7 @@
   #:use-module (grove relation)
   #:use-module ((grove relation dsl) #:select (project))
   #:use-module (grove math premise)
+  #:use-module (grove math rule-spec)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-1)
   #:export (make-math-rewrite-rule math-rule math-factso
@@ -14,11 +15,15 @@
             math-rewrite-rule-condition math-rewrite-rule-condition-checked?
             math-rewrite-rule-group math-rewrite-rule-modes
             math-rewrite-rule-relation math-rewrite-rule-required-facts
-            math-rewrite-rule-backward-default? math-rewrite-rule-schema
-            math-rewrite-rule-documentation))
+            math-rewrite-rule-backward-default? math-rewrite-rule-spec
+            math-rewrite-rule-documentation)
+  #:re-export (make-math-rule-spec math-rule-spec? math-rule-spec-left
+    math-rule-spec-right math-rule-spec-premises math-rule-spec-guards
+    math-rule-spec-match math-rule-spec-instantiate
+    math-rule-spec-guard-kinds math-rule-spec-opaque-guards))
 
 (define-record-type <math-rewrite-rule>
-  (%make-math-rewrite-rule name equation label condition checked? group relation modes backward matcher default? schema)
+  (%make-math-rewrite-rule name equation label condition checked? group relation modes backward matcher default? spec)
   math-rewrite-rule?
   (name math-rewrite-rule-name)
   (equation math-rewrite-rule-equation)
@@ -31,41 +36,21 @@
   (backward rule-backward)
   (matcher math-rewrite-rule-required-facts)
   (default? math-rewrite-rule-backward-default?)
-  (schema math-rewrite-rule-schema))
-
-;; The same quasiquoted left side used by the relation is its diagnostic
-;; pattern. Repeated placeholders must bind structurally identical terms.
-(define (match-pattern pattern term bindings)
-  (cond
-    ((and (pair? pattern) (eq? (car pattern) 'unquote))
-     (let ((previous (assq (cadr pattern) bindings)))
-       (if previous (and (equal? (cdr previous) term) bindings)
-           (cons (cons (cadr pattern) term) bindings))))
-    ((pair? pattern)
-     (and (pair? term)
-          (let ((next (match-pattern (car pattern) (car term) bindings)))
-            (and next (match-pattern (cdr pattern) (cdr term) next)))))
-    (else (and (equal? pattern term) bindings))))
-
-(define (instantiate template bindings)
-  (cond ((and (pair? template) (eq? (car template) 'unquote))
-         (assq-ref bindings (cadr template)))
-        ((pair? template) (cons (instantiate (car template) bindings)
-                               (instantiate (cdr template) bindings)))
-        (else template)))
+  (spec math-rewrite-rule-spec))
 
 (define* (make-math-rewrite-rule name equation condition group relation
-                               #:key (pattern #f) (premises '()) (matcher #f)
+                               #:key (matcher #f)
                                (forward? #t) (backward #f) (backward-default? #f)
-                               (condition-checked? #t) (label #f) (schema #f)
+                               (condition-checked? #t) (label #f) (spec #f)
                                (documentation #f))
   (unless (and (symbol? name) (string? equation) (string? condition)
                (or (not label) (string? label))
                (symbol? group) (procedure? relation)
                (or (not documentation) (string? documentation))
                (boolean? forward?) (boolean? backward-default?) (boolean? condition-checked?)
-               (or matcher pattern) (or (not matcher) (procedure? matcher))
+               (or matcher spec) (or (not matcher) (procedure? matcher))
                (or (not backward) (eq? backward #t) (procedure? backward))
+               (or (not spec) (math-rule-spec? spec))
                (or (not backward-default?) backward))
     (error "invalid math rule declaration" name))
   (when documentation
@@ -77,9 +62,11 @@
     (append (if forward? '(forward) '()) (if backward '(backward) '()) '(check))
     (if (eq? backward #t) relation backward)
     (or matcher (lambda (term)
-                  (let ((bindings (match-pattern pattern term '())))
-                    (and bindings (instantiate premises bindings)))))
-    backward-default? schema))
+                  (let ((bindings (math-rule-spec-match spec term)))
+                    (and bindings
+                         (math-rule-spec-instantiate
+                           spec (math-rule-spec-premises spec) bindings)))))
+    backward-default? spec))
 
 (define (math-rewrite-rule-documentation rule)
   "Return the execution relation's Guile docstring, or #f if absent."
@@ -132,5 +119,5 @@
            (== output (quasiquote right))
            (math-factso assumptions (quasiquote premises))
            goal ...))
-       #:pattern (quote left) #:premises (quote premises)
-       #:schema (quote (left right premises (goal ...))) option ...))))
+       #:spec (make-math-rule-spec (quote left) (quote right)
+               (quote premises) (quote (goal ...))) option ...))))

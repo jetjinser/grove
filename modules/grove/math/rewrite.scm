@@ -24,7 +24,11 @@
   #:re-export (curl-curlo math-rewrite-rule? math-rewrite-rule-name
                math-rewrite-rule-equation math-rewrite-rule-condition
                math-rewrite-rule-condition-checked? math-rewrite-rule-group
-               math-rewrite-rule-modes))
+               math-rewrite-rule-modes math-rewrite-rule-spec
+               make-math-rule-spec math-rule-spec? math-rule-spec-left
+               math-rule-spec-right math-rule-spec-premises math-rule-spec-guards
+               math-rule-spec-match math-rule-spec-instantiate
+               math-rule-spec-guard-kinds math-rule-spec-opaque-guards))
 
 (define math-rewrite-rules
   (append math-vector-rules math-identity-rules math-differentiation-rule-definitions

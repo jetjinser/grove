@@ -48,16 +48,16 @@
     (_ '())))
 
 (define (check-schema-implementation rule sample)
-  (let* ((schema (math-rewrite-rule-schema (math-rewrite-rule-ref rule)))
+  (let* ((spec (math-rewrite-rule-spec (math-rewrite-rule-ref rule)))
          (names (delete-duplicates
-                  (append (schema-metavariables (car schema))
-                          (schema-metavariables (cadr schema)))))
+                  (append (schema-metavariables (math-rule-spec-left spec))
+                          (schema-metavariables (math-rule-spec-right spec)))))
          (zero-names (filter-map
                        (lambda (guard)
                          (match guard
                            (('zeroo _ (? symbol? name)) name)
                            (_ #f)))
-                       (list-ref schema 3)))
+                       (math-rule-spec-guards spec)))
          (bindings
            (map (lambda (name)
                   (cons name
@@ -65,8 +65,8 @@
                           ((eq? sample 'variable) `(var ,name))
                           (else `(+ (var ,name) (num "1"))))))
              names))
-         (input (instantiate-schema (car schema) bindings))
-         (expected (instantiate-schema (cadr schema) bindings))
+         (input (instantiate-schema (math-rule-spec-left spec) bindings))
+         (expected (instantiate-schema (math-rule-spec-right spec) bindings))
          (assumptions
            (delete-duplicates
              (append-map (lambda (binding)

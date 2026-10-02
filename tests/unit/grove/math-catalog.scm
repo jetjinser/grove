@@ -13,7 +13,7 @@
 (test-equal "mode filtering sees every checkable rule"
   (length math-rewrite-rules)
   (length (query (name) (rule-modeo name 'check))))
-(test-equal "operation filtering uses the input side of declared schemas"
+(test-equal "operation filtering uses the input side of declared RuleSpecs"
   '(curl-curl-identity div-curl-zero curl-grad-zero curl-product curl-components)
   (query (name) (rule-operationo name 'curl)))
 (test-equal "premise filtering returns the actual declared premise"
@@ -21,7 +21,7 @@
     (curl-product (differentiable (unquote e))))
   (query (name premise) (rule-premiseo name 'differentiable premise)
          (== name 'curl-product)))
-(test-equal "algorithm rules without fixed schemas are absent from pattern queries" '()
+(test-equal "algorithm rules without fixed RuleSpecs are absent from pattern queries" '()
   (query (name) (rule-operationo name 'differentiate)
          (== name 'differentiate-polynomial)))
 (test-equal "unknown names have no catalog answers" '()
@@ -30,15 +30,16 @@
   '(semantically-checked unsupported)
   (list (car (query (status) (rule-semantic-checko 'add-commutative status)))
         (car (query (status) (rule-semantic-checko 'differentiate-power status)))))
-(test-equal "schema retains premises and executable type guards"
+(test-equal "RuleSpec retains premises and executable guards"
   '(((differentiable (unquote f)) (differentiable (unquote e)))
     ((math-typeo facts f 'scalar) (math-typeo facts e 'vector)))
-  (cddr (math-rewrite-rule-schema (math-rewrite-rule-ref 'curl-product))))
+  (let ((spec (math-rewrite-rule-spec (math-rewrite-rule-ref 'curl-product))))
+    (list (math-rule-spec-premises spec) (math-rule-spec-guards spec))))
 (test-assert "every registered rule renders a native inference fraction"
   (every (lambda (rule) (string-contains (html (math-rewrite-rule-name rule)) "<mfrac>"))
          math-rewrite-rules))
 (test-assert "computed rules disclose their algorithmic nature"
-  (string-contains (html 'normalize-scalar) "not a fixed rewrite schema"))
+  (string-contains (html 'normalize-scalar) "no fixed RuleSpec"))
 (test-assert "power rules expose the guard which computes their result"
   (and (string-contains (html 'differentiate-power) "Executable guards")
        (string-contains (html 'differentiate-power) "natural-value")))

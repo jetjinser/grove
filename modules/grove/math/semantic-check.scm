@@ -176,7 +176,7 @@ natural powers. Division is accepted only by a nonzero rational constant."
 (define (schema-variable name)
   (string->symbol (string-append "__grove_schema_" (symbol->string name))))
 
-(define (schema-zero-metavariables schema)
+(define (spec-zero-metavariables spec)
   (define (zeroo-guard? goal)
     (match goal
       (('zeroo _ (? symbol?)) #t)
@@ -187,9 +187,8 @@ natural powers. Division is accepted only by a nonzero rational constant."
       (('zeroo _ (? symbol? name)) (list name))
       ((head . tail) (append (collect head) (collect tail)))
       (_ '())))
-  (if (and (list? schema) (>= (length schema) 4)
-           (zeroo-guard? (list-ref schema 3)))
-      (collect (list-ref schema 3))
+  (if (math-rule-spec? spec)
+      (collect (math-rule-spec-guards spec))
       '()))
 
 (define* (schema-term term #:optional (zero-variables '()))
@@ -204,19 +203,20 @@ natural powers. Division is accepted only by a nonzero rational constant."
     (_ term)))
 
 (define* (math-polynomial-check-rule name)
-  "Check a rule's existing rewrite schema in the exact scalar-polynomial model."
+  "Check a rule's existing specification in the exact scalar-polynomial model."
   (let* ((rule (math-rewrite-rule-ref name))
-         (schema (and rule (math-rewrite-rule-schema rule)))
-         (law (and (list? schema) (>= (length schema) 2) (take schema 2))))
+         (spec (and rule (math-rewrite-rule-spec rule)))
+         (law (and spec (list (math-rule-spec-left spec)
+                              (math-rule-spec-right spec)))))
     (cond
       ((not rule)
        (semantic-check 'unsupported name "unknown rewrite rule"))
       ((not law)
-       (semantic-check 'unsupported name "the rule has no fixed rewrite schema"))
+       (semantic-check 'unsupported name "the rule has no declarative specification"))
       ((not (every meta-template? law))
-       (semantic-check 'rejected name "malformed rewrite schema"))
+       (semantic-check 'rejected name "malformed rule specification"))
       (else
-       (let* ((zero-variables (schema-zero-metavariables schema))
+       (let* ((zero-variables (spec-zero-metavariables spec))
               (left (math-polynomial-normal-form
                       (schema-term (car law) zero-variables)))
               (right (math-polynomial-normal-form
@@ -224,32 +224,12 @@ natural powers. Division is accepted only by a nonzero rational constant."
          (cond
            ((or (not left) (not right))
             (semantic-check 'unsupported name
-              "the rewrite schema is outside the scalar-polynomial checker"))
+              "the rule specification is outside the scalar-polynomial checker"))
            ((equal? left right)
             (semantic-check 'semantically-checked name #f))
            (else
             (semantic-check 'rejected name
-              "the rewrite schema is not an identity in the rational polynomial model"))))))))
-
-(define (match-law pattern term bindings)
-  (match pattern
-    (('unquote name)
-     (let ((previous (assq name bindings)))
-       (if previous
-           (and (equal? (cdr previous) term) bindings)
-           (cons (cons name term) bindings))))
-    ((head . tail)
-     (and (pair? term)
-          (let ((bindings (match-law head (car term) bindings)))
-            (and bindings (match-law tail (cdr term) bindings)))))
-    (_ (and (equal? pattern term) bindings))))
-
-(define (instantiate-law template bindings)
-  (match template
-    (('unquote name) (assq-ref bindings name))
-    ((head . tail) (cons (instantiate-law head bindings)
-                         (instantiate-law tail bindings)))
-    (_ template)))
+              "the rule specification is not an identity in the rational polynomial model"))))))))
 
 (define (scalar-term? assumptions term)
   (let ((inferred (math-infer-type assumptions term)))
@@ -273,8 +253,9 @@ natural powers. Division is accepted only by a nonzero rational constant."
   "Independently check a scalar-polynomial instance and its whole-term result."
   (let* ((law-check (math-polynomial-check-rule rule-name))
          (rule (math-rewrite-rule-ref rule-name))
-         (schema (and rule (math-rewrite-rule-schema rule)))
-         (law (and (list? schema) (>= (length schema) 2) (take schema 2)))
+         (spec (and rule (math-rewrite-rule-spec rule)))
+         (law (and spec (list (math-rule-spec-left spec)
+                              (math-rule-spec-right spec))))
          (local-from (math-term-at-path from path))
          (local-to (math-term-at-path to path)))
     (cond
@@ -290,8 +271,9 @@ natural powers. Division is accepted only by a nonzero rational constant."
        (semantic-check 'rejected (list from to rule-name path)
          "the whole rewrite is not a declared scalar expression"))
       (else
-       (let* ((bindings (match-law (car law) local-from '()))
-              (expected (and bindings (instantiate-law (cadr law) bindings)))
+       (let* ((bindings (math-rule-spec-match spec local-from))
+              (expected (and bindings
+                             (math-rule-spec-instantiate spec (cadr law) bindings)))
               (from-polynomial (math-polynomial-normal-form from))
               (to-polynomial (math-polynomial-normal-form to)))
          (cond

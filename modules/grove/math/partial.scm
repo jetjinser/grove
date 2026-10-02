@@ -27,8 +27,12 @@
       (member `(parameter ,(cadr input)) facts)))
 
 (define (partial-rule rule)
-  (let* ((schema (rename-derivatives (math-rewrite-rule-schema rule) 'differentiate 'partial))
-         (expression (cadar schema)) (coordinate (caddar schema))
+  (let* ((original (math-rewrite-rule-spec rule))
+         (left (rename-derivatives (math-rule-spec-left original) 'differentiate 'partial))
+         (right (rename-derivatives (math-rule-spec-right original) 'differentiate 'partial))
+         (base-premises (math-rule-spec-premises original))
+         (guards (rename-derivatives (math-rule-spec-guards original) 'differentiate 'partial))
+         (expression (cadr left)) (coordinate (caddr left))
          (premises `((coordinate ,coordinate) (differentiable ,expression))))
     (define (required input)
       (let ((facts (and (pair? input) (eq? (car input) 'partial)
@@ -57,12 +61,12 @@
                     (project (result)
                       (== output (rename-derivatives result 'differentiate 'partial)))) fail)))))
       #:matcher required #:label (math-rewrite-rule-label rule)
-      #:schema (list (car schema) (cadr schema)
-                     (append premises (caddr schema))
-                     (append (cadddr schema)
-                       (if (eq? (math-rewrite-rule-name rule) 'differentiate-independent)
-                           '((project (facts input)
-                               (if (independent-variable? facts input) succeed fail))) '()))))))
+      #:spec (make-math-rule-spec left right
+               (append premises base-premises)
+               (append guards
+                 (if (eq? (math-rewrite-rule-name rule) 'differentiate-independent)
+                     '((project (facts input)
+                         (if (independent-variable? facts input) succeed fail))) '()))))))
 
 (define (mixed-partial-rule name operator)
   (define (premises input)

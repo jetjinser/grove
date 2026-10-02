@@ -54,43 +54,43 @@ Every argument may be unknown."
   "Relate each registered rule to its scalar-polynomial checker status."
   (relationo semantic-check-catalog name status))
 
-(define (schema-operators term)
+(define (spec-operators term)
   (if (not (pair? term)) '()
       (append (if (math-operator-arities (car term)) (list (car term)) '())
-              (append-map schema-operators (cdr term)))))
+              (append-map spec-operators (cdr term)))))
 
 (define operation-catalog
   (make-relation
     (append-map
       (lambda (rule)
-        (let ((schema (math-rewrite-rule-schema rule)))
-          (if schema
+        (let ((spec (math-rewrite-rule-spec rule)))
+          (if spec
               (map (lambda (operator) (list (math-rewrite-rule-name rule) operator))
-                   (delete-duplicates (schema-operators (car schema))))
+                   (delete-duplicates (spec-operators (math-rule-spec-left spec))))
               '())))
       math-rewrite-rules)
     #:arity 2))
 
 (define-public (rule-operationo name operator)
-  "Relate a schema-backed rule to operators occurring in its input pattern."
+  "Relate a specified rule to operators occurring in its input pattern."
   (relationo operation-catalog name operator))
 
 (define premise-catalog
   (make-relation
     (append-map
       (lambda (rule)
-        (let ((schema (math-rewrite-rule-schema rule)))
-          (if schema
+        (let ((spec (math-rewrite-rule-spec rule)))
+          (if spec
               (filter-map (lambda (premise)
                             (and (pair? premise) (symbol? (car premise))
                                  (list (math-rewrite-rule-name rule) (car premise) premise)))
-                          (list-ref schema 2))
+                          (math-rule-spec-premises spec))
               '())))
       math-rewrite-rules)
     #:arity 3))
 
 (define-public (rule-premiseo name predicate premise)
-  "Relate a schema-backed rule to each declared premise predicate and term."
+  "Relate a specified rule to each declared premise predicate and term."
   (relationo premise-catalog name predicate premise))
 
 ;; Metavariables are display placeholders, never concrete solver inputs.
@@ -125,25 +125,25 @@ Every argument may be unknown."
     (_ (text (format #f "~s" goal)))))
 
 (define-public (math-rule->content name)
-  "Render the named rule's schema, documentation and executable guards as content."
+  "Render the named rule's specification, documentation and guards as content."
   (let ((rule (math-rewrite-rule-ref name)))
     (unless rule (error "unknown math rule" name))
-    (let* ((schema (math-rewrite-rule-schema rule))
-           (premises (if schema (list-ref schema 2) '()))
-           (guards (if schema (list-ref schema 3) '()))
+    (let* ((spec (math-rewrite-rule-spec rule))
+           (premises (if spec (math-rule-spec-premises spec) '()))
+           (guards (if spec (math-rule-spec-guards spec) '()))
            (types (filter type-guard? guards))
            (checks (remove type-guard? guards))
            (numerator
              (append (map template-layout premises) (map guard-layout types)
-               (if (or (not schema) (and (null? premises) (null? types)))
+               (if (or (not spec) (and (null? premises) (null? types)))
                    (list (text (math-rewrite-rule-condition rule))) '())
-               (cond ((not schema) (list (text "; algorithm applicability checked")))
+              (cond ((not spec) (list (text "; algorithm applicability checked")))
                      ((pair? checks) (list (text "; executable guards apply")))
                      (else '()))))
            (conclusion
-             (if schema
-                 (list (template-layout (car schema)) (operator "→")
-                       (template-layout (cadr schema)))
+             (if spec
+                 (list (template-layout (math-rule-spec-left spec)) (operator "→")
+                       (template-layout (math-rule-spec-right spec)))
                  (list (text (math-rewrite-rule-equation rule)))))
            (semantic-status
              (math-semantic-check-status (math-polynomial-check-rule name))))
@@ -160,8 +160,8 @@ Every argument may be unknown."
                 (make-content-element 'paragraph
                   (list (format #f "Group: ~a. Modes: ~a. ~a Condition: ~a"
                           (math-rewrite-rule-group rule) (math-rewrite-rule-modes rule)
-                          (if schema "Rewrite schema; metavariables denote terms."
-                              "Algorithm rule; this description is not a fixed rewrite schema.")
+                          (if spec "Declarative RuleSpec; metavariables denote terms."
+                              "Algorithm rule; this description has no fixed RuleSpec.")
                           (math-rewrite-rule-condition rule))) #:flow-kind 'block))
           (list (make-content-element 'paragraph
                   (list (format #f "Scalar-polynomial semantic check: ~a."

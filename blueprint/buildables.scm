@@ -22,6 +22,7 @@
     "grove/math/domain.scm"
     "grove/math/context.scm"
     "grove/math/types.scm"
+    "grove/math/rule-spec.scm"
     "grove/math/rule.scm"
     "grove/math/catalog.scm"
     "grove/math/identities.scm"
