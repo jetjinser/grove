@@ -3,6 +3,7 @@
 
 (define-module (grove math report)
   #:use-module (grove math derivation)
+  #:use-module (grove math audit)
   #:use-module (grove math term)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
@@ -10,10 +11,11 @@
             math-report-candidates math-report-reason math-report-limits
             math-report-states math-report-diagnostics math-report-passes
             math-report-complete? math-report-status math-report-unresolved
-            math-report-derivation math-report-final))
+            math-report-derivation math-report-final
+            math-report-audit math-report-with-audit))
 
 (define-record-type <math-report>
-  (%make-math-report name candidates reason limits states diagnostics passes)
+(%make-math-report name candidates reason limits states diagnostics passes audit)
   math-report?
   (name math-report-name)
   (candidates math-report-candidates)
@@ -21,11 +23,20 @@
   (limits math-report-limits)
   (states math-report-states)
   (diagnostics math-report-diagnostics)
-  (passes math-report-passes))
+  (passes math-report-passes)
+  (audit math-report-audit))
 
 (define* (make-math-report name candidates reason limits states
-                          #:key (diagnostics '()) (passes '()))
-  (%make-math-report name candidates reason limits states diagnostics passes))
+                          #:key (diagnostics '()) (passes '()) (audit #f))
+  (%make-math-report name candidates reason limits states diagnostics passes audit))
+
+(define (math-report-with-audit report audit)
+  (unless (math-report? report) (error "expected a math report" report))
+  (unless (or (not audit) (math-calculation-audit? audit))
+    (error "expected a calculation audit" audit))
+  (%make-math-report (math-report-name report) (math-report-candidates report)
+    (math-report-reason report) (math-report-limits report) (math-report-states report)
+    (math-report-diagnostics report) (math-report-passes report) audit))
 
 (define (math-report-complete? report)
   (and (null? (math-report-diagnostics report))

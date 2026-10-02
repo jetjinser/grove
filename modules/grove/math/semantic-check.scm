@@ -721,13 +721,13 @@ natural powers. Division is accepted only by a nonzero rational constant."
                      (valid-integral-monomial-evidence? variable entry step))
                    input monomials))
        (semantic-check 'rejected evidence "a monomial evidence node has an invalid coefficient or exponent"))
+      ((not (every (lambda (entry) (assq variable (car entry))) result))
+       (semantic-check 'rejected evidence
+         "the primitive is not normalized to zero at the coordinate origin"))
       ((not (equal? result
               (canonical-polynomial
                 (map math-integral-monomial-evidence-output monomials))))
        (semantic-check 'rejected evidence "the claimed primitive differs from the monomial results"))
-      ((not (every (lambda (entry) (assq variable (car entry))) result))
-       (semantic-check 'rejected evidence
-         "the primitive is not normalized to zero at the coordinate origin"))
       ((not (and (math-derivative-evidence? derivative)
                  (equal? (parse-polynomial
                            (math-derivative-evidence-expression derivative))

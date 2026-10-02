@@ -70,4 +70,4 @@
                (if (memq (math-report-name report) '(search search-backward)) origin final-origin)
                (math-diagnostic-path diagnostic)))
            (math-report-diagnostics report))
-      #:passes passes)))
+      #:passes passes #:audit (math-report-audit report))))

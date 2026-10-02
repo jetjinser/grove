@@ -1,9 +1,54 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 (use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math expression) (grove ir) (grove render html)
+             (grove math derivation) (srfi srfi-1)
              (tests unit grove cartesian-fixtures) (srfi srfi-13) (srfi srfi-64)
              (language scribble spec) (language scribble parser) (system base language))
 (test-begin "polynomial calculus composition and writing interface")
+(let* ((derivative (φ:differentiate "x^3+2*x" "x" #:assumptions (list basis)))
+       (primitive (φ:antiderivative "x^3+2*x" "x" #:assumptions (list basis)))
+       (derivative-audit (math-report-audit derivative))
+       (primitive-audit (math-report-audit primitive)))
+  (test-assert "derivative report exposes separate replay, contract, and proof outcomes"
+    (and (math-calculation-audit? derivative-audit)
+         (math-calculation-audit-replay-valid? derivative-audit)
+         (eq? 'semantically-checked
+              (math-calculation-audit-contract-status derivative-audit))
+         (eq? 'unsupported (math-calculation-audit-proof-status derivative-audit))
+         (pair? (math-calculation-audit-proof-errors derivative-audit))))
+  (test-assert "primitive report exposes the same three audit layers"
+    (and (math-calculation-audit-replay-valid? primitive-audit)
+         (eq? 'semantically-checked
+              (math-calculation-audit-contract-status primitive-audit))
+         (eq? 'unsupported (math-calculation-audit-proof-status primitive-audit)))))
+(let* ((report (φ:differentiate "x^3+2*x" "x" #:assumptions (list basis)))
+       (certificate (math-report-derivation report))
+       (terms (math-derivation-terms certificate))
+       (steps (math-derivation-steps certificate))
+       (assumptions (math-derivation-assumptions certificate))
+       (forged (make-math-derivation
+                 (append (drop-right terms 1) (list (φ:term "0"))) steps assumptions))
+       (prefix (make-math-derivation (list (car terms)) '() assumptions))
+       (forged-audit (math-audit-calculation forged))
+       (prefix-audit (math-audit-calculation prefix)))
+  (test-assert "audit reports reject a forged certificate endpoint at replay and contract layers"
+    (and (not (math-calculation-audit-replay-valid? forged-audit))
+         (eq? 'rejected (math-calculation-audit-contract-status forged-audit))
+         (eq? 'rejected (math-calculation-audit-proof-status forged-audit))
+         (pair? (math-calculation-audit-replay-errors forged-audit))
+         (pair? (math-calculation-audit-contract-diagnostics forged-audit))
+         (pair? (math-calculation-audit-proof-errors forged-audit))))
+  (test-assert "a replayable non-result prefix is outside the whole algorithm contract"
+    (and (math-calculation-audit-replay-valid? prefix-audit)
+         (eq? 'unsupported (math-calculation-audit-contract-status prefix-audit)))))
+(let* ((report (φ:differentiate "x^3+2*x" "x" #:assumptions (list basis)
+                  #:max-steps 0))
+       (audit (math-report-audit report)))
+  (test-assert "cutoff reports retain replay evidence while leaving the operation contract unsupported"
+    (and (eq? 'cutoff (math-report-status report))
+         (math-calculation-audit? audit)
+         (math-calculation-audit-replay-valid? audit)
+         (eq? 'unsupported (math-calculation-audit-contract-status audit)))))
 (let ((report (φ:compute "partial(antiderivative(x^3+2*x,x),x)" #:assumptions (list basis))))
   (test-equal "a primitive composes with differentiation" (φ:term "x^3+2*x") (math-report-final report))
   (test-equal "composed primitive uses an explicit extra pass"

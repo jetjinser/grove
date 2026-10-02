@@ -12,6 +12,7 @@
   #:use-module (grove math strategy)
   #:use-module (grove math verification)
   #:use-module (grove math semantic-check)
+  #:use-module (grove math audit)
   #:use-module (grove math polynomial contract)
   #:use-module (grove math differentiation)
   #:use-module (grove math partial)
@@ -34,6 +35,11 @@
   #:re-export (math-derivation->content math-verification->content
                math-report->content math-completed-report->content
                math-semantic-check->content current-math-assumptions call-with-math-assumptions with-math-assumptions
+               math-audit-calculation math-calculation-audit? math-calculation-audit-replay
+               math-calculation-audit-replay-valid? math-calculation-audit-replay-errors
+               math-calculation-audit-contract math-calculation-audit-contract-status
+               math-calculation-audit-contract-diagnostics math-calculation-audit-proof
+               math-calculation-audit-proof-status math-calculation-audit-proof-errors
                math-verify-step math-verify-derivation
                math-verification? math-verification-valid?
                math-verification-errors math-verification-diagnostics
@@ -70,7 +76,8 @@
                math-report? math-report-candidates
                math-report-reason math-report-limits
                math-report-states math-report-complete? math-report-status math-report-unresolved math-report-name
-               math-report-diagnostics math-report-passes math-report-derivation math-report-final))
+               math-report-diagnostics math-report-passes math-report-derivation math-report-final
+               math-report-audit))
 
 (define (value->term who value)
   (unless (math-value? value)
@@ -121,6 +128,12 @@
                            (and (pair? sources) (last sources)))
                 #:properties `((assumptions . ,(math-derivation-assumptions (math-report-derivation report))))))))
 
+(define (audit-calculus-report report)
+  (let ((certificate (math-report-derivation report)))
+    (if certificate
+        (math-report-with-audit report (math-audit-calculation certificate))
+        report)))
+
 (define (derivative-report name rules source variable assumptions validate max-steps max-term-size)
   (let* ((expression (value->term name source))
          (coordinate (value->term name variable))
@@ -143,8 +156,9 @@
 
 (define* (math-differentiate source variable #:key (assumptions '())
                               (max-steps 128) (max-term-size 2048))
-  (derivative-report 'differentiate math-differentiation-rules source variable assumptions
-    differentiation-input-diagnostics max-steps max-term-size))
+  (audit-calculus-report
+    (derivative-report 'differentiate math-differentiation-rules source variable assumptions
+      differentiation-input-diagnostics max-steps max-term-size)))
 
 (define* (math-partial source variable #:key (assumptions '())
                       (max-steps 128) (max-term-size 2048))
@@ -302,7 +316,8 @@ Unknown field derivatives remain explicit; no abstract field components are inve
 (define* (math-antiderivative source coordinate #:key (assumptions '())
                              (max-steps 128) (max-term-size 8192))
   "Compute the exact polynomial primitive anchored at coordinate zero."
-  (polynomial-calculus-report 'antiderivative 'integrate-polynomial source coordinate assumptions max-steps max-term-size))
+  (audit-calculus-report
+    (polynomial-calculus-report 'antiderivative 'integrate-polynomial source coordinate assumptions max-steps max-term-size)))
 
 (define* (math-solve-poisson source #:key (coordinate #f) (assumptions '())
                            (max-steps 128) (max-term-size 8192))

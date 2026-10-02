@@ -67,10 +67,12 @@
     'rejected
     (math-semantic-check-status
       (φ:check-polynomial-antiderivative "x^3+2*x" 'x "x^4/4+x")))
-  (test-equal "a nonzero integration constant violates the canonical origin condition"
-    'rejected
-    (math-semantic-check-status
-      (φ:check-polynomial-antiderivative "x^3+2*x" 'x "x^4/4+x^2+7")))
+  (let ((check (φ:check-polynomial-antiderivative "x^3+2*x" 'x "x^4/4+x^2+7")))
+    (test-equal "a nonzero integration constant violates the canonical origin condition"
+      'rejected (math-semantic-check-status check))
+    (test-assert "the diagnostic identifies the violated normalization contract"
+      (string-contains (car (math-semantic-check-diagnostics check))
+        "not normalized to zero")))
   (test-equal "non-polynomial integrands are outside the integration checker"
     'unsupported
     (math-semantic-check-status
