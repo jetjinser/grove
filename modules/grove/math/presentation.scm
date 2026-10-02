@@ -69,7 +69,7 @@
             (list (chain-content certificate #t)
                   (make-content-element 'subtree full-content
                     #:properties
-                    `((title . ,(format #f "Show ~a step~:p"
+                    `((title . ,(format #f "Derivation (~a step~:p)"
                                         (length (math-derivation-steps certificate))))
                       (open? . #f))
                     #:flow-kind 'block))

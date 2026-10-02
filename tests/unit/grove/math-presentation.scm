@@ -35,14 +35,14 @@
        (steps (cadr (content-element-children presented))))
   (test-assert "compact derivation steps use a collapsed subtree"
     (and (eq? (content-element-kind steps) 'subtree)
-         (string-prefix? "Show "
+         (string-prefix? "Derivation ("
                          (content-element-property steps 'title))
          (not (content-element-property steps 'open?)))))
 (let ((compact (html (display-report 'compact)))
       (full (html (display-report 'full)))
       (result (html (display-report 'result))))
   (test-assert "compact output has a native, initially closed disclosure"
-    (and (string-contains compact "<details><summary>Show ")
+    (and (string-contains compact "<details><summary>Derivation (")
          (not (string-contains compact "open="))
          (not (string-contains compact "<script"))))
   (test-equal "compact keeps endpoints plus both pass tables" 3 (count compact "<mtable>"))
@@ -54,7 +54,7 @@
          (string-contains full "Power rule")
          (not (string-contains full "differentiate-power (at"))))
   (test-equal "plain text retains all steps without duplicate endpoint display"
-    (string-append (format #f "Show ~a steps\n" (length (math-derivation-steps certificate)))
+    (string-append (format #f "Derivation (~a steps)\n" (length (math-derivation-steps certificate)))
                    (content->text (display-report 'full)))
     (content->text (display-report 'compact))))
 (test-assert "all views leave the certificate independently replayable"
