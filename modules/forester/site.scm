@@ -886,6 +886,9 @@
                       (site-page-source (find-page forest id)))
                     included)
                   (content-source-paths (site-page-document page))
-          (filter-map site-page-source
-                              (backlinks forest (site-page-id page))))
+                  (filter-map site-page-source
+                              (backlinks forest (site-page-id page)))
+                  (filter-map site-page-source
+                              (transcluding-pages forest
+                                                  (site-page-id page))))
           string=?))))

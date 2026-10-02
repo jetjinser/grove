@@ -11,6 +11,7 @@
   #:use-module (grove render html)
   #:use-module (grove render html routes)
   #:use-module (grove site)
+  #:use-module (forester backmatter)
   #:use-module (grove style html)
   #:use-module ((forester style html) #:prefix forester:)
   #:use-module (srfi srfi-1)
@@ -189,10 +190,35 @@
     (if (null? groups)
         '()
         (list `(aside (@ (class "backlinks"))
-                      (h2 "Linked from")
+                      (h2 "Backlinks")
                       (ul ,@(map (lambda (group)
                                    (backlink-group-sxml forest page routes group))
                                  groups)))))))
+
+(define (context-sxml forest page routes)
+  (let* ((sources (transcluding-pages forest (site-page-id page)))
+         (items
+           (map (lambda (source)
+                  (list 'li
+                    (list 'a
+                      (list '@
+                        (list 'href
+                          (html-page-url routes (site-page-id source))))
+                      (site-page-title source))))
+                sources)))
+    (if (null? sources)
+        '()
+        (list `(aside (@ (class "backmatter context"))
+                      (h2 "Context")
+                      (ul ,@items))))))
+
+(define (backmatter-sxml forest page routes sections)
+  (append-map
+    (lambda (section)
+      (case section
+        ((context) (context-sxml forest page routes))
+        ((backlinks) (backlinks-sxml forest page routes))))
+    sections))
 
 (define (table-of-contents-sxml forest page)
   (let ((headings (headings forest (site-page-id page))))
@@ -311,11 +337,12 @@
              home-id (html-index-path routes)))
     (index-redirect-html routes home)))
 
-(define* (page-html forest page style routes mathjax-src
+(define* (page-html forest page style routes mathjax-src backmatter
                     #:optional (inline-stylesheets? #f))
   (let* ((site (site forest))
          (body (subtree-content-sxml forest routes page))
-         (article (append body (backlinks-sxml forest page routes))))
+         (article (append body
+                          (backmatter-sxml forest page routes backmatter))))
     (serialize-html-document
       (html-document
         (site-page-title page)
@@ -341,7 +368,7 @@
                    (any (lambda (path) (member path sources string=?))
                         changed))))))
 
-(define (render-html-changed forest style routes mathjax-src
+(define (render-html-changed forest style routes mathjax-src backmatter
                                     changed old-artifacts)
   (check-html-input forest style routes mathjax-src)
   (let* ((site (site forest))
@@ -366,7 +393,8 @@
                         old
                         (make-artifact
                           path
-                          (page-html forest page style routes mathjax-src)
+                          (page-html forest page style routes mathjax-src
+                                     backmatter)
                           sources))))
                 (pages forest))))
     (append (html-style-artifacts style)
@@ -390,8 +418,10 @@
 (define* (site->html forest #:key
                        (style (make-html-style))
                        routes
-                       (mathjax-src default-mathjax-src))
+                       (mathjax-src default-mathjax-src)
+                       (backmatter default-backmatter-sections))
   (set! style (forester:make-html-style #:style style))
+  (check-backmatter-sections backmatter)
   (check-html-input forest style routes mathjax-src)
   (let ((site (site forest)))
     (when (member "index" (map site-page-id (pages forest)))
@@ -400,14 +430,17 @@
       (cons "index" (index-content forest routes))
       (map (lambda (page)
              (cons (site-page-id page)
-                   (page-html forest page style routes mathjax-src #t)))
+                   (page-html forest page style routes mathjax-src
+                              backmatter #t)))
            (pages forest)))))
 
 (define* (render-html forest #:key
                              (style (make-html-style))
                              routes
-                             (mathjax-src default-mathjax-src))
+                             (mathjax-src default-mathjax-src)
+                             (backmatter default-backmatter-sections))
   (set! style (forester:make-html-style #:style style))
+  (check-backmatter-sections backmatter)
   (check-html-input forest style routes mathjax-src)
   (append
     (html-style-artifacts style)
@@ -418,7 +451,7 @@
       (map (lambda (page)
              (make-artifact
                (html-page-path routes (site-page-id page))
-               (page-html forest page style routes mathjax-src)
+               (page-html forest page style routes mathjax-src backmatter)
                (page-source-paths forest page)))
            (pages forest)))))
 
@@ -426,20 +459,24 @@
                                       (style (make-html-style))
                                       routes
                                       (mathjax-src default-mathjax-src)
+                                      (backmatter default-backmatter-sections)
                                       (cache-key #f))
+  (check-backmatter-sections backmatter)
   (let* ((style (forester:make-html-style #:style style))
          (render (lambda (forest)
                   (render-html forest
                                       #:style style
                                       #:routes routes
-                                      #:mathjax-src mathjax-src))))
+                                      #:mathjax-src mathjax-src
+                                      #:backmatter backmatter))))
     (if cache-key
         (make-cached-renderer
           render
-          #:cache-key (string-append "forester-html-v13:" cache-key ":home="
-                                     (html-home-page routes))
+          #:cache-key (string-append "forester-html-v14:" cache-key ":home="
+                                     (html-home-page routes) ":backmatter="
+                                     (format #f "~s" backmatter))
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
-            (render-html-changed forest style routes mathjax-src
+            (render-html-changed forest style routes mathjax-src backmatter
                                         changed old-artifacts)))
         render)))

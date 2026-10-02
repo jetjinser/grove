@@ -9,6 +9,7 @@
   #:use-module (grove output)
   #:use-module (grove render text)
   #:use-module (forester render text routes)
+  #:use-module (forester backmatter)
   #:use-module (grove site)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
@@ -138,7 +139,7 @@
                                         reference))
              references)))))
 
-(define (linked-from-text forest page routes)
+(define (backlinks-text forest page routes)
   (let* ((page-id (site-page-id page))
          (incoming (incoming-references forest page-id))
          (page-references
@@ -158,13 +159,36 @@
                              (list (cons #f page-references)))
                          heading-groups)))
     (if (null? groups)
-        "\n"
+        ""
         (string-append
-          "\n\nLinked from:\n"
+          "\n\nBacklinks:\n"
           (string-concatenate
             (map (lambda (group)
                    (text-backlink-group forest page routes group))
                  groups))))))
+
+(define (context-text forest page routes)
+  (let ((sources (transcluding-pages forest (site-page-id page))))
+    (if (null? sources)
+        ""
+        (string-append
+          "\n\nContext:\n"
+          (string-concatenate
+            (map (lambda (source)
+                   (string-append "- "
+                     (page-reference routes
+                       (text-page-path routes (site-page-id page))
+                       source)
+                     "\n"))
+                 sources))))))
+
+(define (backmatter-text forest page routes sections)
+  (string-concatenate
+    (map (lambda (section)
+           (case section
+             ((context) (context-text forest page routes))
+             ((backlinks) (backlinks-text forest page routes))))
+         sections)))
 
 (define (index->text forest routes)
   (let* ((site (site forest))
@@ -179,7 +203,7 @@
                               "\n"))
              (site-pages site))))))
 
-(define (page->text forest page routes)
+(define (page->text forest page routes backmatter)
   (let ((page-path (text-page-path routes (site-page-id page)))
         (body (string-trim-both
                 (subtree-content-text forest routes page)
@@ -191,7 +215,7 @@
       "\n\n"
       (table-of-contents-text forest page)
       body
-      (linked-from-text forest page routes))))
+      (backmatter-text forest page routes backmatter))))
 
 (define (check-text-routes forest routes)
   (let* ((site (site forest))
@@ -219,7 +243,7 @@
                    (any (lambda (path) (member path sources string=?))
                         changed))))))
 
-(define (render-text-changed forest prefix routes changed old-artifacts)
+(define (render-text-changed forest prefix routes backmatter changed old-artifacts)
   (check-text-routes forest routes)
   (let* ((site (site forest))
          (index-path (output-path prefix (text-index-path routes)))
@@ -244,11 +268,14 @@
                     (if (artifact-current? current old changed)
                         old
                         (make-artifact
-                          path (page->text forest page routes) sources))))
+                          path (page->text forest page routes backmatter) sources))))
                 (pages forest))))
     (cons index-artifact page-artifacts)))
 
-(define* (site->text forest #:key (routes (make-text-routes)))
+(define* (site->text forest #:key
+                     (routes (make-text-routes))
+                     (backmatter default-backmatter-sections))
+  (check-backmatter-sections backmatter)
   (unless (forest? forest)
     (error "Forester text renderer requires a forest" forest))
   (check-text-routes forest routes)
@@ -256,10 +283,13 @@
     (cons (cons "index" (index->text forest routes))
           (map (lambda (page)
                  (cons (site-page-id page)
-                       (page->text forest page routes)))
+                       (page->text forest page routes backmatter)))
                (pages forest)))))
 
-(define* (render-text forest #:key (routes (make-text-routes)))
+(define* (render-text forest #:key
+                      (routes (make-text-routes))
+                      (backmatter default-backmatter-sections))
+  (check-backmatter-sections backmatter)
   (let* ((site (site forest))
          (sources (source-paths forest)))
     (check-text-routes forest routes)
@@ -270,29 +300,34 @@
       (map (lambda (page)
              (make-artifact
                (text-page-path routes (site-page-id page))
-               (page->text forest page routes)
+               (page->text forest page routes backmatter)
                (page-source-paths forest page)))
            (pages forest)))))
 
 (define* (make-text-renderer #:key (prefix #f)
                                       (routes (make-text-routes))
+                                      (backmatter default-backmatter-sections)
                                       (cache-key #f))
+  (check-backmatter-sections backmatter)
   (unless (or (not prefix) (artifact-path? prefix))
     (error "Forester text output prefix must be a relative path or #f" prefix))
   (unless (text-routes? routes)
     (error "Forester text renderer requires text routes" routes))
   (let ((render (lambda (forest)
                   (let ((artifacts (render-text forest
-                                                       #:routes routes)))
+                                                #:routes routes
+                                                #:backmatter backmatter)))
                     (if prefix
                         (prefix-artifacts prefix artifacts)
                         artifacts)))))
     (if cache-key
         (make-cached-renderer
           render
-          #:cache-key (string-append "forester-text-v2:" cache-key)
+          #:cache-key (string-append "forester-text-v3:" cache-key
+                                     ":backmatter="
+                                     (format #f "~s" backmatter))
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
-            (render-text-changed forest prefix routes changed
+            (render-text-changed forest prefix routes backmatter changed
                                         old-artifacts)))
         render)))

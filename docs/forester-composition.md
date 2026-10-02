@@ -83,6 +83,31 @@ output route where the embedded content appears.
 Host artifacts depend on the source files of trees they compose, so edits to a
 transcluded tree invalidate the pages that embed it.
 
+## Backmatter
+
+HTML and text renderers can show incoming composition and link relationships
+after a page's body. The default order is `context` followed by `backlinks`;
+empty sections are omitted. Context lists pages that transclude the current
+tree. Backlinks lists authored links to the current page or its headings.
+These remain separate because embedding and linking express different
+relationships.
+
+Configure the sections on either renderer with `#:backmatter`. The list order
+sets the display order, and an empty list disables generated backmatter:
+
+```scheme
+(make-html-renderer
+  #:routes routes
+  #:backmatter '(backlinks))
+
+(make-text-renderer
+  #:backmatter '())
+```
+
+The supported sections are `context` and `backlinks`. `Related` is not
+included: Grove has no rule yet for deciding which outgoing links count as
+related rather than bibliographic or navigational.
+
 ## Scheme API
 
 The `(forester composition)` module is the shared interface for providing and

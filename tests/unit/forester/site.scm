@@ -257,6 +257,8 @@
   (test-assert "reverse links point back to their source"
     (string-contains limits-html
                      "href=\"/algebra.html#ref-1\">Algebra &amp; limits</a>"))
+  (test-assert "backlinks have a semantic heading"
+    (string-contains limits-html "<h2>Backlinks</h2>"))
   (test-assert "inline math keeps TeX delimiters"
     (string-contains algebra-html "\\(x^2+y^2=z^2\\)"))
   (test-assert "display math keeps TeX delimiters"
@@ -778,6 +780,33 @@
   (test-equal "incoming transclusions map to their host trees"
     '("host")
     (map site-page-id (transcluding-pages forest "reusable")))
+  (test-assert "default HTML backmatter shows transclusion context"
+    (and (string-contains (assoc-ref html "reusable")
+                          "class=\"backmatter context\"")
+         (string-contains (assoc-ref html "reusable") "<h2>Context</h2>")
+         (string-contains (assoc-ref html "reusable")
+                          "href=\"/host.html\">Host</a>")))
+  (test-assert "default text backmatter shows transclusion context"
+    (and (string-contains (assoc-ref text "reusable") "Context:")
+         (string-contains (assoc-ref text "reusable") "Host (host.txt)")))
+  (test-assert "context sources are included in target artifact dependencies"
+    (member "plants/host.plant" (page-source-paths forest target) string=?))
+  (test-assert "backmatter sections can be disabled"
+    (and (not (string-contains
+                (assoc-ref (render-test-html forest #:backmatter '())
+                           "reusable")
+                "class=\"backmatter"))
+         (not (string-contains
+                (assoc-ref (render-test-html forest #:backmatter '())
+                           "reusable")
+                "class=\"backlinks\""))
+         (not (string-contains
+                (assoc-ref (site->text forest #:backmatter '()) "reusable")
+                "Context:"))))
+  (test-error "backmatter rejects unknown sections" #t
+    (render-test-html forest #:backmatter '(related)))
+  (test-error "backmatter rejects duplicate sections" #t
+    (site->text forest #:backmatter '(context context)))
   (test-equal "transclusions do not become ordinary link references"
     '()
     (outgoing-references forest "host"))
