@@ -1,0 +1,43 @@
+@; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+@; SPDX-License-Identifier: CC0-1.0
+
+@use-modules[((grove math formula) #:prefix φ:) (math-derivations commands)
+             (grove math pipeline)
+             ((grove math term) #:select (math-term->source))]
+@title{Independent checks for polynomial math}
+@summary{A small semantic checker verifies scalar polynomial laws and individual derivative results.}
+
+@paragraph{Grove's ordinary derivation verifier replays registered rules. The checks below use a separate exact rational-polynomial normalizer. Its supported scope is intentionally narrower: scalar polynomials, with division only by nonzero rational constants.}
+
+@heading{Checking general scalar laws}
+@paragraph{A semantic law gives the checker a symbolic equation. Replacing each metavariable with an independent indeterminate and obtaining equal normal forms verifies the equation for every scalar polynomial substitution. These checks do not apply to vector expressions or expressions outside the polynomial language.}
+
+@(map (lambda (rule)
+        (φ:polynomial-check->content (φ:check-polynomial-rule rule)))
+      '(add-zero zero-add multiply-one one-multiply
+        add-commutative multiply-associative))
+
+@heading{Checking a recorded step}
+@paragraph{First the normal rewrite checker confirms that the handwritten line uses a registered rule. The semantic checker checks the declared law, exact replacement at the recorded path, and equality of the whole expressions using its own polynomial semantics. It reuses Grove's type inference only to establish that the supplied assumptions make the terms scalar.}
+
+@(let* ((replay
+          (φ:check-chain '("x+0" "x")
+            #:assumptions '("scalar(x)") #:steps '(add-zero)))
+        (semantic
+          (φ:check-polynomial-derivation
+            (math-verification-derivation replay))))
+   (φ:polynomial-check->content semantic))
+
+@heading{Checking one derivative result}
+@(define derivative
+   (φ:differentiate "x^3+2*x" "x" #:assumptions '("scalar(x)")))
+@(math-completed-report->content derivative)
+@paragraph{The checker recomputes the formal derivative using its own sparse-polynomial representation, then compares that result with Grove's output. This checks this calculation instance; it does not prove the Scheme differentiation algorithm correct for every input.}
+@(φ:polynomial-check->content
+   (φ:check-polynomial-derivative "x^3+2*x" "x"
+     (math-term->source (math-report-final derivative))))
+
+@heading{Unsupported claims stay visible}
+@(φ:polynomial-check->content
+   (φ:check-polynomial-derivative "sin(x)" "x" "cos(x)"))
+@paragraph{An unsupported result is not accepted as a proof. Differentiation rules for functions, vector calculus, quotient domains and user assumptions remain outside this checker.}

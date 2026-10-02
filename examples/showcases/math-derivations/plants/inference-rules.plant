@@ -13,5 +13,8 @@
          (query (name premise)
            (rule-premiseo name 'differentiable premise)))
 
+@(format #f "Rules with scalar-polynomial semantic checks: ~s"
+         (query (name) (rule-semantic-checko name 'semantically-checked)))
+
 @(map (lambda (row) (math-rule->content (car row)))
       (query (name modes documentation) (ruleo name 'vector-calculus modes documentation)))

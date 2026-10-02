@@ -15,7 +15,7 @@
 @differentiate[x]{@φ:log{x}}
 @differentiate[x]{x/x^2}
 @differentiate[x]{@φ:call[f]{x^2}}
-@math{@◆:prime[f]{x}}
+@math{prime(f,x)}
 @check-derive[#:view 'full]{
   differentiate(log(x),x)
   differentiate(x,x)/x

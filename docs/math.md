@@ -142,6 +142,39 @@ calculation diagnostic in the article. Authored Formula expressions retain
 source locations through parsing and computation where possible, so diagnostics
 can point back to the relevant source text.
 
+## Independent scalar-polynomial checks
+
+The ordinary derivation verifier replays Grove's registered rewrite relations.
+For a deliberately smaller domain, the independent semantic checker verifies
+polynomial equations using its own exact sparse-polynomial normalizer. The
+checker can validate the registered scalar laws, check an individual rewrite
+step and its recorded path, or compare a computed polynomial derivative with an
+independently computed derivative. For example:
+
+```scheme
+@(φ:polynomial-check->content (φ:check-polynomial-rule 'add-commutative))
+@(φ:polynomial-check->content
+   (φ:check-polynomial-derivative "x^3+2*x" 'x "3*x^2+2"))
+```
+
+Its domain is scalar polynomials over the rationals, including division by a
+nonzero rational constant. Expression-valued denominators, functions, vectors,
+spatial rules and algorithm-wide correctness proofs are unsupported. The
+normalizer also has explicit expansion limits: at most 256 distinct monomials,
+total degree 64, and exponent 128. The checker relies on the correctness of its
+own small Scheme implementation; it is independently implemented from the
+rewrite relations, but is not itself formally verified. A rule check proves
+the identity declared in that rule's `semantic-law` annotation; it does not
+inspect the Scheme procedure or prove that the procedure implements the
+annotation. That correspondence remains a reviewed and tested part of the
+trusted code. For a rewrite step, the ordinary checker replays the registered
+relation, while the polynomial checker checks the recorded instance against
+its annotation and independent polynomial semantics. The latter reuses
+Grove's type inference to check that the supplied assumptions make both terms
+scalar. A successful derivative check certifies that one supplied result
+matches the checker's derivative semantics, not that Grove's derivative
+program is correct for every input. Assumptions remain author-supplied inputs.
+
 ## Display notation
 
 Use Formula text for ordinary expressions. Use Semantic constructors to supply
