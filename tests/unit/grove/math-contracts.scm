@@ -16,6 +16,10 @@
 (test-error "pipeline requires a Semantic value" #t (math-simplify "x+0"))
 (test-assert "Formula facade parses then calls the Semantic pipeline"
   (math-report-complete? (φ:simplify "x+0" #:assumptions '("scalar(x)"))))
+(test-equal "prime notation accepts a declared Semantic function value"
+  '(prime (var f) (var x))
+  (math-value-term
+    (semantic:prime (semantic:function 'f) (semantic:variable 'x))))
 (let ((value (φ:read "x+opaque(x)")))
   (test-assert "unknown function applications remain structurally valid"
     (math-term? (math-value-term value)))
