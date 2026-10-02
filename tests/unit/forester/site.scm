@@ -251,7 +251,7 @@
   (test-assert "at-exp link resolves to a page"
     (string-contains algebra-html "href=\"/limits.html\">limits</a>"))
   (test-assert "links produce reverse links"
-    (and (string-contains algebra-html "class=\"backlinks\"")
+    (and (string-contains algebra-html "class=\"backmatter backlinks\"")
          (string-contains algebra-html
                           "href=\"/limits.html#ref-1\">Limits</a>")))
   (test-assert "reverse links point back to their source"
@@ -471,7 +471,13 @@
              (find (lambda (artifact)
                      (string=? (artifact-path artifact) "forester.css"))
                    artifacts))
-           ".forest-tree-block:hover")))
+           ".forest-tree-block:hover")
+         (string-contains
+           (artifact-content
+             (find (lambda (artifact)
+                     (string=? (artifact-path artifact) "forester.css"))
+                   artifacts))
+           ".backmatter { margin-top:")))
   (test-assert "user stylesheets follow the Forester defaults"
     (let* ((custom
              (make-artifact "custom.css" "body { color: black; }"))
@@ -812,7 +818,7 @@
          (not (string-contains
                 (assoc-ref (render-test-html forest #:backmatter '())
                            "reusable")
-                "class=\"backlinks\""))
+                "class=\"backmatter backlinks\""))
          (not (string-contains
                 (assoc-ref (site->text forest #:backmatter '()) "reusable")
                 "Context:"))))

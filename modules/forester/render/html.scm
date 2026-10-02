@@ -189,7 +189,7 @@
   (let ((groups (backlink-groups forest page)))
     (if (null? groups)
         '()
-        (list `(aside (@ (class "backlinks"))
+        (list `(aside (@ (class "backmatter backlinks"))
                       (h2 ,label)
                       (ul ,@(map (lambda (group)
                                    (backlink-group-sxml forest page routes group))
