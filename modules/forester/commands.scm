@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester commands)
+  #:replace (link)
   #:use-module (ice-9 rdelim)
   #:use-module (grove ir)
   #:use-module (srfi srfi-1)
