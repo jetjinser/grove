@@ -33,7 +33,7 @@
                 (case kind
             ((paragraph) (string-append body "\n"))
             ((summary) (string-append body "\n"))
-            ((subtree)
+            ((disclosure subtree)
              (string-append (content-element-property element 'title)
                             "\n" body))
             ((math-derivation)
@@ -41,7 +41,7 @@
                (if (and (= (length children) 2)
                         (content-element? (cadr children))
                         (memq (content-element-kind (cadr children))
-                              '(details subtree)))
+                              '(details disclosure subtree)))
                    (render (cadr children)) body)))
             ((heading)
              (string-append body "\n"

@@ -44,7 +44,7 @@
             ((verbatim) (cons 'pre children))
             ((details) (cons 'details children))
             ((summary) (cons 'summary children))
-            ((subtree)
+            ((disclosure subtree)
              `(details ,@(if (if (assq 'open? (content-element-properties element))
                                  (content-element-property element 'open?)
                                  #t)

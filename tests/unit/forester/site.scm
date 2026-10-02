@@ -584,6 +584,24 @@
       (and (string-contains collapsed-html "<summary>")
            (not (string-contains collapsed-html "<details open=\"open\">"))
            (string-contains collapsed-html "Hidden until opened."))))
+  (test-assert "host promotes addressable disclosures to indexed subtrees"
+    (let* ((page
+             (make-site-page
+               "addressable" "Addressable"
+               (make-content-document
+                 (list (make-content-disclosure
+                         "Generated steps"
+                         (list (make-content-element
+                                 'paragraph '("Step content.")))
+                         #:open? #f #:addressable? #t)))))
+           (forest (make-forest (make-site (list page))))
+           (rendered (assoc-ref
+                       (render-test-html forest #:mathjax-src #f)
+                       "addressable")))
+      (and (find-page forest "unstable-0")
+           (string-contains rendered "class=\"forest-tree-block inline-subtree\"")
+           (string-contains rendered "<summary>")
+           (not (string-contains rendered "<details open=\"open\">")))))
   (test-assert "inline subtree can be explicitly set to open"
     (let* ((open-root
              (make-site-page

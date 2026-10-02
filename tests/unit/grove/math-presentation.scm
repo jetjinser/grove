@@ -34,9 +34,10 @@
 (let* ((presented (display-report 'compact))
        (steps (cadr (content-element-children presented))))
   (test-assert "compact derivation steps use a collapsed subtree"
-    (and (eq? (content-element-kind steps) 'subtree)
+    (and (eq? (content-element-kind steps) 'disclosure)
          (string-prefix? "Derivation ("
                          (content-element-property steps 'title))
+         (content-element-property steps 'addressable?)
          (not (content-element-property steps 'open?)))))
 (let ((compact (html (display-report 'compact)))
       (full (html (display-report 'full)))

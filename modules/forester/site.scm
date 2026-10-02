@@ -46,64 +46,43 @@
             module-paths
             page-source-paths))
 
+(define* (walk-content content select? #:key (postorder? #f) (stop? (const #f)))
+  (define (walk node)
+    (let* ((element? (content-element? node))
+           (children
+             (cond
+               ((and element? (not (stop? node)))
+                (content-element-children node))
+               ((content-document? node)
+                (content-document-children node))
+               (else '())))
+           (nested (append-map walk children))
+           (selected (if (select? node) (list node) '())))
+      (if postorder? (append nested selected) (append selected nested))))
+  (walk content))
+
+(define (element-kind? kind)
+  (lambda (content)
+    (and (content-element? content)
+         (eq? kind (content-element-kind content)))))
+
 (define (link-elements content)
-  (cond
-    ((content-element? content)
-     (append (append-map link-elements
-                         (content-element-children content))
-             (if (eq? (content-element-kind content) 'link)
-                 (list content)
-                 '())))
-    ((content-document? content)
-     (append-map link-elements (content-document-children content)))
-    (else '())))
+  (walk-content content (element-kind? 'link) #:postorder? #t))
 
 (define (subtree-elements content)
-  (cond
-    ((content-element? content)
-     (append (if (eq? (content-element-kind content) 'subtree)
-                 (list content)
-                 '())
-             (append-map subtree-elements
-                         (content-element-children content))))
-    ((content-document? content)
-     (append-map subtree-elements (content-document-children content)))
-    (else '())))
+  (walk-content content (element-kind? 'subtree)))
 
 (define (direct-subtree-elements content)
-  (cond
-    ((content-element? content)
-     (if (eq? (content-element-kind content) 'subtree)
-         (list content)
-         (append-map direct-subtree-elements
-                     (content-element-children content))))
-    ((content-document? content)
-     (append-map direct-subtree-elements (content-document-children content)))
-    (else '())))
+  (walk-content content (element-kind? 'subtree)
+    #:stop? (element-kind? 'subtree)))
 
 (define (content-source-paths content)
-  (cond
-    ((content-text? content)
-     (if (content-text-source content)
-         (list (content-text-source content))
-         '()))
-    ((content-element? content)
-     (append-map content-source-paths (content-element-children content)))
-    ((content-document? content)
-     (append-map content-source-paths (content-document-children content)))
-    (else '())))
+  (filter-map (lambda (node)
+                (and (content-text? node) (content-text-source node)))
+    (walk-content content content-text?)))
 
 (define (transclusion-elements content)
-  (cond
-    ((content-element? content)
-     (append (append-map transclusion-elements
-                         (content-element-children content))
-             (if (eq? (content-element-kind content) 'transclude)
-                 (list content)
-                 '())))
-    ((content-document? content)
-     (append-map transclusion-elements (content-document-children content)))
-    (else '())))
+  (walk-content content (element-kind? 'transclude) #:postorder? #t))
 
 (define (describe-tree-cycle pages cycle)
   (string-join
@@ -180,7 +159,13 @@
     (define (transform content)
       (cond
         ((content-element? content)
-         (let* ((subtree? (eq? (content-element-kind content) 'subtree))
+         (let* ((addressable-disclosure?
+                  (and (eq? (content-element-kind content) 'disclosure)
+                       (content-element-property content 'addressable?)))
+                (subtree? (or (eq? (content-element-kind content) 'subtree)
+                              addressable-disclosure?))
+                (kind (if addressable-disclosure? 'subtree
+                          (content-element-kind content)))
                 (explicit-id
                   (and subtree?
                        (content-element-property content 'tree-id)))
@@ -192,10 +177,12 @@
                              (format #f "unstable-~d" id))))))
                 (children (map transform (content-element-children content)))
                 (properties
-                  (filter (lambda (entry) (not (eq? (car entry) 'tree-id)))
+                  (filter (lambda (entry)
+                            (not (memq (car entry)
+                                       '(tree-id addressable?))))
                           (content-element-properties content))))
            (make-content-element
-             (content-element-kind content) children
+             kind children
              (content-element-source content)
              #:properties (if id
                               (cons (cons 'tree-id id) properties)
@@ -273,16 +260,7 @@
     (else "")))
 
 (define (heading-elements content)
-  (cond
-    ((content-element? content)
-     (append (append-map heading-elements
-                         (content-element-children content))
-             (if (eq? (content-element-kind content) 'heading)
-                 (list content)
-                 '())))
-    ((content-document? content)
-     (append-map heading-elements (content-document-children content)))
-    (else '())))
+  (walk-content content (element-kind? 'heading) #:postorder? #t))
 
 (define (heading-slug heading)
   (let loop ((characters (string->list (content->plain-text heading)))

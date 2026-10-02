@@ -27,6 +27,7 @@
             content-element-properties
             content-element-property
             content-element-source
+            make-content-disclosure
             content-document?
             make-content-document
             content-document-children
@@ -92,6 +93,20 @@
 
 (define (content-element-property element key)
   (assq-ref (content-element-properties element) key))
+
+(define* (make-content-disclosure title children #:key (open? #t)
+                                  (addressable? #f))
+  "Make a titled disclosure. Addressable disclosures may become trees in a host site."
+  (unless (and (string? title) (not (string-null? title)))
+    (error "content disclosure requires a non-empty title" title))
+  (unless (boolean? open?)
+    (error "content disclosure open? must be a boolean" open?))
+  (unless (boolean? addressable?)
+    (error "content disclosure addressable? must be a boolean" addressable?))
+  (make-content-element 'disclosure children
+    #:properties `((title . ,title) (open? . ,open?)
+                   (addressable? . ,addressable?))
+    #:flow-kind 'block))
 
 (define-record-type <content-document>
   (%make-content-document children source)

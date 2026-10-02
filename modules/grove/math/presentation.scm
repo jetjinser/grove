@@ -67,12 +67,10 @@
       (if (null? (math-derivation-steps certificate)) (chain-content certificate #t)
           (make-content-element 'math-derivation
             (list (chain-content certificate #t)
-                  (make-content-element 'subtree full-content
-                    #:properties
-                    `((title . ,(format #f "Derivation (~a step~:p)"
-                                        (length (math-derivation-steps certificate))))
-                      (open? . #f))
-                    #:flow-kind 'block))
+                  (make-content-disclosure
+                    (format #f "Derivation (~a step~:p)"
+                            (length (math-derivation-steps certificate)))
+                    full-content #:open? #f #:addressable? #t))
             #:flow-kind 'block)))))
 
 (define* (math-derivation->content certificate #:key (view 'compact))
