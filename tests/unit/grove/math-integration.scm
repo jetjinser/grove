@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 (use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math expression) (grove math polynomial)
              (grove math types) (grove math context) (grove relation)
+             (grove math derivation)
              ((grove math semantic) #:prefix ◆:)
              (tests unit grove polynomial-oracle) (tests unit grove cartesian-fixtures)
              (srfi srfi-1) (srfi srfi-64))
@@ -17,6 +18,8 @@
       (test-equal "explicit primitive and simplification passes" '(antiderivative simplify)
         (map math-report-name (math-report-passes report)))
       (test-assert "primitive certificate replays" (math-verification-valid? (math-verify-derivation certificate)))
+      (test-assert "primitive certificate checks against the monomial integration contract"
+        (math-semantic-check-valid? (math-polynomial-check-derivation certificate)))
       (test-equal "independent derivative recovers integrand"
         (evaluate (φ:term source) coordinates)
         (evaluate `(partial ,result (var ,(string->symbol coordinate))) coordinates))
@@ -32,6 +35,37 @@
     ("x^3/3+2*x*y^2-z/7+(x+y)^2*(x-z)" "x")
     ("x^3/3+2*x*y^2-z/7+(x+y)^2*(x-z)" "y")
     ("x^3/3+2*x*y^2-z/7+(x+y)^2*(x-z)" "z")))
+(let* ((report (φ:antiderivative "x^3+2*x" "x" #:assumptions (list basis)))
+       (check (φ:check-polynomial-antiderivative
+                "x^3+2*x" 'x (math-report-result report)))
+       (proof (format #f "~s" (math-semantic-check-subject check))))
+  (test-assert "integration proof records each monomial recurrence and its normalization checks"
+    (and (string-contains proof "integrate-monomial")
+         (string-contains proof "zero-at-coordinate-origin")
+         (string-contains proof "differentiate-result")))
+  (test-assert "integration checker accepts the actual pass result"
+    (math-semantic-check-valid? check))
+  (test-equal "a wrong monomial coefficient is diagnosed by differentiating the candidate"
+    'rejected
+    (math-semantic-check-status
+      (φ:check-polynomial-antiderivative "x^3+2*x" 'x "x^4/4+x")))
+  (test-equal "a nonzero integration constant violates the canonical origin condition"
+    'rejected
+    (math-semantic-check-status
+      (φ:check-polynomial-antiderivative "x^3+2*x" 'x "x^4/4+x^2+7")))
+  (test-equal "non-polynomial integrands are outside the integration checker"
+    'unsupported
+    (math-semantic-check-status
+      (φ:check-polynomial-antiderivative "sin(x)" 'x "-cos(x)")))
+  (let* ((certificate (math-report-derivation report))
+         (terms (math-derivation-terms certificate))
+         (forged (make-math-derivation
+                   (append (drop-right terms 1) (list (φ:term "x^4/4+x")))
+                   (math-derivation-steps certificate)
+                   (math-derivation-assumptions certificate))))
+    (test-equal "integration certificate rejects a forged endpoint"
+      'rejected
+      (math-semantic-check-status (math-polynomial-check-derivation forged)))))
 (let ((report (φ:antiderivative "a*x" "x" #:assumptions (list basis "parameter(a)"))))
   (test-equal "constant parameter coefficient is retained" (φ:term "(1/2)*a*x^2") (math-report-final report))
   (test-assert "parameter role remains a result requirement"

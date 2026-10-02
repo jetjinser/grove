@@ -20,7 +20,8 @@
             math-polynomial-normal-form math-polynomial-equivalent?
             math-polynomial-check-rule math-polynomial-check-rule-spec
             math-polynomial-check-step
-            math-polynomial-check-derivation math-polynomial-check-derivative))
+            math-polynomial-check-derivation math-polynomial-check-derivative
+            math-polynomial-check-antiderivative))
 
 ;; A polynomial is a canonical list of (monomial . exact-rational) pairs.
 ;; Monomials are sorted lists of (variable . natural-power) pairs.
@@ -472,6 +473,10 @@ natural powers. Division is accepted only by a nonzero rational constant."
        (match (car terms)
          (('differentiate expression ('var variable))
           (check-polynomial-derivative-derivation certificate expression variable terms))))
+      ((match (car terms) (('antiderivative _ ('var _)) #t) (_ #f))
+       (match (car terms)
+         (('antiderivative expression ('var variable))
+          (check-polynomial-antiderivative-derivation certificate expression variable terms))))
       (else
        (check-polynomial-rewrite-derivation certificate terms steps assumptions)))))
 
@@ -560,3 +565,96 @@ checked against the denotation produced by this independent recursion."
       (else
        (semantic-check 'rejected (list expression variable result)
          "the supplied result differs from the exact polynomial derivative")))))
+
+(define (integrate-monomial entry variable)
+  (let* ((monomial (car entry))
+         (factor (assq variable monomial))
+         (exponent (if factor (cdr factor) 0))
+         (raised (sort
+                   (cons (cons variable (+ exponent 1))
+                     (filter (lambda (power) (not (eq? (car power) variable))) monomial))
+                   (lambda (left right)
+                     (string<? (symbol->string (car left))
+                               (symbol->string (car right))))))
+         (result (cons raised (/ (cdr entry) (+ exponent 1)))))
+    (list 'integrate-monomial entry variable result)))
+
+(define (polynomial-contract-term polynomial)
+  (define (monomial-term monomial)
+    (let ((factors
+            (map (lambda (factor)
+                   (if (= (cdr factor) 1)
+                       `(var ,(car factor))
+                       `(^ (var ,(car factor)) (num ,(number->string (cdr factor))))))
+              monomial)))
+      (if (null? factors) '(num "1")
+          (fold (lambda (factor product) `(* ,product ,factor)) (car factors) (cdr factors)))))
+  (define (entry-term entry)
+    (let ((coefficient (math-number->term (cdr entry)))
+          (monomial (monomial-term (car entry))))
+      (cond ((equal? monomial '(num "1")) coefficient)
+            ((equal? coefficient '(num "1")) monomial)
+            (else `(* ,coefficient ,monomial)))))
+  (let ((terms (map entry-term polynomial)))
+    (if (null? terms) '(num "0")
+        (fold (lambda (term sum) `(+ ,sum ,term)) (car terms) (cdr terms)))))
+
+(define (polynomial-antiderivative-contract expression variable)
+  "Build the monomial induction evidence for the zero-at-origin primitive."
+  (let ((input (math-polynomial-normal-form expression)))
+    (and input
+      (let* ((evidence (map (lambda (entry) (integrate-monomial entry variable)) input))
+             (expected (canonical-polynomial (map (lambda (item) (cadddr item)) evidence)))
+             (origin-zero?
+               (every (lambda (entry) (assq variable (car entry))) expected))
+             (expected-term (polynomial-contract-term expected))
+             (derivative (polynomial-derivative-contract expected-term variable)))
+        (and origin-zero? derivative (equal? (car derivative) input)
+          (list expected
+            (list 'polynomial-antiderivative expression variable
+                  evidence
+                  (list 'zero-at-coordinate-origin variable #t)
+                  (list 'differentiate-result (cdr derivative)))))))))
+
+(define (math-polynomial-check-antiderivative expression variable result)
+  "Check the termwise polynomial integration contract and its normalization."
+  (let* ((contract (and (symbol? variable)
+                        (catch 'semantic-polynomial-limit
+                          (lambda () (polynomial-antiderivative-contract expression variable))
+                          (lambda _ #f))))
+         (actual (math-polynomial-normal-form result))
+         (actual-derivative (and actual
+                            (polynomial-derivative-contract result variable))))
+    (cond
+      ((not (symbol? variable))
+       (semantic-check 'rejected (list expression variable result)
+         "the integration coordinate must be a symbol"))
+      ((or (not contract) (not actual))
+       (semantic-check 'unsupported (list expression variable result)
+         "the input or result is outside the scalar-polynomial integration checker"))
+      ((not (and actual-derivative
+                 (equal? (car actual-derivative)
+                   (math-polynomial-normal-form expression))))
+       (semantic-check 'rejected (list expression variable result)
+         "differentiating the supplied primitive does not recover the integrand"))
+      ((not (every (lambda (entry) (assq variable (car entry))) actual))
+       (semantic-check 'rejected (list expression variable result)
+         "the primitive is not normalized to zero at the coordinate origin"))
+      ((equal? actual (car contract))
+       (semantic-check 'semantically-checked (cadr contract) #f))
+      (else
+       (semantic-check 'rejected (list expression variable result)
+         "the primitive does not follow the termwise integration contract")))))
+
+(define (check-polynomial-antiderivative-derivation certificate expression variable terms)
+  (let ((replay (math-verify-derivation certificate))
+        (check (math-polynomial-check-antiderivative expression variable (last terms))))
+    (cond
+      ((not (math-verification-valid? replay))
+       (semantic-check 'rejected certificate
+         (string-join (math-verification-errors replay) "; ")))
+      ((math-semantic-check-valid? check)
+       (semantic-check 'semantically-checked
+         (list 'replayed-derivation certificate
+               'integration-contract (math-semantic-check-subject check)) #f))
+      (else check))))

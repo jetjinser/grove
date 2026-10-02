@@ -54,6 +54,7 @@
                math-polynomial-normal-form math-polynomial-equivalent?
                math-polynomial-check-rule math-polynomial-check-step
                math-polynomial-check-derivation math-polynomial-check-derivative
+               math-polynomial-check-antiderivative
                math-report? math-report-candidates
                math-report-reason math-report-limits
                math-report-states math-report-complete? math-report-status math-report-unresolved math-report-name

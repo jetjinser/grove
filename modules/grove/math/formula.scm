@@ -18,7 +18,7 @@
             call components
             derive rewrite search search-backward simplify calculate normalize expand collect
             check-chain check-polynomial-rule check-polynomial-derivation
-            check-polynomial-step check-polynomial-derivative
+            check-polynomial-step check-polynomial-derivative check-polynomial-antiderivative
             polynomial-check->content
             compute check-equation solve-poisson differentiate partial partial-derivative))
 
@@ -184,6 +184,17 @@
                             (eq? (car coordinate-term) 'var)
                             (cadr coordinate-term)))))
     (core:math-polynomial-check-derivative
+      (math-value-term (read expression)) variable
+      (math-value-term (read result)))))
+
+(define-public (check-polynomial-antiderivative expression coordinate result)
+  (let* ((coordinate-term (and (not (symbol? coordinate))
+                               (math-value-term (read coordinate))))
+         (variable (if (symbol? coordinate) coordinate
+                       (and (pair? coordinate-term)
+                            (eq? (car coordinate-term) 'var)
+                            (cadr coordinate-term)))))
+    (core:math-polynomial-check-antiderivative
       (math-value-term (read expression)) variable
       (math-value-term (read result)))))
 
