@@ -259,6 +259,19 @@
                      "href=\"/algebra.html#ref-1\">Algebra &amp; limits</a>"))
   (test-assert "backlinks have a semantic heading"
     (string-contains limits-html "<h2>Backlinks</h2>"))
+  (test-assert "backmatter labels can be customized in HTML and text"
+    (and (string-contains
+           (assoc-ref (render-test-html
+                        (make-forest (make-site (list algebra limits)))
+                        #:backmatter-labels '((backlinks . "Link sources")))
+                      "limits")
+           "<h2>Link sources</h2>")
+         (string-contains
+           (assoc-ref (site->text
+                        (make-forest (make-site (list algebra limits)))
+                        #:backmatter-labels '((backlinks . "Link sources")))
+                      "limits")
+           "Link sources:")))
   (test-assert "inline math keeps TeX delimiters"
     (string-contains algebra-html "\\(x^2+y^2=z^2\\)"))
   (test-assert "display math keeps TeX delimiters"
@@ -807,6 +820,10 @@
     (render-test-html forest #:backmatter '(related)))
   (test-error "backmatter rejects duplicate sections" #t
     (site->text forest #:backmatter '(context context)))
+  (test-error "backmatter labels reject unknown sections" #t
+    (site->text forest #:backmatter-labels '((related . "Related"))))
+  (test-error "backmatter labels reject empty text" #t
+    (site->text forest #:backmatter-labels '((context . ""))))
   (test-equal "transclusions do not become ordinary link references"
     '()
     (outgoing-references forest "host"))

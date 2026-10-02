@@ -104,6 +104,17 @@ sets the display order, and an empty list disables generated backmatter:
   #:backmatter '())
 ```
 
+Use `#:backmatter-labels` to customize headings for the selected sections;
+omitted labels keep their defaults:
+
+```scheme
+(make-html-renderer
+  #:routes routes
+  #:backmatter '(context backlinks)
+  #:backmatter-labels '((context . "Embedded in")
+                       (backlinks . "Linked from")))
+```
+
 The supported sections are `context` and `backlinks`. `Related` is not
 included: Grove has no rule yet for deciding which outgoing links count as
 related rather than bibliographic or navigational.
