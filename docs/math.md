@@ -164,16 +164,21 @@ normalizer also has explicit expansion limits: at most 256 distinct monomials,
 total degree 64, and exponent 128. The checker relies on the correctness of its
 own small Scheme implementation; it is independently implemented from the
 rewrite relations, but is not itself formally verified. A rule check proves
-the identity declared in that rule's `semantic-law` annotation; it does not
-inspect the Scheme procedure or prove that the procedure implements the
-annotation. That correspondence remains a reviewed and tested part of the
-trusted code. For a rewrite step, the ordinary checker replays the registered
-relation, while the polynomial checker checks the recorded instance against
-its annotation and independent polynomial semantics. The latter reuses
-Grove's type inference to check that the supplied assumptions make both terms
-scalar. A successful derivative check certifies that one supplied result
-matches the checker's derivative semantics, not that Grove's derivative
-program is correct for every input. Assumptions remain author-supplied inputs.
+the equation in the rule's existing rewrite schema, specializing declared
+zero-valued operands to scalar zero. It does not add a second public rule-law
+representation. The rule relation is generated from the same schema, but
+guards and procedural details still need testing. Tests replay each supported
+polynomial schema on variable and compound substitutions; those finite tests
+do not establish implementation equivalence for every possible input. For an
+individual rewrite step, the ordinary checker replays the registered
+relation, while the polynomial checker checks the recorded path and whole-term
+denotation independently. It reuses Grove's type inference to establish that
+the supplied assumptions make both terms scalar. For polynomial derivative
+certificates, the same derivation record retains the rule, path and endpoints;
+the ordinary verifier replays those steps, then the independent checker
+compares the final term with its own exact derivative. This checks a specific
+certificate, not the derivative program for all inputs. Assumptions remain
+author-supplied inputs.
 
 ## Display notation
 
