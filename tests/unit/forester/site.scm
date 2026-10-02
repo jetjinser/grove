@@ -376,7 +376,9 @@
          (string-contains source-text "target.txt#about-trees")))
   (test-assert "fragment links produce section-aware backlinks"
     (and (string-contains target-html "href=\"/source.html#ref-1\">Source</a>")
-         (string-contains target-html "href=\"#overview-2\">Overview</a>")))
+         (string-contains target-html "href=\"#overview-2\">Overview</a>")
+         (not (string-contains target-html "This page"))
+         (not (string-contains target-text "This page"))))
   (test-assert "Forest references preserve source, target, label and fragment"
     (and (reference? first-reference)
          (string=? (reference-source-page-id first-reference) "source")

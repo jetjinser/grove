@@ -176,14 +176,14 @@
                         (string=? fragment (heading-id heading)))
                       (headings forest (site-page-id page)))))
          (references (cdr group))
-         (label (if target-heading
-                    `(a (@ (href ,(string-append "#" fragment)))
-                        ,(heading-label target-heading))
-                    "This page")))
-    `(li ,label
-         (ul ,@(map (lambda (reference)
-                      (backlink-reference-sxml forest routes reference))
-                    references)))))
+         (items (map (lambda (reference)
+                       (backlink-reference-sxml forest routes reference))
+                     references)))
+    (if target-heading
+        `(li (a (@ (href ,(string-append "#" fragment)))
+                ,(heading-label target-heading))
+             (ul ,@items))
+        items)))
 
 (define (backlinks-sxml forest page routes label)
   (let ((groups (backlink-groups forest page)))
@@ -191,9 +191,10 @@
         '()
         (list `(aside (@ (class "backmatter backlinks"))
                       (h2 ,label)
-                      (ul ,@(map (lambda (group)
-                                   (backlink-group-sxml forest page routes group))
-                                 groups)))))))
+                      (ul ,@(append-map
+                              (lambda (group)
+                                (backlink-group-sxml forest page routes group))
+                              groups)))))))
 
 (define (context-sxml forest page routes label)
   (let* ((sources (transcluding-pages forest (site-page-id page)))

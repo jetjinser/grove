@@ -114,30 +114,34 @@
                  headings))
           "\n"))))
 
-(define (text-backlink-reference forest page-id routes reference)
+(define (text-backlink-reference forest page-id routes reference indent)
   (let* ((source-id (reference-source-page-id reference))
          (source (find (lambda (candidate)
                          (equal? source-id (site-page-id candidate)))
                        (pages forest)))
          (path (text-relative-path (text-page-path routes page-id)
                                    (text-page-path routes source-id))))
-    (string-append "  - " (site-page-title source) " [" path "#"
+    (string-append indent "- " (site-page-title source) " [" path "#"
                    (reference-source-id reference) "]: "
                    (reference-label reference) "\n")))
 
 (define (text-backlink-group forest page routes group)
   (let ((heading-record (car group))
         (references (cdr group)))
-    (string-append
-      (if heading-record
-          (string-append "- " (heading-label heading-record)
-                         " [#" (heading-id heading-record) "]:\n")
-          "- This page:\n")
-      (string-concatenate
-        (map (lambda (reference)
-               (text-backlink-reference forest (site-page-id page) routes
-                                        reference))
-             references)))))
+    (if heading-record
+        (string-append
+          "- " (heading-label heading-record)
+          " [#" (heading-id heading-record) "]:\n"
+          (string-concatenate
+            (map (lambda (reference)
+                   (text-backlink-reference forest (site-page-id page) routes
+                                            reference "  "))
+                 references)))
+        (string-concatenate
+          (map (lambda (reference)
+                 (text-backlink-reference forest (site-page-id page) routes
+                                          reference ""))
+               references)))))
 
 (define (backlinks-text forest page routes label)
   (let* ((page-id (site-page-id page))
