@@ -5,7 +5,9 @@
 (define-module (grove math semantic-check)
   #:use-module (grove math derivation)
   #:use-module (grove math number)
+  #:use-module (grove math rule)
   #:use-module (grove math rewrite)
+  #:use-module (grove math verification)
   #:use-module (grove math term)
   #:use-module (grove math types)
   #:use-module (ice-9 match)
@@ -167,47 +169,71 @@ natural powers. Division is accepted only by a nonzero rational constant."
 
 (define (meta-template? term)
   (match term
-    (('meta (? symbol?)) #t)
+    (('unquote name) (symbol? name))
     ((head . tail) (and (meta-template? head) (meta-template? tail)))
     (_ #t)))
 
 (define (schema-variable name)
   (string->symbol (string-append "__grove_schema_" (symbol->string name))))
 
-(define (schema-term term)
+(define (schema-zero-metavariables schema)
+  (define (zeroo-guard? goal)
+    (match goal
+      (('zeroo _ (? symbol?)) #t)
+      ((head . tail) (or (zeroo-guard? head) (zeroo-guard? tail)))
+      (_ #f)))
+  (define (collect goal)
+    (match goal
+      (('zeroo _ (? symbol? name)) (list name))
+      ((head . tail) (append (collect head) (collect tail)))
+      (_ '())))
+  (if (and (list? schema) (>= (length schema) 4)
+           (zeroo-guard? (list-ref schema 3)))
+      (collect (list-ref schema 3))
+      '()))
+
+(define* (schema-term term #:optional (zero-variables '()))
   (match term
-    (('meta name) `(var ,(schema-variable name)))
-    ((head . tail) (cons (schema-term head) (schema-term tail)))
+    (('unquote name)
+     (if (memq name zero-variables) '(num "0")
+         `(var ,(schema-variable name))))
+    ((head . tail)
+     (cons (schema-term head zero-variables) (schema-term tail zero-variables)))
+    ((? symbol? name)
+     (if (memq name zero-variables) '(num "0") term))
     (_ term)))
 
 (define* (math-polynomial-check-rule name)
-  "Check a registered scalar-polynomial law for all metavariable instances."
+  "Check a rule's existing rewrite schema in the exact scalar-polynomial model."
   (let* ((rule (math-rewrite-rule-ref name))
-         (law (and rule (math-rewrite-rule-semantic-law rule))))
+         (schema (and rule (math-rewrite-rule-schema rule)))
+         (law (and (list? schema) (>= (length schema) 2) (take schema 2))))
     (cond
       ((not rule)
        (semantic-check 'unsupported name "unknown rewrite rule"))
       ((not law)
-       (semantic-check 'unsupported name
-         "the rule has no declared scalar-polynomial semantic law"))
+       (semantic-check 'unsupported name "the rule has no fixed rewrite schema"))
       ((not (every meta-template? law))
-       (semantic-check 'rejected name "malformed semantic-law template"))
+       (semantic-check 'rejected name "malformed rewrite schema"))
       (else
-       (let ((left (math-polynomial-normal-form (schema-term (car law))))
-             (right (math-polynomial-normal-form (schema-term (cadr law)))))
+       (let* ((zero-variables (schema-zero-metavariables schema))
+              (left (math-polynomial-normal-form
+                      (schema-term (car law) zero-variables)))
+              (right (math-polynomial-normal-form
+                       (schema-term (cadr law) zero-variables))))
          (cond
            ((or (not left) (not right))
             (semantic-check 'unsupported name
-              "the declared law is outside the scalar-polynomial checker"))
+              "the rewrite schema is outside the scalar-polynomial checker"))
            ((equal? left right)
             (semantic-check 'semantically-checked name #f))
            (else
             (semantic-check 'rejected name
-              "the declared law is not an identity in the rational polynomial model"))))))))
+              "the rewrite schema is not an identity in the rational polynomial model"))))))))
 
 (define (match-law pattern term bindings)
   (match pattern
-    (('meta name)
+    (('unquote name)
      (let ((previous (assq name bindings)))
        (if previous
            (and (equal? (cdr previous) term) bindings)
@@ -220,7 +246,7 @@ natural powers. Division is accepted only by a nonzero rational constant."
 
 (define (instantiate-law template bindings)
   (match template
-    (('meta name) (assq-ref bindings name))
+    (('unquote name) (assq-ref bindings name))
     ((head . tail) (cons (instantiate-law head bindings)
                          (instantiate-law tail bindings)))
     (_ template)))
@@ -247,7 +273,8 @@ natural powers. Division is accepted only by a nonzero rational constant."
   "Independently check a scalar-polynomial instance and its whole-term result."
   (let* ((law-check (math-polynomial-check-rule rule-name))
          (rule (math-rewrite-rule-ref rule-name))
-         (law (and rule (math-rewrite-rule-semantic-law rule)))
+         (schema (and rule (math-rewrite-rule-schema rule)))
+         (law (and (list? schema) (>= (length schema) 2) (take schema 2)))
          (local-from (math-term-at-path from path))
          (local-to (math-term-at-path to path)))
     (cond
@@ -270,7 +297,7 @@ natural powers. Division is accepted only by a nonzero rational constant."
          (cond
            ((not bindings)
             (semantic-check 'rejected (list from to rule-name path)
-              "the local input does not match the declared semantic law"))
+              "the local input does not match the rule schema"))
            ((not (and (equal? expected local-to)
                       (equal? (replace-at-path from path expected) to)))
             (semantic-check 'rejected (list from to rule-name path)
@@ -284,39 +311,65 @@ natural powers. Division is accepted only by a nonzero rational constant."
             (semantic-check 'rejected (list from to rule-name path)
               "the rewrite changes the rational-polynomial denotation"))))))))
 
+(define (check-polynomial-rewrite-derivation certificate terms steps assumptions)
+  (let ((checks
+          (map (lambda (step from to)
+                 (if (not (math-derivation-step? step))
+                     (semantic-check 'rejected step "malformed derivation step")
+                     (if (not (and (equal? from (math-derivation-step-from step))
+                                   (equal? to (math-derivation-step-to step))))
+                         (semantic-check 'rejected step
+                           "recorded step endpoints do not match the chain")
+                         (math-polynomial-check-step assumptions from to
+                           (math-derivation-step-rule step)
+                           (math-derivation-step-path step)))))
+               steps (drop-right terms 1) (cdr terms))))
+    (cond
+      ((every math-semantic-check-valid? checks)
+       (semantic-check 'semantically-checked certificate #f))
+      ((any (lambda (check)
+              (eq? (math-semantic-check-status check) 'rejected)) checks)
+       (make-math-semantic-check 'rejected certificate
+         (append-map math-semantic-check-diagnostics checks)))
+      (else
+       (make-math-semantic-check 'unsupported certificate
+         (append-map math-semantic-check-diagnostics checks))))))
+
+(define (check-polynomial-derivative-derivation certificate expression variable terms)
+  (let* ((replay (math-verify-derivation certificate))
+         (expected (math-polynomial-normal-form expression))
+         (actual (math-polynomial-normal-form (last terms))))
+    (cond
+      ((not (math-verification-valid? replay))
+       (semantic-check 'rejected certificate
+         (string-join (math-verification-errors replay) "; ")))
+      ((or (not expected) (not actual))
+       (semantic-check 'unsupported certificate
+         "the derivative chain is outside the scalar-polynomial checker"))
+      ((equal? actual (differentiate-polynomial expected variable))
+       (semantic-check 'semantically-checked certificate #f))
+      (else
+       (semantic-check 'rejected certificate
+         "the replayed derivative chain has an incorrect polynomial result")))))
+
 (define (math-polynomial-check-derivation certificate)
-  "Check every recorded step without invoking its rewrite relation."
+  "Check a rewrite chain, or replay and independently check a polynomial derivative."
   (unless (math-derivation? certificate)
     (error "expected a math derivation" certificate))
   (let ((terms (math-derivation-terms certificate))
         (steps (math-derivation-steps certificate))
         (assumptions (math-derivation-assumptions certificate)))
-    (if (not (and (list? terms) (pair? terms) (list? steps)
-                  (list? assumptions)
-                  (= (length terms) (+ 1 (length steps)))))
-        (semantic-check 'rejected certificate "malformed derivation chain")
-        (let ((checks
-                (map (lambda (step from to)
-                       (if (not (math-derivation-step? step))
-                           (semantic-check 'rejected step "malformed derivation step")
-                           (if (not (and (equal? from (math-derivation-step-from step))
-                                         (equal? to (math-derivation-step-to step))))
-                               (semantic-check 'rejected step
-                                 "recorded step endpoints do not match the chain")
-                               (math-polynomial-check-step assumptions from to
-                                 (math-derivation-step-rule step)
-                                 (math-derivation-step-path step)))))
-                     steps (drop-right terms 1) (cdr terms))))
-          (cond
-            ((every math-semantic-check-valid? checks)
-             (semantic-check 'semantically-checked certificate #f))
-            ((any (lambda (check)
-                    (eq? (math-semantic-check-status check) 'rejected)) checks)
-             (make-math-semantic-check 'rejected certificate
-               (append-map math-semantic-check-diagnostics checks)))
-            (else
-             (make-math-semantic-check 'unsupported certificate
-               (append-map math-semantic-check-diagnostics checks))))))))
+    (cond
+      ((not (and (list? terms) (pair? terms) (list? steps)
+                 (list? assumptions)
+                 (= (length terms) (+ 1 (length steps)))))
+       (semantic-check 'rejected certificate "malformed derivation chain"))
+      ((match (car terms) (('differentiate _ ('var _)) #t) (_ #f))
+       (match (car terms)
+         (('differentiate expression ('var variable))
+          (check-polynomial-derivative-derivation certificate expression variable terms))))
+      (else
+       (check-polynomial-rewrite-derivation certificate terms steps assumptions)))))
 
 (define (differentiate-polynomial polynomial variable)
   (canonical-polynomial

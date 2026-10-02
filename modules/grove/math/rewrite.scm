@@ -24,7 +24,7 @@
   #:re-export (curl-curlo math-rewrite-rule? math-rewrite-rule-name
                math-rewrite-rule-equation math-rewrite-rule-condition
                math-rewrite-rule-condition-checked? math-rewrite-rule-group
-               math-rewrite-rule-modes math-rewrite-rule-semantic-law))
+               math-rewrite-rule-modes))
 
 (define math-rewrite-rules
   (append math-vector-rules math-identity-rules math-differentiation-rule-definitions

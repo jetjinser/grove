@@ -48,7 +48,6 @@
                math-derivation-step-path math-derivation?
                math-derivation-terms math-derivation-steps
                math-derivation-assumptions math-derivation-sources math-derivation-requirements
-               math-rewrite-rule-semantic-law
                math-semantic-check? math-semantic-check-status
                math-semantic-check-valid? math-semantic-check-subject
                math-semantic-check-diagnostics

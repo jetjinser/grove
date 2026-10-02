@@ -168,7 +168,7 @@
       grad-product div-product curl-product
       subtract-zero add-zero zero-add subtract-right-zero double-negation multiply-one one-multiply
       multiply-zero zero-multiply power-one power-zero
-      add-commutative multiply-associative
+      add-commutative multiply-associative add-associative multiply-commutative
       differentiate-constant differentiate-variable differentiate-independent
       differentiate-negation differentiate-sum differentiate-difference
       differentiate-product differentiate-power differentiate-quotient differentiate-sin

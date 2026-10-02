@@ -5,7 +5,9 @@
 (use-modules ((grove math formula) #:prefix φ:)
              (grove math pipeline)
              (grove math rewrite)
+             (grove math rule)
              (grove math derivation)
+             (ice-9 match)
              (grove ir)
              (grove render html)
              (srfi srfi-1)
@@ -24,12 +26,71 @@
 (test-assert "normalization limits report unsupported instead of expanding without bound"
   (not (math-polynomial-normal-form (φ:term "(x+y)^65"))))
 
+(define (schema-metavariables term)
+  (match term
+    (('unquote name) (list name))
+    ((head . tail) (append (schema-metavariables head)
+                           (schema-metavariables tail)))
+    (_ '())))
+
+(define (instantiate-schema term bindings)
+  (match term
+    (('unquote name) (assq-ref bindings name))
+    ((head . tail) (cons (instantiate-schema head bindings)
+                         (instantiate-schema tail bindings)))
+    (_ term)))
+
+(define (scalar-variable-facts term)
+  (match term
+    (('var name) `((scalar (var ,name))))
+    ((head . tail) (append (scalar-variable-facts head)
+                           (scalar-variable-facts tail)))
+    (_ '())))
+
+(define (check-schema-implementation rule sample)
+  (let* ((schema (math-rewrite-rule-schema (math-rewrite-rule-ref rule)))
+         (names (delete-duplicates
+                  (append (schema-metavariables (car schema))
+                          (schema-metavariables (cadr schema)))))
+         (zero-names (filter-map
+                       (lambda (guard)
+                         (match guard
+                           (('zeroo _ (? symbol? name)) name)
+                           (_ #f)))
+                       (list-ref schema 3)))
+         (bindings
+           (map (lambda (name)
+                  (cons name
+                    (cond ((memq name zero-names) '(num "0"))
+                          ((eq? sample 'variable) `(var ,name))
+                          (else `(+ (var ,name) (num "1"))))))
+             names))
+         (input (instantiate-schema (car schema) bindings))
+         (expected (instantiate-schema (cadr schema) bindings))
+         (assumptions
+           (delete-duplicates
+             (append-map (lambda (binding)
+                           (scalar-variable-facts (cdr binding)))
+               bindings)
+             equal?))
+         (answers (math-rewrite-answers assumptions input (list rule) #f
+                    #:mode 'check #:max-results 16)))
+    (any (lambda (answer)
+           (and (equal? (car answer) expected) (null? (caddr answer))))
+      answers)))
+
+(define checked-schema-rules
+  (filter (lambda (rule)
+            (math-semantic-check-valid? (φ:check-polynomial-rule rule)))
+    (math-rule-names #:mode 'check)))
+
 (for-each
   (lambda (rule)
-    (test-assert (format #f "universal polynomial law checks: ~a" rule)
-      (math-semantic-check-valid? (φ:check-polynomial-rule rule))))
-  '(add-zero zero-add multiply-one one-multiply
-    add-commutative multiply-associative))
+    (test-assert (format #f "schema relation matches checker for ~a variables" rule)
+      (check-schema-implementation rule 'variable))
+    (test-assert (format #f "schema relation matches checker for ~a compound terms" rule)
+      (check-schema-implementation rule 'compound)))
+  checked-schema-rules)
 (test-equal "algorithm rules are not presented as checked polynomial laws"
   'unsupported
   (math-semantic-check-status (φ:check-polynomial-rule 'differentiate-power)))
@@ -60,7 +121,7 @@
     (and (math-verification-valid? checked)
          (math-semantic-check-valid?
            (math-polynomial-check-derivation derivation)))))
-(test-error "check-only algebra laws cannot be selected for rewrite search" #t
+  (test-error "check-only algebra laws cannot be selected for rewrite search" #t
   (math-selected-rules '(add-commutative) math-default-rules #:mode 'forward))
 (test-assert "derivation checker rejects forged certificate endpoints"
   (not
@@ -84,6 +145,24 @@
 (test-assert "derivative checker handles independent variables"
   (math-semantic-check-valid?
     (φ:check-polynomial-derivative "x^2+y" "x" "2*x")))
+(test-assert "derivative certificate replays sourced steps and checks final denotation"
+  (let* ((report (φ:differentiate "x^3+2*x" "x"
+                   #:assumptions '("coordinate(x)")))
+         (derivation (math-report-derivation report)))
+    (and (math-report-complete? report)
+         (every math-derivation-step? (math-derivation-steps derivation))
+         (math-semantic-check-valid?
+           (φ:check-polynomial-derivation derivation)))))
+(test-assert "derivative certificate rejects a forged final value"
+  (let* ((report (φ:differentiate "x^3+2*x" "x"
+                   #:assumptions '("coordinate(x)")))
+         (derivation (math-report-derivation report))
+         (terms (math-derivation-terms derivation))
+         (forged (make-math-derivation
+                   (append (drop-right terms 1) (list (φ:term "x^2")))
+                   (math-derivation-steps derivation)
+                   (math-derivation-assumptions derivation))))
+    (not (math-semantic-check-valid? (φ:check-polynomial-derivation forged)))))
 (test-equal "non-polynomial differentiation is explicitly unsupported"
   'unsupported
   (math-semantic-check-status

@@ -15,10 +15,10 @@
             math-rewrite-rule-group math-rewrite-rule-modes
             math-rewrite-rule-relation math-rewrite-rule-required-facts
             math-rewrite-rule-backward-default? math-rewrite-rule-schema
-            math-rewrite-rule-documentation math-rewrite-rule-semantic-law))
+            math-rewrite-rule-documentation))
 
 (define-record-type <math-rewrite-rule>
-  (%make-math-rewrite-rule name equation label condition checked? group relation modes backward matcher default? schema semantic-law)
+  (%make-math-rewrite-rule name equation label condition checked? group relation modes backward matcher default? schema)
   math-rewrite-rule?
   (name math-rewrite-rule-name)
   (equation math-rewrite-rule-equation)
@@ -31,8 +31,7 @@
   (backward rule-backward)
   (matcher math-rewrite-rule-required-facts)
   (default? math-rewrite-rule-backward-default?)
-  (schema math-rewrite-rule-schema)
-  (semantic-law math-rewrite-rule-semantic-law))
+  (schema math-rewrite-rule-schema))
 
 ;; The same quasiquoted left side used by the relation is its diagnostic
 ;; pattern. Repeated placeholders must bind structurally identical terms.
@@ -59,13 +58,11 @@
                                #:key (pattern #f) (premises '()) (matcher #f)
                                (forward? #t) (backward #f) (backward-default? #f)
                                (condition-checked? #t) (label #f) (schema #f)
-                               (documentation #f) (semantic-law #f))
+                               (documentation #f))
   (unless (and (symbol? name) (string? equation) (string? condition)
                (or (not label) (string? label))
                (symbol? group) (procedure? relation)
                (or (not documentation) (string? documentation))
-               (or (not semantic-law)
-                   (and (list? semantic-law) (= (length semantic-law) 2)))
                (boolean? forward?) (boolean? backward-default?) (boolean? condition-checked?)
                (or matcher pattern) (or (not matcher) (procedure? matcher))
                (or (not backward) (eq? backward #t) (procedure? backward))
@@ -82,7 +79,7 @@
     (or matcher (lambda (term)
                   (let ((bindings (match-pattern pattern term '())))
                     (and bindings (instantiate premises bindings)))))
-    backward-default? schema semantic-law))
+    backward-default? schema))
 
 (define (math-rewrite-rule-documentation rule)
   "Return the execution relation's Guile docstring, or #f if absent."
