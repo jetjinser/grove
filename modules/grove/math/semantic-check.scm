@@ -441,17 +441,17 @@ natural powers. Division is accepted only by a nonzero rational constant."
 
 (define (check-polynomial-derivative-derivation certificate expression variable terms)
   (let* ((replay (math-verify-derivation certificate))
-         (expected (math-polynomial-normal-form expression))
+         (contract (polynomial-derivative-contract expression variable))
          (actual (math-polynomial-normal-form (last terms))))
     (cond
       ((not (math-verification-valid? replay))
        (semantic-check 'rejected certificate
          (string-join (math-verification-errors replay) "; ")))
-      ((or (not expected) (not actual))
+      ((or (not contract) (not actual))
        (semantic-check 'unsupported certificate
          "the derivative chain is outside the scalar-polynomial checker"))
-      ((equal? actual (differentiate-polynomial expected variable))
-       (semantic-check 'semantically-checked certificate #f))
+      ((equal? actual (car contract))
+       (semantic-check 'semantically-checked (cdr contract) #f))
       (else
        (semantic-check 'rejected certificate
          "the replayed derivative chain has an incorrect polynomial result")))))
@@ -475,35 +475,88 @@ natural powers. Division is accepted only by a nonzero rational constant."
       (else
        (check-polynomial-rewrite-derivation certificate terms steps assumptions)))))
 
-(define (differentiate-polynomial polynomial variable)
-  (canonical-polynomial
-    (filter-map
-      (lambda (entry)
-        (let ((power (or (assq variable (car entry)) #f)))
-          (and power
-               (cons (if (= (cdr power) 1)
-                         (delq power (car entry))
-                         (map (lambda (factor)
-                                (if (eq? factor power)
-                                    (cons variable (- (cdr factor) 1))
-                                    factor))
-                              (car entry)))
-                     (* (cdr entry) (cdr power))))))
-      polynomial)))
+(define (polynomial-derivative-contract term variable)
+  "Return the recursive derivative denotation and its structural proof tree.
+
+The tree records the induction case at each source constructor. Its leaves are
+constants and variables; compound nodes use the sum, product, quotient-by-
+constant, or natural-power contract. The executable differentiation pass is
+checked against the denotation produced by this independent recursion."
+  (match term
+    (('num text)
+     (let ((value (math-natural-value text)))
+       (and value (cons '() (list 'constant term variable '() '())))))
+    (('var name)
+     (let ((result (constant-polynomial (if (eq? name variable) 1 0))))
+       (cons result
+         (list (if (eq? name variable) 'coordinate 'independent-variable)
+               term variable result '()))))
+    (('- operand)
+     (let ((child (polynomial-derivative-contract operand variable)))
+       (and child
+            (let ((result (polynomial-scale (car child) -1)))
+              (cons result (list 'negation term variable result (list (cdr child))))))))
+    (((or '+ '-) left right)
+     (let ((left-proof (polynomial-derivative-contract left variable))
+           (right-proof (polynomial-derivative-contract right variable)))
+       (and left-proof right-proof
+            (let ((result (polynomial-add (car left-proof)
+                            (polynomial-scale (car right-proof)
+                              (if (eq? (car term) '+) 1 -1)))))
+              (cons result (list (if (eq? (car term) '+) 'sum 'difference)
+                term variable result (list (cdr left-proof) (cdr right-proof))))))))
+    (('* left right)
+     (let* ((left-value (parse-polynomial left))
+            (right-value (parse-polynomial right))
+            (left-proof (polynomial-derivative-contract left variable))
+            (right-proof (polynomial-derivative-contract right variable)))
+       (and left-value right-value left-proof right-proof
+            (let ((result
+                    (polynomial-add
+                      (polynomial-multiply (car left-proof) right-value)
+                      (polynomial-multiply left-value (car right-proof)))))
+              (cons result (list 'product term variable result
+                (list (cdr left-proof) (cdr right-proof))))))))
+    (('/ numerator denominator)
+     (let* ((value (parse-polynomial denominator))
+            (constant (and value (polynomial-constant-value value)))
+            (numerator-proof (polynomial-derivative-contract numerator variable)))
+       (and constant (not (zero? constant)) numerator-proof
+            (let ((result (polynomial-scale (car numerator-proof) (/ 1 constant))))
+              (cons result (list 'constant-quotient term variable result
+                (list (cdr numerator-proof))))))))
+    (('^ base ('num exponent-text))
+     (let* ((exponent (math-natural-value exponent-text))
+            (base-value (parse-polynomial base))
+            (base-proof (polynomial-derivative-contract base variable)))
+       (and exponent (<= exponent 128) base-value base-proof
+            (let ((result
+                    (if (zero? exponent)
+                        '()
+                        (polynomial-scale
+                          (polynomial-multiply
+                            (polynomial-power base-value (- exponent 1))
+                            (car base-proof))
+                          exponent))))
+              (cons result (list 'natural-power term variable result
+                (list (cdr base-proof))))))))
+    (_ #f)))
 
 (define (math-polynomial-check-derivative expression variable result)
-  "Check one derivative result against an independent exact polynomial derivative."
-  (let ((input (math-polynomial-normal-form expression))
+  "Check a derivative by recursively interpreting its source constructors."
+  (let ((contract (and (symbol? variable)
+                       (polynomial-derivative-contract expression variable)))
         (output (math-polynomial-normal-form result)))
     (cond
       ((not (symbol? variable))
        (semantic-check 'rejected (list expression variable result)
          "the differentiation variable must be a symbol"))
-      ((or (not input) (not output))
+      ((or (not contract) (not output))
        (semantic-check 'unsupported (list expression variable result)
          "the input or result is outside the scalar-polynomial checker"))
-      ((equal? output (differentiate-polynomial input variable))
-       (semantic-check 'semantically-checked (list expression variable result) #f))
+      ((equal? output (car contract))
+       (semantic-check 'semantically-checked
+         (list 'derivative-contract (cdr contract) 'actual-result output) #f))
       (else
        (semantic-check 'rejected (list expression variable result)
          "the supplied result differs from the exact polynomial derivative")))))

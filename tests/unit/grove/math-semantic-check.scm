@@ -180,6 +180,12 @@
 (test-assert "derivative checker validates the expected polynomial result"
   (math-semantic-check-valid?
     (φ:check-polynomial-derivative "x^3+2*x" 'x "3*x^2+2")))
+(test-assert "derivative contract records recursive power, product, and sum cases"
+  (let ((subject (math-semantic-check-subject
+                   (φ:check-polynomial-derivative "x^3+2*x" 'x "3*x^2+2"))))
+    (and (string-contains (format #f "~s" subject) "natural-power")
+         (string-contains (format #f "~s" subject) "product")
+         (string-contains (format #f "~s" subject) "sum"))))
 (test-assert "derivative checker accepts a Formula variable expression"
   (math-semantic-check-valid?
     (φ:check-polynomial-derivative "x^3+2*x" "x" "3*x^2+2")))
