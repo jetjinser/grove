@@ -574,12 +574,8 @@
     (let* ((collapsed-root
              (make-site-page
                "collapsed" "Collapsed"
-               (make-content-document
-                 (list (make-content-element
-                         'subtree
-                         (list (make-content-element 'paragraph '("Hidden until opened.")))
-                         #:properties '((title . "Collapsed") (open? . #f))
-                         #:flow-kind 'block)))))
+               (evaluate-document
+                 "@subtree[#:open? #f]{@title{Collapsed}@paragraph{Hidden until opened.}}")))
            (collapsed-html
              (assoc-ref (render-test-html
                           (make-forest (make-site (list collapsed-root)))
@@ -588,6 +584,18 @@
       (and (string-contains collapsed-html "<summary>")
            (not (string-contains collapsed-html "<details open=\"open\">"))
            (string-contains collapsed-html "Hidden until opened."))))
+  (test-assert "inline subtree can be explicitly set to open"
+    (let* ((open-root
+             (make-site-page
+               "explicit-open" "Explicit open"
+               (evaluate-document
+                 "@subtree[#:open? #t]{@title{Open}}")))
+           (open-html
+             (assoc-ref (render-test-html
+                          (make-forest (make-site (list open-root)))
+                          #:mathjax-src #f)
+                        "explicit-open")))
+      (string-contains open-html "<details open=\"open\">")))
   (test-assert "inline tree title is a native disclosure control"
     (string-contains (assoc-ref html "root") "<summary>"))
   (test-assert "site->html embeds the Forester stylesheet"

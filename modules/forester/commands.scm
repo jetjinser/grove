@@ -134,16 +134,29 @@
 
 (define subtree-id-unspecified (list 'subtree-id-unspecified))
 
+(define (subtree-body arguments)
+  (let loop ((arguments arguments) (body '()))
+    (cond
+      ((null? arguments) (reverse body))
+      ((keyword? (car arguments))
+       (unless (pair? (cdr arguments))
+         (error "Forester subtree keyword requires a value"
+                (car arguments)))
+       (loop (cddr arguments) body))
+      (else (loop (cdr arguments) (cons (car arguments) body))))))
+
 (define-public subtree
-  (lambda* (#:key (id subtree-id-unspecified) . arguments)
+  (lambda* (#:key (id subtree-id-unspecified) (open? #t) . arguments)
     (let* ((named? (not (eq? id subtree-id-unspecified)))
            ;; Guile's rest argument contains keyword arguments as well.
-           (body (if named? (drop arguments 2) arguments)))
+           (body (subtree-body arguments)))
       (when (and named?
                  (not (and (string? id)
                            (not (string-null? id))
                            (not (string-index id #\#)))))
         (error "Forester subtree ID must be a non-empty string without #" id))
+      (unless (boolean? open?)
+        (error "Forester subtree #:open? must be a boolean" open?))
       (let ((titles (filter (lambda (element)
                               (and (content-element? element)
                                    (eq? (content-element-kind element) 'title)))
@@ -161,7 +174,7 @@
             'subtree
             (remove (lambda (element) (eq? element title-element)) body)
             #:properties
-            (append `((title . ,title-text))
+            (append `((title . ,title-text) (open? . ,open?))
                     (if named? `((tree-id . ,id)) '()))
             #:flow-kind 'block))))))
 
