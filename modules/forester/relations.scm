@@ -19,6 +19,7 @@
             nodeo
             node-propertyo
             childo
+            ancestoro
             descendanto
             paragrapho
             plain-text-paragrapho
@@ -85,6 +86,18 @@
          (node-id child-id)
          (parent-id parent-id)))
 
+(define-relation (parento relation child-id parent-id)
+  (nodeo relation
+         (node-id child-id)
+         (parent-id parent-id)))
+
+(define-relation (ancestoro relation ancestor-id descendant-id)
+  (either
+    ((parento relation descendant-id ancestor-id))
+    ((exists (parent-id)
+       (parento relation descendant-id parent-id)
+       (ancestoro relation ancestor-id parent-id)))))
+
 (define-relation (descendanto relation ancestor-id descendant-id)
   (either
     ((childo relation ancestor-id descendant-id))
@@ -93,10 +106,10 @@
        (descendanto relation parent-id descendant-id)))))
 
 (define-relation (math-containing-paragrapho relation paragraph-id)
-  (paragrapho relation paragraph-id)
   (exists (math-id)
-    (descendanto relation paragraph-id math-id)
-    (math-nodeo relation math-id)))
+    (math-nodeo relation math-id)
+    (ancestoro relation paragraph-id math-id)
+    (paragrapho relation paragraph-id)))
 
 (define-relation (shorter-than-o relation node-id maximum)
   (exists (character-count)
@@ -121,16 +134,20 @@
           fail))))
 
 (define-relation (topic-membero relation topic-id page-id label)
-  (exists (node-id kind)
-    (nodeo relation
-           (node-id node-id)
-           (page-id page-id)
-           (kind kind)
-           (text label))
-    (either
-      ((== 'tag kind)
-       (node-propertyo relation node-id 'id topic-id))
-      ((== 'taxon kind)
+  (either
+    ((exists (node-id)
+       (nodeo relation
+              (node-id node-id)
+              (page-id page-id)
+              (kind 'tag)
+              (text label))
+       (node-propertyo relation node-id 'id topic-id)))
+    ((exists (node-id)
+       (nodeo relation
+              (node-id node-id)
+              (page-id page-id)
+              (kind 'taxon)
+              (text label))
        (node-propertyo relation node-id 'id topic-id)))))
 
 (define* (topic-page-ids relation topic-id #:optional kind)

@@ -14,12 +14,14 @@
   #:use-module (forester render text)
   #:use-module (forester render text routes)
   #:use-module ((forester composition) #:prefix composition:)
+  #:use-module (forester relations)
   #:use-module (forester site)
   #:use-module (grove build)
   #:use-module (grove ir)
   #:use-module (grove render html)
   #:use-module (grove render html routes)
   #:use-module (grove output)
+  #:use-module (grove relation dsl)
   #:use-module (grove site)
   #:use-module (grove style html))
 
@@ -1029,5 +1031,105 @@
     (string-contains alpha "Home: ../index.txt"))
   (test-assert "text index references configured page routes"
     (string-contains index "Alpha (notes/alpha.md)")))
+
+(let* ((plain-paragraph
+         (make-content-element
+           'paragraph (list "A short note about 范畴论.")))
+       (math-paragraph
+         (make-content-element
+           'paragraph
+           (list "Formula: "
+                 (make-content-element
+                   'math (list (make-content-layout 'math "x^2")))
+                 ".")))
+       (link-node
+         (make-content-element
+           'link (list "The target page")
+           #:properties '((target . "target"))))
+       (tag-node
+         (make-content-element
+           'tag (list "Tutorial")
+           #:properties '((id . "tutorial"))))
+       (taxon-node
+         (make-content-element
+           'taxon (list "Mathematics")
+           #:properties '((id . "mathematics"))))
+       (subtree-node
+         (make-content-element
+           'subtree
+           (list (make-content-element 'paragraph (list "Nested note.")))
+           #:properties '((tree-id . "query-subtree")
+                          (title . "Query subtree"))
+           #:flow-kind 'block))
+       (article
+         (make-site-page
+           "query-article" "Query article"
+           (make-content-document
+             (list plain-paragraph math-paragraph link-node tag-node
+                   taxon-node subtree-node))
+           "query-article.plant"))
+       (target
+         (make-site-page "target" "Target" (make-content-document '())
+                         "target.plant"))
+       (forest (make-forest (make-site (list article target))))
+       (nodes (content-node-relation forest))
+       (math-paragraph-ids
+         (query (node-id)
+           (math-containing-paragrapho nodes node-id)))
+       (plain-matches
+         (query (node-id page-id text)
+           (plain-text-paragrapho nodes node-id)
+           (shorter-than-o nodes node-id 120)
+           (contains-texto nodes node-id "范畴论")
+           (nodeo nodes
+                  (page-id page-id)
+                  (text text))))
+       (tutorial-pages
+         (query (page-id label)
+           (topic-membero nodes "tutorial" page-id label)))
+       (math-pages
+         (query (page-id label)
+           (topic-membero nodes "mathematics" page-id label)))
+       (link-node-ids
+         (query (node-id)
+           (nodeo nodes (node-id node-id) (kind 'link))))
+       (subtree-node-ids
+         (query (node-id)
+           (nodeo nodes (node-id node-id) (kind 'subtree)))))
+  (test-equal "plain paragraphs and their text are derived from page IR"
+    '("query-article" "query-subtree")
+    (delete-duplicates (map cadr plain-matches) string=?))
+  (test-assert "content queries can search the derived paragraph text"
+    (string-contains (caddar plain-matches) "范畴论"))
+  (test-equal "paragraphs containing math are found through IR ancestry"
+    1
+    (length math-paragraph-ids))
+  (test-equal "the math query identifies the original paragraph IR node"
+    'paragraph
+    (content-element-kind
+      (content-node forest (car math-paragraph-ids))))
+  (test-equal "tag IR is queryable as a page topic"
+    '(("query-article" "Tutorial"))
+    tutorial-pages)
+  (test-equal "taxon IR is queryable through the same topic relation"
+    '(("query-article" "Mathematics"))
+    math-pages)
+  (test-equal "link nodes and their target properties remain in content IR"
+    '("target")
+    (query (target-id)
+      (node-propertyo nodes (car link-node-ids) 'target target-id)))
+  (test-equal "named subtree nodes are queryable as content IR"
+    '("query-subtree")
+    (query (tree-id)
+      (node-propertyo nodes (car subtree-node-ids) 'tree-id tree-id)))
+  (test-equal "subtree body paragraphs belong to their named tree"
+    '("query-subtree")
+    (delete-duplicates
+      (map cadr
+           (query (node-id page-id)
+             (plain-text-paragrapho nodes node-id)
+             (nodeo nodes (node-id node-id) (page-id page-id))
+             (contains-texto nodes node-id "Nested note")))
+      string=?)))
 
 (test-end "forester site")
