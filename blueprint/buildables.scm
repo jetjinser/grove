@@ -41,6 +41,7 @@
     "grove/math/scalar.scm"
     "grove/math/premise.scm"
     "grove/math/derivation.scm"
+    "grove/math/proof.scm"
     "grove/math/diagnostic.scm"
     "grove/math/report.scm"
     "grove/math/source.scm"

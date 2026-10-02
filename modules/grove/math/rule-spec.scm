@@ -37,7 +37,7 @@
                (list? right) (pair? right)
                (rule-template? left) (rule-template? right)
                (list? premises) (every (lambda (form) (and (list? form) (rule-template? form))) premises)
-               (list? guards) (every (lambda (form) (and (list? form) (rule-template? form))) guards))
+               (list? guards) (every list? guards))
     (error "invalid math rule specification" left right premises guards))
   (%make-math-rule-spec left right premises guards))
 
