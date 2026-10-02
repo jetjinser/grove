@@ -182,14 +182,33 @@
                      "\n"))
                  sources))))))
 
-(define (backmatter-text forest page routes sections labels)
+(define (related-text forest page routes reference-taxon-id label)
+  (let ((targets (related-pages forest (site-page-id page)
+                                reference-taxon-id)))
+    (if (null? targets)
+        ""
+        (string-append
+          (string-append "\n\n" label ":\n")
+          (string-concatenate
+            (map (lambda (target)
+                   (string-append "- "
+                     (page-reference routes
+                       (text-page-path routes (site-page-id page))
+                       target)
+                     "\n"))
+                 targets))))))
+
+(define (backmatter-text forest page routes sections labels
+                         reference-taxon-id)
   (string-concatenate
     (map (lambda (section)
            (case section
              ((context) (context-text forest page routes
                                       (assq-ref labels 'context)))
              ((backlinks) (backlinks-text forest page routes
-                                          (assq-ref labels 'backlinks)))))
+                                          (assq-ref labels 'backlinks)))
+             ((related) (related-text forest page routes reference-taxon-id
+                                      (assq-ref labels 'related)))))
          sections)))
 
 (define (index->text forest routes)
@@ -205,7 +224,8 @@
                               "\n"))
              (site-pages site))))))
 
-(define (page->text forest page routes backmatter backmatter-labels)
+(define (page->text forest page routes backmatter backmatter-labels
+                    reference-taxon-id)
   (let ((page-path (text-page-path routes (site-page-id page)))
         (body (string-trim-both
                 (subtree-content-text forest routes page)
@@ -217,7 +237,8 @@
       "\n\n"
       (table-of-contents-text forest page)
       body
-      (backmatter-text forest page routes backmatter backmatter-labels))))
+      (backmatter-text forest page routes backmatter backmatter-labels
+                       reference-taxon-id))))
 
 (define (check-text-routes forest routes)
   (let* ((site (site forest))
@@ -246,6 +267,7 @@
                         changed))))))
 
 (define (render-text-changed forest prefix routes backmatter backmatter-labels
+                             reference-taxon-id
                              changed old-artifacts)
   (check-text-routes forest routes)
   (let* ((site (site forest))
@@ -272,16 +294,19 @@
                         old
                         (make-artifact
                           path (page->text forest page routes backmatter
-                                           backmatter-labels) sources))))
+                                           backmatter-labels
+                                           reference-taxon-id) sources))))
                 (pages forest))))
     (cons index-artifact page-artifacts)))
 
 (define* (site->text forest #:key
                      (routes (make-text-routes))
                      (backmatter default-backmatter-sections)
-                     (backmatter-labels '()))
+                     (backmatter-labels '())
+                     (reference-taxon-id default-reference-taxon-id))
   (check-backmatter-sections backmatter)
   (set! backmatter-labels (check-backmatter-labels backmatter-labels))
+  (check-reference-taxon-id reference-taxon-id)
   (unless (forest? forest)
     (error "Forester text renderer requires a forest" forest))
   (check-text-routes forest routes)
@@ -290,15 +315,17 @@
           (map (lambda (page)
                  (cons (site-page-id page)
                        (page->text forest page routes backmatter
-                                   backmatter-labels)))
+                                   backmatter-labels reference-taxon-id)))
                (pages forest)))))
 
 (define* (render-text forest #:key
                       (routes (make-text-routes))
                       (backmatter default-backmatter-sections)
-                      (backmatter-labels '()))
+                      (backmatter-labels '())
+                      (reference-taxon-id default-reference-taxon-id))
   (check-backmatter-sections backmatter)
   (set! backmatter-labels (check-backmatter-labels backmatter-labels))
+  (check-reference-taxon-id reference-taxon-id)
   (let* ((site (site forest))
          (sources (source-paths forest)))
     (check-text-routes forest routes)
@@ -309,7 +336,8 @@
       (map (lambda (page)
              (make-artifact
                (text-page-path routes (site-page-id page))
-               (page->text forest page routes backmatter backmatter-labels)
+               (page->text forest page routes backmatter backmatter-labels
+                           reference-taxon-id)
                (page-source-paths forest page)))
            (pages forest)))))
 
@@ -317,9 +345,11 @@
                                       (routes (make-text-routes))
                                       (backmatter default-backmatter-sections)
                                       (backmatter-labels '())
+                                      (reference-taxon-id default-reference-taxon-id)
                                       (cache-key #f))
   (check-backmatter-sections backmatter)
   (set! backmatter-labels (check-backmatter-labels backmatter-labels))
+  (check-reference-taxon-id reference-taxon-id)
   (unless (or (not prefix) (artifact-path? prefix))
     (error "Forester text output prefix must be a relative path or #f" prefix))
   (unless (text-routes? routes)
@@ -329,20 +359,25 @@
                                                 #:routes routes
                                                 #:backmatter backmatter
                                                 #:backmatter-labels
-                                                backmatter-labels)))
+                                                backmatter-labels
+                                                #:reference-taxon-id
+                                                reference-taxon-id)))
                     (if prefix
                         (prefix-artifacts prefix artifacts)
                         artifacts)))))
     (if cache-key
         (make-cached-renderer
           render
-          #:cache-key (string-append "forester-text-v3:" cache-key
+          #:cache-key (string-append "forester-text-v4:" cache-key
                                      ":backmatter="
                                      (format #f "~s" backmatter)
                                      ":labels="
-                                     (format #f "~s" backmatter-labels))
+                                     (format #f "~s" backmatter-labels)
+                                     ":reference-taxon="
+                                     reference-taxon-id)
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
             (render-text-changed forest prefix routes backmatter
-                                 backmatter-labels changed old-artifacts)))
+                                 backmatter-labels reference-taxon-id
+                                 changed old-artifacts)))
         render)))

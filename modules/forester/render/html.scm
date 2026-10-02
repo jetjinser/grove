@@ -212,14 +212,35 @@
                       (h2 ,label)
                       (ul ,@items))))))
 
-(define (backmatter-sxml forest page routes sections labels)
+(define (related-sxml forest page routes reference-taxon-id label)
+  (let ((targets (related-pages forest (site-page-id page)
+                                reference-taxon-id)))
+    (if (null? targets)
+        '()
+        (list `(aside (@ (class "backmatter related"))
+                      (h2 ,label)
+                      (ul
+                        ,@(map (lambda (target)
+                                 (list 'li
+                                   (list 'a
+                                     (list '@
+                                       (list 'href
+                                         (html-page-url
+                                           routes (site-page-id target))))
+                                     (site-page-title target))))
+                               targets)))))))
+
+(define (backmatter-sxml forest page routes sections labels
+                         reference-taxon-id)
   (append-map
     (lambda (section)
       (case section
         ((context) (context-sxml forest page routes
                                  (assq-ref labels 'context)))
         ((backlinks) (backlinks-sxml forest page routes
-                                     (assq-ref labels 'backlinks)))))
+                                     (assq-ref labels 'backlinks)))
+        ((related) (related-sxml forest page routes reference-taxon-id
+                                 (assq-ref labels 'related)))))
     sections))
 
 (define (table-of-contents-sxml forest page)
@@ -340,12 +361,13 @@
     (index-redirect-html routes home)))
 
 (define* (page-html forest page style routes mathjax-src backmatter labels
+                    reference-taxon-id
                     #:optional (inline-stylesheets? #f))
   (let* ((site (site forest))
          (body (subtree-content-sxml forest routes page))
          (article (append body
                           (backmatter-sxml forest page routes backmatter
-                                           labels))))
+                                           labels reference-taxon-id))))
     (serialize-html-document
       (html-document
         (site-page-title page)
@@ -372,6 +394,7 @@
                         changed))))))
 
 (define (render-html-changed forest style routes mathjax-src backmatter labels
+                             reference-taxon-id
                                     changed old-artifacts)
   (check-html-input forest style routes mathjax-src)
   (let* ((site (site forest))
@@ -397,7 +420,7 @@
                         (make-artifact
                           path
                           (page-html forest page style routes mathjax-src
-                                     backmatter labels)
+                                     backmatter labels reference-taxon-id)
                           sources))))
                 (pages forest))))
     (append (html-style-artifacts style)
@@ -423,10 +446,12 @@
                        routes
                        (mathjax-src default-mathjax-src)
                        (backmatter default-backmatter-sections)
-                       (backmatter-labels '()))
+                       (backmatter-labels '())
+                       (reference-taxon-id default-reference-taxon-id))
   (set! style (forester:make-html-style #:style style))
   (check-backmatter-sections backmatter)
   (set! backmatter-labels (check-backmatter-labels backmatter-labels))
+  (check-reference-taxon-id reference-taxon-id)
   (check-html-input forest style routes mathjax-src)
   (let ((site (site forest)))
     (when (member "index" (map site-page-id (pages forest)))
@@ -436,7 +461,8 @@
       (map (lambda (page)
              (cons (site-page-id page)
                    (page-html forest page style routes mathjax-src
-                              backmatter backmatter-labels #t)))
+                              backmatter backmatter-labels
+                              reference-taxon-id #t)))
            (pages forest)))))
 
 (define* (render-html forest #:key
@@ -444,10 +470,12 @@
                              routes
                              (mathjax-src default-mathjax-src)
                              (backmatter default-backmatter-sections)
-                             (backmatter-labels '()))
+                             (backmatter-labels '())
+                             (reference-taxon-id default-reference-taxon-id))
   (set! style (forester:make-html-style #:style style))
   (check-backmatter-sections backmatter)
   (set! backmatter-labels (check-backmatter-labels backmatter-labels))
+  (check-reference-taxon-id reference-taxon-id)
   (check-html-input forest style routes mathjax-src)
   (append
     (html-style-artifacts style)
@@ -459,7 +487,7 @@
              (make-artifact
                (html-page-path routes (site-page-id page))
                (page-html forest page style routes mathjax-src backmatter
-                          backmatter-labels)
+                          backmatter-labels reference-taxon-id)
                (page-source-paths forest page)))
            (pages forest)))))
 
@@ -469,9 +497,11 @@
                                       (mathjax-src default-mathjax-src)
                                       (backmatter default-backmatter-sections)
                                       (backmatter-labels '())
+                                      (reference-taxon-id default-reference-taxon-id)
                                       (cache-key #f))
   (check-backmatter-sections backmatter)
   (set! backmatter-labels (check-backmatter-labels backmatter-labels))
+  (check-reference-taxon-id reference-taxon-id)
   (let* ((style (forester:make-html-style #:style style))
          (render (lambda (forest)
                   (render-html forest
@@ -479,18 +509,23 @@
                                       #:routes routes
                                       #:mathjax-src mathjax-src
                                       #:backmatter backmatter
-                                      #:backmatter-labels backmatter-labels))))
+                                      #:backmatter-labels backmatter-labels
+                                      #:reference-taxon-id
+                                      reference-taxon-id))))
     (if cache-key
         (make-cached-renderer
           render
-          #:cache-key (string-append "forester-html-v14:" cache-key ":home="
+          #:cache-key (string-append "forester-html-v15:" cache-key ":home="
                                      (html-home-page routes) ":backmatter="
                                      (format #f "~s" backmatter)
                                      ":labels="
-                                     (format #f "~s" backmatter-labels))
+                                     (format #f "~s" backmatter-labels)
+                                     ":reference-taxon="
+                                     reference-taxon-id)
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
             (render-html-changed forest style routes mathjax-src backmatter
                                         backmatter-labels
+                                        reference-taxon-id
                                         changed old-artifacts)))
         render)))

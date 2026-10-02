@@ -18,6 +18,7 @@
             content-node-relation
             content-node
             topic-pages
+            related-pages
             find-page
             links
             backlinks
@@ -334,6 +335,20 @@
     (filter (lambda (page)
               (member (site-page-id page) page-ids string=?))
             (pages forest))))
+
+(define* (related-pages forest page-id
+                        #:optional (reference-taxon-id "Reference"))
+  "Return direct link targets except pages in the reference taxon."
+  (let ((reference-page-ids
+          (map site-page-id
+               (topic-pages forest reference-taxon-id 'taxon))))
+    (map (lambda (target-id) (find-page forest target-id))
+         (filter (lambda (target-id)
+                   (not (member target-id reference-page-ids string=?)))
+                 (delete-duplicates
+                   (map reference-target-page-id
+                        (outgoing-references forest page-id))
+                   string=?)))))
 
 (define (validate-topic-facts! facts)
   (let ((topics
@@ -890,5 +905,11 @@
                               (backlinks forest (site-page-id page)))
                   (filter-map site-page-source
                               (transcluding-pages forest
-                                                  (site-page-id page))))
+                                                  (site-page-id page)))
+                  (filter-map
+                    (lambda (reference)
+                      (site-page-source
+                        (find-page forest
+                                   (reference-target-page-id reference))))
+                    (outgoing-references forest (site-page-id page))))
           string=?))))

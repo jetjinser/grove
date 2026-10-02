@@ -823,11 +823,11 @@
                 (assoc-ref (site->text forest #:backmatter '()) "reusable")
                 "Context:"))))
   (test-error "backmatter rejects unknown sections" #t
-    (render-test-html forest #:backmatter '(related)))
+    (render-test-html forest #:backmatter '(unknown)))
   (test-error "backmatter rejects duplicate sections" #t
     (site->text forest #:backmatter '(context context)))
   (test-error "backmatter labels reject unknown sections" #t
-    (site->text forest #:backmatter-labels '((related . "Related"))))
+    (site->text forest #:backmatter-labels '((unknown . "Unknown"))))
   (test-error "backmatter labels reject empty text" #t
     (site->text forest #:backmatter-labels '((context . ""))))
   (test-equal "transclusions do not become ordinary link references"
@@ -859,6 +859,46 @@
                      "href=\"/destination.html\""))
   (test-assert "transcluded text links use the host route and destination"
     (string-contains (assoc-ref text "host") "destination.txt")))
+
+(let* ((citation
+         (make-site-page "citation" "A citation"
+           (evaluate-document "@taxon[\"Reference\"]{Reference}")
+           "plants/citation.plant"))
+       (idea
+         (make-site-page "idea" "A related idea"
+           (evaluate-document "@paragraph{An idea.}")
+           "plants/idea.plant"))
+       (source
+         (make-site-page "source" "Source"
+           (evaluate-document
+             "@paragraph{@link[\"citation\"]{the citation}; @link[\"idea\"]{the idea}.}")
+           "plants/source.plant"))
+       (forest (make-forest (make-site (list source citation idea))))
+       (html (render-test-html forest #:mathjax-src #f))
+       (text (site->text forest)))
+  (test-equal "Related excludes pages in the Reference taxon"
+    '("idea")
+    (map site-page-id (related-pages forest "source")))
+  (test-assert "HTML Related lists linked non-reference pages"
+    (and (string-contains (assoc-ref html "source") "<h2>Related</h2>")
+         (string-contains (assoc-ref html "source")
+                          "href=\"/idea.html\">A related idea</a>")
+         (not (string-contains (assoc-ref html "source")
+                               "href=\"/citation.html\">A citation</a>"))))
+  (test-assert "text Related lists linked non-reference pages"
+    (and (string-contains (assoc-ref text "source") "Related:")
+         (string-contains (assoc-ref text "source") "A related idea (idea.txt)")
+         (not (string-contains (assoc-ref text "source") "A citation"))))
+  (test-assert "related targets are included in source artifact dependencies"
+    (and (member "plants/idea.plant" (page-source-paths forest source) string=?)
+         (member "plants/citation.plant" (page-source-paths forest source)
+                 string=?)))
+  (test-equal "Related can use a project-specific reference taxon ID"
+    '("citation" "idea")
+    (map site-page-id
+      (related-pages forest "source" "Bibliography")))
+  (test-error "empty reference taxon IDs are rejected" #t
+    (site->text forest #:reference-taxon-id "")))
 
 (let* ((source
          (make-site-page

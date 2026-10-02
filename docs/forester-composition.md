@@ -86,10 +86,12 @@ transcluded tree invalidate the pages that embed it.
 ## Backmatter
 
 HTML and text renderers can show incoming composition and link relationships
-after a page's body. The default order is `context` followed by `backlinks`;
-empty sections are omitted. Context lists pages that transclude the current
-tree. Backlinks lists authored links to the current page or its headings.
-These remain separate because embedding and linking express different
+after a page's body. The default order is `context`, `backlinks`, then
+`related`; empty sections are omitted. Context lists pages that transclude the
+current tree. Backlinks lists authored links to the current page or its
+headings. Related lists pages linked from the current page, excluding pages
+with the configured reference taxon. These sections remain separate because
+embedding, incoming links, and outgoing related links express different
 relationships.
 
 Configure the sections on either renderer with `#:backmatter`. The list order
@@ -110,14 +112,17 @@ omitted labels keep their defaults:
 ```scheme
 (make-html-renderer
   #:routes routes
-  #:backmatter '(context backlinks)
+  #:backmatter '(context backlinks related)
   #:backmatter-labels '((context . "Embedded in")
-                       (backlinks . "Linked from")))
+                       (backlinks . "Linked from")
+                       (related . "See also"))
+  #:reference-taxon-id "Bibliography")
 ```
 
-The supported sections are `context` and `backlinks`. `Related` is not
-included: Grove has no rule yet for deciding which outgoing links count as
-related rather than bibliographic or navigational.
+The default reference taxon ID is `Reference`, following JMS Forester's
+reference classification. Mark a reference page with a matching taxon, for
+example `@taxon["Reference"]{Reference}`. Projects with another taxonomy can
+override the ID through `#:reference-taxon-id`.
 
 ## Scheme API
 

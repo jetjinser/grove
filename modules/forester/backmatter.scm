@@ -6,22 +6,26 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (default-backmatter-sections
+            default-reference-taxon-id
             check-backmatter-sections
-            check-backmatter-labels))
+            check-backmatter-labels
+            check-reference-taxon-id))
 
-(define default-backmatter-sections '(context backlinks))
+(define default-backmatter-sections '(context backlinks related))
+(define default-reference-taxon-id "Reference")
 (define default-backmatter-labels
   '((context . "Context")
-    (backlinks . "Backlinks")))
+    (backlinks . "Backlinks")
+    (related . "Related")))
 
 (define (check-backmatter-sections sections)
   (unless (and (list? sections)
                (every (lambda (section)
-                        (memq section '(context backlinks)))
+                        (memq section '(context backlinks related)))
                       sections)
                (= (length sections)
                   (length (delete-duplicates sections eq?))))
-    (error "Forester backmatter must be a list of unique sections: context, backlinks"
+    (error "Forester backmatter must be a list of unique sections: context, backlinks, related"
            sections))
   sections)
 
@@ -29,7 +33,7 @@
   (unless (and (list? labels)
                (every (lambda (entry)
                         (and (pair? entry)
-                             (memq (car entry) '(context backlinks))
+                             (memq (car entry) '(context backlinks related))
                              (string? (cdr entry))
                              (not (string-null? (cdr entry)))))
                       labels)
@@ -41,3 +45,8 @@
          (cons (car entry)
                (or (assq-ref labels (car entry)) (cdr entry))))
        default-backmatter-labels))
+
+(define (check-reference-taxon-id id)
+  (unless (and (string? id) (not (string-null? id)))
+    (error "Forester reference taxon ID must be a non-empty string" id))
+  id)
