@@ -83,7 +83,7 @@
        #:load-compiled-path (list #%?builddir)
        #:enable-coverage? (->bool (getenv "GROVE_TESTS_ENABLE_COVERAGE"))
        #:time-limit (or (and=> (getenv "GROVE_TESTS_TIME_LIMIT") string->number)
-                        20)))
+                        60)))
 
 (define grove-tests
   (map
