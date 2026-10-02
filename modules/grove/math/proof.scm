@@ -167,8 +167,17 @@
                      (unless (check-guard guard assumptions substitution type-bindings)
                        (proof-error 'rejected (format #f "rule guard failed: ~s" guard))))
                    guards)
-         (values (math-rule-spec-instantiate spec (math-rule-spec-left spec) substitution)
-                 (math-rule-spec-instantiate spec (math-rule-spec-right spec) substitution)))))
+         (let* ((left (math-rule-spec-instantiate spec
+                        (math-rule-spec-left spec) substitution))
+                (right (math-rule-spec-instantiate spec
+                         (math-rule-spec-right spec) substitution))
+                (left-type (math-infer-type assumptions left))
+                (right-type (math-infer-type assumptions right)))
+           (unless (and left-type right-type
+                        (eq? 'scalar (math-typed-term-type left-type))
+                        (eq? 'scalar (math-typed-term-type right-type)))
+             (proof-error 'rejected "rule instance is not well-typed in the scalar theory"))
+           (values left right)))))
     (_ (proof-error 'rejected "malformed rule-instance node"))))
 
 (define (check-node proof assumptions)
@@ -216,13 +225,17 @@
 (define (math-proof-check proof assumptions)
   "Independently check a proof tree under the supplied ordered assumptions."
   (unless (list? assumptions) (error "proof assumptions must be a list" assumptions))
-  (catch 'math-proof-error
-    (lambda ()
-      (call-with-values (lambda () (check-node proof assumptions))
-        (lambda (left right)
-          (make-math-proof-result 'checked left right '()))))
-    (lambda (key status message)
-      (make-math-proof-result status #f #f (list message)))))
+  (let ((assumption-errors (math-assumption-diagnostics assumptions)))
+    (if (pair? assumption-errors)
+        (make-math-proof-result 'rejected #f #f
+          (list (format #f "invalid assumptions: ~s" assumption-errors)))
+        (catch 'math-proof-error
+          (lambda ()
+            (call-with-values (lambda () (check-node proof assumptions))
+              (lambda (left right)
+                (make-math-proof-result 'checked left right '()))))
+          (lambda (key status message)
+            (make-math-proof-result status #f #f (list message)))))))
 
 (define (template-variables template)
   (match template

@@ -23,6 +23,16 @@
   (list (scalar-rule 'normalize-scalar 'normalize scalar-normalize (lambda (input) '()))
         (scalar-rule 'cancel-scalar-factors 'cancel scalar-cancel
           (lambda (input) `((nonzero ,(caddr input)))))
+        ;; The general coefficient-reduction pass is procedural; this exact
+        ;; conditional identity is the checkable theorem it can expose.
+        (math-rule 'cancel-common-factor "(X * A) / A = X"
+          "real scalar terms; A is nonzero" 'cancel
+          (facts value factor)
+          (/ (* ,value ,factor) ,factor) ,value
+          ((nonzero ,factor))
+          ((math-typeo facts value 'scalar) (math-typeo facts factor 'scalar))
+          #:forward? #f
+          #:documentation "A check-only cancellation theorem. Its denominator side condition is explicit in the premise and must remain in the surrounding domain requirements.")
         (scalar-rule 'expand-scalar-product 'expand scalar-expand (lambda (input) '()))
         (math-rule 'normalize-function-prime "f'(u) = partial_1 f(u)"
           "Declared unary scalar function with one derivative" 'normalize

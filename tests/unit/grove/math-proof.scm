@@ -26,6 +26,11 @@
   'rejected (math-proof-result-status (math-proof-check add-zero-proof '())))
 (test-equal "proof nodes reject missing premise references"
   'rejected (math-proof-result-status (math-proof-check (math-proof-premise 0) '())))
+(test-equal "proof checker rejects contradictory assumptions"
+  'rejected
+  (math-proof-result-status
+    (math-proof-check (math-proof-reflexivity '(var x))
+      '((scalar (var x)) (vector (var x))))))
 (test-assert "equality assumptions can serve as equality proof leaves"
   (let ((result (math-proof-check (math-proof-premise 0)
                   '((= (var x) (var y))))))
@@ -86,5 +91,28 @@
          (math-proof-result-valid? checked)
          (equal? (math-proof-result-left checked) '(+ (var x) (num "0")))
          (equal? (math-proof-result-right checked) '(var x)))))
+
+(test-assert "conditional cancellation retains and proves its nonzero premise"
+  (let* ((verification
+           (φ:check-chain '("(x*a)/a" "x")
+             #:assumptions '("scalar(x); scalar(a); nonzero(a)")
+             #:steps '(cancel-common-factor)))
+         (derivation (math-verification-derivation verification))
+         (proof (math-proof-from-derivation derivation))
+         (checked (and proof
+                       (math-proof-check proof
+                         (math-derivation-assumptions derivation)))))
+    (and (math-verification-valid? verification)
+         (math-proof-result-valid? checked)
+         (equal? (math-proof-result-left checked)
+                 '(/ (* (var x) (var a)) (var a)))
+         (equal? (math-proof-result-right checked) '(var x)))))
+(test-equal "conditional cancellation fails without its premise reference"
+  'rejected
+  (math-proof-result-status
+    (math-proof-check
+      (math-proof-rule-instance 'cancel-common-factor
+        '((value . (var x)) (factor . (var a))) '())
+      '((scalar (var x)) (scalar (var a))))))
 
 (test-end "math proof IR and checker")

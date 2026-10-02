@@ -48,8 +48,10 @@
 (define math-simplification-rules (math-rule-names #:groups '(identity calculate collect normalize cancel)))
 (define math-default-rules
   (map math-rewrite-rule-name
-    (filter (lambda (rule) (not (memq (math-rewrite-rule-group rule)
-                                      '(expand components spatial polynomial-calculus polynomial-algebra))))
+    (filter (lambda (rule)
+              (and (memq 'forward (math-rewrite-rule-modes rule))
+                   (not (memq (math-rewrite-rule-group rule)
+                              '(expand components spatial polynomial-calculus polynomial-algebra)))))
             math-rewrite-rules)))
 (define math-calculation-rules (math-rule-names #:groups '(calculate)))
 (define math-collection-rules (math-rule-names #:groups '(collect)))

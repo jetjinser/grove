@@ -51,7 +51,7 @@ Every argument may be unknown."
     #:arity 2))
 
 (define-public (rule-semantic-checko name status)
-  "Relate each registered rule to its scalar-polynomial checker status."
+  "Relate each registered rule to its exact scalar-algebra checker status."
   (relationo semantic-check-catalog name status))
 
 (define (spec-operators term)
@@ -164,7 +164,7 @@ Every argument may be unknown."
                               "Algorithm rule; this description has no fixed RuleSpec.")
                           (math-rewrite-rule-condition rule))) #:flow-kind 'block))
           (list (make-content-element 'paragraph
-                  (list (format #f "Scalar-polynomial semantic check: ~a."
+                  (list (format #f "Exact scalar-algebra check: ~a."
                           semantic-status)) #:flow-kind 'block))
           (if (null? checks) '()
               (list (make-content-element 'details

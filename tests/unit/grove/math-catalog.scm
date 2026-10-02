@@ -49,16 +49,16 @@
        (string-contains (html 'curl-product) "→")))
 (test-assert "rule pages state the limited semantic-check coverage"
   (and (string-contains (html 'add-commutative)
-                        "Scalar-polynomial semantic check: semantically-checked")
+                        "Exact scalar-algebra check: semantically-checked")
        (string-contains (html 'differentiate-power)
-                        "Scalar-polynomial semantic check: unsupported")))
+                        "Exact scalar-algebra check: unsupported")))
 (test-error "unknown rule rendering is rejected" #t (math-rule->content 'missing-rule))
 (test-equal "rule documentation is the execution procedure's native docstring"
   (procedure-documentation
     (math-rewrite-rule-relation (math-rewrite-rule-ref 'curl-product) 'forward))
   (car (query (documentation)
          (fresh (group modes) (ruleo 'curl-product group modes documentation)))))
-(test-equal "documentation queries enumerate only documented rules" 7
+(test-equal "documentation queries enumerate only documented rules" 8
   (length (query (name documentation)
             (fresh (group modes) (ruleo name group modes documentation))
             (=/= documentation #f))))

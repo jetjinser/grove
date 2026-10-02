@@ -5,6 +5,7 @@
 (define-module (grove math semantic-check)
   #:use-module (grove math derivation)
   #:use-module (grove math number)
+  #:use-module (grove math premise)
   #:use-module (grove math rule)
   #:use-module (grove math rewrite)
   #:use-module (grove math verification)
@@ -17,7 +18,8 @@
             math-semantic-check-valid? math-semantic-check-subject
             math-semantic-check-diagnostics
             math-polynomial-normal-form math-polynomial-equivalent?
-            math-polynomial-check-rule math-polynomial-check-step
+            math-polynomial-check-rule math-polynomial-check-rule-spec
+            math-polynomial-check-step
             math-polynomial-check-derivation math-polynomial-check-derivative))
 
 ;; A polynomial is a canonical list of (monomial . exact-rational) pairs.
@@ -164,6 +166,102 @@ natural powers. Division is accepted only by a nonzero rational constant."
         (right (math-polynomial-normal-form right)))
     (and left right (equal? left right))))
 
+;; Rational expressions keep numerator, denominator and their explicit domain
+;; obligations separate. Equality is checked by cross multiplication only
+;; after every symbolic denominator is justified by a declared nonzero fact.
+(define (fraction numerator denominator conditions)
+  (list numerator denominator (delete-duplicates conditions equal?)))
+
+(define (fraction-add left right sign)
+  (fraction
+    (polynomial-add
+      (polynomial-multiply (car left) (cadr right))
+      (polynomial-scale
+        (polynomial-multiply (car right) (cadr left)) sign))
+    (polynomial-multiply (cadr left) (cadr right))
+    (append (caddr left) (caddr right))))
+
+(define (parse-rational term)
+  (let ((polynomial (parse-polynomial term)))
+    (cond
+      (polynomial (fraction polynomial (constant-polynomial 1) '()))
+      (else
+       (match term
+         (('- operand)
+          (let ((operand (parse-rational operand)))
+            (and operand (fraction (polynomial-scale (car operand) -1)
+                                   (cadr operand) (caddr operand)))))
+         (('+ left right)
+          (let ((left (parse-rational left)) (right (parse-rational right)))
+            (and left right (fraction-add left right 1))))
+         (('- left right)
+          (let ((left (parse-rational left)) (right (parse-rational right)))
+            (and left right (fraction-add left right -1))))
+         (('* left right)
+          (let ((left (parse-rational left)) (right (parse-rational right)))
+            (and left right
+                 (fraction (polynomial-multiply (car left) (car right))
+                   (polynomial-multiply (cadr left) (cadr right))
+                   (append (caddr left) (caddr right))))))
+         (('/ numerator denominator-term)
+          (let ((numerator (parse-rational numerator))
+                (denominator (parse-rational denominator-term)))
+            (and numerator denominator (not (null? (car denominator)))
+                 (let* ((constant-polynomial
+                          (math-polynomial-normal-form denominator-term))
+                        (constant (and constant-polynomial
+                                       (polynomial-constant-value constant-polynomial)))
+                        (denominator-conditions
+                          (if (and constant (not (zero? constant))) '()
+                              (list denominator-term))))
+                   (fraction (polynomial-multiply (car numerator) (cadr denominator))
+                     (polynomial-multiply (cadr numerator) (car denominator))
+                     (append (caddr numerator) (caddr denominator)
+                             denominator-conditions))))))
+         (('^ base ('num exponent-text))
+          (let ((base (parse-rational base))
+                (exponent (math-natural-value exponent-text)))
+            (and base exponent (<= exponent 128)
+                 (fraction (polynomial-power (car base) exponent)
+                   (polynomial-power (cadr base) exponent) (caddr base)))))
+         (_ #f))))))
+
+(define (math-rational-normal-form term)
+  (catch 'semantic-polynomial-limit
+    (lambda () (and (math-term? term) (parse-rational term)))
+    (lambda _ #f)))
+
+(define (nonzero-obligation-covered? spec obligation)
+  (let ((obligation (math-polynomial-normal-form obligation)))
+    (and obligation
+      (any
+        (lambda (premise)
+          (and (pair? premise) (memq (car premise) '(nonzero positive))
+               (= (length premise) 2)
+               (let ((premise-term (math-polynomial-normal-form
+                                     (schema-term (cadr premise)))))
+                 (and premise-term (equal? obligation premise-term)))))
+        (math-rule-spec-premises spec)))))
+
+(define (check-rational-law spec left right)
+  (let ((left (math-rational-normal-form left))
+        (right (math-rational-normal-form right)))
+    (cond
+      ((not (and left right))
+       (semantic-check 'unsupported spec
+         "the rule is outside the rational-polynomial checker"))
+      ((not (every (lambda (condition)
+                     (nonzero-obligation-covered? spec condition))
+                   (append (caddr left) (caddr right))))
+       (semantic-check 'rejected spec
+         "the rule omits a nonzero premise required by its denominators"))
+      ((equal? (polynomial-multiply (car left) (cadr right))
+               (polynomial-multiply (car right) (cadr left)))
+       (semantic-check 'semantically-checked spec #f))
+      (else
+       (semantic-check 'rejected spec
+         "the rule changes its rational-polynomial denotation")))))
+
 (define (semantic-check status subject message)
   (make-math-semantic-check status subject (if message (list message) '())))
 
@@ -202,19 +300,11 @@ natural powers. Division is accepted only by a nonzero rational constant."
      (if (memq name zero-variables) '(num "0") term))
     (_ term)))
 
-(define* (math-polynomial-check-rule name)
-  "Check a rule's existing specification in the exact scalar-polynomial model."
-  (let* ((rule (math-rewrite-rule-ref name))
-         (spec (and rule (math-rewrite-rule-spec rule)))
-         (law (and spec (list (math-rule-spec-left spec)
-                              (math-rule-spec-right spec)))))
+(define (check-rule-spec subject spec)
+  (let ((law (list (math-rule-spec-left spec) (math-rule-spec-right spec))))
     (cond
-      ((not rule)
-       (semantic-check 'unsupported name "unknown rewrite rule"))
-      ((not law)
-       (semantic-check 'unsupported name "the rule has no declarative specification"))
       ((not (every meta-template? law))
-       (semantic-check 'rejected name "malformed rule specification"))
+       (semantic-check 'rejected subject "malformed rule specification"))
       (else
        (let* ((zero-variables (spec-zero-metavariables spec))
               (left (math-polynomial-normal-form
@@ -223,13 +313,31 @@ natural powers. Division is accepted only by a nonzero rational constant."
                        (schema-term (cadr law) zero-variables))))
          (cond
            ((or (not left) (not right))
-            (semantic-check 'unsupported name
-              "the rule specification is outside the scalar-polynomial checker"))
+            (let ((rational-check
+                    (check-rational-law spec
+                      (schema-term (car law) zero-variables)
+                      (schema-term (cadr law) zero-variables))))
+              (make-math-semantic-check
+                (math-semantic-check-status rational-check) subject
+                (math-semantic-check-diagnostics rational-check))))
            ((equal? left right)
-            (semantic-check 'semantically-checked name #f))
+            (semantic-check 'semantically-checked subject #f))
            (else
-            (semantic-check 'rejected name
+            (semantic-check 'rejected subject
               "the rule specification is not an identity in the rational polynomial model"))))))))
+
+(define (math-polynomial-check-rule-spec spec)
+  "Check a RuleSpec as a universal law in Grove's exact scalar theory."
+  (unless (math-rule-spec? spec) (error "expected a RuleSpec" spec))
+  (check-rule-spec spec spec))
+
+(define (math-polynomial-check-rule name)
+  "Check a registered rule's RuleSpec as a universal law."
+  (let ((rule (math-rewrite-rule-ref name)))
+    (cond ((not rule) (semantic-check 'unsupported name "unknown rewrite rule"))
+          ((not (math-rewrite-rule-spec rule))
+           (semantic-check 'unsupported name "the rule has no declarative specification"))
+          (else (check-rule-spec name (math-rewrite-rule-spec rule))))))
 
 (define (scalar-term? assumptions term)
   (let ((inferred (math-infer-type assumptions term)))
@@ -274,8 +382,11 @@ natural powers. Division is accepted only by a nonzero rational constant."
        (let* ((bindings (math-rule-spec-match spec local-from))
               (expected (and bindings
                              (math-rule-spec-instantiate spec (cadr law) bindings)))
-              (from-polynomial (math-polynomial-normal-form from))
-              (to-polynomial (math-polynomial-normal-form to)))
+              (premises (and bindings
+                             (math-rule-spec-instantiate
+                               spec (math-rule-spec-premises spec) bindings)))
+              (from-rational (math-rational-normal-form from))
+              (to-rational (math-rational-normal-form to)))
          (cond
            ((not bindings)
             (semantic-check 'rejected (list from to rule-name path)
@@ -284,10 +395,21 @@ natural powers. Division is accepted only by a nonzero rational constant."
                       (equal? (replace-at-path from path expected) to)))
             (semantic-check 'rejected (list from to rule-name path)
               "the recorded step is not exactly the declared local replacement"))
-           ((or (not from-polynomial) (not to-polynomial))
+           ((not (every (lambda (premise)
+                          (math-premise-known? assumptions premise))
+                        premises))
+            (semantic-check 'rejected (list from to rule-name path)
+              "the rewrite application is missing a declared rule premise"))
+           ((or (not from-rational) (not to-rational))
             (semantic-check 'unsupported (list from to rule-name path)
-              "the complete expressions are outside the scalar-polynomial checker"))
-           ((equal? from-polynomial to-polynomial)
+              "the complete expressions are outside the rational-polynomial checker"))
+           ((not (every (lambda (condition)
+                          (math-premise-known? assumptions `(nonzero ,condition)))
+                        (append (caddr from-rational) (caddr to-rational))))
+            (semantic-check 'rejected (list from to rule-name path)
+              "the complete expressions require an unproved nonzero denominator"))
+           ((equal? (polynomial-multiply (car from-rational) (cadr to-rational))
+                    (polynomial-multiply (car to-rational) (cadr from-rational)))
             (semantic-check 'semantically-checked (list from to rule-name path) #f))
            (else
             (semantic-check 'rejected (list from to rule-name path)

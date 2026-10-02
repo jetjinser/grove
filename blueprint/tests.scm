@@ -31,6 +31,7 @@
     "unit/grove/math-context.scm"
     "unit/grove/math-contracts.scm"
     "unit/grove/math-semantic-check.scm"
+    "unit/grove/math-proof.scm"
     "unit/grove/math-provenance.scm"
     "unit/grove/math-oracle.scm"
     "unit/grove/math-search.scm"

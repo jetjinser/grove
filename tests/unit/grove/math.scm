@@ -173,7 +173,7 @@
       differentiate-negation differentiate-sum differentiate-difference
       differentiate-product differentiate-power differentiate-quotient differentiate-sin
       differentiate-cos differentiate-exp differentiate-log differentiate-function evaluate-constant collect-like-terms
-      combine-coefficients normalize-scalar cancel-scalar-factors expand-scalar-product
+      combine-coefficients normalize-scalar cancel-scalar-factors cancel-common-factor expand-scalar-product
       normalize-function-prime
       partial-constant partial-variable partial-independent partial-negation partial-sum partial-difference
       partial-product partial-power partial-quotient partial-sin partial-cos partial-exp partial-log partial-function-chain

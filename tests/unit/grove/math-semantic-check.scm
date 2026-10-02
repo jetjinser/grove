@@ -6,6 +6,7 @@
              (grove math pipeline)
              (grove math rewrite)
              (grove math rule)
+             (grove math semantic-check)
              (grove math derivation)
              (ice-9 match)
              (grove ir)
@@ -67,11 +68,13 @@
              names))
          (input (instantiate-schema (math-rule-spec-left spec) bindings))
          (expected (instantiate-schema (math-rule-spec-right spec) bindings))
+         (premises (instantiate-schema (math-rule-spec-premises spec) bindings))
          (assumptions
            (delete-duplicates
-             (append-map (lambda (binding)
-                           (scalar-variable-facts (cdr binding)))
-               bindings)
+             (append
+               (append-map (lambda (binding)
+                             (scalar-variable-facts (cdr binding))) bindings)
+               premises)
              equal?))
          (answers (math-rewrite-answers assumptions input (list rule) #f
                     #:mode 'check #:max-results 16)))
@@ -94,12 +97,53 @@
 (test-equal "algorithm rules are not presented as checked polynomial laws"
   'unsupported
   (math-semantic-check-status (φ:check-polynomial-rule 'differentiate-power)))
+(test-equal "basic algebra laws have checked universal RuleSpecs"
+  '(semantically-checked semantically-checked)
+  (map (lambda (name)
+         (math-semantic-check-status (φ:check-polynomial-rule name)))
+    '(add-zero multiply-associative)))
+(let ((conditional-cancel
+        (make-math-rule-spec
+          '(/ (* (unquote value) (unquote factor)) (unquote factor))
+          '(unquote value)
+          '((nonzero (unquote factor)))
+          '((math-typeo facts value (quote scalar))
+            (math-typeo facts factor (quote scalar)))))
+      (unjustified-cancel
+        (make-math-rule-spec
+          '(/ (* (unquote value) (unquote factor)) (unquote factor))
+          '(unquote value) '()
+          '((math-typeo facts value (quote scalar))
+            (math-typeo facts factor (quote scalar)))))
+      (false-cancel
+        (make-math-rule-spec
+          '(/ (* (unquote value) (unquote factor)) (unquote factor))
+          '(unquote other)
+          '((nonzero (unquote factor))) '())))
+  (test-equal "symbolic cancellation is proved under an explicit nonzero premise"
+    'semantically-checked
+    (math-semantic-check-status (math-polynomial-check-rule-spec conditional-cancel)))
+  (test-equal "symbolic cancellation without its domain premise is rejected"
+    'rejected
+    (math-semantic-check-status (math-polynomial-check-rule-spec unjustified-cancel)))
+  (test-equal "a nonzero premise cannot certify a forged cancellation result"
+    'rejected
+    (math-semantic-check-status (math-polynomial-check-rule-spec false-cancel))))
 
 (let* ((checked (φ:check-chain '("x+0" "x")
                  #:assumptions '("scalar(x)") #:steps '(add-zero)))
        (derivation (math-verification-derivation checked)))
-  (test-assert "independent checker validates a concrete polynomial rewrite"
-    (math-semantic-check-valid? (math-polynomial-check-derivation derivation)))
+(test-assert "independent checker validates a concrete polynomial rewrite"
+  (math-semantic-check-valid? (math-polynomial-check-derivation derivation)))
+(test-assert "independent checker validates conditional cancellation with its premise"
+  (math-semantic-check-valid?
+    (φ:check-polynomial-step "(x*a)/a" "x" 'cancel-common-factor '()
+      #:assumptions "scalar(x); scalar(a); nonzero(a)")))
+(test-equal "independent checker rejects conditional cancellation without its premise"
+  'rejected
+  (math-semantic-check-status
+    (φ:check-polynomial-step "(x*a)/a" "x" 'cancel-common-factor '()
+      #:assumptions "scalar(x); scalar(a)")))
   (test-assert "semantic checker rejects a forged local conclusion"
     (not (math-semantic-check-valid?
            (φ:check-polynomial-step "x+0" "x+1" 'add-zero '()

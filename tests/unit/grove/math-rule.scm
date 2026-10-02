@@ -20,6 +20,11 @@
   math-rewrite-rules)
 (test-equal "calculation rule selection follows group declarations"
   '(evaluate-constant) math-calculation-rules)
+(test-assert "default search excludes registered check-only theorems"
+  (and (not (memq 'cancel-common-factor math-default-rules))
+       (every (lambda (name)
+                (math-rewrite-rule-relation (math-rewrite-rule-ref name) 'forward))
+              math-default-rules)))
 (test-equal "differentiation is explicitly constructive, not inverse integration"
   '(forward check) (math-rewrite-rule-modes (math-rewrite-rule-ref 'differentiate-power)))
 (test-error "inverse derivative selection reports its unsupported mode" #t
