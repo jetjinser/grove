@@ -5,101 +5,78 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # Grove
 
-Grove is a Guile-based content platform. Its project pipeline composes a
-reader, an optional analyzer, and independent renderers. The current example
-uses the Scribble-inspired `.plant` language and Forester's bidirectional links
-to build a notes site.
+Grove is a Scheme toolkit for turning source files into useful projects and
+documents. You provide a reader, an optional analyzer, and one or more
+renderers; Grove tracks inputs and writes the resulting artifacts.
 
-## Examples
+The repository's writing format is `.plant`: Guile Scheme with Scribble-style
+at-expressions. Forester builds on Grove to add linked pages, backlinks,
+subtrees, transclusion, and site renderers. Grove's project and content APIs
+can also be used without Forester or HTML.
 
-Each example demonstrates a different boundary in Grove. `linked-notes` is the
-reference Forester integration; `catalog` and `inventory` show two distinct
-uses of the generic project API; the showcases reuse Forester to focus on
-authored material rather than repeat another API example.
+## Try it
 
-| Example | Demonstrates | Start here when |
-| --- | --- | --- |
-| [`linked-notes`](examples/linked-notes/build.scm) | Forester links, shared Scheme modules, HTML/text/RSS/sitemap/graph renderers, and cache configuration | You want to build a linked notes site |
-| [`catalog`](examples/catalog/build.scm) | A project-owned model rendered through Grove's content IR to HTML and text | You want a generic Grove project with document output |
-| [`inventory`](examples/inventory/build.scm) | CSV input and CSV/Scheme artifacts without Grove's content IR or HTML | Your inputs and outputs are structured data |
-| [`showcases/forest-category`](examples/showcases/forest-category/build.scm) | A small cross-linked category theory forest | You want an authored-content example |
-| [`showcases/heat-conduction`](examples/showcases/heat-conduction/build.scm) | A longer linked derivation using the same showcase runner | You want a larger content sample |
-| [`showcases/math-derivations`](examples/showcases/math-derivations/build.scm) | Checked vector identities and polynomial differentiation, with search and failure diagnostics | You want executable mathematical articles |
-
-The showcases share their runner in
-[`examples/common/`](examples/common/). `linked-notes` keeps a separate,
-complete configuration as the reference integration. These examples are
-functional demonstrations, not performance benchmarks.
-
-## Build an example
-
-Enter the development environment from the repository root:
+From the repository root, enter the development environment and build the
+linked-notes example:
 
 ```sh
 nix develop ./nix
 ```
 
-Then build the linked-notes example:
+Then, inside that shell, run:
 
 ```sh
-guile -L modules examples/linked-notes/build.scm
+guile -L modules examples/linked-notes/build.scm /tmp/grove-preview
 ```
 
-By default, the build writes HTML to `/tmp/grove-linked-notes` and plain text
-to `/tmp/grove-linked-notes/text`, plus `feed.xml`, `sitemap.xml`, and
-`forest-graph.scm`. Pass an output directory as the first argument to choose
-another location.
+Open `/tmp/grove-preview/index.html`. The example's home page is selected in
+its build configuration; Grove does not generate a page-list index. The build
+also writes plain text, RSS, a sitemap, a graph, and static assets. Omit the
+output argument to write to `/tmp/grove-linked-notes`.
 
-The example shows the main project pieces:
+To see the authoring syntax, start with the
+[`math-0001.plant`](examples/linked-notes/plants/algebra/math-0001.plant) page
+and follow its links. For smaller demonstrations, build one of these examples:
 
-- `.plant` pages are Guile Scheme sources with at-exp document syntax.
-- `examples/linked-notes/modules/commands.plant` defines shared Scheme commands
-  loaded before pages are read.
-- Forester turns page links into forward and reverse links.
-- HTML, plain-text, RSS, sitemap, and Scheme graph renderers write separate
-  targets.
-- The HTML style declares `style.css` as both a project input and an artifact
-  dependency, so edits are reported and rebuild the stylesheet output.
+| Example | Focus |
+| --- | --- |
+| [`catalog`](examples/catalog/build.scm) | A custom model rendered as HTML and text, without Forester. |
+| [`inventory`](examples/inventory/build.scm) | CSV input and data outputs, without Grove content or HTML. |
+| [`math-derivations`](examples/showcases/math-derivations/build.scm) | Executable math articles, checked derivations, search, and diagnostics. |
+| [`forest-category`](examples/showcases/forest-category/build.scm) | A compact cross-linked collection of authored pages. |
 
-## Try a non-Forester project
+Examples write to `/tmp` by default and accept an output directory as their
+first argument.
 
-```sh
-guile -L modules examples/catalog/build.scm
-```
+## What you can build
 
-This project reads `.quote` files into its own catalog record, then writes
-`index.html`, `catalog.css`, and `catalog.txt` to `/tmp/grove-catalog`. Its
-reader, analyzer, HTML output, and text output use Grove's generic project and
-artifact APIs without importing Forester.
+- Read text or Scheme-based sources into any Scheme data model.
+- Analyze that model once and send it to independent renderers.
+- Use Grove's content IR and HTML/text renderers, or provide your own output
+  formats and artifact data.
+- Write `.plant` documents with executable Scheme, reusable commands, and
+  automatic paragraphs for ordinary prose.
+- Use Forester for page links, named content trees, transclusion, and
+  miniKanren queries over pages and document content.
+- Write math with the Formula (`φ:`), Semantic (`◆:`), and Notation (`◇:`)
+  interfaces. Computation produces inspectable reports; document commands
+  render those reports as content.
 
-For a non-document project with no HTML renderer, try the inventory example:
+## Learn more
 
-```sh
-guile -L modules examples/inventory/build.scm
-```
-
-It reads CSV into project-owned Scheme records and writes a summary CSV plus a
-Scheme data file to `/tmp/grove-inventory`.
-
-## Project structure
-
-Grove owns file collection, model-independent project orchestration, the
-generic content IR, build reports, artifact writing, and optional renderer
-caching. Projects supply a source reader and analyzer; the analyzer can return
-any Scheme value, which each configured renderer consumes to produce
-artifacts. The page-oriented Site records are an optional adapter.
-
-Forester is one library built on those interfaces. It currently provides
-linked-page analysis and HTML, text, and RSS renderers. See
-[`docs/project.md`](docs/project.md) for project configuration, source
-dependencies, cache behavior, routing, and MathJax. See
-[`docs/ir.md`](docs/ir.md) for the Grove content records.
-[`docs/architecture.md`](docs/architecture.md) records the Grove/Forester
-dependency and packaging boundary.
+- [Project guide](docs/project.md): configure readers, analyzers, renderers,
+  output paths, and caching.
+- [Math guide](docs/math.md): authoring, computation, notation, and current
+  mathematical scope.
+- [Relations guide](docs/relations.md): miniKanren API and Forester queries.
+- [Subtrees and transclusion](docs/forester-composition.md): composing
+  addressable content trees.
+- [HACKING.md](HACKING.md): development setup, code boundaries, tests, and
+  contribution workflow.
 
 ## Checks
 
-From the development environment, run:
+Inside the development environment, run:
 
 ```sh
 blue check
