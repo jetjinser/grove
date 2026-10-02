@@ -45,6 +45,11 @@
     (lambda (key . args)
       (string-contains (format #f "~s" (cons key args)) text))))
 
+;; Project code can name a useful composition of public Forester predicates.
+(define-relation (short-math-paragrapho nodes paragraph-id maximum)
+  (math-containing-paragrapho nodes paragraph-id)
+  (shorter-than-o nodes paragraph-id maximum))
+
 (test-begin "forester project")
 
 (dynamic-wind
@@ -277,6 +282,16 @@
                     (text text))
                   (shorter-than-o nodes node-id 120)
                   (contains-texto nodes node-id "范畴论"))))
+            (test-equal "project-defined goals compose Forester predicates"
+              '("See limits. x^2+y^2=z^2")
+              (query (text)
+                (exists (node-id)
+                  (short-math-paragrapho nodes node-id 120)
+                  (nodeo nodes
+                    (node-id node-id)
+                    (page-id "algebra")
+                    (kind 'paragraph)
+                    (text text)))))
             (test-equal "plain text paragraph goal excludes inline elements"
               '("范畴论 is useful.")
               (query (text)

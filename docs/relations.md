@@ -162,6 +162,26 @@ shared page ID:
       (contains-texto nodes node-id "范畴论"))))
 ```
 
+Projects can name a frequently used combination of predicates in their own
+module:
+
+```scheme
+(use-modules (forester relations) (grove relation dsl))
+
+(define-relation (short-math-paragrapho nodes paragraph-id maximum)
+  (math-containing-paragrapho nodes paragraph-id)
+  (shorter-than-o nodes paragraph-id maximum))
+
+(let ((nodes (content-node-relation forest)))
+  (query (paragraph-id)
+    (short-math-paragrapho nodes paragraph-id 120)))
+```
+
+The project owns this predicate because the length limit is a project choice.
+It receives the content relation explicitly, so it works with any Forest
+snapshot and composes with other goals. Grove and Forester do not need a
+built-in helper for each project's query policy.
+
 Forester tree composition has a separate semantic interface in
 `(forester composition)`. That module accepts typed subtree-definition and
 transclusion facts, then uses Grove's relation layer internally. Forester's
