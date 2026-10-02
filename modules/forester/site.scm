@@ -118,7 +118,7 @@
 (define (owned-content content)
   (cond
     ((content-element? content)
-     (if (eq? (content-element-kind content) 'subtree)
+     (if (memq (content-element-kind content) '(subtree forest-query))
          #f
          (make-content-element
            (content-element-kind content)
@@ -314,7 +314,7 @@
 (define-record-type <forest>
   (%make-forest site pages reference-index heading-index reference-relation
                 composition page-index page-relation content-node-relation
-                content-node-index)
+                content-node-index query-page-ids)
   forest?
   (site site)
   (pages pages)
@@ -325,7 +325,8 @@
   (page-index page-index)
   (page-relation page-relation)
   (content-node-relation content-node-relation)
-  (content-node-index content-node-index))
+  (content-node-index content-node-index)
+  (query-page-ids query-page-ids))
 
 (define* (topic-pages forest topic-id #:optional kind)
   (let ((page-ids
@@ -367,32 +368,36 @@
     (letrec
       ((visit
          (lambda (page content parent-id position)
-           (if (not (content-element? content))
-               (cons '() (content->plain-text content))
-               (let* ((id next-id)
-                      (kind (content-element-kind content))
-                      (properties (content-element-properties content))
-                      (children (content-element-children content)))
-                 (set! next-id (1+ next-id))
-                 (set! index (cons (cons id content) index))
-                 (let* ((child-results
-                          (if (eq? kind 'subtree)
-                              '()
-                              (map (lambda (child child-position)
-                                     (visit page child id child-position))
-                                   children
-                                   (iota (length children)))))
-                        (text (if (eq? kind 'subtree)
-                                  (content->plain-text content)
-                                  (element->plain-text
-                                    kind properties
-                                    (map cdr child-results)))))
-                   (cons (cons
-                           (list id (site-page-id page) parent-id kind position
-                                 properties text (string-length text)
-                                 (element-plain-text? content))
-                           (append-map car child-results))
-                         text)))))))
+           (cond
+             ((not (content-element? content))
+              (cons '() (content->plain-text content)))
+             ((eq? (content-element-kind content) 'forest-query)
+              (cons '() ""))
+             (else
+              (let* ((id next-id)
+                     (kind (content-element-kind content))
+                     (properties (content-element-properties content))
+                     (children (content-element-children content)))
+                (set! next-id (1+ next-id))
+                (set! index (cons (cons id content) index))
+                (let* ((child-results
+                         (if (eq? kind 'subtree)
+                             '()
+                             (map (lambda (child child-position)
+                                    (visit page child id child-position))
+                                  children
+                                  (iota (length children)))))
+                       (text (if (eq? kind 'subtree)
+                                 (content->plain-text content)
+                                 (element->plain-text
+                                   kind properties
+                                   (map cdr child-results)))))
+                  (cons (cons
+                          (list id (site-page-id page) parent-id kind position
+                                properties text (string-length text)
+                                (element-plain-text? content))
+                          (append-map car child-results))
+                        text))))))))
       (let ((facts
               (append-map
                 (lambda (page)
@@ -412,6 +417,151 @@
                       (vector-set! node-index (car entry) (cdr entry)))
                     index)
           (values (make-content-node-relation facts) node-index))))))
+
+(define (query-in-content? content)
+  (and (content-document? content)
+       (any (lambda (child)
+              (and (content-element? child)
+                   (eq? (content-element-kind child) 'forest-query)))
+            (content-document-children content))))
+
+(define (nested-query-in-content? content)
+  (cond
+    ((content-element? content)
+     (or (eq? (content-element-kind content) 'forest-query)
+         (and (not (eq? (content-element-kind content) 'subtree))
+              (any nested-query-in-content?
+                   (content-element-children content)))))
+    ((content-document? content)
+     (any nested-query-in-content? (content-document-children content)))
+    (else #f)))
+
+(define (query-source-label page request)
+  (let ((location (content-element-property request 'source-location)))
+    (format #f "~a~a"
+      (or (and (list? location) (assq-ref location 'file))
+          (site-page-source page)
+          (site-page-id page))
+      (if (and (list? location) (assq-ref location 'line))
+          (format #f ":~a:~a"
+            (assq-ref location 'line)
+            (or (assq-ref location 'column) 1))
+          ""))))
+
+(define (query-output-content forest page request)
+  (let* ((query (content-element-property request 'query))
+         (source (query-source-label page request))
+         (result
+           (catch #t
+             (lambda () (query forest (site-page-id page)))
+             (lambda (key . args)
+               (error (format #f "Forester query failed at ~a: ~s"
+                              source (cons key args)))))))
+    (define (validate-query-link target)
+      (catch #t
+        (lambda ()
+          (let* ((page-id (page-id-from-link target))
+                 (fragment (fragment-from-link target)))
+            (find-page forest page-id)
+            (when (and fragment
+                       (not (member fragment
+                               (map heading-id (headings forest page-id))
+                               string=?)))
+              (error "unknown page fragment" page-id fragment))))
+        (lambda (key . args)
+          (error (format #f "Invalid query link at ~a to ~s: ~s"
+                         source target (cons key args))))))
+    (define (prepare content)
+      (cond
+        ((content-element? content)
+         (let ((kind (content-element-kind content)))
+           (when (memq kind '(forest-query subtree transclude))
+             (error (format #f
+               "Forester query at ~a returned unsupported ~a content"
+               source kind)))
+           (let* ((kind (case kind
+                          ((link) 'query-link)
+                          ((heading) 'query-heading)
+                          (else kind)))
+                  (element
+                    (make-content-element
+                      kind (map prepare (content-element-children content))
+                      (content-element-source content)
+                      #:properties (content-element-properties content)
+                      #:flow-kind (content-element-flow-kind content))))
+             (when (eq? kind 'query-link)
+               (validate-query-link
+                 (content-element-property element 'target)))
+             element)))
+        (else content)))
+    (unless (content-document? result)
+      (error (format #f
+        "Forester query at ~a must return a content document, got ~s"
+        source result)))
+    (make-content-document
+      (map prepare (content-document-children result))
+      (content-document-source result))))
+
+(define (resolve-page-queries forest page)
+  (define (resolve content)
+    (if (and (content-element? content)
+             (eq? (content-element-kind content) 'forest-query))
+        (content-document-children
+          (query-output-content forest page content))
+        (list content)))
+  (make-content-document
+    (append-map resolve (content-document-children
+                          (site-page-document page)))
+    (content-document-source (site-page-document page))))
+
+(define (resolve-forest-queries forest)
+  (for-each
+    (lambda (page)
+      (when (any nested-query-in-content?
+                 (filter (lambda (child)
+                           (not (and (content-element? child)
+                                     (eq? (content-element-kind child)
+                                          'forest-query))))
+                         (content-document-children
+                           (site-page-document page))))
+        (error "Forester query must be a top-level page command"
+               (site-page-source page))))
+    (pages forest))
+  (let* ((query-pages
+           (filter (lambda (page)
+                     (query-in-content? (site-page-document page)))
+                   (pages forest))))
+    (if (null? query-pages)
+        forest
+        (let* ((query-page-ids (map site-page-id query-pages))
+               (resolved-pages
+                 (map (lambda (page)
+                        (if (member (site-page-id page) query-page-ids string=?)
+                            (make-site-page
+                              (site-page-id page)
+                              (site-page-title page)
+                              (resolve-page-queries forest page)
+                              (site-page-source page)
+                              #:metadata (site-page-metadata page))
+                            page))
+                      (pages forest)))
+               (resolved-page-index (make-hash-table))
+               (_ (for-each
+                    (lambda (page)
+                      (hash-set! resolved-page-index (site-page-id page) page))
+                    resolved-pages))
+               (resolved-site
+                 (make-site resolved-pages
+                   #:title (site-title (site forest))
+                   #:description (site-description (site forest))
+                   #:sources (site-sources (site forest)))))
+          (%make-forest
+            resolved-site resolved-pages
+            (reference-index forest) (heading-index forest)
+            (reference-relation forest) (composition forest)
+            resolved-page-index (page-relation forest)
+            (content-node-relation forest) (content-node-index forest)
+            query-page-ids)))))
 
 (define (element-plain-text? element)
   (and (content-element? element)
@@ -576,10 +726,12 @@
                pages)
              (append-map cdr transclusion-index)))
          (_ (validate-composition-cycles! pages composition)))
-    (%make-forest site pages reference-index heading-index
-                  reference-relation composition page-index page-relation
-                  (car content-node-state)
-                  (cadr content-node-state))))
+    (resolve-forest-queries
+      (%make-forest site pages reference-index heading-index
+                    reference-relation composition page-index page-relation
+                    (car content-node-state)
+                    (cadr content-node-state)
+                    '()))))
 
 (define (find-page forest id)
   (or (hash-ref (page-index forest) id)
@@ -723,13 +875,17 @@
                   (cons id seen))))))))
 
 (define (page-source-paths forest page)
-  (delete-duplicates
-    (append (module-paths forest)
-            (filter-map
-              (lambda (id)
-                (site-page-source (find-page forest id)))
-              (included-tree-ids forest (site-page-id page)))
-            (content-source-paths (site-page-document page))
-            (filter-map site-page-source
-                        (backlinks forest (site-page-id page))))
-    string=?))
+  (let ((included (included-tree-ids forest (site-page-id page))))
+    (if (any (lambda (id) (member id (query-page-ids forest) string=?))
+             included)
+        (source-paths forest)
+        (delete-duplicates
+          (append (module-paths forest)
+                  (filter-map
+                    (lambda (id)
+                      (site-page-source (find-page forest id)))
+                    included)
+                  (content-source-paths (site-page-document page))
+          (filter-map site-page-source
+                              (backlinks forest (site-page-id page))))
+          string=?))))

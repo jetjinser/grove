@@ -9,6 +9,7 @@
 @updated{2026-09-27}
 @taxon["mathematics"]{Mathematics}
 @tag["algebra"]{Algebra}
+@paragraph{The @link["orphans"]{orphan trees page} is a live project query.}
 @paragraph{The @link["math-0002"]{limits} are useful. @tex-math{x^2+y^2=z^2}}
 @paragraph{@image["images/algebra.svg"]{A simple diagram of an algebraic identity.}}
 @tex-display-math{a^2+b^2=c^2}

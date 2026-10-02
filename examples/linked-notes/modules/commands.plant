@@ -3,4 +3,5 @@
 
 @(define-module (linked-notes commands)
   #:use-module (forester commands)
-  #:re-export (link image tag taxon title subtree transclude summary published updated))
+  #:re-export (link image tag taxon title subtree transclude summary published
+               updated forest-query))

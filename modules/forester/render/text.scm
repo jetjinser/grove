@@ -46,6 +46,21 @@
                                   (if fragment (string-append "#" fragment) "")
                                   "] [#"
                                   (reference-source-id reference) "]"))))
+      (query-link . ,(lambda (element body)
+                      (let* ((target
+                               (content-element-property element 'target))
+                             (page-id (page-id-from-link target))
+                             (path
+                               (text-relative-path
+                                 (text-page-path routes (site-page-id page))
+                                 (text-page-path routes page-id)))
+                             (fragment (fragment-from-link target)))
+                        (string-append body " [" path
+                          (if fragment (string-append "#" fragment) "")
+                          "]"))))
+      (query-heading . ,(lambda (_ body)
+                          (string-append body "\n"
+                            (make-string (string-length body) #\=) "\n")))
       (heading . ,(lambda (_ body)
                     (when (null? headings)
                       (error "Forester heading rendering exceeded its index"

@@ -174,6 +174,56 @@ library can export its own relation queries without changing Grove. Scheme
 remains available for I/O, model construction, and rendering; the relation
 API defines the common logic-query model.
 
+### Deferred queries in articles
+
+`@forest-query[procedure]` records a Forester query while a page is read. After
+all authored pages and the Forest relation snapshots exist, Forester calls the
+procedure with `(forest page-id)`. It must return a `content-document`. The
+callback can use the page, content-node, and reference relations above, along
+with ordinary Scheme to assemble the result. Place the command at the page's
+top level; its result may contain ordinary blocks, including links and copied
+content nodes.
+
+```scheme
+@use-modules[(forester commands) (forester relations) (forester site)
+             (grove ir) (grove relation dsl)]
+@(define algebra-pages
+   (lambda (forest _page-id)
+     (let* ((nodes (content-node-relation forest))
+            (matches
+              (query (page-id label)
+                (topic-membero nodes "algebra" page-id label))))
+       (make-content-document
+         (list
+           (make-content-element 'itemize
+             (map (lambda (match)
+                    (let ((page (find-page forest (car match))))
+                      (make-content-element 'item
+                        (list (link (site-page-id page)
+                                    (site-page-title page))))))
+                  matches)))))))
+@forest-query[algebra-pages]
+```
+
+The query result is inserted at the command's position for rendering. It does
+not become source data: generated elements are absent from page, reference,
+composition, heading, and content-node relations. Generated `@link` elements
+are checked against the authored Forest and rendered as links, but do not
+create backlinks or alter authored link IDs. Query output cannot recursively
+request another Forest query or create subtrees or transclusions. This keeps
+every query over one fixed, finite snapshot.
+
+Because a query may depend on any source page or module, rendered pages
+containing a query (including a page that embeds such a page as a subtree or
+transclusion) depend on all Forest sources for cache invalidation. This is
+intentionally conservative.
+
+For finite-set questions such as “pages with no incoming references,” use the
+relation results to collect the referenced IDs and take the set difference in
+Scheme. `=/=` is an inequality constraint, not general negation over a
+relation. By default, incoming references mean authored links; transclusions
+are represented separately by the composition API.
+
 ## Recursion and tabling
 
 Recursive rules are ordinary miniKanren relations and must define their own

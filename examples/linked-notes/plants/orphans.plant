@@ -1,0 +1,55 @@
+@; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+@; SPDX-License-Identifier: CC0-1.0
+
+@use-modules[(linked-notes commands)
+             (forester site)
+             (grove ir)
+             (grove site)
+             (srfi srfi-1)]
+
+@title{Orphan trees}
+@summary{Pages in this project with no incoming authored page links.}
+
+@(define orphan-query
+   (lambda (forest current-page-id)
+     (let* ((all-pages (pages forest))
+            (root-pages
+              (filter (lambda (page)
+                        (not (assq-ref (site-page-metadata page)
+                                       'inline-subtree)))
+                      all-pages))
+            (incoming-page-ids
+              (delete-duplicates
+                (append-map
+                  (lambda (source)
+                    (map reference-target-page-id
+                         (filter
+                           (lambda (reference)
+                             (not (string=?
+                                    (reference-source-page-id reference)
+                                    (reference-target-page-id reference))))
+                           (outgoing-references forest
+                             (site-page-id source)))))
+                  all-pages)
+                string=?))
+            (orphans
+              (filter (lambda (page)
+                        (and (not (member (site-page-id page)
+                                          '("math-0001" "orphans")
+                                          string=?))
+                             (not (member (site-page-id page)
+                                          incoming-page-ids string=?))))
+                      root-pages)))
+       (make-content-document
+         (if (null? orphans)
+             (list (make-content-element 'paragraph
+                     (list "Every other page has an incoming authored link.")))
+             (list
+               (make-content-element 'itemize
+                 (map (lambda (page)
+                        (make-content-element 'item
+                          (list (link (site-page-id page)
+                                      (site-page-title page)))))
+                      orphans))))))))
+
+@forest-query[orphan-query]

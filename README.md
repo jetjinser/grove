@@ -57,7 +57,8 @@ first argument.
 - Write `.plant` documents with executable Scheme, reusable commands, and
   automatic paragraphs for ordinary prose.
 - Use Forester for page links, named content trees, transclusion, and
-  miniKanren queries over pages and document content.
+  miniKanren queries over pages and document content, including deferred
+  `@forest-query` blocks in authored pages.
 - Write math with the Formula (`φ:`), Semantic (`◆:`), and Notation (`◇:`)
   interfaces. Computation produces inspectable reports; document commands
   render those reports as content.

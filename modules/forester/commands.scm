@@ -91,6 +91,14 @@
 (define-public (updated date)
   (make-content-element 'updated (list date) #:flow-kind 'block))
 
+(define-public (forest-query query)
+  "Record a query to run against the complete Forest after source analysis."
+  (unless (procedure? query)
+    (error "Forester query must be a procedure" query))
+  (make-content-element 'forest-query '()
+                        #:properties `((query . ,query))
+                        #:flow-kind 'block))
+
 (define-public link
   (lambda* (target . label)
     (make-content-element 'link

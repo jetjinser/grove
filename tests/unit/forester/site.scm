@@ -26,7 +26,13 @@
   #:use-module (grove style html))
 
 (define environment (default-environment scribble))
-(eval '(use-modules (forester commands) ((grove math notation) #:prefix notation:)) environment)
+(eval '(use-modules (forester commands)
+                     (forester relations)
+                     (forester site)
+                     (grove site)
+                     (grove relation dsl)
+                     ((grove math notation) #:prefix notation:))
+      environment)
 
 (define (evaluate-document source)
   (scribble-evaluate-document (open-input-string source) environment))
@@ -1209,11 +1215,108 @@
       (fresh (node-id)
         (math-containing-paragrapho nodes node-id)
         (nodeo nodes (node-id node-id) (text text)))))
-  (test-equal "source-locationo returns the paragraph's source position"
+(test-equal "source-locationo returns the paragraph's source position"
     '(("query-article.plant" 7 3))
     (query (file line column)
       (fresh (node-id)
         (math-containing-paragrapho nodes node-id)
         (source-locationo nodes node-id file line column)))))
+
+(let* ((catalog-document
+         (evaluate-document
+           (string-append
+           "@(define render-query\n"
+           "   (lambda (forest _page-id)\n"
+           "     (let* ((nodes (content-node-relation forest))\n"
+           "            (matches\n"
+           "              (query (node-id page-id)\n"
+           "                (plain-text-paragrapho nodes node-id)\n"
+           "                (nodeo nodes (node-id node-id) (page-id page-id))\n"
+           "                (contains-texto nodes node-id \"范畴论\"))))\n"
+           "       (make-content-document\n"
+           "         (map (lambda (match)\n"
+           "                (let ((target (find-page forest (cadr match))))\n"
+           "                  (make-content-element 'item\n"
+           "                    (list (link (site-page-id target)\n"
+           "                                (site-page-title target))\n"
+           "                          \" — \" (content-node forest (car match))))))\n"
+           "              matches)))))\n"
+           "@forest-query[render-query]\n"
+           "@paragraph{Authored link: @link[\"manual\"]{manual}.}")))
+       (catalog
+         (make-site-page "catalog" "Catalog" catalog-document
+                         "catalog.plant"))
+       (article
+         (make-site-page "article" "Article"
+           (evaluate-document "@paragraph{范畴论 appears in this note.}")
+           "article.plant"))
+       (manual (make-site-page "manual" "Manual" (make-content-document '())
+                               "manual.plant"))
+       (forest
+         (make-forest
+           (make-site (list catalog article manual)
+             #:sources '("commands.scm"))))
+       (resolved-catalog (find-page forest "catalog"))
+       (resolved-children
+         (content-document-children
+           (site-page-document resolved-catalog)))
+       (nodes (content-node-relation forest)))
+  (test-assert "@forest-query runs after the complete Forest snapshot exists"
+    (any (lambda (element)
+           (and (content-element? element)
+                (eq? (content-element-kind element) 'item)))
+         resolved-children))
+  (test-equal "query-generated links do not enter the reference relation"
+    '("manual")
+    (map reference-target-page-id (outgoing-references forest "catalog")))
+  (test-equal "query-generated links do not create backlinks"
+    '()
+    (incoming-references forest "article"))
+  (test-equal "query-generated content is absent from the source node snapshot"
+    '("article")
+    (map cadr
+      (query (node-id page-id)
+      (plain-text-paragrapho nodes node-id)
+      (nodeo nodes (node-id node-id) (page-id page-id))
+      (contains-texto nodes node-id "范畴论")
+      (== page-id "article"))))
+  (test-assert "query pages depend on every Forest source for caching"
+    (every (lambda (source)
+            (member source (page-source-paths forest resolved-catalog) string=?))
+      '("catalog.plant" "article.plant" "manual.plant" "commands.scm")))
+  (let ((html (assoc-ref (render-test-html forest) "catalog")))
+  (test-assert "query-generated links render without consuming authored link IDs"
+    (and (string-contains html "href=\"/article.html\">Article</a>")
+         (string-contains html "id=\"ref-1\" href=\"/manual.html\">manual</a>")))
+  (let* ((routes (make-text-routes))
+         (text (assoc-ref (site->text forest #:routes routes) "catalog")))
+    (test-assert "query-generated links render in text output"
+      (string-contains text "Article [article.txt]")))))
+
+(let ((message
+        (catch #t
+          (lambda ()
+            (make-forest
+              (make-site
+                (list
+                  (make-site-page "query" "Query"
+                    (make-content-document
+                      (list
+                        (make-content-element
+                          'forest-query '()
+                          #:properties
+                          `((query . ,(lambda (_forest _page-id)
+                                        (make-content-document
+                                          (list
+                                            (make-content-element
+                                              'transclude '()
+                                              #:properties
+                                              '((target . "other")))))))))))
+                    "query.plant"))))
+            #f)
+          (lambda (key . args) (format #f "~s" (cons key args))))))
+  (test-assert "query output cannot mutate Forest composition recursively"
+    (string-contains message
+      "Forester query at query.plant returned unsupported transclude content")))
 
 (test-end "forester site")

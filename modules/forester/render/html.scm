@@ -55,8 +55,20 @@
                    (set! references (cdr references))
                    `(a (@ (id ,(string-append anchor-prefix
                                              (reference-source-id reference)))
-                         (href ,(link-url routes reference)))
+                     (href ,(link-url routes reference)))
                      ,@children))))
+      (query-link . ,(lambda (element children)
+                       (let ((target
+                               (content-element-property element 'target)))
+                         `(a (@ (href
+                                  ,(string-append
+                                     (html-page-url routes
+                                       (page-id-from-link target))
+                                     (if (fragment-from-link target)
+                                         (string-append "#"
+                                           (fragment-from-link target))
+                                         ""))))
+                            ,@children))))
       (heading . ,(lambda (_ children)
                     (when (null? heading-ids)
                       (error "Forester heading rendering exceeded its index"
@@ -64,7 +76,8 @@
                     (let ((id (car heading-ids)))
                       (set! heading-ids (cdr heading-ids))
                       `(h2 (@ (id ,(string-append anchor-prefix id)))
-                           ,@children)))))))
+                           ,@children))))
+      (query-heading . ,(lambda (_ children) `(h2 ,@children))))))
 
 (define* (subtree-content-sxml forest routes page #:optional (anchor-prefix ""))
   (let ((transclusions
