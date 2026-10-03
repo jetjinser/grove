@@ -127,6 +127,7 @@
            (filter-map owned-content (content-element-children content))
            (content-element-source content)
            #:properties (content-element-properties content)
+           #:style (content-element-style content)
            #:flow-kind (content-element-flow-kind content))))
     ((content-document? content)
      (make-content-document
@@ -189,6 +190,7 @@
              #:properties (if id
                               (cons (cons 'tree-id id) properties)
                               properties)
+             #:style (content-element-style content)
              #:flow-kind (content-element-flow-kind content))))
         ((content-document? content)
          (make-content-document
@@ -521,6 +523,7 @@
                       kind (map prepare (content-element-children content))
                       (content-element-source content)
                       #:properties (content-element-properties content)
+                      #:style (content-element-style content)
                       #:flow-kind (content-element-flow-kind content))))
              (when (eq? kind 'query-link)
                (validate-query-link

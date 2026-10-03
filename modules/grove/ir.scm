@@ -6,6 +6,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
+  #:use-module (grove style)
   #:export (content-text?
             make-content-text
             content-text-value
@@ -26,6 +27,7 @@
             content-element-children
             content-element-properties
             content-element-property
+            content-element-style
             content-element-source
             make-content-disclosure
             content-document?
@@ -61,11 +63,12 @@
   (%make-content-layout kind raw source))
 
 (define-record-type <content-element>
-  (%make-content-element kind children properties source flow-kind)
+  (%make-content-element kind children properties style source flow-kind)
   content-element?
   (kind content-element-kind)
   (children content-element-children)
   (properties content-element-properties)
+  (style content-element-style)
   (source content-element-source)
   (flow-kind content-element-flow-kind))
 
@@ -76,17 +79,20 @@
 
 (define* (make-content-element kind children #:optional (source #f)
                                #:key (properties '())
+                                     (style #f)
                                      (flow-kind #f))
   (unless (symbol? kind)
     (error "content element kind must be a symbol" kind))
   (unless (valid-properties? properties)
     (error "content element properties must have unique symbol keys"
            properties))
+  (unless (or (not style) (content-style? style))
+    (error "content element style must be a content style" style))
   (let ((flow-kind (or flow-kind 'inline)))
   (unless (memq flow-kind '(inline block))
     (error "content element flow kind must be inline or block" flow-kind))
   (%make-content-element kind (normalize-children children 'element)
-                         properties source flow-kind)))
+                         properties style source flow-kind)))
 
 (define (content-element-block? element)
   (eq? (content-element-flow-kind element) 'block))
@@ -172,6 +178,7 @@
          (content-element-kind content)
          (content-element-children content)
          `((source-location . ,location) ,@properties)
+         (content-element-style content)
          (content-element-source content)
          (content-element-flow-kind content))))
     ((content-document? content)

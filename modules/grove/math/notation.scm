@@ -75,6 +75,7 @@
              (decode-math-fragments (content-element-children value))
              (content-element-source value)
              #:properties (content-element-properties value)
+             #:style (content-element-style value)
              #:flow-kind (content-element-flow-kind value))))
     (else (error "unsupported value in math expression" value))))
 

@@ -5,6 +5,8 @@
 (define-module (tests unit grove content)
   #:use-module (srfi srfi-64)
   #:use-module (grove ir)
+  #:use-module (grove style)
+  #:use-module (grove style html)
   #:use-module (grove render html)
   #:use-module (grove render text))
 
@@ -47,12 +49,34 @@
       (and (content-element-block? block)
            (eq? (content-element-flow-kind block) 'block)))
     (test-assert "flow semantics survive ordinary IR reconstruction"
-      (content-element-block?
+           (content-element-block?
         (make-content-element
           (content-element-kind block)
           (content-element-children block)
           #:properties (content-element-properties block)
           #:flow-kind (content-element-flow-kind block)))))
+  (let ((styled
+          (make-content-element 'notice '("Hello")
+            #:style
+            (make-content-style 'callout
+              (list (make-html-attributes
+                      '((id . "greeting") (class . "loud")
+                        (data-kind . "salutation"))))))))
+    (test-equal "HTML style names and attributes attach to the default tag"
+      '(span (@ (class "notice callout loud")
+               (id "greeting") (data-kind "salutation"))
+         "Hello")
+      (content->sxml styled)))
+  (let ((styled
+          (make-content-element 'paragraph '("Hello")
+            #:style (make-content-style 'callout
+                      (list (make-html-tag 'aside)
+                            (make-html-attributes '((role . "note"))))))))
+    (test-equal "HTML style can select a tag while retaining its style class"
+      '(aside (@ (class "callout") (role "note")) "Hello")
+      (content->sxml styled)))
+  (test-error "HTML attributes require unique string-valued pairs" #t
+    (make-html-attributes '((id . "one") (id . "two"))))
   (test-equal "HTML supplies a generic fallback for open element kinds"
     '(article (span (@ (class "notice")) "Hello"))
     (content->sxml document))

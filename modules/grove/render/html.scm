@@ -4,6 +4,8 @@
 
 (define-module (grove render html)
   #:use-module (grove ir)
+  #:use-module (grove style)
+  #:use-module (grove style html)
   #:use-module (srfi srfi-1)
   #:use-module (sxml simple)
   #:export (content->sxml
@@ -21,42 +23,117 @@
        (cons 'article (map render (content-document-children content))))
       (else (error "not a content node" content))))
 
+  (define (style-html-attributes style)
+    (if (not style) '()
+        (append
+          (let ((name (content-style-name style)))
+            (if name
+                `((class . ,(if (symbol? name) (symbol->string name) name)))
+                '()))
+          (append-map
+            (lambda (property)
+              (if (html-attributes? property)
+                  (html-attributes-assoc property)
+                  '()))
+            (content-style-properties style)))))
+
+  (define (style-html-tag style)
+    (and style
+      (let loop ((properties (content-style-properties style)) (tag #f))
+        (if (null? properties) tag
+            (loop (cdr properties)
+              (if (html-tag? (car properties))
+                  (string->symbol (html-tag-name (car properties)))
+                  tag))))))
+
+  (define (merge-html-attributes original additions)
+    (fold
+      (lambda (addition attributes)
+        (let* ((name (car addition))
+               (value (cdr addition))
+               (existing (assq name attributes)))
+          (cond
+            ((not existing) (append attributes (list addition)))
+            ((eq? name 'class)
+             (map (lambda (attribute)
+                    (if (eq? (car attribute) name)
+                        (cons name (string-append (cdr attribute) " " value))
+                        attribute)) attributes))
+            ((eq? name 'style)
+             (map (lambda (attribute)
+                    (if (eq? (car attribute) name)
+                        (cons name (string-append (cdr attribute) "; " value))
+                        attribute)) attributes))
+            (else
+             (map (lambda (attribute)
+                    (if (eq? (car attribute) name) addition attribute))
+                  attributes)))))
+      original additions))
+
+  (define (apply-element-style element rendered)
+    (let* ((style (content-element-style element))
+           (attributes (style-html-attributes style))
+           (tag (style-html-tag style)))
+      (cond
+        ((and (null? attributes) (not tag)) rendered)
+        ((not (and (pair? rendered) (symbol? (car rendered))))
+         (error "HTML style requires a single root tag" element))
+        (else
+         (let* ((tail (cdr rendered))
+                (has-attributes?
+                  (and (pair? tail) (pair? (car tail)) (eq? (caar tail) '@)))
+                (original-attributes
+                  (if has-attributes?
+                      (map (lambda (attribute)
+                             (cons (car attribute) (cadr attribute)))
+                           (cdar tail))
+                      '()))
+                (children (if has-attributes? (cdr tail) tail))
+                (merged (merge-html-attributes original-attributes attributes)))
+           `(,(or tag (car rendered))
+             ,@(if (null? merged) '()
+                   (list (cons '@ (map (lambda (attribute)
+                                         (list (car attribute) (cdr attribute)))
+                                       merged))))
+             ,@children))))))
+
   (define (render-element element)
     (let* ((kind (content-element-kind element))
-           (lazy-handler (assq-ref lazy-handlers kind)))
-      (if lazy-handler
-          (lazy-handler element render)
-          (if (eq? kind 'math)
-              (render-math element)
-          (let ((children (map render (content-element-children element)))
-                (handler (assq-ref handlers kind)))
-            (if handler
-                (handler element children)
-                (case kind
-            ((bold) (cons 'strong children))
-            ((paragraph) (cons 'p children))
-            ((heading) (cons 'h2 children))
-            ((blockquote) (cons 'blockquote children))
-            ((itemize) (cons 'ul children))
-            ((item) (cons 'li children))
-            ((code) (cons 'code children))
-            ((code-block) `(pre (code ,@children)))
-            ((verbatim) (cons 'pre children))
-            ((details) (cons 'details children))
-            ((summary) (cons 'summary children))
-            ((disclosure subtree)
-             `(details ,@(if (if (assq 'open? (content-element-properties element))
-                                 (content-element-property element 'open?)
-                                 #t)
-                             '((@ (open "open")))
-                             '())
-                (summary ,(content-element-property element 'title))
-                ,@children))
-            ((math-derivation math-diagnostics)
-             `(div (@ (class ,(symbol->string kind))) ,@children))
-            ((math-diagnostic) `(aside (@ (class "math-diagnostic")) ,@children))
-                  (else
-                   `(span (@ (class ,(symbol->string kind))) ,@children)))))))))
+           (lazy-handler (assq-ref lazy-handlers kind))
+           (rendered
+             (cond
+               (lazy-handler (lazy-handler element render))
+               ((eq? kind 'math) (render-math element))
+               (else
+                (let ((children (map render (content-element-children element)))
+                      (handler (assq-ref handlers kind)))
+                  (if handler
+                      (handler element children)
+                      (case kind
+                        ((bold) (cons 'strong children))
+                        ((paragraph) (cons 'p children))
+                        ((heading) (cons 'h2 children))
+                        ((blockquote) (cons 'blockquote children))
+                        ((itemize) (cons 'ul children))
+                        ((item) (cons 'li children))
+                        ((code) (cons 'code children))
+                        ((code-block) `(pre (code ,@children)))
+                        ((verbatim) (cons 'pre children))
+                        ((details) (cons 'details children))
+                        ((summary) (cons 'summary children))
+                        ((disclosure subtree)
+                         `(details
+                            ,@(if (if (assq 'open? (content-element-properties element))
+                                      (content-element-property element 'open?) #t)
+                                  '((@ (open "open"))) '())
+                            (summary ,(content-element-property element 'title))
+                            ,@children))
+                        ((math-derivation math-diagnostics)
+                         `(div (@ (class ,(symbol->string kind))) ,@children))
+                        ((math-diagnostic)
+                         `(aside (@ (class "math-diagnostic")) ,@children))
+                        (else `(span (@ (class ,(symbol->string kind))) ,@children)))))))))
+      (apply-element-style element rendered)))
 
   (define (render-math-children children)
     (map render-math-child children))

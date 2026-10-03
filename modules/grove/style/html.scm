@@ -10,7 +10,9 @@
             make-html-style
             compose-html-styles
             html-style-stylesheets
-            html-style-artifacts))
+            html-style-artifacts
+            make-html-attributes html-attributes? html-attributes-assoc
+            make-html-tag html-tag? html-tag-name))
 
 (define-record-type <html-style>
   (%make-html-style stylesheets assets)
@@ -36,3 +38,46 @@
 (define (html-style-artifacts style)
   (append (html-style-stylesheets style)
           (html-style-extra-assets style)))
+
+(define-record-type <html-attributes>
+  (%make-html-attributes assoc)
+  html-attributes?
+  (assoc html-attributes-assoc))
+
+(define (valid-html-attributes? assoc)
+  (and (list? assoc)
+       (every (lambda (attribute)
+                (and (pair? attribute)
+                     (symbol? (car attribute))
+                     (string? (cdr attribute))))
+              assoc)
+       (let loop ((remaining assoc) (seen '()))
+         (or (null? remaining)
+             (and (not (memq (caar remaining) seen))
+                  (loop (cdr remaining) (cons (caar remaining) seen)))))))
+
+(define (make-html-attributes assoc)
+  "Add HTML attributes to the tag produced for a styled content element."
+  (unless (valid-html-attributes? assoc)
+    (error "HTML attributes must be unique symbol/string pairs" assoc))
+  (%make-html-attributes assoc))
+
+(define-record-type <html-tag>
+  (%make-html-tag name)
+  html-tag?
+  (name html-tag-name))
+
+(define (html-tag-name? name)
+  (and (string? name) (> (string-length name) 0)
+       (char-alphabetic? (string-ref name 0))
+       (every (lambda (character)
+                (or (char-alphabetic? character) (char-numeric? character)
+                    (memv character '(#\- #\_ #\:))))
+              (string->list (substring name 1)))))
+
+(define (make-html-tag name)
+  "Use NAME instead of the HTML renderer's default tag for a content element."
+  (let ((name (if (symbol? name) (symbol->string name) name)))
+    (unless (html-tag-name? name)
+      (error "invalid HTML tag name" name))
+    (%make-html-tag name)))
