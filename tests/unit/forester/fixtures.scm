@@ -24,8 +24,10 @@
                      ((grove math notation) #:prefix notation:))
       environment)
 
-(define (evaluate-document source)
-  (scribble-evaluate-document (open-input-string source) environment))
+(define* (evaluate-document source #:optional (filename #f))
+  (let ((port (open-input-string source)))
+    (when filename (set-port-filename! port filename))
+    (scribble-evaluate-document port environment)))
 
 (define algebra
   (make-site-page

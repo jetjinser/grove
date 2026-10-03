@@ -8,6 +8,7 @@
   #:use-module (grove site)
   #:use-module ((forester composition) #:prefix composition:)
   #:use-module (forester relations)
+  #:use-module (forester input scribble)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
@@ -142,11 +143,12 @@
     (unless (and (non-empty-string? id)
                  (non-empty-string? title))
       (error "invalid Forester subtree element" element))
-    (make-site-page
-      id title
-      (make-content-document (content-element-children element) source)
-      source
-      #:metadata '((inline-subtree . #t)))))
+    (document->tree-page
+      id (make-content-document (content-element-children element) source) source
+      #:title title
+      #:metadata `((inline-subtree . #t)
+                   ,@(let ((location (content-element-property element 'source-location)))
+                       (if location `((source-location . ,location)) '()))))))
 
 (define (subtree-pages pages)
   (define (descendants page)

@@ -450,4 +450,28 @@
          (string-contains message "missing"))))
 
 
+(let* ((forest
+          (make-forest
+            (make-site
+              (list (make-site-page "frontmatter" "Root"
+                      (evaluate-document
+                        "@subtree[#:id \"child\"]{@title{Child}@summary{Child summary}@published{2026-01-01}@tag[\"nested\"]{Nested}@taxon[\"Lemma\"]{Lemma}@paragraph{Child body.}}" "frontmatter.plant"))))))
+       (child (find-page forest "child")))
+  (test-equal "subtree uses root frontmatter extraction"
+    "Child summary" (assq-ref (site-page-metadata child) 'summary))
+  (test-equal "subtree dates are stored as frontmatter"
+    "2026-01-01" (assq-ref (site-page-metadata child) 'published))
+  (test-equal "subtree declaration retains source location"
+    1 (assq-ref (assq-ref (site-page-metadata child) 'source-location) 'line))
+  (test-equal "nested topics belong only to their tree"
+    '("child") (map site-page-id (topic-pages forest "nested")))
+  (test-equal "direct definition is retained"
+    '(("frontmatter" "child")) (subtree-definitions forest)))
+
+(test-error "subtree frontmatter validates dates" #t
+  (make-forest
+    (make-site (list (make-site-page "invalid" "Invalid"
+      (evaluate-document
+        "@subtree{@title{Child}@published{yesterday}}"))))))
+
 (test-end "forester composition")

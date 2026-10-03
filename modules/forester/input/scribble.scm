@@ -10,7 +10,8 @@
   #:use-module (grove site)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (make-page-reader))
+  #:export (make-page-reader
+            document->tree-page))
 
 (define metadata-kinds '(title summary published updated tag taxon))
 
@@ -79,44 +80,40 @@
       (error (format #f "Forester page ~a has more than one taxon" path)))
     (and (pair? taxa) (car taxa))))
 
-(define (page-from-document path document)
-  (let* ((filename (basename path))
-         (children (content-document-children document))
+(define* (document->tree-page id document source #:key title (metadata '()))
+  "Extract a tree's direct frontmatter, retaining topic nodes as queryable IR."
+  (let* ((children (content-document-children document))
          (metadata-nodes (filter metadata-element? children))
-         (titles (elements-of-kind metadata-nodes 'title))
-         (summary (one-metadata-value metadata-nodes 'summary path))
-         (published (date-metadata metadata-nodes 'published path))
-         (updated (date-metadata metadata-nodes 'updated path))
-         (tags (topic-metadata metadata-nodes 'tag path))
-         (taxon (taxon-metadata metadata-nodes path)))
+         (tree-title (or title (one-metadata-value metadata-nodes 'title source #t)))
+         (summary (one-metadata-value metadata-nodes 'summary source))
+         (published (date-metadata metadata-nodes 'published source))
+         (updated (date-metadata metadata-nodes 'updated source)))
+    ;; Topics stay in the body, but validation is identical for every tree.
+    (topic-metadata metadata-nodes 'tag source)
+    (taxon-metadata metadata-nodes source)
+    (make-site-page
+      id tree-title
+      (make-content-document
+        (remove (lambda (child)
+                  (and (content-element? child)
+                       (memq (content-element-kind child)
+                             '(title summary published updated))))
+                children)
+        (content-document-source document))
+      source
+      #:metadata (append metadata
+                         (filter cdr
+                           (list (cons 'summary summary)
+                                 (cons 'published published)
+                                 (cons 'updated updated)))))))
+
+(define (page-from-document path document)
+  (let ((filename (basename path)))
     (unless (string-suffix? ".plant" filename)
       (error (format #f "Forester page source must end in .plant: ~a" path)))
-    (unless (= (length titles) 1)
-      (error (format #f
-                     "Forester page ~a requires exactly one top-level @title (found ~a)"
-                     path (length titles))))
-    (let ((title (string-trim-both
-                   (content-verbatim-string
-                     (content-element-children (car titles))))))
-      (when (string-null? title)
-        (error (format #f "Forester page title is empty in ~a" path)))
-      (make-site-page
-        ;; Forester addresses trees by filename; directories only organize
-        ;; the source tree and must not leak into page IDs or links.
-        (string-drop-right filename (string-length ".plant"))
-        title
-        (make-content-document
-          (remove (lambda (child)
-                    (and (content-element? child)
-                         (memq (content-element-kind child)
-                               '(title summary published updated))))
-                  children)
-          (content-document-source document))
-        path
-        #:metadata (filter cdr
-                     (list (cons 'summary summary)
-                           (cons 'published published)
-                           (cons 'updated updated)))))))
+    ;; Directories organize source files; tree IDs are their basenames.
+    (document->tree-page
+      (string-drop-right filename (string-length ".plant")) document path)))
 
 (define (make-page-reader read-document)
   "Return a reader whose page IDs are source basenames without `.plant'."
