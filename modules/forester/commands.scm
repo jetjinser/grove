@@ -12,6 +12,7 @@
   #:use-module (ice-9 string-fun)
   #:use-module (ice-9 optargs)
   #:use-module (grove ir)
+  #:use-module (language scribble flow)
   #:use-module (grove string-fun))
 
 (define-public (title . body)
@@ -146,7 +147,7 @@
        (when (string-null? title-text)
          (error "Forester subtree title cannot be empty"))
        (make-content-element
-         'subtree (remove (cut eq? <> title-element) body)
+         'subtree (decode-flow (remove (cut eq? <> title-element) body))
          #:properties
          `((title . ,title-text)
            (open? . ,open?)

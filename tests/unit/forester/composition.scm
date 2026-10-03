@@ -474,4 +474,13 @@
       (evaluate-document
         "@subtree{@title{Child}@published{yesterday}}"))))))
 
+(let* ((forest (make-forest
+                 (make-site (list (make-site-page "flow" "Flow"
+                   (evaluate-document
+                     "@subtree[#:id \"flow-child\"]{@title{Child}\nFirst paragraph.\n\nSecond paragraph.}"))))))
+       (child (find-page forest "flow-child")))
+  (test-equal "subtree bodies decode plain text into paragraphs"
+    '(paragraph paragraph)
+    (map content-element-kind (content-document-children (site-page-document child)))))
+
 (test-end "forester composition")
