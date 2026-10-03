@@ -37,6 +37,21 @@
 (define (evaluate-document source)
   (scribble-evaluate-document (open-input-string source) environment))
 
+(test-equal "unlabeled links use their target as the label"
+  "destination"
+  (content-verbatim-string
+    (content-element-children (eval '(link "destination") environment))))
+
+(test-equal "unlabeled tags use their ID as the label"
+  "topic"
+  (content-verbatim-string
+    (content-element-children (eval '(tag "topic") environment))))
+
+(test-equal "unlabeled taxa use their ID as the label"
+  "topic"
+  (content-verbatim-string
+    (content-element-children (eval '(taxon "topic") environment))))
+
 (define algebra
   (make-site-page
     "algebra"

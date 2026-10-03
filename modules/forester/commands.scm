@@ -81,7 +81,7 @@
 
 (define-public (link target . labels)
   (make-content-element 'link
-                        (or labels (list target))
+                        (if (null? labels) (list target) labels)
                         #:properties `((target . ,target))))
 
 (define-public (image source . alternative-text)
@@ -105,10 +105,10 @@
                         #:flow-kind 'block))
 
 (define-public (tag id . labels)
-  (topic-element 'tag id (or labels (list id))))
+  (topic-element 'tag id (if (null? labels) (list id) labels)))
 
 (define-public (taxon id . labels)
-  (topic-element 'taxon id (or labels (list id))))
+  (topic-element 'taxon id (if (null? labels) (list id) labels)))
 
 (define (subtree-body arguments)
   (let loop ([args arguments]
