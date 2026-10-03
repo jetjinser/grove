@@ -14,21 +14,15 @@
             render-graph
             make-graph-renderer))
 
-(define (heading->graph heading)
-  `((id . ,(heading-id heading))
-    (label . ,(heading-label heading))))
+
 
 (define (page->graph forest page)
-  `((id . ,(site-page-id page))
-    (title . ,(site-page-title page))
-    (headings . ,(map heading->graph
-                       (headings forest (site-page-id page))))))
+  `((id . ,(site-page-id page)) (title . ,(site-page-title page))))
 
 (define (reference->graph reference)
   `((source-page . ,(reference-source-page-id reference))
     (source-id . ,(reference-source-id reference))
     (target-page . ,(reference-target-page-id reference))
-    (target-fragment . ,(reference-target-fragment reference))
     (label . ,(reference-label reference))))
 
 (define (transclusion->graph transclusion)

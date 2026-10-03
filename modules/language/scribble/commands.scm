@@ -53,9 +53,6 @@
 (define-public (paragraph . body)
   (make-content-element 'paragraph body #:flow-kind 'block))
 
-(define-public (heading . body)
-  (make-content-element 'heading body #:flow-kind 'block))
-
 (define-public (blockquote . body)
   (make-content-element 'blockquote body #:flow-kind 'block))
 

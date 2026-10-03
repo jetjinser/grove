@@ -59,7 +59,7 @@
     (mkdir mathematics-directory)
     (write-test-file
       (string-append module-directory "/commands.plant")
-      "@(define-module (tests unit forester linked commands)\n  #:use-module (forester commands)\n  #:re-export (link tag taxon title summary published updated))")
+      "@(define-module (tests unit forester linked commands)\n  #:use-module (forester commands)\n  #:re-export (link tag taxon title summary published updated subtree))")
     (write-test-file
       (string-append source-directory "/algebra.plant")
       (string-append
@@ -70,7 +70,7 @@
         "@updated{2026-09-28}\n"
         "@taxon[\"mathematics\"]{Mathematics}\n"
         "@tag[\"algebra\"]{Algebra}\n"
-        "@heading{Quadratic equations}\n"
+        "@subtree[#:id \"quadratic-equations\"]{@title{Quadratic equations}}\n"
         "@paragraph{See @link[\"limits\"]{limits}. "
         "@tex-math{x^2+y^2=z^2}}\n"
         "@paragraph{范畴论 is useful.}\n@tex-display-math{a^2+b^2=c^2}"))
@@ -82,7 +82,7 @@
         "@taxon[\"mathematics\"]{Mathematics}\n"
         "@tag[\"analysis\"]{Analysis}\n"
         "@paragraph{See @link[\"algebra\"]{algebra}. "
-        "Read @link[\"algebra#quadratic-equations\"]{about quadratics}.}"))
+        "Read @link[\"quadratic-equations\"]{about quadratics}.}"))
     (write-test-file
       (string-append source-directory "/unlinked.plant")
       "@use-modules[(tests unit forester linked commands)]\n@title{Unlinked}\n@paragraph{Standalone.}")
@@ -393,12 +393,12 @@
              (not (string-contains algebra-html "class=\"tag\""))
              (not (string-contains algebra-html "class=\"taxon\""))
              (not (string-contains algebra-html "Mathematics"))))
-      (test-assert "HTML project emits stable heading anchors"
+      (test-assert "HTML project emits named tree titles"
         (string-contains algebra-html
-          "<h2 id=\"quadratic-equations\">Quadratic equations</h2>"))
-      (test-assert "real .plant fragment links resolve through configured routes"
+          "<h2 class=\"forest-tree-title\">Quadratic equations</h2>"))
+      (test-assert "real .plant tree links resolve through configured routes"
         (string-contains limits-html
-          "href=\"/notes/algebra.html#quadratic-equations\">about quadratics</a>"))
+          "href=\"/notes/quadratic-equations.html\">about quadratics</a>"))
       (test-assert "HTML project output contains reverse links"
         (string-contains limits-html
           "href=\"/notes/algebra.html#ref-1\">Algebra</a>"))
@@ -456,7 +456,7 @@
           (string-append
             "@use-modules[(tests unit forester linked commands)]\n"
             "@title{Algebra}\n"
-            "@heading{Polynomial equations}\n"
+            "@subtree[#:id \"quadratic-equations\"]{@title{Polynomial equations}}\n"
             "@paragraph{See @link[\"limits\"]{limits}. "
             "@tex-math{x^2+y^2=z^2}}\n"
             "@tex-display-math{a^2+b^2=c^2}\n"
@@ -467,12 +467,12 @@
             "@use-modules[(tests unit forester linked commands)]\n"
             "@title{Limits}\n"
             "@paragraph{See @link[\"algebra\"]{algebra}. "
-            "Read @link[\"algebra#polynomial-equations\"]{about polynomials}.}"))
+            "Read @link[\"quadratic-equations\"]{about polynomials}.}"))
         (let ((changed-links (build-project/report incremental-project)))
           (test-equal "new links update the newly linked page's backlinks"
             '("index.html" "notes/algebra.html" "notes/limits.html"
-              "notes/unlinked.html" "text/index.txt" "text/algebra.txt"
-              "text/limits.txt" "text/unlinked.txt")
+              "notes/unlinked.html" "notes/quadratic-equations.html" "text/index.txt" "text/algebra.txt"
+              "text/limits.txt" "text/unlinked.txt" "text/quadratic-equations.txt")
             (build-report-affected-artifacts changed-links))
           (test-assert "new backlinks appear in the target page"
             (string-contains
@@ -485,16 +485,16 @@
               (read-test-file
                 (string-append cache-output-directory "/text/unlinked.txt"))
               "Algebra"))
-          (test-assert "changed heading text updates its HTML anchor"
+          (test-assert "changed tree title updates its display"
             (string-contains
               (read-test-file
                 (string-append cache-output-directory "/notes/algebra.html"))
-              "<h2 id=\"polynomial-equations\">Polynomial equations</h2>"))
-          (test-assert "updated fragment references resolve in cached builds"
+              "<h2 class=\"forest-tree-title\">Polynomial equations</h2>"))
+          (test-assert "tree references resolve in cached builds"
             (string-contains
               (read-test-file
                 (string-append cache-output-directory "/notes/limits.html"))
-              "href=\"/notes/algebra.html#polynomial-equations\">about polynomials</a>")))
+              "href=\"/notes/quadratic-equations.html\">about polynomials</a>")))
         (write-test-file
           (string-append module-directory "/commands.plant")
           (string-append
@@ -508,9 +508,9 @@
             (build-report-modified-sources changed-module))
           (test-equal "shared module changes affect all rendered pages"
             '("index.html" "notes/algebra.html" "notes/limits.html"
-              "notes/orphan.html" "notes/unlinked.html" "text/index.txt"
+              "notes/orphan.html" "notes/unlinked.html" "notes/quadratic-equations.html" "text/index.txt"
               "text/algebra.txt" "text/limits.txt" "text/orphan.txt"
-              "text/unlinked.txt")
+              "text/unlinked.txt" "text/quadratic-equations.txt")
             (build-report-affected-artifacts changed-module)))
         (delete-file (string-append source-directory "/orphan.plant"))
         (let ((removed-page (build-project/report incremental-project)))
@@ -540,7 +540,9 @@
       (lambda (path)
         (when (file-exists? path)
           (delete-file path)))
-      (list (string-append output-directory "/index.html")
+      (list (string-append output-directory "/text/quadratic-equations.txt")
+            (string-append output-directory "/notes/quadratic-equations.html")
+            (string-append output-directory "/index.html")
             (string-append output-directory "/forester.css")
             (string-append output-directory "/feed.xml")
             (string-append output-directory "/sitemap.xml")
@@ -557,6 +559,8 @@
             (string-append output-directory "/.grove-artifacts.tmp")
             (string-append output-directory "/.grove-build-state")
             (string-append output-directory "/.grove-build-state.tmp")
+            (string-append cache-output-directory "/notes/quadratic-equations.html")
+            (string-append cache-output-directory "/text/quadratic-equations.txt")
             (string-append cache-output-directory "/index.html")
             (string-append cache-output-directory "/forester.css")
             (string-append cache-output-directory "/notes/algebra.html")

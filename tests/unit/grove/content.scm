@@ -98,7 +98,7 @@
 
 (let* ((document
          (make-content-document
-           (list (make-content-element 'heading '("Details"))
+           (list (make-content-element 'paragraph '("Details"))
                  (make-content-element 'blockquote '("A short quote."))
                  (make-content-element
                    'itemize

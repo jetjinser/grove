@@ -20,8 +20,7 @@
             make-text-renderer))
 
 (define (page-content-handlers forest routes page)
-  (let ((references (outgoing-references forest (site-page-id page)))
-        (headings (headings forest (site-page-id page))))
+  (let ((references (outgoing-references forest (site-page-id page))))
     `((tag . ,(lambda (_element _body) ""))
       (taxon . ,(lambda (_element _body) ""))
       (image . ,(lambda (element body)
@@ -32,65 +31,32 @@
                      body)))
       (link . ,(lambda (_ body)
                  (when (null? references)
-                   (error "Forester link rendering exceeded its index"
-                          (site-page-id page)))
+                   (error "Forester link rendering exceeded its index" (site-page-id page)))
                  (let* ((reference (car references))
-                        (path
-                          (text-relative-path
-                            (text-page-path routes (site-page-id page))
-                            (text-page-path
-                              routes
-                              (reference-target-page-id reference))))
-                        (fragment
-                          (reference-target-fragment reference)))
+                        (path (text-relative-path
+                                (text-page-path routes (site-page-id page))
+                                (text-page-path routes (reference-target-page-id reference)))))
                    (set! references (cdr references))
-                   (string-append body " [" path
-                                  (if fragment (string-append "#" fragment) "")
-                                  "] [#"
-                                  (reference-source-id reference) "]"))))
+                   (string-append body " [" path "] [#" (reference-source-id reference) "]"))))
       (query-link . ,(lambda (element body)
-                      (let* ((target
-                               (content-element-property element 'target))
-                             (page-id (page-id-from-link target))
-                             (path
-                               (text-relative-path
-                                 (text-page-path routes (site-page-id page))
-                                 (text-page-path routes page-id)))
-                             (fragment (fragment-from-link target)))
-                        (string-append body " [" path
-                          (if fragment (string-append "#" fragment) "")
-                          "]"))))
-      (query-heading . ,(lambda (_ body)
-                          (string-append body "\n"
-                            (make-string (string-length body) #\=) "\n")))
-      (heading . ,(lambda (_ body)
-                    (when (null? headings)
-                      (error "Forester heading rendering exceeded its index"
-                             (site-page-id page)))
-                    (let* ((heading-record (car headings))
-                           (id (heading-id heading-record)))
-                      (set! headings (cdr headings))
-                      (string-append body "\n"
-                                     (make-string (string-length body) #\=)
-                                     "\n[#" id "]\n")))))))
+                      (string-append body " ["
+                        (text-relative-path (text-page-path routes (site-page-id page))
+                          (text-page-path routes (content-element-property element 'target)))
+                        "]"))))))
 
-(define (subtree-content-text forest routes page)
-  (content->text
-    (site-page-document page)
-    #:handlers (page-content-handlers forest routes page)
-    #:lazy-handlers
-    (list (cons 'subtree (lambda (element _render)
-                    (let* ((id (content-element-property element 'tree-id))
-                           (target (find-page forest id)))
-                      (string-append
-                        (heading (site-page-title target))
-                        (subtree-content-text forest routes target)))))
-          (cons 'transclude (lambda (element _render)
-                       (let* ((id (content-element-property element 'target))
-                              (target (find-page forest id)))
-                         (string-append
-                           (heading (site-page-title target))
-                           (subtree-content-text forest routes target))))))))
+(define* (subtree-content-text forest routes page #:optional (prefix ""))
+  (let ((position 0))
+    (define (render-tree element _render)
+      (set! position (1+ position))
+      (let* ((id (tree-occurrence-target element))
+             (target (find-page forest id))
+             (anchor (format #f "~atree-~a" prefix position)))
+        (string-append (heading (site-page-title target)) "[#" anchor "]\n"
+                       (subtree-content-text forest routes target (string-append anchor "--")))))
+    (content->text (site-page-document page)
+      #:handlers (page-content-handlers forest routes page)
+      #:lazy-handlers (map (lambda (kind) (cons kind render-tree))
+                          '(subtree transclude query-transclude)))))
 
 (define (heading title)
   (string-append title "\n" (make-string (string-length title) #\=) "\n"))
@@ -102,18 +68,17 @@
                         (text-page-path routes (site-page-id page))) ")"))
 
 (define (table-of-contents-text forest page)
-  (let ((headings (headings forest (site-page-id page))))
-    (if (null? headings)
-        ""
-        (string-append
-          (heading "Contents") "\n"
-          (string-concatenate
-            (map (lambda (heading-record)
-                   (string-append "- "
-                                  (heading-label heading-record)
-                                  " [#" (heading-id heading-record) "]\n"))
-                 headings))
-          "\n"))))
+  (define (entries id prefix indent)
+    (string-concatenate
+      (map (lambda (element position)
+             (let* ((target-id (tree-occurrence-target element))
+                    (target (find-page forest target-id))
+                    (anchor (format #f "~atree-~a" prefix position)))
+               (string-append indent "- " (site-page-title target) " [#" anchor "]\n"
+                 (entries target-id (string-append anchor "--") (string-append indent "  ")))))
+           (tree-occurrences forest id) (iota (length (tree-occurrences forest id)) 1))))
+  (let ((items (entries (site-page-id page) "" "")))
+    (if (string-null? items) "" (string-append (heading "Contents") "\n" items "\n"))))
 
 (define (text-backlink-reference forest page-id routes reference indent)
   (let* ((source-id (reference-source-page-id reference))
@@ -126,51 +91,17 @@
                    (reference-source-id reference) "]: "
                    (reference-label reference) "\n")))
 
-(define (text-backlink-group forest page routes group)
-  (let ((heading-record (car group))
-        (references (cdr group)))
-    (if heading-record
-        (string-append
-          "- " (heading-label heading-record)
-          " [#" (heading-id heading-record) "]:\n"
-          (string-concatenate
-            (map (lambda (reference)
-                   (text-backlink-reference forest (site-page-id page) routes
-                                            reference "  "))
-                 references)))
-        (string-concatenate
-          (map (lambda (reference)
-                 (text-backlink-reference forest (site-page-id page) routes
-                                          reference ""))
-               references)))))
+
 
 (define (backlinks-text forest page routes label)
   (let* ((page-id (site-page-id page))
-         (incoming (incoming-references forest page-id))
-         (page-references
-           (filter (lambda (reference)
-                     (not (reference-target-fragment reference)))
-                   incoming))
-         (heading-groups
-           (filter-map
-             (lambda (heading-record)
-               (let* ((fragment (heading-id heading-record))
-                      (references
-                        (incoming-references forest page-id fragment)))
-                 (and (pair? references) (cons heading-record references))))
-             (headings forest page-id)))
-         (groups (append (if (null? page-references)
-                             '()
-                             (list (cons #f page-references)))
-                         heading-groups)))
-    (if (null? groups)
-        ""
-        (string-append
-          (string-append "\n\n" label ":\n")
+         (references (incoming-references forest page-id)))
+    (if (null? references) ""
+        (string-append "\n\n" label ":\n"
           (string-concatenate
-            (map (lambda (group)
-                   (text-backlink-group forest page routes group))
-                 groups))))))
+            (map (lambda (reference)
+                   (text-backlink-reference forest page-id routes reference ""))
+                 references))))))
 
 (define (context-text forest page routes label)
   (let ((sources (transcluding-pages forest (site-page-id page))))

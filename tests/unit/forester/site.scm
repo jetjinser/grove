@@ -358,7 +358,7 @@
                                         (make-content-document
                                           (list
                                             (make-content-element
-                                              'transclude '()
+                                              'subtree '()
                                               #:properties
                                               '((target . "other")))))))))))
                     "query.plant"))))
@@ -366,6 +366,41 @@
           (lambda (key . args) (format #f "~s" (cons key args))))))
   (test-assert "query output cannot mutate Forest composition recursively"
     (string-contains message
-      "Forester query at query.plant returned unsupported transclude content")))
+      "Forester query at query.plant returned unsupported subtree content")))
+
+(define (query-transclusion-page id target)
+  (make-site-page id id
+    (make-content-document
+      (list (make-content-element 'forest-query '()
+        #:properties `((query . ,(lambda (_forest _id)
+          (make-content-document
+            (list (make-content-element 'transclude '()
+                    #:properties `((target . ,target)))))))))))))
+
+(let* ((target (make-site-page "query-target" "Existing tree"
+                 (evaluate-document "@paragraph{Existing body}")))
+       (host (query-transclusion-page "query-host" "query-target"))
+       (forest (make-forest (make-site (list host target))))
+       (html (assoc-ref (render-test-html forest) "query-host")))
+  (test-assert "queries can display an existing tree"
+    (and (string-contains html "Existing body")
+         (string-contains html "href=\"#tree-1\">Existing tree</a>")))
+  (test-equal "query tree displays do not change authored composition"
+    '() (incoming-transclusions forest "query-target"))
+  (test-assert "query tree displays render in text"
+    (string-contains (assoc-ref (site->text forest) "query-host") "Existing body")))
+
+(test-error "query tree displays reject unknown identities" #t
+  (make-forest (make-site (list (query-transclusion-page "query-host" "missing")))))
+
+(test-error "query tree displays reject direct cycles" #t
+  (make-forest (make-site (list (query-transclusion-page "query-host" "query-host")))))
+
+(test-error "query tree displays reject cycles through authored composition" #t
+  (make-forest
+    (make-site
+      (list (query-transclusion-page "query-host" "query-target")
+            (make-site-page "query-target" "Target"
+              (evaluate-document "@transclude[\"query-host\"]"))))))
 
 (test-end "forester site")

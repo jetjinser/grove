@@ -104,109 +104,46 @@
          (string-contains html "<mtable>")
          (not (string-contains html "mathjax")))))
 
-(let* ((target-document
-         (make-content-document
-           (list
-             (make-content-element 'heading '("Overview"))
-             (make-content-element 'heading '("Overview"))
-             (make-content-element 'heading '("About: Trees?"))
-             (make-content-element 'heading '("!!!"))
-             (make-content-element 'heading '("Overview-2")))))
-       (source-document
-         (make-content-document
-           (list
-             (make-content-element
-               'paragraph
-               (list (make-content-element
-                       'link '("second section")
-                       #:properties '((target . "target#overview-2")))))
-             (make-content-element
-               'paragraph
-               (list (make-content-element
-                       'link '("the trees")
-                       #:properties '((target . "target#about-trees"))))))))
-       (target (make-site-page "target" "Target" target-document))
-       (source (make-site-page "source" "Source" source-document))
+(let* ((target
+          (make-site-page "target" "Target"
+            (evaluate-document
+              "@subtree[#:id \"overview\"]{@title{Overview}@paragraph{Body}@subtree[#:id \"details\"]{@title{Details}@paragraph{Nested body}}}")))
+       (source
+          (make-site-page "source" "Source"
+            (evaluate-document "@paragraph{@link[\"overview\"]{the overview}}")))
        (forest (make-forest (make-site (list target source))))
        (html (render-test-html forest))
-       (text (site->text forest))
-       (target-html (assoc-ref html "target"))
-       (target-text (assoc-ref text "target"))
-       (source-html (assoc-ref html "source"))
-       (source-text (assoc-ref text "source"))
-       (outgoing (outgoing-references forest "source"))
-       (first-reference (car outgoing))
-       (section-references
-         (incoming-references forest "target" "overview-2")))
-  (test-equal "heading anchors slugify text and disambiguate duplicate IDs"
-    '("overview" "overview-2" "about-trees" "section" "overview-2-2")
-    (heading-ids forest "target"))
-  (test-assert "HTML headings emit their indexed anchor IDs"
-    (and (string-contains target-html "<h2 id=\"overview\">Overview</h2>")
-         (string-contains target-html
-                          "<h2 id=\"overview-2\">Overview</h2>")
-         (string-contains target-html
-                          "<h2 id=\"overview-2-2\">Overview-2</h2>")))
-  (test-assert "HTML pages include a table of contents linked to heading IDs"
-    (and (string-contains target-html
-                          "class=\"table-of-contents\" aria-label=\"Contents\"")
-         (string-contains target-html "href=\"#overview-2\">Overview</a>")))
-  (test-assert "text pages include a heading directory and matching markers"
-    (and (string-contains target-text "Contents")
-         (string-contains target-text "- Overview [#overview-2]")
-         (string-contains target-text "[#overview-2]")))
-  (test-assert "HTML page links preserve fragment targets"
-    (and (string-contains source-html
-                          "href=\"/target.html#overview-2\">second section</a>")
-         (string-contains source-html
-                          "href=\"/target.html#about-trees\">the trees</a>")))
-  (test-assert "plain-text page links preserve fragment targets"
-    (and (string-contains source-text "target.txt#overview-2")
-         (string-contains source-text "target.txt#about-trees")))
-  (test-assert "fragment links produce section-aware backlinks"
-    (and (string-contains target-html "href=\"/source.html#ref-1\">Source</a>")
-         (string-contains target-html "href=\"#overview-2\">Overview</a>")
-         (not (string-contains target-html "This page"))
-         (not (string-contains target-text "This page"))))
-  (test-assert "Forest references preserve source, target, label and fragment"
-    (and (reference? first-reference)
-         (string=? (reference-source-page-id first-reference) "source")
-         (string=? (reference-source-id first-reference) "ref-1")
-         (string=? (reference-target-page-id first-reference) "target")
-         (string=? (reference-target-fragment first-reference)
-                   "overview-2")
-         (string=? (reference-label first-reference)
-                   "second section")))
-  (test-equal "incoming-reference queries can select one heading"
-    '("second section")
-    (map reference-label section-references))
-  (test-equal "legacy link queries retain page and fragment targets"
-    '("target#overview-2" "target#about-trees")
-    (links forest "source")))
+       (text (site->text forest)))
+  (test-equal "tree references preserve source, identity and label"
+    '("source" "ref-1" "overview" "the overview")
+    (let ((reference (car (outgoing-references forest "source"))))
+      (list (reference-source-page-id reference) (reference-source-id reference)
+            (reference-target-page-id reference) (reference-label reference))))
+  (test-assert "tree directory follows nested display structure"
+    (and (string-contains (assoc-ref html "target") "href=\"#tree-1\">Overview</a>")
+         (string-contains (assoc-ref html "target") "href=\"#tree-1--tree-1\">Details</a>")))
+  (test-assert "title levels follow display depth"
+    (and (string-contains (assoc-ref html "target") "<h2 class=\"forest-tree-title\">Overview</h2>")
+         (string-contains (assoc-ref html "target") "<h3 class=\"forest-tree-title\">Details</h3>")))
+  (test-assert "tree references use independent routes"
+    (and (string-contains (assoc-ref html "source") "href=\"/overview.html\">the overview</a>")
+         (string-contains (assoc-ref text "source") "overview.txt")))
+  (test-assert "backlinks belong to the referenced tree"
+    (and (string-contains (assoc-ref html "overview") "href=\"/source.html#ref-1\">Source</a>")
+         (null? (incoming-references forest "target"))))
+  (test-assert "text directory and body share occurrence anchors"
+    (and (string-contains (assoc-ref text "target") "- Overview [#tree-1]")
+         (string-contains (assoc-ref text "target") "  - Details [#tree-1--tree-1]")))
+  (test-equal "tree link queries use the same identities"
+    '("overview") (links forest "source")))
 
-(test-error "links to missing heading fragments fail forest analysis" #t
+(test-error "fragment targets are not tree identities" #t
   (make-forest
-    (make-site
-      (list
-        (make-site-page "target" "Target"
-          (make-content-document
-            (list (make-content-element 'heading '("Existing")))))
-        (make-site-page "source" "Source"
-          (make-content-document
-            (list (make-content-element
-                    'link '("missing")
-                    #:properties '((target . "target#not-here"))))))))))
-
-(test-error "empty page fragments are rejected" #t
-  (make-forest
-    (make-site
-      (list
-        (make-site-page "target" "Target" (make-content-document '()))
-        (make-site-page "source" "Source"
-          (make-content-document
-            (list (make-content-element
-                    'link '("target")
-                    #:properties '((target . "target#"))))))))))
+    (make-site (list (make-site-page "target" "Target" (make-content-document '()))
+                    (make-site-page "source" "Source"
+                      (make-content-document
+                        (list (make-content-element 'link '("missing")
+                                #:properties '((target . "target#heading"))))))))))
 
 (let* ((forest (make-forest (make-site (list algebra limits)
                                        #:title "Linked Notes"
@@ -358,7 +295,7 @@
            "preview" "Preview"
            (make-content-document
              (list
-               (make-content-element 'heading '("Details"))
+               (make-content-element 'paragraph '("Details"))
                (make-content-element
                  'paragraph
                  (list "Run " (make-content-element 'code '("x + 1")) "."))

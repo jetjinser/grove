@@ -15,7 +15,7 @@
   (make-site-page
     "target" "Target"
     (make-content-document
-      (list (make-content-element 'heading '("Overview"))))
+      '())
     "/notes/target.plant"))
 
 (define source
@@ -26,7 +26,7 @@
               'paragraph
               (list (make-content-element
                       'link '("the overview")
-                      #:properties '((target . "target#overview")))))))
+                      #:properties '((target . "target")))))))
     "/notes/source.plant"))
 
 (define forest
@@ -39,16 +39,14 @@
 (let* ((graph (site->graph forest))
        (pages (cadr (assoc 'pages (cdr graph))))
        (references (cadr (assoc 'references (cdr graph)))))
-  (test-equal "graph records page headings in site order"
-    '(((id . "source") (title . "Source") (headings . ()))
-      ((id . "target") (title . "Target")
-       (headings . (((id . "overview") (label . "Overview"))))))
+  (test-equal "graph records tree identities in site order"
+    '(((id . "source") (title . "Source"))
+      ((id . "target") (title . "Target")))
     pages)
   (test-equal "graph records directed references and their occurrences"
     '(((source-page . "source")
        (source-id . "ref-1")
        (target-page . "target")
-       (target-fragment . "overview")
        (label . "the overview")))
     references))
 
@@ -76,7 +74,7 @@
              (list
                (make-content-element
                  'subtree
-                 (list (make-content-element 'heading '("Inline")))
+                 (list (make-content-element 'paragraph '("Inline")))
                  #:properties '((title . "Inline tree")))))))
        (host
          (make-site-page

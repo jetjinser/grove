@@ -232,7 +232,7 @@
          (make-site-page
            "reusable" "Reusable note"
            (evaluate-document
-             "@heading{Included section} @paragraph{Shared content. @link[\"destination\"]{Follow destination.}}")
+             "@paragraph{Included content} @paragraph{Shared content. @link[\"destination\"]{Follow destination.}}")
            "plants/reusable.plant"))
        (destination
          (make-site-page
@@ -394,7 +394,7 @@
 (let* ((target
          (make-site-page
            "repeat-target" "Repeated target"
-           (evaluate-document "@heading{Unique heading}")))
+           (evaluate-document "@paragraph{@link[\"repeat-target\"]{Self reference}}")))
        (host
          (make-site-page
            "repeat-host" "Repeated host"
@@ -405,8 +405,8 @@
                           #:mathjax-src #f)
                         "repeat-host")))
   (test-assert "repeated transclusions receive distinct HTML anchor prefixes"
-    (and (string-contains html "transcluded-transclude-1--unique-heading")
-         (string-contains html "transcluded-transclude-2--unique-heading"))))
+    (and (string-contains html "tree-1--ref-1")
+         (string-contains html "tree-2--ref-1"))))
 
 (test-error "transclusion cycles fail forest analysis" #t
   (make-forest

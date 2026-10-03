@@ -23,13 +23,7 @@
             make-html-renderer))
 
 (define (link-url routes reference)
-  (string-append
-    (html-page-url routes
-                   (reference-target-page-id reference))
-    (if (reference-target-fragment reference)
-        (string-append "#"
-                       (reference-target-fragment reference))
-        "")))
+  (html-page-url routes (reference-target-page-id reference)))
 
 (define (reference-source-url routes reference)
   (string-append
@@ -37,9 +31,7 @@
     "#" (reference-source-id reference)))
 
 (define* (page-content-handlers forest routes page #:optional (anchor-prefix ""))
-  (let ((heading-ids (heading-ids forest (site-page-id page)))
-        (references (outgoing-references
-                      forest (site-page-id page))))
+  (let ((references (outgoing-references forest (site-page-id page))))
     `((tag . ,(lambda (_element _children) '()))
       (taxon . ,(lambda (_element _children) '()))
       (image . ,(lambda (element children)
@@ -61,74 +53,43 @@
                      (href ,(link-url routes reference)))
                      ,@children))))
       (query-link . ,(lambda (element children)
-                       (let ((target
-                               (content-element-property element 'target)))
-                         `(a (@ (href
-                                  ,(string-append
-                                     (html-page-url routes
-                                       (page-id-from-link target))
-                                     (if (fragment-from-link target)
-                                         (string-append "#"
-                                           (fragment-from-link target))
-                                         ""))))
-                            ,@children))))
-      (heading . ,(lambda (_ children)
-                    (when (null? heading-ids)
-                      (error "Forester heading rendering exceeded its index"
-                             (site-page-id page)))
-                    (let ((id (car heading-ids)))
-                      (set! heading-ids (cdr heading-ids))
-                      `(h2 (@ (id ,(string-append anchor-prefix id)))
-                           ,@children))))
-      (query-heading . ,(lambda (_ children) `(h2 ,@children))))))
+                       `(a (@ (href ,(html-page-url routes
+                                        (content-element-property element 'target))))
+                           ,@children))))))
 
-(define* (subtree-content-sxml forest routes page #:optional (anchor-prefix ""))
-  (let ((transclusions
-          (outgoing-transclusions forest (site-page-id page))))
-   (content->sxml
-    (site-page-document page)
-    #:handlers (page-content-handlers
-                 forest routes page
-                 anchor-prefix)
-    #:lazy-handlers
-    (list (cons 'subtree (lambda (element _render)
-                    (let* ((id (content-element-property element 'tree-id))
-                           (target (find-page forest id)))
-                      (tree-block-sxml
-                        "inline-subtree" id (site-page-title target)
-                        (html-page-url routes id)
-                        (subtree-content-sxml
-                          forest routes target
-                          (string-append anchor-prefix "tree-" id "--"))
-                        (if (assq 'open? (content-element-properties element))
-                            (content-element-property element 'open?)
-                            #t)))))
-          (cons 'transclude (lambda (element _render)
-                       (let* ((id (content-element-property element 'target))
-                              (transclusion (car transclusions))
-                              (target (find-page forest id)))
-                         (set! transclusions (cdr transclusions))
-                         (tree-block-sxml
-                           "transclusion" id (site-page-title target)
-                           (html-page-url routes id)
-                           (subtree-content-sxml
-                             forest routes target
-                             (string-append anchor-prefix "transcluded-"
-                                            (composition:transclusion-source-id
-                                              transclusion)
-                                            "--"))))))))))
+(define* (subtree-content-sxml forest routes page #:optional (anchor-prefix "") (depth 1))
+  (let ((position 0))
+    (define (render-tree element _render)
+      (set! position (1+ position))
+      (let* ((id (tree-occurrence-target element))
+             (target (find-page forest id))
+             (anchor (format #f "~atree-~a" anchor-prefix position)))
+        (tree-block-sxml
+          (if (eq? (content-element-kind element) 'subtree)
+              "inline-subtree" "transclusion")
+          id (site-page-title target) (html-page-url routes id)
+          (subtree-content-sxml forest routes target (string-append anchor "--") (1+ depth))
+          #:anchor anchor #:depth (1+ depth)
+          #:open? (if (assq 'open? (content-element-properties element))
+                      (content-element-property element 'open?) #t))))
+    (content->sxml
+      (site-page-document page)
+      #:handlers (page-content-handlers forest routes page anchor-prefix)
+      #:lazy-handlers (map (lambda (kind) (cons kind render-tree))
+                          '(subtree transclude query-transclude)))))
 
 (define (display-tree-id id)
   (if (string-prefix? "unstable-" id)
       (string-append "#" (substring id (string-length "unstable-")))
       id))
 
-(define* (tree-block-sxml kind id title page-url content #:optional (open? #t))
+(define* (tree-block-sxml kind id title page-url content #:key (open? #t) anchor (depth 2))
   `(section (@ (class ,(string-append "forest-tree-block " kind))
-               (data-tree-id ,id))
+               (data-tree-id ,id) (id ,anchor))
      (details ,@(if open? '((@ (open "open"))) '())
        (summary
-         (span (@ (class "forest-tree-title")) ,title)
+         (,(string->symbol (format #f "h~a" (min depth 6)))
+           (@ (class "forest-tree-title")) ,title)
          (a (@ (class "forest-tree-id")
                (href ,page-url)
                (aria-label ,(string-append
@@ -140,23 +101,7 @@
                   (cdr content)
                   (list content))))))
 
-(define (backlink-groups forest page)
-  (let* ((page-id (site-page-id page))
-         (incoming (incoming-references forest page-id))
-         (page-references
-           (filter (lambda (reference)
-                     (not (reference-target-fragment reference)))
-                   incoming))
-         (heading-groups
-           (filter-map
-             (lambda (heading)
-               (let* ((fragment (heading-id heading))
-                      (references
-                        (incoming-references forest page-id fragment)))
-                 (and (pair? references) (cons fragment references))))
-             (headings forest page-id))))
-    (append (if (null? page-references) '() (list (cons #f page-references)))
-            heading-groups)))
+
 
 (define (backlink-reference-sxml forest routes reference)
   (let ((source
@@ -170,33 +115,17 @@
        " — "
        ,(reference-label reference))))
 
-(define (backlink-group-sxml forest page routes group)
-  (let* ((fragment (car group))
-         (target-heading
-           (and fragment
-                (find (lambda (heading)
-                        (string=? fragment (heading-id heading)))
-                      (headings forest (site-page-id page)))))
-         (references (cdr group))
-         (items (map (lambda (reference)
-                       (backlink-reference-sxml forest routes reference))
-                     references)))
-    (if target-heading
-        `(li (a (@ (href ,(string-append "#" fragment)))
-                ,(heading-label target-heading))
-             (ul ,@items))
-        items)))
+
 
 (define (backlinks-sxml forest page routes label)
-  (let ((groups (backlink-groups forest page)))
-    (if (null? groups)
+  (let ((references (incoming-references forest (site-page-id page))))
+    (if (null? references)
         '()
         (list `(aside (@ (class "backmatter backlinks"))
                       (h2 ,label)
-                      (ul ,@(append-map
-                              (lambda (group)
-                                (backlink-group-sxml forest page routes group))
-                              groups)))))))
+                      (ul ,@(map (lambda (reference)
+                                   (backlink-reference-sxml forest routes reference))
+                                 references)))))))
 
 (define (context-sxml forest page routes label)
   (let* ((sources (transcluding-pages forest (site-page-id page)))
@@ -257,19 +186,20 @@
     sections))
 
 (define (table-of-contents-sxml forest page)
-  (let ((headings (headings forest (site-page-id page))))
-    (if (null? headings)
-        '()
-        (list
-          `(nav (@ (class "table-of-contents") (aria-label "Contents"))
-             (h2 "Contents")
-             (ol
-               ,@(map (lambda (heading)
-                        `(li
-                           (a (@ (href ,(string-append
-                                          "#" (heading-id heading))))
-                              ,(heading-label heading))))
-                      headings)))))))
+  (define (entries id prefix)
+    (map (lambda (element position)
+           (let* ((target-id (tree-occurrence-target element))
+                  (target (find-page forest target-id))
+                  (anchor (format #f "~atree-~a" prefix position))
+                  (nested (entries target-id (string-append anchor "--"))))
+             `(li (a (@ (href ,(string-append "#" anchor))) ,(site-page-title target))
+                  ,@(if (null? nested) '() (list `(ol ,@nested))))))
+         (tree-occurrences forest id)
+         (iota (length (tree-occurrences forest id)) 1)))
+  (let ((items (entries (site-page-id page) "")))
+    (if (null? items) '()
+        (list `(nav (@ (class "table-of-contents") (aria-label "Contents"))
+                    (h2 "Contents") (ol ,@items))))))
 
 (define default-mathjax-src
   "https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js")

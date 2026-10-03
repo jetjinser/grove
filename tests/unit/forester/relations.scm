@@ -11,36 +11,28 @@
 
 (define references
   (make-reference-relation
-    '(("a" "ref-1" "b" #f "B")
-      ("a" "ref-2" "b" "section" "B section")
-      ("a" "ref-3" "c" #f "C")
-      ("b" "ref-1" "c" #f "C")
-      ("c" "ref-1" "a" #f "A")
-      ("d" "ref-1" "b" #f "B"))))
+    '(("a" "ref-1" "b" "B")
+      ("a" "ref-2" "b" "Another B")
+      ("a" "ref-3" "c" "C")
+      ("b" "ref-1" "c" "C")
+      ("c" "ref-1" "a" "A")
+      ("d" "ref-1" "b" "B"))))
 
 (test-equal "incoming row queries retain all fields and occurrences"
-  '(("a" "ref-1" "b" #f "B")
-    ("a" "ref-2" "b" "section" "B section")
-    ("d" "ref-1" "b" #f "B"))
+  '(("a" "ref-1" "b" "B")
+    ("a" "ref-2" "b" "Another B")
+    ("d" "ref-1" "b" "B"))
   (incoming-reference-rows references "b"))
 
-(test-equal "incoming fragment row queries retain all reference fields"
-  '(("a" "ref-2" "b" "section" "B section"))
-  (incoming-reference-rows references "b" "section"))
-
 (test-equal "outgoing row queries preserve relation order"
-  '(("a" "ref-1" "b" #f "B")
-    ("a" "ref-2" "b" "section" "B section")
-    ("a" "ref-3" "c" #f "C"))
+  '(("a" "ref-1" "b" "B")
+    ("a" "ref-2" "b" "Another B")
+    ("a" "ref-3" "c" "C"))
   (outgoing-reference-rows references "a"))
 
 (test-equal "incoming queries retain reference occurrences and order"
   '(("a" "ref-1") ("a" "ref-2") ("d" "ref-1"))
   (incoming-reference-keys references "b"))
-
-(test-equal "fragment queries select the matching reference occurrence"
-  '(("a" "ref-2"))
-  (incoming-reference-keys references "b" "section"))
 
 (test-equal "outgoing queries return local reference ids"
   '("ref-1" "ref-2" "ref-3")
@@ -66,7 +58,7 @@
   '()
   (reachable-page-ids
     (make-reference-relation
-      '(("self" "ref-1" "self" #f "Self")))
+      '(("self" "ref-1" "self" "Self")))
     "self"))
 
 (define composition

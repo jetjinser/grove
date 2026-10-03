@@ -24,22 +24,16 @@
             reference-pages
             find-page
             links
+            tree-occurrences
+            tree-occurrence-target
             backlinks
             common-backlinks
             reachable-pages
-            page-id-from-link
-            fragment-from-link
-            heading-ids
             reference?
             reference-source-page-id
             reference-source-id
             reference-target-page-id
-            reference-target-fragment
             reference-label
-            heading?
-            heading-id
-            heading-label
-            headings
             outgoing-references
             incoming-references
             subtree-definitions
@@ -209,26 +203,6 @@
              #:metadata (site-page-metadata page)))
          pages)))
 
-(define (split-link-target target)
-  (unless (non-empty-string? target)
-    (error "Forester link target must be a non-empty string" target))
-  (let ((separator (string-index target #\#)))
-    (if separator
-        (let ((page-id (substring target 0 separator))
-              (fragment (substring target (+ separator 1))))
-          (when (or (string-null? page-id)
-                    (string-null? fragment)
-                    (string-index fragment #\#))
-            (error "invalid Forester page fragment target" target))
-          (cons page-id fragment))
-        (cons target #f))))
-
-(define (page-id-from-link target)
-  (car (split-link-target target)))
-
-(define (fragment-from-link target)
-  (cdr (split-link-target target)))
-
 (define (element->plain-text kind properties parts)
   (case kind
     ((math-token)
@@ -266,66 +240,21 @@
                               (content-document-children content))))
     (else "")))
 
-(define (heading-elements content)
-  (walk-content content (element-kind? 'heading) #:postorder? #t))
-
-(define (heading-slug heading)
-  (let loop ((characters (string->list (content->plain-text heading)))
-             (result '())
-             (separator? #f))
-    (if (null? characters)
-        (let ((slug (list->string (reverse result))))
-          (if (string-null? slug) "section" slug))
-        (let ((character (car characters)))
-          (if (or (char-alphabetic? character)
-                  (char-numeric? character))
-              (loop (cdr characters)
-                    (cons (char-downcase character)
-                          (if (and separator? (pair? result))
-                              (cons #\- result)
-                              result))
-                    #f)
-              (loop (cdr characters) result (pair? result)))))))
-
-(define (unique-heading-slugs headings)
-  (let loop ((headings headings) (used '()) (result '()))
-    (if (null? headings)
-        (reverse result)
-        (let* ((base (heading-slug (car headings)))
-               (id (let find-id ((suffix 1))
-                     (let ((candidate
-                             (if (= suffix 1)
-                                 base
-                                 (format #f "~a-~a" base suffix))))
-                       (if (member candidate used string=?)
-                           (find-id (+ suffix 1))
-                           candidate)))))
-          (loop (cdr headings) (cons id used) (cons id result))))))
-
 (define-record-type <reference>
-  (%make-reference source-page-id source-id target-page-id
-                          target-fragment label)
+  (%make-reference source-page-id source-id target-page-id label)
   reference?
   (source-page-id reference-source-page-id)
   (source-id reference-source-id)
   (target-page-id reference-target-page-id)
-  (target-fragment reference-target-fragment)
   (label reference-label))
 
-(define-record-type <heading>
-  (%make-heading id label)
-  heading?
-  (id heading-id)
-  (label heading-label))
-
 (define-record-type <forest>
-  (%make-forest site pages heading-index reference-relation
+  (%make-forest site pages reference-relation
                 composition page-index page-relation content-node-relation
                 content-node-index query-page-ids)
   forest?
   (site site)
   (pages pages)
-  (heading-index heading-index)
   (reference-relation reference-relation)
   (composition composition)
   (page-index page-index)
@@ -497,14 +426,7 @@
     (define (validate-query-link target)
       (catch #t
         (lambda ()
-          (let* ((page-id (page-id-from-link target))
-                 (fragment (fragment-from-link target)))
-            (find-page forest page-id)
-            (when (and fragment
-                       (not (member fragment
-                               (map heading-id (headings forest page-id))
-                               string=?)))
-              (error "unknown page fragment" page-id fragment))))
+          (find-page forest target))
         (lambda (key . args)
           (error (format #f "Invalid query link at ~a to ~s: ~s"
                          source target (cons key args))))))
@@ -512,13 +434,13 @@
       (cond
         ((content-element? content)
          (let ((kind (content-element-kind content)))
-           (when (memq kind '(forest-query subtree transclude))
+           (when (memq kind '(forest-query subtree))
              (error (format #f
                "Forester query at ~a returned unsupported ~a content"
                source kind)))
            (let* ((kind (case kind
                           ((link) 'query-link)
-                          ((heading) 'query-heading)
+                          ((transclude) 'query-transclude)
                           (else kind)))
                   (element
                     (make-content-element
@@ -527,7 +449,7 @@
                       #:properties (content-element-properties content)
                       #:style (content-element-style content)
                       #:flow-kind (content-element-flow-kind content))))
-             (when (eq? kind 'query-link)
+             (when (memq kind '(query-link query-transclude))
                (validate-query-link
                  (content-element-property element 'target)))
              element)))
@@ -551,6 +473,41 @@
     (append-map resolve (content-document-children
                           (site-page-document page)))
     (content-document-source (site-page-document page))))
+
+(define (validate-query-composition! forest resolved-pages)
+  (let ((generated
+          (append-map
+            (lambda (page)
+              (map (lambda (element index)
+                     (composition:make-transclusion
+                       (site-page-id page) (format #f "query-~a" index)
+                       (content-element-property element 'target)))
+                   (walk-content (owned-content (site-page-document page))
+                                 (element-kind? 'query-transclude))
+                   (iota (length (walk-content
+                                   (owned-content (site-page-document page))
+                                   (element-kind? 'query-transclude))))))
+            resolved-pages)))
+    (validate-composition-cycles!
+      resolved-pages
+      (composition:make-composition
+        (composition:subtree-definitions (composition forest))
+        (append generated
+                (append-map (lambda (page)
+                              (outgoing-transclusions forest (site-page-id page)))
+                            resolved-pages))))))
+
+(define (tree-occurrences forest id)
+  "Return direct tree displays in body order, stopping at tree boundaries."
+  (define (tree-display? node)
+    (and (content-element? node)
+         (memq (content-element-kind node) '(subtree transclude query-transclude))))
+  (walk-content (site-page-document (find-page forest id))
+                tree-display? #:stop? tree-display?))
+
+(define (tree-occurrence-target element)
+  (content-element-property element
+    (if (eq? (content-element-kind element) 'subtree) 'tree-id 'target)))
 
 (define (resolve-forest-queries forest)
   (for-each
@@ -593,9 +550,9 @@
                    #:title (site-title (site forest))
                    #:description (site-description (site forest))
                    #:sources (site-sources (site forest)))))
+          (validate-query-composition! forest resolved-pages)
           (%make-forest
             resolved-site resolved-pages
-            (heading-index forest)
             (reference-relation forest) (composition forest)
             resolved-page-index (page-relation forest)
             (content-node-relation forest) (content-node-index forest)
@@ -629,19 +586,6 @@
          (_ (for-each (lambda (page)
                         (hash-set! page-index (site-page-id page) page))
                       pages))
-         (heading-index
-           (map (lambda (page)
-                  (let* ((elements
-                           (heading-elements
-                             (owned-content (site-page-document page))))
-                         (ids (unique-heading-slugs elements)))
-                    (cons
-                      (site-page-id page)
-                      (map (lambda (element id)
-                             (%make-heading
-                               id (content->plain-text element)))
-                           elements ids))))
-                pages))
          (reference-facts
            (append-map
              (lambda (source-page)
@@ -654,9 +598,10 @@
                    (lambda (element index)
                      (let* ((target
                               (content-element-property element 'target))
-                            (target-page-id (page-id-from-link target))
-                            (fragment (fragment-from-link target))
-                            (target-page (hash-ref page-index target-page-id)))
+                            (target-page-id target)
+                            (target-page (and (non-empty-string? target-page-id)
+                                              (not (string-index target-page-id #\#))
+                                              (hash-ref page-index target-page-id))))
                        (unless target-page
                          (error
                            (format #f
@@ -665,22 +610,8 @@
                              (or (site-page-source source-page)
                                  "<unknown source>")
                              target)))
-                       (when (and fragment
-                                  (not (member
-                                         fragment
-                                         (map heading-id
-                                              (cdr (assoc target-page-id
-                                                          heading-index)))
-                                         string=?)))
-                         (error
-                           (format #f
-                             "unresolved Forester fragment in page ~a (~a): ~a"
-                             source-id
-                             (or (site-page-source source-page)
-                                 "<unknown source>")
-                             target)))
                        (list source-id (format #f "ref-~a" index)
-                             target-page-id fragment
+                             target-page-id
                              (content->plain-text element))))
                    elements (iota (length elements) 1))))
              pages))
@@ -745,7 +676,7 @@
              (append-map cdr transclusion-index)))
          (_ (validate-composition-cycles! pages composition)))
     (resolve-forest-queries
-      (%make-forest site pages heading-index
+      (%make-forest site pages
                     reference-relation composition page-index page-relation
                     (car content-node-state)
                     (cadr content-node-state)
@@ -762,37 +693,21 @@
        (composition:subtree-definitions
          (composition forest))))
 
-(define (heading-ids forest id)
-  (map heading-id (headings forest id)))
-
-(define (headings forest id)
-  (let ((entry (assoc id (heading-index forest))))
-    (unless entry
-      (error "unknown forest page" id))
-    (cdr entry)))
-
 (define (links forest id)
-  (map (lambda (reference)
-         (let ((fragment (reference-target-fragment reference)))
-           (string-append (reference-target-page-id reference)
-                          (if fragment (string-append "#" fragment) ""))))
-       (outgoing-references forest id)))
+  (map reference-target-page-id (outgoing-references forest id)))
 
 (define (outgoing-references forest id)
-  (unless (assoc id (heading-index forest))
-    (error "unknown forest page" id))
+  (find-page forest id)
   (map (lambda (row) (apply %make-reference row))
        (outgoing-reference-rows (reference-relation forest) id)))
 
 (define (outgoing-transclusions forest id)
-  (unless (assoc id (heading-index forest))
-    (error "unknown forest page" id))
+  (find-page forest id)
   (composition:outgoing-transclusions
     (composition forest) id))
 
 (define (incoming-transclusions forest id)
-  (unless (assoc id (heading-index forest))
-    (error "unknown forest page" id))
+  (find-page forest id)
   (composition:incoming-transclusions
     (composition forest) id))
 
@@ -806,18 +721,13 @@
               (member (site-page-id page) source-ids equal?))
             (pages forest))))
 
-(define* (incoming-references forest id #:optional fragment)
-  (unless (assoc id (heading-index forest))
-    (error "unknown forest page" id))
-  (when (and fragment
-             (not (member fragment (heading-ids forest id) string=?)))
-    (error "unknown forest heading fragment" id fragment))
+(define (incoming-references forest id)
+  (find-page forest id)
   (map (lambda (row) (apply %make-reference row))
-       (incoming-reference-rows (reference-relation forest) id fragment)))
+       (incoming-reference-rows (reference-relation forest) id)))
 
 (define (backlinks forest id)
-  (unless (assoc id (heading-index forest))
-    (error "unknown forest page" id))
+  (find-page forest id)
   (let ((source-ids
           (backlink-page-ids (reference-relation forest) id)))
     (filter (lambda (page) (member (site-page-id page) source-ids equal?))
@@ -826,8 +736,7 @@
 (define (common-backlinks forest left-id right-id)
   (for-each
     (lambda (id)
-      (unless (assoc id (heading-index forest))
-        (error "unknown forest page" id)))
+      (find-page forest id))
     (list left-id right-id))
   (let ((source-ids
           (common-backlink-page-ids
@@ -836,8 +745,7 @@
             (pages forest))))
 
 (define (reachable-pages forest id)
-  (unless (assoc id (heading-index forest))
-    (error "unknown forest page" id))
+  (find-page forest id)
   (let ((reachable-ids
           (reachable-page-ids (reference-relation forest) id)))
     (filter (lambda (page)

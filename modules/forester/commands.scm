@@ -80,6 +80,8 @@
                         #:flow-kind 'block))
 
 (define-public (link target . labels)
+  (unless (and (non-empty-string? target) (not (string-index target #\#)))
+    (error "Forester link requires a tree ID without #" target))
   (make-content-element 'link
                         (if (null? labels) (list target) labels)
                         #:properties `((target . ,target))))

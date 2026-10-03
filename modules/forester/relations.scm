@@ -33,9 +33,9 @@
             topic-membero
             topic-page-ids))
 
-;; Rows are (source-page-id local-reference-id target-page-id fragment label).
+;; Rows are (source-page-id local-reference-id target-page-id label).
 (define-relation-schema make-reference-relation referenceo
-  (source-page-id reference-id target-page-id fragment label))
+  (source-page-id reference-id target-page-id label))
 
 ;; Rows are (page-id title metadata).
 (define-relation-schema make-page-relation pageo
@@ -178,69 +178,40 @@
 
 (define-relation (incoming-reference-rowo relation fixed-target-page-id
                                           source-page-id reference-id
-                                          target-page-id fragment label)
+                                          target-page-id label)
   (all
     (referenceo relation
                 (source-page-id source-page-id)
                 (reference-id reference-id)
                 (target-page-id target-page-id)
-                (fragment fragment)
                 (label label))
     (== fixed-target-page-id target-page-id)))
 
-(define-relation (incoming-fragment-reference-rowo
-                   relation fixed-target-page-id fixed-fragment
-                   source-page-id reference-id target-page-id fragment label)
-  (all
-    (incoming-reference-rowo relation fixed-target-page-id
-                             source-page-id reference-id target-page-id
-                             fragment label)
-    (== fixed-fragment fragment)))
-
 (define-relation (outgoing-reference-rowo relation fixed-source-page-id
                                           source-page-id reference-id
-                                          target-page-id fragment label)
+                                          target-page-id label)
   (all
     (referenceo relation
                 (source-page-id source-page-id)
                 (reference-id reference-id)
                 (target-page-id target-page-id)
-                (fragment fragment)
                 (label label))
     (== fixed-source-page-id source-page-id)))
 
-(define (incoming-page-reference-rows relation target-page-id)
-  (query (source-page-id reference-id result-target-page-id
-                         result-fragment label)
+(define (incoming-reference-rows relation target-page-id)
+  (query (source-page-id reference-id result-target-page-id label)
     (incoming-reference-rowo relation target-page-id
-                             source-page-id reference-id
-                             result-target-page-id result-fragment label)))
+                             source-page-id reference-id result-target-page-id label)))
 
-(define (incoming-fragment-reference-rows
-         relation target-page-id fragment-id)
-  (query (source-page-id reference-id result-target-page-id
-                         result-fragment label)
-    (incoming-fragment-reference-rowo
-      relation target-page-id fragment-id source-page-id reference-id
-      result-target-page-id result-fragment label)))
-
-(define* (incoming-reference-rows relation target-page-id
-                                  #:optional fragment-id)
-  (if fragment-id
-      (incoming-fragment-reference-rows
-        relation target-page-id fragment-id)
-      (incoming-page-reference-rows relation target-page-id)))
-
-(define* (incoming-reference-keys relation target-page-id
-                                  #:optional fragment-id)
+(define (incoming-reference-keys relation target-page-id)
   (map (lambda (row) (list (car row) (cadr row)))
-       (incoming-reference-rows relation target-page-id fragment-id)))
+       (incoming-reference-rows relation target-page-id)))
 
 (define (outgoing-reference-rows relation source-page-id)
-  (query (result-source-page-id reference-id target-page-id fragment label)
+  (query (result-source-page-id reference-id target-page-id label)
     (outgoing-reference-rowo relation source-page-id
                              result-source-page-id reference-id target-page-id
-                             fragment label)))
+                             label)))
 
 (define (outgoing-reference-ids relation source-page-id)
   (map cadr (outgoing-reference-rows relation source-page-id)))

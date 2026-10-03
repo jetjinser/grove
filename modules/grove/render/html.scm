@@ -112,7 +112,6 @@
                       (case kind
                         ((bold) (cons 'strong children))
                         ((paragraph) (cons 'p children))
-                        ((heading) (cons 'h2 children))
                         ((blockquote) (cons 'blockquote children))
                         ((itemize) (cons 'ul children))
                         ((item) (cons 'li children))

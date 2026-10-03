@@ -43,9 +43,6 @@
                         (memq (content-element-kind (cadr children))
                               '(details disclosure subtree)))
                    (render (cadr children)) body)))
-            ((heading)
-             (string-append body "\n"
-                            (make-string (string-length body) #\=) "\n"))
             ((blockquote)
              (string-append
                (string-join
