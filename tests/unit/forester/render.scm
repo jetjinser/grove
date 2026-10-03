@@ -12,6 +12,7 @@
   #:use-module (forester render text)
   #:use-module (forester render text routes)
   #:use-module (forester site)
+  #:use-module (forester style html)
   #:use-module (grove build)
   #:use-module (grove ir)
   #:use-module (grove render html)
@@ -213,7 +214,8 @@
              (render-html
                forest
                #:routes (make-html-routes #:home-page "algebra")
-               #:style (make-html-style #:stylesheets (list custom))))
+               #:style (compose-html-styles default-html-style
+                         (make-html-style #:stylesheets (list custom)))))
            (stylesheet-paths (map artifact-path (take styled-artifacts 2)))
            (styled-index
              (artifact-content
@@ -444,5 +446,31 @@
   (test-assert "text index references configured page routes"
     (string-contains index "Alpha (notes/alpha.md)")))
 
+
+(let* ((forest (make-forest (make-site (list algebra limits))))
+       (routes (make-html-routes #:home-page "algebra")))
+  (for-each
+    (lambda (name)
+      (let* ((style (make-html-style
+                      #:stylesheets (list (make-artifact name "body { color: teal; }"))))
+             (artifacts ((make-html-renderer #:routes routes #:style style) forest))
+             (html (artifact-content
+                     (find (lambda (artifact) (string=? (artifact-path artifact) "algebra.html"))
+                           artifacts))))
+        (test-equal "explicit style is used without filename-based composition"
+          (list name)
+          (filter (lambda (path) (string-suffix? ".css" path))
+                  (map artifact-path artifacts)))
+        (test-assert "explicit style controls linked stylesheet contents"
+          (and (string-contains html (string-append "href=\"/" name "\""))
+               (string=? "body { color: teal; }" (artifact-content (car artifacts)))))
+        (test-assert "explicit style controls inline stylesheet contents too"
+          (let ((html (assoc-ref (site->html forest #:routes routes #:style style) "algebra")))
+            (and (string-contains html "body { color: teal; }")
+                 (not (string-contains html ".forest-tree-block {")))))))
+    '("theme.css" "forester.css"))
+  (test-assert "an empty style opts out of default stylesheets"
+    (not (any (lambda (artifact) (string-suffix? ".css" (artifact-path artifact)))
+              (render-html forest #:routes routes #:style (make-html-style))))))
 
 (test-end "forester renderers")

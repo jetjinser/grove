@@ -10,6 +10,7 @@
              (forester render sitemap)
              (forester render text)
              (forester site)
+             (forester style html)
              (grove input scribble)
              (grove output)
              (grove project)
@@ -25,10 +26,12 @@
          (stylesheet-path (string-append directory "/style.css"))
          (stylesheet (call-with-input-file stylesheet-path get-string-all))
          (style
-           (make-html-style
-             #:stylesheets
-             (list (make-artifact "style.css" stylesheet
-                                  (list stylesheet-path)))))
+           (compose-html-styles
+             default-html-style
+             (make-html-style
+               #:stylesheets
+               (list (make-artifact "style.css" stylesheet
+                                    (list stylesheet-path))))))
          (routes (make-html-routes #:home-page home-page))
          (project
            (make-site-project

@@ -14,7 +14,7 @@
   #:use-module (grove site)
   #:use-module (forester backmatter)
   #:use-module (grove style html)
-  #:use-module ((forester style html) #:prefix forester:)
+  #:use-module (forester style html)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (site->html
@@ -356,13 +356,12 @@
            mathjax-src)))
 
 (define* (site->html forest #:key
-                       (style (make-html-style))
+                       (style default-html-style)
                        routes
                        (mathjax-src default-mathjax-src)
                        (backmatter default-backmatter-sections)
                        (backmatter-labels '())
                        (reference-taxon-id default-reference-taxon-id))
-  (set! style (forester:make-html-style #:style style))
   (validate-backmatter-sections backmatter)
   (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
   (check-reference-taxon-id reference-taxon-id)
@@ -380,13 +379,12 @@
            (pages forest)))))
 
 (define* (render-html forest #:key
-                             (style (make-html-style))
+                             (style default-html-style)
                              routes
                              (mathjax-src default-mathjax-src)
                              (backmatter default-backmatter-sections)
                              (backmatter-labels '())
                              (reference-taxon-id default-reference-taxon-id))
-  (set! style (forester:make-html-style #:style style))
   (validate-backmatter-sections backmatter)
   (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
   (check-reference-taxon-id reference-taxon-id)
@@ -406,7 +404,7 @@
            (pages forest)))))
 
 (define* (make-html-renderer #:key
-                                      (style (make-html-style))
+                                      (style default-html-style)
                                       routes
                                       (mathjax-src default-mathjax-src)
                                       (backmatter default-backmatter-sections)
@@ -416,8 +414,7 @@
   (validate-backmatter-sections backmatter)
   (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
   (check-reference-taxon-id reference-taxon-id)
-  (let* ((style (forester:make-html-style #:style style))
-         (render (lambda (forest)
+  (let ((render (lambda (forest)
                   (render-html forest
                                       #:style style
                                       #:routes routes
@@ -429,7 +426,7 @@
     (if cache-key
         (make-cached-renderer
           render
-          #:cache-key (string-append "forester-html-v16:" cache-key ":home="
+          #:cache-key (string-append "forester-html-v17:" cache-key ":home="
                                      (html-home-page routes) ":backmatter="
                                      (format #f "~s" backmatter)
                                      ":labels="

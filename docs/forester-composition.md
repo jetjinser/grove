@@ -186,3 +186,27 @@ defines a reusable identity, links from its body to another named tree, and
 transcludes it twice. A second [source file](../examples/linked-notes/plants/algebra/math-0004.plant)
 also transcludes that subtree. Run `guile -L modules examples/linked-notes/build.scm`; output
 goes to `/tmp/grove-linked-notes` unless another output directory is passed.
+
+## Styles
+
+The renderer's `#:style` defaults to `default-html-style` from
+`(forester style html)`. This is an ordinary `(grove style html)` value.
+Passing a style uses it directly; filenames have no special meaning.
+
+To extend the default CSS, compose styles in cascade order:
+
+```scheme
+(use-modules (forester style html) (grove style html) (grove output))
+
+(define style
+  (compose-html-styles
+    default-html-style
+    (make-html-style
+      #:stylesheets (list (make-artifact "flora.css" "body { color: #333; }")))))
+
+(make-html-renderer #:routes routes #:style style)
+```
+
+Pass the custom style alone to replace the default, or `(make-html-style)` to
+omit stylesheets entirely. File-backed CSS artifacts should list their source
+paths as dependencies, as in the showcase builder.
