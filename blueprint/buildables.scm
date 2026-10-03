@@ -76,7 +76,8 @@
     "language/scribble/spec.scm"))
 
 (define +forester-sources+
-  '("forester/commands.scm"
+  '("forester/backmatter.scm"
+    "forester/commands.scm"
     "forester/composition.scm"
     "forester/private/date.scm"
     "forester/private/web.scm"

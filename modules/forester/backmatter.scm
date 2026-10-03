@@ -5,50 +5,53 @@
 (define-module (forester backmatter)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
+  #:use-module (srfi srfi-26) ; cut(e)
+  #:use-module (ice-9 match)
   #:export (default-backmatter-sections
             default-reference-taxon-id
-            check-backmatter-sections
-            check-backmatter-labels
+            validate-backmatter-sections
+            normalize-backmatter-labels
             check-reference-taxon-id))
 
-(define default-backmatter-sections '(context references backlinks related))
+(define (non-empty-string? x)
+  (and (string? x) (not (string-null? x))))
+
 (define default-reference-taxon-id "Reference")
 (define default-backmatter-labels
-  '((context . "Context")
+  '((context    . "Context")
     (references . "References")
-    (backlinks . "Backlinks")
-    (related . "Related")))
+    (backlinks  . "Backlinks")
+    (related    . "Related")))
+(define default-backmatter-sections (map car default-backmatter-labels))
 
-(define (check-backmatter-sections sections)
+(define (validate-backmatter-sections sections)
   (unless (and (list? sections)
-               (every (lambda (section)
-                        (memq section '(context references backlinks related)))
+               (every (cut memq <> default-backmatter-sections)
                       sections)
                (= (length sections)
                   (length (delete-duplicates sections eq?))))
-    (error "Forester backmatter must be a list of unique sections: context, references, backlinks, related"
+    (error "Forester backmatter must be a list of unique sections"
+           default-backmatter-sections
            sections))
   sections)
 
-(define (check-backmatter-labels labels)
+(define (normalize-backmatter-labels labels)
   (unless (and (list? labels)
-               (every (lambda (entry)
-                        (and (pair? entry)
-                             (memq (car entry)
-                                   '(context references backlinks related))
-                             (string? (cdr entry))
-                             (not (string-null? (cdr entry)))))
+               (every (match-lambda
+                        [(a . b)
+                         (and (memq a default-backmatter-sections)
+                              (non-empty-string? b))]
+                        [_ #f])
                       labels)
                (= (length labels)
                   (length (delete-duplicates (map car labels) eq?))))
     (error "Forester backmatter labels must map unique section names to non-empty strings"
            labels))
-  (map (lambda (entry)
-         (cons (car entry)
-               (or (assq-ref labels (car entry)) (cdr entry))))
+  (map (match-lambda
+         [(a . b) (cons a (or (assq-ref labels a) b))])
        default-backmatter-labels))
 
 (define (check-reference-taxon-id id)
-  (unless (and (string? id) (not (string-null? id)))
+  (unless (non-empty-string? id)
     (error "Forester reference taxon ID must be a non-empty string" id))
   id)
