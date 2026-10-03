@@ -39,8 +39,7 @@ blue -j 1 check
 Build a runnable example from the repository root with
 `guile -L modules examples/linked-notes/build.scm /tmp/grove-preview`.
 Examples are integration fixtures as well as demonstrations; keep them small
-and focused on a feature. The math showcase is the place for longer teaching
-examples.
+and focused on a feature. Flora is the place for longer teaching examples.
 
 ## Project flow
 
@@ -66,9 +65,14 @@ sync with reader, analyzer, renderer code, and configuration.
 
 Grove owns generic project orchestration, content records, rendering helpers,
 artifact writing, and relational query primitives. Forester is a library on
-top of Grove: it adds page IDs, links and backlinks, inline subtrees,
+top of Grove: it adds tree IDs, links and backlinks, inline subtrees,
 transclusion, content queries, and site renderers. Keep domain policy in
 Forester and generic contracts in Grove.
+
+Forester structure is tree composition. Titles are tree properties; renderer
+nesting determines their HTML levels. Keep tree identity separate from local
+display anchors. Root documents and subtree bodies share the paragraph decoder
+in `(language scribble flow)`.
 
 The Grove content IR is defined in `(grove ir)`. It has text and layout leaves,
 elements with open symbol kinds and properties, and root documents. Properties

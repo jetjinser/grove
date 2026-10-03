@@ -14,6 +14,11 @@ at-expressions. Forester builds on Grove to add linked pages, backlinks,
 subtrees, transclusion, and site renderers. Grove's project and content APIs
 can also be used without Forester or HTML.
 
+Document structure is made of trees: each `.plant` file defines a root tree,
+and `subtree` defines a nested tree. Titles are tree properties; links and
+transclusions use tree IDs. Ordinary text becomes paragraphs in both root and
+subtree bodies.
+
 ## Try it
 
 From the repository root, enter the development environment and build the

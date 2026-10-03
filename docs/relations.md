@@ -31,12 +31,12 @@ The public construction and query forms are intended to be:
 ```scheme
 (define references
   (make-relation
-    '(("intro" "algebra" #f)
-      ("limits" "algebra" "continuity"))
-    #:arity 3))
+    '(("intro" "algebra")
+      ("limits" "algebra"))
+    #:arity 2))
 
-(run* (source fragment)
-  (relationo references source "algebra" fragment))
+(run* (source)
+  (relationo references source "algebra"))
 ```
 
 Rows are tuples, so nested lists remain available as individual terms. The
@@ -55,7 +55,7 @@ miniKanren APIs from `(grove relation)` and adds `define-relation`, `exists`,
 (use-modules (grove relation dsl))
 
 (define-relation-schema make-reference-relation referenceo
-  (source-page reference-id target-page fragment label))
+  (source-page reference-id target-page label))
 
 (define-relation (incoming-referenceo references target source)
   (referenceo references
@@ -73,9 +73,9 @@ requires its projected terms to be ground. They add no new evaluation engine.
 the tuple columns once, generates a constructor with fixed arity, and creates a
 named query macro. Query clauses name columns, so omitted columns become
 independent anonymous logic variables. Unknown or repeated columns are
-rejected during macro expansion. For example, a fragment query can constrain
-`(target-page "algebra")` and `(fragment "continuity")` without naming the
-other three columns. Terms are ordinary Scheme expressions in lexical scope.
+rejected during macro expansion. For example, a query can constrain
+`(target-page "algebra")` without naming the other three columns. Terms are
+ordinary Scheme expressions in lexical scope.
 `either` clauses and `all` goals retain standard miniKanren search order, and
 results retain its duplicate-answer behavior. Libraries pass relation values
 explicitly and export their own named rules. The positional `relationo` and
@@ -110,8 +110,8 @@ internals, this adapter and those public behavior tests are the compatibility
 boundary to update.
 
 The Forester reference adapter lives in `(forester relations)` independently
-of `(forester site)`. It stores each reference occurrence as a five-column
-row: `(source-page-id local-reference-id target-page-id fragment label)`. Its
+of `(forester site)`. It stores each reference occurrence as a four-column
+row: `(source-page-id local-reference-id target-page-id label)`. Its
 exports provide incoming and outgoing reference queries, backlinks, common
 backlinks, and transitive reachability. The site layer maps those query
 results back to page and reference records and preserves site ordering.
@@ -227,11 +227,13 @@ content nodes.
 
 The query result is inserted at the command's position for rendering. It does
 not become source data: generated elements are absent from page, reference,
-composition, heading, and content-node relations. Generated `@link` elements
+composition and content-node relations. Generated `@link` elements
 are checked against the authored Forest and rendered as links, but do not
 create backlinks or alter authored link IDs. Query output cannot recursively
-request another Forest query or create subtrees or transclusions. This keeps
-every query over one fixed, finite snapshot.
+request another Forest query or declare new subtrees. It may return
+`transclude` elements to display existing trees: targets must exist and the
+resolved display graph must be acyclic. Generated transclusions do not enter
+the authored composition relation. Every query runs over one fixed snapshot.
 
 Because a query may depend on any source page or module, rendered pages
 containing a query (including a page that embeds such a page as a subtree or

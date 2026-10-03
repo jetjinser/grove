@@ -10,6 +10,16 @@ inside a tree and makes that content addressable. A `transclude` inserts a
 tree's content at another point. Transclusion keeps the target tree as a
 separate page as well.
 
+Document structure consists of trees and their composition. A title is a tree
+property, not an independently indexed heading. Use nested `subtree` commands
+for local organization too; an explicit ID is needed when its identity should
+survive edits. HTML title levels follow display depth.
+
+The contents directory follows subtree and transclusion occurrences in body
+order. Repeated displays of one tree have distinct local anchors; links to its
+ID open its standalone route. These local anchors are renderer output, not
+authored fragment targets.
+
 ## Declare an inline tree
 
 Use `@subtree{...}` with exactly one direct title. Give a subtree a durable
@@ -22,15 +32,23 @@ address with the `#:id` option:
 
 @subtree[#:id "difference-of-squares"]{
   @title{Difference of squares}
-  @heading{Identity}
   @tex-display-math{a^2-b^2=(a-b)(a+b)}
   @paragraph{See @link["algebra#examples"]{the algebra examples}.}
 }
 ```
 
+Ordinary text in a subtree is decoded into paragraphs using the same blank-line
+rules as a root document. Direct `summary`, `published`, and `updated` commands
+are extracted as frontmatter; `tag` and `taxon` remain queryable content nodes.
+The subtree declaration's source location is retained in its page metadata.
+
+Shared Scheme bindings belong at document top level, before the subtree that
+uses them. `subtree` is an ordinary procedure; a Scheme `let` expression can
+also construct content using local bindings.
+
 The subtree stays visible at its definition and gets its own HTML and text
 routes. Its title becomes the standalone page title; the direct `@title` is
-removed from the body. Headings and links in its body belong to the subtree's
+removed from the body. Content and links in its body belong to the subtree's
 tree, including when that body is rendered inside another tree.
 
 ## Subtree IDs
@@ -46,8 +64,7 @@ An explicitly named subtree keeps its ID across source edits:
 
 Use that ID in `@transclude["difference-of-squares"]` and in links. IDs share
 the same namespace as file-backed page IDs and other subtrees; duplicates are
-errors. IDs cannot contain `#`, which separates page IDs from heading
-fragments in links.
+errors. IDs cannot contain `#`; authored links accept tree IDs only.
 
 Subtrees without `#:id` keep their automatically assigned `unstable-N` IDs.
 The analyzer numbers them in source-page order and document preorder, skipping
@@ -90,7 +107,7 @@ after a page's body. The default order is `context`, `references`,
 `backlinks`, then `related`; empty sections are omitted. Context lists pages
 that transclude the current tree. References lists pages in the configured
 reference taxon linked from the current tree or its subtrees and transcluded
-trees. Backlinks lists authored links to the current page or its headings.
+trees. Backlinks lists authored links to the current tree.
 Related lists non-reference pages linked directly from the current page.
 These sections remain separate because embedding, incoming links, citations,
 and outgoing related links express different relationships.
@@ -165,7 +182,7 @@ composition facts from another source while using the same semantic queries.
 ## Complete example
 
 The runnable [linked-notes example](../examples/linked-notes/plants/algebra/math-0003.plant)
-defines a reusable identity, links from its body to an existing heading, and
+defines a reusable identity, links from its body to another named tree, and
 transcludes it twice. A second [source file](../examples/linked-notes/plants/algebra/math-0004.plant)
 also transcludes that subtree. Run `guile -L modules examples/linked-notes/build.scm`; output
 goes to `/tmp/grove-linked-notes` unless another output directory is passed.

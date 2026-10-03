@@ -36,9 +36,9 @@ default index path, `index.html`, redirects to the selected home page.
 Forester reads each `.plant` file as a page. Its ID is the filename without
 the extension; parent directories organize files but do not affect IDs. Thus
 `plants/algebra/quadratics.plant` has ID `quadratics`. IDs must be unique.
-Links may target a page or a heading, such as
-`@link["quadratics#difference-of-squares"]{the identity}`. Missing pages,
-headings, or composition targets fail while the Forest is built.
+Links target tree IDs, such as `@link["difference-of-squares"]{the identity}`.
+A named subtree uses the same identity namespace as a file-backed tree.
+Missing link or transclusion targets fail while the Forest is built.
 
 Use `@title` for the required page title. `@summary`, `@published`, and
 `@updated` become page metadata. Tags and taxa remain in the content IR, so
@@ -92,7 +92,7 @@ configuration.
 Grove's Scribble reader evaluates Guile Scheme and converts document syntax to
 content IR. Ordinary prose becomes paragraphs; commands can return content
 elements or lists of document values. Grove's standard HTML and text
-renderers handle common elements such as paragraphs, headings, code, and
+renderers handle common elements such as paragraphs, code, and
 lists. Forester adds page-specific commands such as links, tags, subtrees,
 and transclusion.
 
