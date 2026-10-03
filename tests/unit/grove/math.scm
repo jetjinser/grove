@@ -48,6 +48,22 @@
   (test-equal "precedence is resolved before term lowering"
     '(+ (var x) (* (var y) (num "2")))
     (φ:term "x + y * 2"))
+  (let* ((report
+           (math-differentiate (φ:read "x^3+2*x") (φ:read "x")
+             #:assumptions (φ:assumptions "coordinate(x)")))
+         (notation (math-report-result->notation report)))
+    (test-equal "a completed report lowers directly to inspectable Notation IR"
+      '(math-row
+         (math-row
+           (math-token (properties (token-kind . mn)) "3")
+           (math-sup
+             (math-row (math-token (properties (token-kind . mi)) "x"))
+             (math-row (math-token (properties (token-kind . mn)) "2"))))
+         (math-token (properties (token-kind . mo)) "+")
+         (math-token (properties (token-kind . mn)) "2"))
+      (math-notation->datum notation))
+    (test-error "math report result conversion rejects rendered content"
+      #t (math-report-result notation)))
   (test-equal "underscore tokenizes as a script marker between identifiers"
     '(identifier subscript identifier eof)
     (map math-token-kind (tokenize-math "E_x")))

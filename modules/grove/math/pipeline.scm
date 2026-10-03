@@ -25,13 +25,14 @@
   #:use-module (grove math source)
   #:use-module (grove math provenance)
   #:use-module (grove math presentation)
+  #:use-module (grove math layout)
   #:use-module (grove math premise)
   #:use-module (grove math assumption)
   #:use-module (srfi srfi-1)
   #:export (math-derive
             math-search math-search-backward math-simplify math-calculate math-collect
             math-check-chain
-            math-check-equation math-antiderivative math-solve-poisson math-compute math-differentiate math-partial math-rewrite math-report-result math-normalize math-expand)
+            math-check-equation math-antiderivative math-solve-poisson math-compute math-differentiate math-partial math-rewrite math-report-result math-report-result->notation math-normalize math-expand)
   #:re-export (math-derivation->content math-verification->content
                math-report->content math-completed-report->content
                math-semantic-check->content current-math-assumptions call-with-math-assumptions with-math-assumptions
@@ -121,12 +122,22 @@
     (math-report-with-origin (attach report) (math-value-origin (car values)))))
 
 (define (math-report-result report)
+  (unless (math-report? report)
+    (error "expected a math report"))
   (let ((term (math-report-final report)))
     (and (math-report-complete? report) term (make-math-value term
                 #:requirements (math-derivation-requirements (math-report-derivation report))
                 #:origin (let ((sources (math-derivation-sources (math-report-derivation report))))
                            (and (pair? sources) (last sources)))
                 #:properties `((assumptions . ,(math-derivation-assumptions (math-report-derivation report))))))))
+
+(define (math-report-result->notation report)
+  "Lower a completed report's Semantic result to a Notation IR node."
+  (let ((result (math-report-result report)))
+    (unless result
+      (error "math report has no completed result"
+             (math-report-name report) (math-report-reason report)))
+    (math-value->layout result)))
 
 (define (audit-calculus-report report)
   (let ((certificate (math-report-derivation report)))

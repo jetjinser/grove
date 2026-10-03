@@ -10,7 +10,7 @@
   #:use-module (grove math function-derivative)
   #:use-module ((grove math notation core) #:prefix notation:)
   #:use-module (srfi srfi-1)
-  #:export (math-term->layout math-value->layout))
+  #:export (math-term->layout math-value->layout math-notation->datum))
 
 (define token notation:token)
 (define row notation:row)
@@ -33,6 +33,17 @@
   (math-term->layout (math-value-term value)
     (delete-duplicates (append types (or (assq-ref (math-value-properties value) 'assumptions) '())) equal?)
     #:properties (math-value-properties value)))
+
+(define (math-notation->datum value)
+  "Return a readable Scheme datum describing a Notation IR tree."
+  (cond
+    ((content-text? value) (content-text-value value))
+    ((content-element? value)
+     `(,(content-element-kind value)
+       ,@(if (null? (content-element-properties value)) '()
+             (list (cons 'properties (content-element-properties value))))
+       ,@(map math-notation->datum (content-element-children value))))
+    (else (error "expected a Notation IR node" value))))
 
 (define* (math-term->layout term #:optional (types '()) #:key (properties '()))
   (define (lower value preferences)
