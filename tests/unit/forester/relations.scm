@@ -18,6 +18,22 @@
       ("c" "ref-1" "a" #f "A")
       ("d" "ref-1" "b" #f "B"))))
 
+(test-equal "incoming row queries retain all fields and occurrences"
+  '(("a" "ref-1" "b" #f "B")
+    ("a" "ref-2" "b" "section" "B section")
+    ("d" "ref-1" "b" #f "B"))
+  (incoming-reference-rows references "b"))
+
+(test-equal "incoming fragment row queries retain all reference fields"
+  '(("a" "ref-2" "b" "section" "B section"))
+  (incoming-reference-rows references "b" "section"))
+
+(test-equal "outgoing row queries preserve relation order"
+  '(("a" "ref-1" "b" #f "B")
+    ("a" "ref-2" "b" "section" "B section")
+    ("a" "ref-3" "c" #f "C"))
+  (outgoing-reference-rows references "a"))
+
 (test-equal "incoming queries retain reference occurrences and order"
   '(("a" "ref-1") ("a" "ref-2") ("d" "ref-1"))
   (incoming-reference-keys references "b"))

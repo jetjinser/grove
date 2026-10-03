@@ -7,7 +7,9 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (make-reference-relation
+            incoming-reference-rows
             incoming-reference-keys
+            outgoing-reference-rows
             outgoing-reference-ids
             backlink-page-ids
             common-backlink-page-ids
@@ -174,39 +176,74 @@
             (topic-membero relation topic-id page-id label))))
     equal?))
 
-(define-relation (incoming-referenceo relation target-page-id
-                                       source-page-id reference-id)
-  (referenceo relation
-              (source-page-id source-page-id)
-              (reference-id reference-id)
-              (target-page-id target-page-id)))
-
-(define (incoming-page-reference-keys relation target-page-id)
-  (query (source-page-id reference-id)
-    (incoming-referenceo relation target-page-id
-                         source-page-id reference-id)))
-
-(define (incoming-fragment-reference-keys
-         relation target-page-id fragment-id)
-  (query (source-page-id reference-id)
+(define-relation (incoming-reference-rowo relation fixed-target-page-id
+                                          source-page-id reference-id
+                                          target-page-id fragment label)
+  (all
     (referenceo relation
                 (source-page-id source-page-id)
                 (reference-id reference-id)
                 (target-page-id target-page-id)
-                (fragment fragment-id))))
+                (fragment fragment)
+                (label label))
+    (== fixed-target-page-id target-page-id)))
 
-(define* (incoming-reference-keys relation target-page-id
-                                         #:optional fragment-id)
-  (if fragment-id
-      (incoming-fragment-reference-keys
-        relation target-page-id fragment-id)
-      (incoming-page-reference-keys relation target-page-id)))
+(define-relation (incoming-fragment-reference-rowo
+                   relation fixed-target-page-id fixed-fragment
+                   source-page-id reference-id target-page-id fragment label)
+  (all
+    (incoming-reference-rowo relation fixed-target-page-id
+                             source-page-id reference-id target-page-id
+                             fragment label)
+    (== fixed-fragment fragment)))
 
-(define (outgoing-reference-ids relation source-page-id)
-  (query (reference-id)
+(define-relation (outgoing-reference-rowo relation fixed-source-page-id
+                                          source-page-id reference-id
+                                          target-page-id fragment label)
+  (all
     (referenceo relation
                 (source-page-id source-page-id)
-                (reference-id reference-id))))
+                (reference-id reference-id)
+                (target-page-id target-page-id)
+                (fragment fragment)
+                (label label))
+    (== fixed-source-page-id source-page-id)))
+
+(define (incoming-page-reference-rows relation target-page-id)
+  (query (source-page-id reference-id result-target-page-id
+                         result-fragment label)
+    (incoming-reference-rowo relation target-page-id
+                             source-page-id reference-id
+                             result-target-page-id result-fragment label)))
+
+(define (incoming-fragment-reference-rows
+         relation target-page-id fragment-id)
+  (query (source-page-id reference-id result-target-page-id
+                         result-fragment label)
+    (incoming-fragment-reference-rowo
+      relation target-page-id fragment-id source-page-id reference-id
+      result-target-page-id result-fragment label)))
+
+(define* (incoming-reference-rows relation target-page-id
+                                  #:optional fragment-id)
+  (if fragment-id
+      (incoming-fragment-reference-rows
+        relation target-page-id fragment-id)
+      (incoming-page-reference-rows relation target-page-id)))
+
+(define* (incoming-reference-keys relation target-page-id
+                                  #:optional fragment-id)
+  (map (lambda (row) (list (car row) (cadr row)))
+       (incoming-reference-rows relation target-page-id fragment-id)))
+
+(define (outgoing-reference-rows relation source-page-id)
+  (query (result-source-page-id reference-id target-page-id fragment label)
+    (outgoing-reference-rowo relation source-page-id
+                             result-source-page-id reference-id target-page-id
+                             fragment label)))
+
+(define (outgoing-reference-ids relation source-page-id)
+  (map cadr (outgoing-reference-rows relation source-page-id)))
 
 (define (backlink-page-ids relation target-page-id)
   (delete-duplicates

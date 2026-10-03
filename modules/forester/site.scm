@@ -317,13 +317,12 @@
   (label heading-label))
 
 (define-record-type <forest>
-  (%make-forest site pages reference-index heading-index reference-relation
+  (%make-forest site pages heading-index reference-relation
                 composition page-index page-relation content-node-relation
                 content-node-index query-page-ids)
   forest?
   (site site)
   (pages pages)
-  (reference-index reference-index)
   (heading-index heading-index)
   (reference-relation reference-relation)
   (composition composition)
@@ -594,7 +593,7 @@
                    #:sources (site-sources (site forest)))))
           (%make-forest
             resolved-site resolved-pages
-            (reference-index forest) (heading-index forest)
+            (heading-index forest)
             (reference-relation forest) (composition forest)
             resolved-page-index (page-relation forest)
             (content-node-relation forest) (content-node-index forest)
@@ -641,55 +640,47 @@
                                id (content->plain-text element)))
                            elements ids))))
                 pages))
-         (reference-index
-           (map
+         (reference-facts
+           (append-map
              (lambda (source-page)
                (let* ((source-id (site-page-id source-page))
                       (elements
                         (link-elements
                           (owned-content
                             (site-page-document source-page)))))
-                 (cons
-                   source-id
-                   (map
-                     (lambda (element index)
-                       (let* ((target
-                                (content-element-property element 'target))
-                              (target-page-id
-                                (page-id-from-link target))
-                              (fragment (fragment-from-link target))
-                              (target-page
-                                (hash-ref page-index target-page-id)))
-                         (unless target-page
-                           (error
-                             (format #f
-                               "unresolved Forester link in page ~a (~a): ~a"
-                               source-id
-                               (or (site-page-source source-page)
-                                   "<unknown source>")
-                               target)))
-                         (when (and fragment
-                                    (not (member
-                                           fragment
-                                           (map heading-id
-                                                (cdr (assoc target-page-id
-                                                            heading-index)))
-                                           string=?)))
-                           (error
-                             (format #f
-                               "unresolved Forester fragment in page ~a (~a): ~a"
-                               source-id
-                               (or (site-page-source source-page)
-                                   "<unknown source>")
-                               target)))
-                         (%make-reference
-                           source-id
-                           (format #f "ref-~a" index)
-                           target-page-id
-                           fragment
-                           (content->plain-text element))))
-                     elements
-                     (iota (length elements) 1)))))
+                 (map
+                   (lambda (element index)
+                     (let* ((target
+                              (content-element-property element 'target))
+                            (target-page-id (page-id-from-link target))
+                            (fragment (fragment-from-link target))
+                            (target-page (hash-ref page-index target-page-id)))
+                       (unless target-page
+                         (error
+                           (format #f
+                             "unresolved Forester link in page ~a (~a): ~a"
+                             source-id
+                             (or (site-page-source source-page)
+                                 "<unknown source>")
+                             target)))
+                       (when (and fragment
+                                  (not (member
+                                         fragment
+                                         (map heading-id
+                                              (cdr (assoc target-page-id
+                                                          heading-index)))
+                                         string=?)))
+                         (error
+                           (format #f
+                             "unresolved Forester fragment in page ~a (~a): ~a"
+                             source-id
+                             (or (site-page-source source-page)
+                                 "<unknown source>")
+                             target)))
+                       (list source-id (format #f "ref-~a" index)
+                             target-page-id fragment
+                             (content->plain-text element))))
+                   elements (iota (length elements) 1))))
              pages))
          (transclusion-index
            (map
@@ -726,18 +717,7 @@
                      (iota (length elements) 1)))))
              pages))
          (reference-relation
-           (make-reference-relation
-             (append-map
-               (lambda (entry)
-                 (map (lambda (reference)
-                        (list
-                          (reference-source-page-id reference)
-                          (reference-source-id reference)
-                          (reference-target-page-id reference)
-                          (reference-target-fragment reference)
-                          (reference-label reference)))
-                      (cdr entry)))
-               reference-index)))
+           (make-reference-relation reference-facts))
          (page-relation
            (make-page-relation
              (map (lambda (page)
@@ -763,7 +743,7 @@
              (append-map cdr transclusion-index)))
          (_ (validate-composition-cycles! pages composition)))
     (resolve-forest-queries
-      (%make-forest site pages reference-index heading-index
+      (%make-forest site pages heading-index
                     reference-relation composition page-index page-relation
                     (car content-node-state)
                     (cadr content-node-state)
@@ -797,16 +777,10 @@
        (outgoing-references forest id)))
 
 (define (outgoing-references forest id)
-  (let ((entry (assoc id (reference-index forest))))
-    (unless entry
-      (error "unknown forest page" id))
-    (let ((reference-ids
-            (outgoing-reference-ids
-              (reference-relation forest) id)))
-      (filter (lambda (reference)
-                (member (reference-source-id reference)
-                        reference-ids equal?))
-              (cdr entry)))))
+  (unless (assoc id (heading-index forest))
+    (error "unknown forest page" id))
+  (map (lambda (row) (apply %make-reference row))
+       (outgoing-reference-rows (reference-relation forest) id)))
 
 (define (outgoing-transclusions forest id)
   (unless (assoc id (heading-index forest))
@@ -836,13 +810,8 @@
   (when (and fragment
              (not (member fragment (heading-ids forest id) string=?)))
     (error "unknown forest heading fragment" id fragment))
-  (let* ((keys (incoming-reference-keys
-                 (reference-relation forest) id fragment))
-         (key? (lambda (reference)
-                 (member (list (reference-source-page-id reference)
-                               (reference-source-id reference))
-                         keys equal?))))
-    (filter key? (append-map cdr (reference-index forest)))))
+  (map (lambda (row) (apply %make-reference row))
+       (incoming-reference-rows (reference-relation forest) id fragment)))
 
 (define (backlinks forest id)
   (unless (assoc id (heading-index forest))
