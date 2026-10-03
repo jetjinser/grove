@@ -5,12 +5,28 @@
 (define-module (forester commands)
   #:replace (link)
   #:use-module (ice-9 rdelim)
+  #:use-module (ice-9 textual-ports)
   #:use-module (grove ir)
   #:use-module (grove string)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13))
 
-(define lipsum-source #f)
+(define-syntax include-text
+  (lambda (stx)
+    (syntax-case stx ()
+      ((_ filename)
+       (let* ((path (syntax->datum #'filename))
+              (source (search-path %load-path path)))
+         (unless source
+           (syntax-violation 'include-text "text file not found in load path"
+                             stx #'filename))
+         (datum->syntax stx
+           `(quote ,(call-with-include-port
+                      (datum->syntax #'filename source)
+                      get-string-all))))))))
+
+(define lipsum-source
+  (search-path %load-path "forester/data/lipsum-la.txt"))
 
 (define-public (title . body)
   (make-content-element 'title body #:flow-kind 'block))
@@ -19,33 +35,29 @@
   (make-content-element 'summary body #:flow-kind 'block))
 
 (define lipsum-paragraphs
-  (let ((path (search-path %load-path "forester/data/lipsum-la.txt")))
-    (unless path
-      (error "Cannot find forester/data/lipsum-la.txt on the Guile load path"))
-    (set! lipsum-source path)
-    (call-with-input-file path
-      (lambda (port)
-        (let loop ((line (read-line port))
-                   (current-lines '())
-                   (paragraphs '()))
-          (cond
-            ((eof-object? line)
-             (reverse
+  (let ((port (open-input-string
+                (include-text "forester/data/lipsum-la.txt"))))
+    (let loop ((line (read-line port))
+               (current-lines '())
+               (paragraphs '()))
+      (cond
+        ((eof-object? line)
+         (reverse
+           (if (null? current-lines)
+               paragraphs
+               (cons (string-join (reverse current-lines) " ")
+                     paragraphs))))
+        ((string-null? (string-trim-both line))
+         (loop (read-line port)
+               '()
                (if (null? current-lines)
                    paragraphs
                    (cons (string-join (reverse current-lines) " ")
                          paragraphs))))
-            ((string-null? (string-trim-both line))
-             (loop (read-line port)
-                   '()
-                   (if (null? current-lines)
-                       paragraphs
-                       (cons (string-join (reverse current-lines) " ")
-                             paragraphs))))
-            (else
-              (loop (read-line port)
-                    (cons (string-trim-both line) current-lines)
-                    paragraphs))))))))
+        (else
+          (loop (read-line port)
+                (cons (string-trim-both line) current-lines)
+                paragraphs))))))
 
 (define (lipsum-selector->range selector)
   (let* ((text (cond
