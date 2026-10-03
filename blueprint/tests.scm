@@ -63,6 +63,7 @@
     "unit/grove/math-calculus-interface.scm"
     "unit/scribble/parse.scm"
     "unit/grove/build.scm"
+    "unit/grove/collect.scm"
     "unit/grove/state.scm"
     "unit/grove/content.scm"
     "unit/grove/string.scm"
@@ -72,10 +73,20 @@
     "unit/grove/static.scm"
     "unit/grove/project.scm"
     "unit/grove/platform.scm"
+    "unit/grove/test-registry.scm"
+    "unit/forester/commands.scm"
+    "unit/forester/composition.scm"
     "unit/forester/project.scm"
+    "unit/forester/render.scm"
+    "unit/forester/queries.scm"
     "unit/forester/relations.scm"
     "unit/forester/site.scm"
     "unit/forester/graph.scm"))
+
+(define +fixture-resources+
+  '("unit/grove/cartesian-fixtures.scm"
+    "unit/grove/polynomial-oracle.scm"
+    "unit/forester/fixtures.scm"))
 
 (define test-environment
   #%~(list (format #f "GROVE_SRCDIR=~a" #%?srcdir)))
