@@ -14,7 +14,7 @@
     "grove/build/state.scm"
     "grove/collect.scm"
     "grove/ir.scm"
-    "grove/string.scm"
+    "grove/string-fun.scm"
     "grove/style.scm"
     "grove/math/audit.scm"
     "grove/math/syntax.scm"
@@ -126,4 +126,7 @@
     (list
       (template-file
         (inputs "forester/data/lipsum-la.txt")
-        (outputs "forester/data/lipsum-la.txt")))))
+        (outputs "forester/data/lipsum-la.txt"))
+      (template-file
+        (inputs "forester/style/default.css")
+        (outputs "forester/style/default.css")))))

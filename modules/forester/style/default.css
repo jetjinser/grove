@@ -1,0 +1,35 @@
+/* SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu> */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* Baseline adapted from Josh W. Comeau's A Modern CSS Reset:
+   https://www.joshwcomeau.com/css/custom-css-reset/ */
+*, *::before, *::after { box-sizing: border-box; }
+*:not(dialog) { margin: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  html { interpolate-size: allow-keywords; }
+}
+body { line-height: 1.5; -webkit-font-smoothing: antialiased; isolation: isolate; }
+img, picture, video, canvas, svg { display: block; max-width: 100%; }
+input, button, textarea, select { font: inherit; }
+p, h1, h2, h3, h4, h5, h6 { overflow-wrap: break-word; }
+p { text-wrap: pretty; }
+h1, h2, h3, h4, h5, h6, .forest-tree-title { text-wrap: balance; }
+
+/* Document spacing after resetting browser margins. */
+body { margin: 1rem; }
+p, ul, ol, blockquote, pre { margin-block: 1em; }
+h1, h2, h3, h4, h5, h6 { margin-block: .75em; }
+blockquote { margin-inline: 2em; }
+hr { margin-block: 1em; }
+pre, .math-display { overflow-x: auto; }
+
+.forest-tree-block { margin: 1rem 0; border-radius: .3rem; transition: background-color .12s ease; }
+.forest-tree-block:hover, .forest-tree-block:focus-within { background-color: rgba(0, 100, 255, .04); }
+.forest-tree-block summary { cursor: pointer; list-style: none; }
+.forest-tree-block summary::marker { content: ''; }
+.forest-tree-block summary::-webkit-details-marker { display: none; }
+.forest-tree-title { display: inline; font-size: inherit; margin: 0; font-weight: 600; }
+.forest-tree-id { margin-left: .15em; font-size: .75em; opacity: .65; }
+.forest-tree-id:hover { opacity: 1; }
+.forest-tree-content { padding: .25rem .85rem; }
+.backmatter { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid currentColor; }
