@@ -94,12 +94,11 @@
          cycle)
     " -> "))
 
-(define (validate-composition-cycles! pages composition)
+(define (validate-tree-cycles! pages targets)
   (let ((edges
           (map (lambda (page)
                  (cons (site-page-id page)
-                       (composition:target-ids
-                         composition (site-page-id page))))
+                       (targets page)))
                pages)))
     (letrec ((visit
                (lambda (id path)
@@ -475,27 +474,16 @@
     (content-document-source (site-page-document page))))
 
 (define (validate-query-composition! forest resolved-pages)
-  (let ((generated
-          (append-map
-            (lambda (page)
-              (map (lambda (element index)
-                     (composition:make-transclusion
-                       (site-page-id page) (format #f "query-~a" index)
-                       (content-element-property element 'target)))
-                   (walk-content (owned-content (site-page-document page))
-                                 (element-kind? 'query-transclude))
-                   (iota (length (walk-content
-                                   (owned-content (site-page-document page))
-                                   (element-kind? 'query-transclude))))))
-            resolved-pages)))
-    (validate-composition-cycles!
-      resolved-pages
-      (composition:make-composition
-        (composition:subtree-definitions (composition forest))
-        (append generated
-                (append-map (lambda (page)
-                              (outgoing-transclusions forest (site-page-id page)))
-                            resolved-pages))))))
+  ;; Validate the resolved display graph without adding generated facts to the
+  ;; authored composition snapshot.
+  (validate-tree-cycles!
+    resolved-pages
+    (lambda (page)
+      (append
+        (composition:target-ids (composition forest) (site-page-id page))
+        (map (lambda (element) (content-element-property element 'target))
+             (walk-content (owned-content (site-page-document page))
+                           (element-kind? 'query-transclude)))))))
 
 (define (tree-occurrences forest id)
   "Return direct tree displays in body order, stopping at tree boundaries."
@@ -674,7 +662,9 @@
                         (site-page-document page))))
                pages)
              (append-map cdr transclusion-index)))
-         (_ (validate-composition-cycles! pages composition)))
+         (_ (validate-tree-cycles! pages
+              (lambda (page)
+                (composition:target-ids composition (site-page-id page))))))
     (resolve-forest-queries
       (%make-forest site pages
                     reference-relation composition page-index page-relation

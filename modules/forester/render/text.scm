@@ -51,14 +51,14 @@
       (let* ((id (tree-occurrence-target element))
              (target (find-page forest id))
              (anchor (format #f "~atree-~a" prefix position)))
-        (string-append (heading (site-page-title target)) "[#" anchor "]\n"
+        (string-append (title-text (site-page-title target)) "[#" anchor "]\n"
                        (subtree-content-text forest routes target (string-append anchor "--")))))
     (content->text (site-page-document page)
       #:handlers (page-content-handlers forest routes page)
       #:lazy-handlers (map (lambda (kind) (cons kind render-tree))
                           '(subtree transclude query-transclude)))))
 
-(define (heading title)
+(define (title-text title)
   (string-append title "\n" (make-string (string-length title) #\=) "\n"))
 
 (define (page-reference routes from-path page)
@@ -78,7 +78,7 @@
                  (entries target-id (string-append anchor "--") (string-append indent "  ")))))
            (tree-occurrences forest id) (iota (length (tree-occurrences forest id)) 1))))
   (let ((items (entries (site-page-id page) "" "")))
-    (if (string-null? items) "" (string-append (heading "Contents") "\n" items "\n"))))
+    (if (string-null? items) "" (string-append (title-text "Contents") "\n" items "\n"))))
 
 (define (text-backlink-reference forest page-id routes reference indent)
   (let* ((source-id (reference-source-page-id reference))
@@ -162,7 +162,7 @@
   (let* ((site (site forest))
          (index-path (text-index-path routes)))
     (string-append
-      (heading (site-title site))
+      (title-text (site-title site))
       "\n"
       (string-concatenate
         (map (lambda (page)
@@ -178,7 +178,7 @@
                 (subtree-content-text forest routes page)
                 (char-set #\newline))))
     (string-append
-      (heading (site-page-title page))
+      (title-text (site-page-title page))
       "\nHome: "
       (text-relative-path page-path (text-index-path routes))
       "\n\n"
