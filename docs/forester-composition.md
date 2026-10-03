@@ -210,3 +210,42 @@ To extend the default CSS, compose styles in cascade order:
 Pass the custom style alone to replace the default, or `(make-html-style)` to
 omit stylesheets entirely. File-backed CSS artifacts should list their source
 paths as dependencies, as in the showcase builder.
+
+### Element styles
+
+Rendered prose commands, `link`, `image`, `subtree`, `transclude`, and math
+notation commands accept `#:style`. A symbol or string is a named content
+style; HTML maps its name to a class:
+
+```scheme
+@paragraph[#:style 'notice]{This is a note.}
+@link["lemma" #:style 'reference]{Read the lemma.}
+@subtree[#:id "lemma" #:style 'callout]{
+  @title{Lemma}
+  This is the body.
+}
+@◇:math{@◇:frac[#:style 'ratio]{x}{y}}
+```
+
+For HTML-specific attributes, use the existing style property API:
+
+```scheme
+@use-modules[(grove style) (grove style html)]
+@(define note-style
+  (make-content-style 'notice
+    (list (make-html-attributes
+            '((id . "intro") (class . "important") (role . "note"))))))
+@paragraph[#:style note-style]{This is an important note.}
+```
+
+`class` is appended to structural classes. HTML IDs and local `href` attributes
+in styles are scoped when a tree is embedded, so repeated transclusions keep
+separate anchors. A style cannot replace a renderer-owned navigation ID.
+A subtree's `#:id` is its tree identity, not an HTML attribute.
+
+`content-with-style` applies the same interface to an element returned by
+Scheme code, preserving its content, properties, source, and flow kind.
+Styling does not change query or mathematical semantics. Text output ignores
+HTML presentation properties. Frontmatter commands extract data rather than
+rendering styled elements; computation commands returning several elements
+can be placed inside a styled subtree.

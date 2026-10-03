@@ -7,7 +7,7 @@
 @summary{A small adaptation of the category definition in cat-0001.tree.}
 @published{2024-05-21}
 
-@paragraph{A @bold{category} @tex-math{\mathcal{C}} consists of objects, morphisms, domain and codomain operations, identity morphisms, and a partially defined composition operation.}
+@paragraph[#:style 'lead]{A @bold{category} @tex-math{\mathcal{C}} consists of objects, morphisms, domain and codomain operations, identity morphisms, and a partially defined composition operation.}
 
 @subtree[#:id "cat-0001-objects-and-morphisms"]{
   @title{Objects and morphisms}
