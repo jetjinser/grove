@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove build)
+  #:use-module (grove string)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-9)
@@ -26,7 +27,7 @@
 (define* (make-cached-renderer procedure #:key cache-key render-changed inputs)
   (unless (procedure? procedure)
     (error "cached renderer requires a procedure" procedure))
-  (unless (and (string? cache-key) (not (string-null? cache-key)))
+  (unless (non-empty-string? cache-key)
     (error "cached renderer requires a non-empty cache key" cache-key))
   (unless (or (not render-changed) (procedure? render-changed))
     (error "incremental renderer must be a procedure or #f" render-changed))

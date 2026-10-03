@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove render html routes)
+  #:use-module (grove string)
   #:use-module (grove output)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
@@ -33,7 +34,7 @@
     (error "HTML page path requires a procedure" page-path))
   (unless (artifact-path? index-path)
     (error "HTML index requires a relative artifact path" index-path))
-  (unless (and (string? home-page) (not (string-null? home-page)))
+  (unless (non-empty-string? home-page)
     (error "HTML home page ID must be a non-empty string" home-page))
   (unless (and (string? url-prefix)
                (string-prefix? "/" url-prefix)

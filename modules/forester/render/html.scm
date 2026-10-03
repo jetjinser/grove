@@ -4,7 +4,9 @@
 
 (define-module (forester render html)
   #:use-module (grove build)
+  #:use-module (grove string)
   #:use-module ((forester composition) #:prefix composition:)
+  #:use-module (forester render artifact)
   #:use-module (forester site)
   #:use-module (grove ir)
   #:use-module (grove output)
@@ -392,18 +394,6 @@
         mathjax-src
         inline-stylesheets?))))
 
-(define (find-artifact artifacts path)
-  (find (lambda (artifact) (string=? (artifact-path artifact) path))
-        artifacts))
-
-(define (artifact-current? current previous changed)
-  (let ((sources (artifact-sources current)))
-    (and previous
-         (equal? sources (artifact-sources previous))
-         (not (and sources
-                   (any (lambda (path) (member path sources string=?))
-                        changed))))))
-
 (define (render-html-changed forest style routes mathjax-src backmatter labels
                              reference-taxon-id
                                     changed old-artifacts)
@@ -411,12 +401,12 @@
   (let* ((site (site forest))
          (index-sources (source-paths forest))
          (index-path (html-index-path routes))
-         (old-index (find-artifact old-artifacts index-path))
+         (old-index (find-artifact-by-path old-artifacts index-path))
          (index-current
            (make-artifact index-path "" index-sources))
          (index-artifact
            (make-artifact index-path
-                          (if (artifact-current? index-current old-index changed)
+                          (if (artifact-reusable? index-current old-index changed)
                               (artifact-content old-index)
                               (index-content forest routes))
                           index-sources))
@@ -424,9 +414,9 @@
            (map (lambda (page)
                   (let* ((path (html-page-path routes (site-page-id page)))
                          (sources (page-source-paths forest page))
-                         (old (find-artifact old-artifacts path))
+                         (old (find-artifact-by-path old-artifacts path))
                          (current (make-artifact path "" sources)))
-                    (if (artifact-current? current old changed)
+                    (if (artifact-reusable? current old changed)
                         old
                         (make-artifact
                           path
@@ -445,8 +435,7 @@
   (unless (html-routes? routes)
     (error "Forester HTML renderer requires HTML routes" routes))
   (unless (or (not mathjax-src)
-              (and (string? mathjax-src)
-                   (not (string-null? mathjax-src))
+              (and (non-empty-string? mathjax-src)
                    (or (external-url? mathjax-src)
                        (artifact-path? mathjax-src))))
     (error "MathJax source must be a URL, relative artifact path, or #f"

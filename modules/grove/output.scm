@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove output)
+  #:use-module (grove string)
   #:use-module (ice-9 ftw)
   #:use-module (ice-9 binary-ports)
   #:use-module (ice-9 textual-ports)
@@ -28,8 +29,7 @@
   (sources artifact-sources))
 
 (define (artifact-path? path)
-  (and (string? path)
-       (not (string-null? path))
+  (and (non-empty-string? path)
        (every (lambda (part)
                 (and (not (string-null? part))
                      (not (member part '("." "..")))))

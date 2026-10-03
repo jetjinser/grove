@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove ir)
+  #:use-module (grove string)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
@@ -103,7 +104,7 @@
 (define* (make-content-disclosure title children #:key (open? #t)
                                   (addressable? #f))
   "Make a titled disclosure. Addressable disclosures may become trees in a host site."
-  (unless (and (string? title) (not (string-null? title)))
+  (unless (non-empty-string? title)
     (error "content disclosure requires a non-empty title" title))
   (unless (boolean? open?)
     (error "content disclosure open? must be a boolean" open?))

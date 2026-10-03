@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester backmatter)
+  #:use-module (grove string)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-26) ; cut(e)
@@ -12,9 +13,6 @@
             validate-backmatter-sections
             normalize-backmatter-labels
             check-reference-taxon-id))
-
-(define (non-empty-string? x)
-  (and (string? x) (not (string-null? x))))
 
 (define default-reference-taxon-id "Reference")
 (define default-backmatter-labels
@@ -47,8 +45,7 @@
                   (length (delete-duplicates (map car labels) eq?))))
     (error "Forester backmatter labels must map unique section names to non-empty strings"
            labels))
-  (map (match-lambda
-         [(a . b) (cons a (or (assq-ref labels a) b))])
+  (map (match-lambda [(a . b) (cons a (or (assq-ref labels a) b))])
        default-backmatter-labels))
 
 (define (check-reference-taxon-id id)

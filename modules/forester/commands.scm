@@ -6,6 +6,7 @@
   #:replace (link)
   #:use-module (ice-9 rdelim)
   #:use-module (grove ir)
+  #:use-module (grove string)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13))
 
@@ -107,14 +108,13 @@
 
 (define-public image
   (lambda* (source . alternative-text)
-    (unless (and (string? source) (not (string-null? source)))
+    (unless (non-empty-string? source)
       (error "Forester image source must be a non-empty string" source))
     (make-content-element 'image alternative-text
                           #:properties `((source . ,source)))))
 
 (define (valid-topic-id? id)
-  (and (string? id)
-       (> (string-length id) 0)
+  (and (non-empty-string? id)
        (let ((first (string-ref id 0))
              (last (string-ref id (- (string-length id) 1))))
          (and (or (char-alphabetic? first) (char-numeric? first))
@@ -159,8 +159,7 @@
            ;; Guile's rest argument contains keyword arguments as well.
            (body (subtree-body arguments)))
       (when (and named?
-                 (not (and (string? id)
-                           (not (string-null? id))
+                 (not (and (non-empty-string? id)
                            (not (string-index id #\#)))))
         (error "Forester subtree ID must be a non-empty string without #" id))
       (unless (boolean? open?)
@@ -187,7 +186,7 @@
             #:flow-kind 'block))))))
 
 (define-public (transclude id)
-  (unless (and (string? id) (not (string-null? id)))
+  (unless (non-empty-string? id)
     (error "Forester transclusion target must be a non-empty tree ID" id))
   (make-content-element 'transclude '() #:properties `((target . ,id))
                         #:flow-kind 'block))

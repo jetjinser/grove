@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester site)
+  #:use-module (grove string)
   #:use-module (grove ir)
   #:use-module (grove site)
   #:use-module ((forester composition) #:prefix composition:)
@@ -138,8 +139,8 @@
 (define (subtree-page element source)
   (let ((id (content-element-property element 'tree-id))
         (title (content-element-property element 'title)))
-    (unless (and (string? id) (not (string-null? id))
-                 (string? title) (not (string-null? title)))
+    (unless (and (non-empty-string? id)
+                 (non-empty-string? title))
       (error "invalid Forester subtree element" element))
     (make-site-page
       id title
@@ -207,7 +208,7 @@
          pages)))
 
 (define (split-link-target target)
-  (unless (and (string? target) (not (string-null? target)))
+  (unless (non-empty-string? target)
     (error "Forester link target must be a non-empty string" target))
   (let ((separator (string-index target #\#)))
     (if separator
@@ -383,8 +384,8 @@
       (lambda (topic)
         (let ((id (cadr topic))
               (label (caddr topic)))
-          (unless (and (string? id) (not (string-null? id))
-                       (string? label) (not (string-null? label)))
+          (unless (and (non-empty-string? id)
+                       (non-empty-string? label))
             (error "invalid topic IR element" topic))
           (let ((same-id
                   (find (lambda (candidate)
@@ -709,8 +710,7 @@
                               (source-path
                                 (or (site-page-source source-tree)
                                     "<unknown source>")))
-                         (unless (and (string? target-id)
-                                      (not (string-null? target-id)))
+                         (unless (non-empty-string? target-id)
                            (error
                              (format #f
                                "invalid Forester transclusion ~a in tree ~a (~a): ~s"

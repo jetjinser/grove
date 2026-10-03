@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove project)
+  #:use-module (grove string)
   #:use-module (grove build)
   #:use-module (grove build state)
   #:use-module (grove collect)
@@ -106,7 +107,7 @@
   (unless (string? output-directory)
     (error "project requires an output directory" output-directory))
   (unless (or (not cache-key)
-              (and (string? cache-key) (not (string-null? cache-key))))
+              (non-empty-string? cache-key))
     (error "project cache key must be a non-empty string or #f" cache-key))
   (%make-project source-directory source-filter collect-sources prepare
                  extra-sources read-source analyze renderers
@@ -127,7 +128,7 @@
                                     (project-source-filter project)))))))
     (unless (and (list? paths)
                  (every (lambda (path)
-                          (and (string? path) (not (string-null? path))))
+                          (non-empty-string? path))
                         paths))
       (error "project collector must return a list of source paths" paths))
     (when (not (= (length paths) (length (delete-duplicates paths string=?))))
@@ -143,7 +144,7 @@
                               key args))))))
     (unless (and (list? paths)
                  (every (lambda (path)
-                          (and (string? path) (not (string-null? path))))
+                          (non-empty-string? path))
                         paths))
       (error "project prepare hook must return source paths" paths))
     (when (not (= (length paths) (length (delete-duplicates paths string=?))))

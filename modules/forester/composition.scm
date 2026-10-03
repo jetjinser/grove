@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester composition)
+  #:use-module (grove string)
   #:use-module (grove relation dsl)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
@@ -37,9 +38,6 @@
   (source-tree-id transclusion-source-tree-id)
   (source-id transclusion-source-id)
   (target-tree-id transclusion-target-tree-id))
-
-(define (non-empty-string? value)
-  (and (string? value) (not (string-null? value))))
 
 (define (make-subtree-definition parent child)
   (unless (and (non-empty-string? parent) (non-empty-string? child))

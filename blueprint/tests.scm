@@ -65,6 +65,7 @@
     "unit/grove/build.scm"
     "unit/grove/state.scm"
     "unit/grove/content.scm"
+    "unit/grove/string.scm"
     "unit/grove/relation.scm"
     "unit/grove/relation-dsl.scm"
     "unit/grove/output.scm"

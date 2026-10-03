@@ -6,6 +6,7 @@
   #:use-module (ice-9 ftw)
   #:use-module (forester private date)
   #:use-module (grove ir)
+  #:use-module (grove string)
   #:use-module (grove site)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
@@ -55,8 +56,8 @@
                         (label (string-trim-both
                                  (content-verbatim-string
                                    (content-element-children element)))))
-                   (unless (and (string? id) (not (string-null? id))
-                                (not (string-null? label)))
+                   (unless (and (non-empty-string? id)
+                                (non-empty-string? label))
                      (error (format #f "Forester ~a requires an ID and label in ~a"
                                     kind path)))
                    (cons id label)))
