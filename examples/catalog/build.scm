@@ -61,7 +61,8 @@
   (make-content-document
     (append-map
       (lambda (entry)
-        (list (make-content-element 'heading (list (quote-entry-title entry)))
+        (list (make-content-element 'paragraph
+                (list (make-content-element 'bold (list (quote-entry-title entry)))))
               (make-content-element 'paragraph (list (quote-entry-body entry)))))
       (quote-catalog-entries catalog))))
 

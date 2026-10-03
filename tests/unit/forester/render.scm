@@ -123,8 +123,8 @@
     (and (string-contains (assoc-ref html "target") "href=\"#tree-1\">Overview</a>")
          (string-contains (assoc-ref html "target") "href=\"#tree-1--tree-1\">Details</a>")))
   (test-assert "title levels follow display depth"
-    (and (string-contains (assoc-ref html "target") "<h2 class=\"forest-tree-title\">Overview</h2>")
-         (string-contains (assoc-ref html "target") "<h3 class=\"forest-tree-title\">Details</h3>")))
+    (and (string-contains (assoc-ref html "target") "<h2 class=\"forest-tree-title\"><span>Overview</span>")
+         (string-contains (assoc-ref html "target") "<h3 class=\"forest-tree-title\"><span>Details</span>")))
   (test-assert "tree references use independent routes"
     (and (string-contains (assoc-ref html "source") "href=\"/overview.html\">the overview</a>")
          (string-contains (assoc-ref text "source") "overview.txt")))

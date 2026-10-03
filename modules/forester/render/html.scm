@@ -88,19 +88,17 @@
      (details ,@(if open? '((@ (open "open"))) '())
        (summary
          (,(string->symbol (format #f "h~a" (min depth 6)))
-           (@ (class "forest-tree-title")) ,title)
-         (a (@ (class "forest-tree-id")
+           (@ (class "forest-tree-title")) (span ,title)
+           (a (@ (class "forest-tree-id")
                (href ,page-url)
                (aria-label ,(string-append
                               "Open tree " (display-tree-id id)
                               " as a page")))
-            "[" ,(display-tree-id id) "]"))
+              "[" ,(display-tree-id id) "]")))
        (div (@ (class "forest-tree-content"))
             ,@(if (and (pair? content) (eq? (car content) 'article))
                   (cdr content)
                   (list content))))))
-
-
 
 (define (backlink-reference-sxml forest routes reference)
   (let ((source
@@ -113,8 +111,6 @@
           ,(site-page-title source))
        " — "
        ,(reference-label reference))))
-
-
 
 (define (backlinks-sxml forest page routes label)
   (let ((references (incoming-references forest (site-page-id page))))

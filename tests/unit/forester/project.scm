@@ -395,7 +395,7 @@
              (not (string-contains algebra-html "Mathematics"))))
       (test-assert "HTML project emits named tree titles"
         (string-contains algebra-html
-          "<h2 class=\"forest-tree-title\">Quadratic equations</h2>"))
+          "<h2 class=\"forest-tree-title\"><span>Quadratic equations</span>"))
       (test-assert "real .plant tree links resolve through configured routes"
         (string-contains limits-html
           "href=\"/notes/quadratic-equations.html\">about quadratics</a>"))
@@ -489,7 +489,7 @@
             (string-contains
               (read-test-file
                 (string-append cache-output-directory "/notes/algebra.html"))
-              "<h2 class=\"forest-tree-title\">Polynomial equations</h2>"))
+              "<h2 class=\"forest-tree-title\"><span>Polynomial equations</span>"))
           (test-assert "tree references resolve in cached builds"
             (string-contains
               (read-test-file
