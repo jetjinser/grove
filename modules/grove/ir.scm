@@ -29,6 +29,7 @@
             content-element-properties
             content-element-property
             content-element-style
+            content-with-style
             content-element-source
             make-content-disclosure
             content-document?
@@ -87,13 +88,29 @@
   (unless (valid-properties? properties)
     (error "content element properties must have unique symbol keys"
            properties))
-  (unless (or (not style) (content-style? style))
-    (error "content element style must be a content style" style))
+  (set! style (normalize-style style))
   (let ((flow-kind (or flow-kind 'inline)))
   (unless (memq flow-kind '(inline block))
     (error "content element flow kind must be inline or block" flow-kind))
   (%make-content-element kind (normalize-children children 'element)
                          properties style source flow-kind)))
+
+(define (normalize-style style)
+  (cond
+    ((or (not style) (content-style? style)) style)
+    ((or (symbol? style) (string? style)) (make-content-style style))
+    (else (error "content element style must be a style name, content style, or #f" style))))
+
+(define (content-with-style element style)
+  "Set an element's presentation style, preserving its content and provenance."
+  (unless (content-element? element)
+    (error "content-with-style requires a content element" element))
+  (let ((style (normalize-style style)))
+    (if (eq? style (content-element-style element)) element
+        (%make-content-element
+          (content-element-kind element) (content-element-children element)
+          (content-element-properties element) style
+          (content-element-source element) (content-element-flow-kind element)))))
 
 (define (content-element-block? element)
   (eq? (content-element-flow-kind element) 'block))
@@ -102,7 +119,7 @@
   (assq-ref (content-element-properties element) key))
 
 (define* (make-content-disclosure title children #:key (open? #t)
-                                  (addressable? #f))
+                                  (addressable? #f) (style #f))
   "Make a titled disclosure. Addressable disclosures may become trees in a host site."
   (unless (non-empty-string? title)
     (error "content disclosure requires a non-empty title" title))
@@ -113,6 +130,7 @@
   (make-content-element 'disclosure children
     #:properties `((title . ,title) (open? . ,open?)
                    (addressable? . ,addressable?))
+    #:style style
     #:flow-kind 'block))
 
 (define-record-type <content-document>

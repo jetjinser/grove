@@ -73,6 +73,7 @@
                       (content-element-property element 'open?) #t))))
     (content->sxml
       (site-page-document page)
+      #:id-prefix anchor-prefix
       #:handlers (page-content-handlers forest routes page anchor-prefix)
       #:lazy-handlers (map (lambda (kind) (cons kind render-tree))
                           '(subtree transclude query-transclude)))))
@@ -426,7 +427,7 @@
     (if cache-key
         (make-cached-renderer
           render
-          #:cache-key (string-append "forester-html-v17:" cache-key ":home="
+          #:cache-key (string-append "forester-html-v18:" cache-key ":home="
                                      (html-home-page routes) ":backmatter="
                                      (format #f "~s" backmatter)
                                      ":labels="

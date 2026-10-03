@@ -7,11 +7,12 @@
   #:use-module (grove style)
   #:use-module (grove style html)
   #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-13)
   #:use-module (sxml simple)
   #:export (content->sxml
             sxml->html))
 
-(define* (content->sxml content #:key (handlers '()) (lazy-handlers '()))
+(define* (content->sxml content #:key (handlers '()) (lazy-handlers '()) (id-prefix ""))
   (define math-variant (make-parameter #f))
   (define (render content)
     (cond
@@ -33,7 +34,15 @@
           (append-map
             (lambda (property)
               (if (html-attributes? property)
-                  (html-attributes-assoc property)
+                  (map (lambda (attribute)
+                         (let ((name (car attribute)) (value (cdr attribute)))
+                           (cons name
+                             (cond
+                               ((eq? name 'id) (string-append id-prefix value))
+                               ((and (eq? name 'href) (string-prefix? "#" value))
+                                (string-append "#" id-prefix (substring value 1)))
+                               (else value)))))
+                       (html-attributes-assoc property))
                   '()))
             (content-style-properties style)))))
 
@@ -54,6 +63,8 @@
                (existing (assq name attributes)))
           (cond
             ((not existing) (append attributes (list addition)))
+            ((eq? name 'id)
+             (error "HTML style cannot replace a renderer-owned ID" (cdr existing) value))
             ((eq? name 'class)
              (map (lambda (attribute)
                     (if (eq? (car attribute) name)
@@ -141,6 +152,9 @@
     `(mrow ,@(render-math-children children)))
 
   (define (render-math-child child)
+    (apply-element-style child (render-math-child/raw child)))
+
+  (define (render-math-child/raw child)
     (if (not (content-element? child))
         (error "math children must be tokenized" child)
         (let ((kind (content-element-kind child))

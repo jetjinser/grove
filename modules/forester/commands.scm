@@ -12,6 +12,7 @@
   #:use-module (ice-9 string-fun)
   #:use-module (ice-9 optargs)
   #:use-module (grove ir)
+  #:use-module (language scribble command)
   #:use-module (language scribble flow)
   #:use-module (grove string-fun))
 
@@ -80,17 +81,21 @@
                         #:properties `((query . ,query))
                         #:flow-kind 'block))
 
-(define-public (link target . labels)
+(define*-public (link target #:key (style #f) . labels)
+  (set! labels (command-body labels))
   (unless (and (non-empty-string? target) (not (string-index target #\#)))
     (error "Forester link requires a tree ID without #" target))
   (make-content-element 'link
                         (if (null? labels) (list target) labels)
+                        #:style style
                         #:properties `((target . ,target))))
 
-(define-public (image source . alternative-text)
+(define*-public (image source #:key (style #f) . alternative-text)
+  (set! alternative-text (command-body alternative-text))
   (unless (non-empty-string? source)
     (error "Forester image source must be a non-empty string" source))
   (make-content-element 'image alternative-text
+                        #:style style
                         #:properties `((source . ,source))))
 
 (define char-set:topic-body (char-set-adjoin char-set:letter+digit #\-))
@@ -113,23 +118,11 @@
 (define-public (taxon id . labels)
   (topic-element 'taxon id (if (null? labels) (list id) labels)))
 
-(define (subtree-body arguments)
-  (let loop ([args arguments]
-             [body '()])
-    (match args
-      [() (reverse body)]
-      [((? keyword? k) val . rest)
-       (loop rest body)]
-      [((? keyword? k))
-       (error "Forester subtree keyword requires a value" k)]
-      [(x . rest)
-       (loop rest (cons x body))])))
-
-(define*-public (subtree #:key [id #f] [open? #t] . arguments)
+(define*-public (subtree #:key [id #f] [open? #t] [style #f] . arguments)
   (unless (boolean? open?)
     (error "Forester subtree #:open? must be a boolean" open?))
   ;;     Guile's rest argument contains keyword arguments as well.
-  (let* ([body   (subtree-body arguments)]
+  (let* ([body   (command-body arguments)]
          [titles (filter (lambda (element)
                             (and (content-element? element)
                                  (eq? (content-element-kind element) 'title)))
@@ -148,6 +141,7 @@
          (error "Forester subtree title cannot be empty"))
        (make-content-element
          'subtree (decode-flow (remove (cut eq? <> title-element) body))
+         #:style style
          #:properties
          `((title . ,title-text)
            (open? . ,open?)
@@ -156,8 +150,8 @@
       [_ (error "Forester subtree requires exactly one direct @title"
                 (length titles))])))
 
-(define-public (transclude id)
+(define*-public (transclude id #:key (style #f))
   (unless (non-empty-string? id)
     (error "Forester transclusion target must be a non-empty tree ID" id))
-  (make-content-element 'transclude '() #:properties `((target . ,id))
+  (make-content-element 'transclude '() #:style style #:properties `((target . ,id))
                         #:flow-kind 'block))

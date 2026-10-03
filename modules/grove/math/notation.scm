@@ -3,6 +3,9 @@
 
 (define-module (grove math notation)
   #:use-module (grove ir)
+  #:use-module (ice-9 optargs)
+  #:use-module (ice-9 match)
+  #:use-module (language scribble command)
   #:use-module ((grove math notation core) #:prefix notation:)
   #:use-module (grove math expression)
   #:use-module (grove math layout)
@@ -11,10 +14,13 @@
   #:use-module (srfi srfi-13))
 
 ;; Notation nodes carry layout, never mathematical assertions.
-(define-public (math . source)
-  (notation:math (decode-math-fragments source)))
-(define-public (display-math . source)
-  (notation:display-math (decode-math-fragments source)))
+(define*-public (math #:key (style #f) . source)
+  (set! source (command-body source))
+  (content-with-style (notation:math (decode-math-fragments source)) style))
+
+(define*-public (display-math #:key (style #f) . source)
+  (set! source (command-body source))
+  (content-with-style (notation:display-math (decode-math-fragments source)) style))
 
 (define math-token notation:token)
 
@@ -85,20 +91,28 @@
 (define (math-argument value)
   (decode-math-fragments (if (list? value) value (list value))))
 
-(define-public (frac numerator denominator)
-  (notation:frac (math-argument numerator) (math-argument denominator)))
+(define*-public (frac #:key (style #f) . arguments)
+  (match (command-body arguments)
+    ((numerator denominator) (content-with-style (notation:frac (math-argument numerator) (math-argument denominator)) style))
+    (_ (error "frac requires exactly two arguments" arguments))))
 
-(define-public (vec . body)
-  (notation:vec (decode-math-fragments body)))
+(define*-public (vec #:key (style #f) . body)
+  (set! body (command-body body))
+  (content-with-style (notation:vec (decode-math-fragments body)) style))
 
-(define-public (sup base exponent)
-  (notation:sup (math-argument base) (math-argument exponent)))
+(define*-public (sup #:key (style #f) . arguments)
+  (match (command-body arguments)
+    ((base exponent) (content-with-style (notation:sup (math-argument base) (math-argument exponent)) style))
+    (_ (error "sup requires exactly two arguments" arguments))))
 
-(define-public (sub base index)
-  (notation:sub (math-argument base) (math-argument index)))
+(define*-public (sub #:key (style #f) . arguments)
+  (match (command-body arguments)
+    ((base index) (content-with-style (notation:sub (math-argument base) (math-argument index)) style))
+    (_ (error "sub requires exactly two arguments" arguments))))
 
-(define-public (parens . body)
-  (notation:parens (decode-math-fragments body)))
+(define*-public (parens #:key (style #f) . body)
+  (set! body (command-body body))
+  (content-with-style (notation:parens (decode-math-fragments body)) style))
 
 (define (align-fragment-events fragment)
   (cond
@@ -162,9 +176,11 @@
       (else
        (loop (cdr events) (cons (cadar events) cell) cells rows)))))
 
-(define-public (align . fragments)
-  (notation:align (align-lines fragments)))
+(define*-public (align #:key (style #f) . fragments)
+  (set! fragments (command-body fragments))
+  (content-with-style (notation:align (align-lines fragments)) style))
 
-(define-public (column . entries)
+(define*-public (column #:key (style #f) . entries)
   "Lay out entries as a column; this notation does not assert vector semantics."
-  (notation:column (map (lambda (entry) (notation:row (decode-math-fragments (list entry)))) entries)))
+  (set! entries (command-body entries))
+  (content-with-style (notation:column (map (lambda (entry) (notation:row (decode-math-fragments (list entry)))) entries)) style))

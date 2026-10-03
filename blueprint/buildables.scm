@@ -77,6 +77,7 @@
     "grove/render/static.scm"
     "grove/render/text.scm"
     "grove/style/html.scm"
+    "language/scribble/command.scm"
     "language/scribble/flow.scm"
     "language/scribble/commands.scm"
     "language/scribble/parser.scm"

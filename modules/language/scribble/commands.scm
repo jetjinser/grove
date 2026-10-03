@@ -4,6 +4,8 @@
 
 (define-module (language scribble commands)
   #:use-module (grove ir)
+  #:use-module (ice-9 optargs)
+  #:use-module (language scribble command)
   #:use-module (grove math pipeline)
   #:use-module (grove math presentation)
   #:use-module (grove math context)
@@ -41,40 +43,51 @@
                           (cons (make-paragraph-text current) paragraphs)))
                 (loop (cdr lines) (cons line current) paragraphs)))))))
 
-(define-public (bold . body)
-  (make-content-element 'bold body))
+(define*-public (bold #:key (style #f) . body)
+  (set! body (command-body body))
+  (make-content-element 'bold body #:style style))
 
-(define-public (verbatim . body)
+(define*-public (verbatim #:key (style #f) . body)
+  (set! body (command-body body))
   (make-content-element
     'verbatim
     (list (make-content-text (content-verbatim-string body)))
-    #:flow-kind 'block))
+    #:style style #:flow-kind 'block))
 
-(define-public (paragraph . body)
-  (make-content-element 'paragraph body #:flow-kind 'block))
+(define*-public (paragraph #:key (style #f) . body)
+  (set! body (command-body body))
+  (make-content-element 'paragraph body #:style style #:flow-kind 'block))
 
-(define-public (blockquote . body)
-  (make-content-element 'blockquote body #:flow-kind 'block))
+(define*-public (blockquote #:key (style #f) . body)
+  (set! body (command-body body))
+  (make-content-element 'blockquote body #:style style #:flow-kind 'block))
 
-(define-public (itemize . body)
-  (make-content-element 'itemize body #:flow-kind 'block))
+(define*-public (itemize #:key (style #f) . body)
+  (set! body (command-body body))
+  (make-content-element 'itemize body #:style style #:flow-kind 'block))
 
-(define-public (item . body)
-  (make-content-element 'item body #:flow-kind 'block))
+(define*-public (item #:key (style #f) . body)
+  (set! body (command-body body))
+  (make-content-element 'item body #:style style #:flow-kind 'block))
 
-(define-public (code . body)
-  (make-content-element 'code body))
+(define*-public (code #:key (style #f) . body)
+  (set! body (command-body body))
+  (make-content-element 'code body #:style style))
 
-(define-public (code-block . body)
-  (make-content-element 'code-block body #:flow-kind 'block))
+(define*-public (code-block #:key (style #f) . body)
+  (set! body (command-body body))
+  (make-content-element 'code-block body #:style style #:flow-kind 'block))
 
-(define-public (math . source)
+(define*-public (math #:key (style #f) . source)
+  (set! source (command-body source))
   (make-content-element 'math
-    (list (math-value->layout (apply φ:read source) (math-assumptions '())))))
+    (list (math-value->layout (apply φ:read source) (math-assumptions '()))) #:style style))
 
-(define-public (display-math . source)
+(define*-public (display-math #:key (style #f) . source)
+  (set! source (command-body source))
   (make-content-element 'math
                         (list (math-value->layout (apply φ:read source) (math-assumptions '())))
+                        #:style style
                         #:properties '((display? . #t))
                         #:flow-kind 'block))
 
@@ -85,12 +98,6 @@
 
 ;; Guile's lambda* rest argument retains keyword/value pairs. Strip them once
 ;; for all math commands; lambda* owns option defaults and validation.
-(define (math-command-fragments fragments)
-  (let body ((remaining fragments) (text '()))
-    (cond ((null? remaining) (reverse text))
-          ((keyword? (car remaining)) (body (cddr remaining) text))
-          (else (body (cdr remaining) (cons (car remaining) text))))))
-
 (define (command-assumptions assumptions)
   (if assumptions (φ:assumptions assumptions) '()))
 
@@ -98,7 +105,7 @@
   (lambda* (#:key (assumptions #f) (view 'compact) (on-error 'raise)
                  (rules #f) (max-steps 32) (max-term-size 2048) #:rest source)
     (math-completed-report->content
-      (math-derive (apply φ:read (math-command-fragments source))
+      (math-derive (apply φ:read (command-body source))
         #:assumptions (command-assumptions assumptions)
         #:rules rules #:max-steps max-steps #:max-term-size max-term-size)
       #:view view #:on-error on-error)))
@@ -106,7 +113,7 @@
 (define-public check-derive
   (lambda* (#:key (assumptions #f) (view 'compact) (on-error 'raise)
                  (rules #f) (steps #f) #:rest source)
-    (let ((lines (apply φ:read-lines (math-command-fragments source))))
+    (let ((lines (apply φ:read-lines (command-body source))))
       (math-verification->content
         (math-check-chain lines #:assumptions (command-assumptions assumptions) #:rules rules #:steps steps)
         #:view view #:on-error on-error))))
@@ -115,7 +122,7 @@
   (lambda* (variable #:key (assumptions #f) (view 'compact) (on-error 'raise)
                           (max-steps 128) (max-term-size 2048) #:rest source)
     (math-completed-report->content
-      (math-differentiate (apply φ:read (math-command-fragments source)) (φ:read variable)
+      (math-differentiate (apply φ:read (command-body source)) (φ:read variable)
         #:assumptions (command-assumptions assumptions)
         #:max-steps max-steps #:max-term-size max-term-size)
       #:view view #:on-error on-error)))
@@ -125,7 +132,7 @@
                           (max-steps 128) (max-term-size 2048) #:rest source)
     "Compute and display a partial derivative in an explicit coordinate scope."
     (math-completed-report->content
-      (math-partial (apply φ:read (math-command-fragments source)) (φ:read variable)
+      (math-partial (apply φ:read (command-body source)) (φ:read variable)
         #:assumptions (command-assumptions assumptions)
         #:max-steps max-steps #:max-term-size max-term-size)
       #:view view #:on-error on-error)))
@@ -136,14 +143,15 @@
                        (max-depth 8) (max-states 256) (max-term-size 128) #:rest source)
     (unless (boolean? backward?) (error "search direction must be boolean" backward?))
     (math-report->content
-      (let ((input (apply φ:read (math-command-fragments source))))
+      (let ((input (apply φ:read (command-body source))))
         ((if backward? math-search-backward math-search)
           (if backward? (φ:read target) input) (if backward? input (φ:read target))
           #:assumptions (command-assumptions assumptions) #:rules rules #:max-results max-results
           #:max-depth max-depth #:max-states max-states #:max-term-size max-term-size))
       #:view view)))
 
-(define-public (tex-math . source)
+(define*-public (tex-math #:key (style #f) . source)
+  (set! source (command-body source))
   (make-content-element 'math
                         (map make-content-text
                              (map (lambda (value)
@@ -152,9 +160,11 @@
                                         (error "TeX math accepts plain source text"
                                                value)))
                                   source))
+                        #:style style
                         #:properties '((tex? . #t))))
 
-(define-public (tex-display-math . source)
+(define*-public (tex-display-math #:key (style #f) . source)
+  (set! source (command-body source))
   (make-content-element 'math
                         (map make-content-text
                              (map (lambda (value)
@@ -163,6 +173,7 @@
                                         (error "TeX math accepts plain source text"
                                                value)))
                                   source))
+                        #:style style
                         #:properties '((tex? . #t) (display? . #t))
                         #:flow-kind 'block))
 
@@ -171,7 +182,7 @@
                  (max-steps 256) (max-term-size 8192) #:rest source)
     "Compute Cartesian components with explicit, replayable passes."
     (math-completed-report->content
-      (math-compute (apply φ:read (math-command-fragments source))
+      (math-compute (apply φ:read (command-body source))
         #:assumptions (command-assumptions assumptions)
         #:max-steps max-steps #:max-term-size max-term-size)
       #:view view #:on-error on-error)))
@@ -180,7 +191,7 @@
   (lambda* (coordinate #:key (assumptions #f) (view 'compact) (on-error 'raise)
                             (max-steps 128) (max-term-size 8192) #:rest source)
     (math-completed-report->content
-      (math-antiderivative (apply φ:read (math-command-fragments source)) (φ:read coordinate)
+      (math-antiderivative (apply φ:read (command-body source)) (φ:read coordinate)
         #:assumptions (command-assumptions assumptions) #:max-steps max-steps #:max-term-size max-term-size)
       #:view view #:on-error on-error)))
 
@@ -188,7 +199,7 @@
   (lambda* (#:key (coordinate #f) (assumptions #f) (view 'compact) (on-error 'raise)
                  (max-steps 128) (max-term-size 8192) #:rest source)
     (math-completed-report->content
-      (math-solve-poisson (apply φ:read (math-command-fragments source))
+      (math-solve-poisson (apply φ:read (command-body source))
         #:coordinate coordinate #:assumptions (command-assumptions assumptions)
         #:max-steps max-steps #:max-term-size max-term-size)
       #:view view #:on-error on-error)))
@@ -197,6 +208,6 @@
   (lambda* (target #:key (assumptions #f) (view 'compact) (on-error 'raise)
                         (max-steps 256) (max-term-size 8192) #:rest source)
     (math-completed-report->content
-      (math-check-equation (apply φ:read (math-command-fragments source)) (φ:read target)
+      (math-check-equation (apply φ:read (command-body source)) (φ:read target)
         #:assumptions (command-assumptions assumptions) #:max-steps max-steps #:max-term-size max-term-size)
       #:view view #:on-error on-error)))

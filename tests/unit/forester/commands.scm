@@ -5,7 +5,13 @@
 (define-module (tests unit forester commands)
   #:use-module (srfi srfi-64)
   #:use-module (forester commands)
-  #:use-module (grove ir))
+  #:use-module (grove ir)
+  #:use-module (grove style)
+  #:use-module (grove render html)
+  #:use-module (grove render text)
+  #:use-module (grove style html)
+  #:use-module (srfi srfi-13)
+  #:use-module (tests unit forester fixtures))
 
 (define (label-text element)
   (content-verbatim-string (content-element-children element)))
@@ -63,5 +69,47 @@
 
 (test-error "images reject an empty source" #t
   (image ""))
+
+(let* ((document (evaluate-document
+                  "@paragraph[#:style 'notice]{Read @bold[#:style \"emphasis\"]{this}.}@code-block[#:style 'source]{(display \"hello\")}"))
+       (html (sxml->html (content->sxml document))))
+  (test-assert "styled at-exp commands keep body text and apply classes"
+    (and (string-contains html "<p class=\"notice\">Read ")
+         (string-contains html "<strong class=\"emphasis\">this</strong>")
+         (string-contains html "<pre class=\"source\"><code>")))
+  (test-equal "text output ignores HTML presentation"
+    "Read this.\n```\n(display \"hello\")\n```\n" (content->text document)))
+
+(let* ((location '((file . "styled.plant") (line . 4) (column . 2)))
+       (original (content-with-source-location
+                   (make-content-element 'paragraph '("Source") "styled.plant"
+                     #:flow-kind 'block) location))
+       (styled (content-with-style original 'notice)))
+  (test-equal "styling preserves source location and flow semantics"
+    (list "styled.plant" location 'block)
+    (list (content-element-source styled)
+          (content-element-property styled 'source-location)
+          (content-element-flow-kind styled))))
+
+(let ((element (link "destination" #:style 'reference)))
+  (test-equal "style keywords do not become link labels"
+    "destination" (label-text element))
+  (test-equal "named style is normalized into the existing style IR"
+    'reference (content-style-name (content-element-style element))))
+
+(test-error "commands reject unknown keyword options" #t
+  (evaluate-document "@paragraph[#:class \"notice\"]{Text}"))
+(test-error "commands reject invalid styles" #t
+  (evaluate-document "@paragraph[#:style 42]{Text}"))
+(test-error "commands reject missing keyword values" #t
+  (evaluate-document "@paragraph[#:style]"))
+
+(let* ((document (evaluate-document
+                  "@notation:display-math[#:style 'formula]{@notation:frac[#:style 'ratio]{x}{y}+@notation:sup[#:style 'power]{z}{2}}"))
+       (html (sxml->html (content->sxml document))))
+  (test-assert "multi-argument notation commands accept style before brace arguments"
+    (and (string-contains html "class=\"math-display formula\"")
+         (string-contains html "<mfrac class=\"ratio\">")
+         (string-contains html "<msup class=\"power\">"))))
 
 (test-end "forester commands")

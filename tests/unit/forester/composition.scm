@@ -483,4 +483,34 @@
     '(paragraph paragraph)
     (map content-element-kind (content-document-children (site-page-document child)))))
 
+(let* ((target (make-site-page "styled-target" "Styled target"
+                 (evaluate-document
+                   "@use-modules[(grove style) (grove style html)]
+@(define intro-style (make-content-style 'notice (list (make-html-attributes '((id . \"intro\"))))))
+@paragraph[#:style intro-style]{A styled paragraph.}")))
+       (host (make-site-page "styled-host" "Styled host"
+               (evaluate-document
+                 "@subtree[#:id \"styled-child\" #:open? #f #:style 'callout]{@title{Child}Child text.}
+@transclude[\"styled-target\" #:style 'reuse]
+@transclude[\"styled-target\" #:style 'reuse]")))
+       (forest (make-forest (make-site (list host target))))
+       (html (render-test-html forest))
+       (host-html (assoc-ref html "styled-host")))
+  (test-assert "subtree styles survive analysis and retain structural classes"
+    (string-contains host-html "class=\"forest-tree-block inline-subtree callout\""))
+  (test-assert "transclusions accept styles without changing target identity"
+    (string-contains host-html "class=\"forest-tree-block transclusion reuse\""))
+  (test-assert "authored HTML IDs are scoped per tree display"
+    (and (string-contains host-html "id=\"tree-2--intro\"")
+         (string-contains host-html "id=\"tree-3--intro\"")
+         (string-contains (assoc-ref html "styled-target") "id=\"intro\""))))
+
+(test-error "element styles cannot replace navigation IDs" #t
+  (let ((forest (make-forest
+                 (make-site (list (make-site-page "reserved" "Reserved"
+                   (evaluate-document
+                     "@use-modules[(grove style) (grove style html)]
+@subtree[#:style (make-content-style #f (list (make-html-attributes '((id . \"override\")))))]{@title{Child}Text.}")))))))
+    (render-test-html forest)))
+
 (test-end "forester composition")
