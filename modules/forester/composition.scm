@@ -26,6 +26,12 @@
             outgoing-transclusions
             incoming-transclusions))
 
+(define-syntax all-of
+  (syntax-rules ()
+    ((_ pred arg ...)
+     (let ((p pred))
+       (and (p arg) ...)))))
+
 (define-record-type <subtree-definition>
   (%make-subtree-definition parent child)
   subtree-definition?
@@ -40,14 +46,13 @@
   (target-tree-id transclusion-target-tree-id))
 
 (define (make-subtree-definition parent child)
-  (unless (and (non-empty-string? parent) (non-empty-string? child))
-    (error "subtree definition requires non-empty tree IDs" parent child))
+  (unless (all-of non-empty-string? parent child)
+    (error "subtree definition requires non-empty tree IDs"
+           parent child))
   (%make-subtree-definition parent child))
 
 (define (make-transclusion source-tree-id source-id target-tree-id)
-  (unless (and (non-empty-string? source-tree-id)
-               (non-empty-string? source-id)
-               (non-empty-string? target-tree-id))
+  (unless (all-of non-empty-string? source-tree-id source-id target-tree-id)
     (error "transclusion requires non-empty tree and occurrence IDs"
            source-tree-id source-id target-tree-id))
   (%make-transclusion source-tree-id source-id target-tree-id))
@@ -56,18 +61,15 @@
   (kind source occurrence target))
 
 (define-record-type <composition>
-  (%make-composition relation definitions transclusions)
+  (%make-composition relation)
   composition?
-  (relation composition-relation)
-  (definitions composition-definitions)
-  (transclusions composition-transclusions))
+  (relation composition-relation))
 
 (define (make-composition definitions transclusions)
   (unless (and (list? definitions) (every subtree-definition? definitions))
     (error "composition definitions must be subtree definitions" definitions))
   (unless (and (list? transclusions) (every transclusion? transclusions))
-    (error "composition transclusions must be transclusion records"
-           transclusions))
+    (error "composition transclusions must be transclusion records" transclusions))
   (unless (= (length definitions)
              (length (delete-duplicates
                        (map (lambda (definition)
@@ -100,7 +102,7 @@
                            (transclusion-source-id transclusion)
                            (transclusion-target-tree-id transclusion)))
                    transclusions)))))
-    (%make-composition relation definitions transclusions)))
+    (%make-composition relation)))
 
 (define (target-ids composition source-tree-id)
   (map caddr
@@ -112,43 +114,30 @@
                        (target target)))))
 
 (define (subtree-definitions composition)
-  (let ((keys
-          (query (parent child)
-            (compositiono (composition-relation composition)
-                          (kind "subtree")
-                          (source parent)
-                          (target child)))))
-    (filter (lambda (definition)
-              (member (list (subtree-definition-parent definition)
-                            (subtree-definition-child definition))
-                      keys equal?))
-            (composition-definitions composition))))
+  (map (lambda (answer)
+         (make-subtree-definition (car answer) (cadr answer)))
+       (query (parent child)
+         (compositiono (composition-relation composition)
+                       (kind "subtree")
+                       (source parent)
+                       (target child)))))
 
 (define (outgoing-transclusions composition source-tree-id)
-  (let ((occurrences
-          (query (occurrence)
-            (compositiono (composition-relation composition)
-                          (kind "transclude")
-                          (source source-tree-id)
-                          (occurrence occurrence)))))
-    (filter (lambda (transclusion)
-              (and (equal? (transclusion-source-tree-id transclusion)
-                           source-tree-id)
-                   (member (transclusion-source-id transclusion)
-                           occurrences equal?)))
-            (composition-transclusions composition))))
+  (map (lambda (answer)
+         (make-transclusion source-tree-id (car answer) (cadr answer)))
+       (query (occurrence target)
+         (compositiono (composition-relation composition)
+                       (kind "transclude")
+                       (source source-tree-id)
+                       (occurrence occurrence)
+                       (target target)))))
 
 (define (incoming-transclusions composition target-tree-id)
-  (let ((keys
-          (query (source occurrence)
-            (compositiono (composition-relation composition)
-                          (kind "transclude")
-                          (source source)
-                          (occurrence occurrence)
-                          (target target-tree-id)))))
-    (filter (lambda (transclusion)
-              (member (list
-                        (transclusion-source-tree-id transclusion)
-                        (transclusion-source-id transclusion))
-                      keys equal?))
-            (composition-transclusions composition))))
+  (map (lambda (answer)
+         (make-transclusion (car answer) (cadr answer) target-tree-id))
+       (query (source occurrence)
+         (compositiono (composition-relation composition)
+                       (kind "transclude")
+                       (source source)
+                       (occurrence occurrence)
+                       (target target-tree-id)))))
