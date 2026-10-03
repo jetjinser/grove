@@ -3,7 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester site)
-  #:use-module (grove string)
+  #:use-module (grove string-fun)
   #:use-module (grove ir)
   #:use-module (grove site)
   #:use-module ((forester composition) #:prefix composition:)

@@ -3,7 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove project)
-  #:use-module (grove string)
+  #:use-module (grove string-fun)
   #:use-module (grove build)
   #:use-module (grove build state)
   #:use-module (grove collect)

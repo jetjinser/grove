@@ -6,7 +6,7 @@
   #:use-module (ice-9 ftw)
   #:use-module (forester private date)
   #:use-module (grove ir)
-  #:use-module (grove string)
+  #:use-module (grove string-fun)
   #:use-module (grove site)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)

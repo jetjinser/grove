@@ -4,7 +4,7 @@
 
 (define-module (forester render html)
   #:use-module (grove build)
-  #:use-module (grove string)
+  #:use-module (grove string-fun)
   #:use-module ((forester composition) #:prefix composition:)
   #:use-module (forester render artifact)
   #:use-module (forester site)

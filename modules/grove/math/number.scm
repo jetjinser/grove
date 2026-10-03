@@ -2,7 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math number)
-  #:use-module (grove string)
+  #:use-module (grove string-fun)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-13)
   #:export (math-natural-value math-number-value math-number->term))

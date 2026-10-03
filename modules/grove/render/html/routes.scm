@@ -3,7 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove render html routes)
-  #:use-module (grove string)
+  #:use-module (grove string-fun)
   #:use-module (grove output)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)

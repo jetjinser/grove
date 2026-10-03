@@ -9,25 +9,10 @@
   #:use-module (srfi srfi-26) ; cut(e)
   #:use-module (ice-9 match)
   #:use-module (ice-9 rdelim)
-  #:use-module (ice-9 textual-ports)
   #:use-module (ice-9 string-fun)
   #:use-module (ice-9 optargs)
   #:use-module (grove ir)
-  #:use-module (grove string))
-
-(define-syntax include-text
-  (lambda (stx)
-    (syntax-case stx ()
-      [(_ filename)
-       (let* ([path   (syntax->datum #'filename)]
-              [source (search-path %load-path path)])
-         (unless source
-           (syntax-violation 'include-text "text file not found in load path"
-                             stx #'filename))
-         (datum->syntax stx
-           `(quote ,(call-with-include-port
-                      (datum->syntax #'filename (canonicalize-path source))
-                      get-string-all))))])))
+  #:use-module (grove string-fun))
 
 (define-public (title . body)
   (make-content-element 'title body #:flow-kind 'block))

@@ -3,7 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove output)
-  #:use-module (grove string)
+  #:use-module (grove string-fun)
   #:use-module (ice-9 ftw)
   #:use-module (ice-9 binary-ports)
   #:use-module (ice-9 textual-ports)
