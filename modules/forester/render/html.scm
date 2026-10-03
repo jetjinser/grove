@@ -401,28 +401,17 @@
   (let* ((site (site forest))
          (index-sources (source-paths forest))
          (index-path (html-index-path routes))
-         (old-index (find-artifact-by-path old-artifacts index-path))
-         (index-current
-           (make-artifact index-path "" index-sources))
          (index-artifact
-           (make-artifact index-path
-                          (if (artifact-reusable? index-current old-index changed)
-                              (artifact-content old-index)
-                              (index-content forest routes))
-                          index-sources))
+           (reuse-artifact index-path index-sources old-artifacts changed
+             (lambda () (index-content forest routes))))
          (page-artifacts
            (map (lambda (page)
                   (let* ((path (html-page-path routes (site-page-id page)))
-                         (sources (page-source-paths forest page))
-                         (old (find-artifact-by-path old-artifacts path))
-                         (current (make-artifact path "" sources)))
-                    (if (artifact-reusable? current old changed)
-                        old
-                        (make-artifact
-                          path
-                          (page-html forest page style routes mathjax-src
-                                     backmatter labels reference-taxon-id)
-                          sources))))
+                         (sources (page-source-paths forest page)))
+                    (reuse-artifact path sources old-artifacts changed
+                      (lambda ()
+                        (page-html forest page style routes mathjax-src
+                                   backmatter labels reference-taxon-id)))))
                 (pages forest))))
     (append (html-style-artifacts style)
             (cons index-artifact page-artifacts))))

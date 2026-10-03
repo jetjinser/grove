@@ -277,29 +277,21 @@
   (let* ((site (site forest))
          (index-path (output-path prefix (text-index-path routes)))
          (index-sources (source-paths forest))
-         (old-index (find-artifact-by-path old-artifacts index-path))
-         (index-current (make-artifact index-path "" index-sources))
          (index-artifact
-           (make-artifact index-path
-                          (if (artifact-reusable? index-current old-index changed)
-                              (artifact-content old-index)
-                              (index->text forest routes))
-                          index-sources))
+           (reuse-artifact index-path index-sources old-artifacts changed
+             (lambda () (index->text forest routes))))
          (page-artifacts
            (map (lambda (page)
                   (let* ((path (output-path
                                  prefix
                                  (text-page-path routes
                                                  (site-page-id page))))
-                         (sources (page-source-paths forest page))
-                         (old (find-artifact-by-path old-artifacts path))
-                         (current (make-artifact path "" sources)))
-                    (if (artifact-reusable? current old changed)
-                        old
-                        (make-artifact
-                          path (page->text forest page routes backmatter
-                                           backmatter-labels
-                                           reference-taxon-id) sources))))
+                         (sources (page-source-paths forest page)))
+                    (reuse-artifact path sources old-artifacts changed
+                      (lambda ()
+                        (page->text forest page routes backmatter
+                                    backmatter-labels
+                                    reference-taxon-id)))))
                 (pages forest))))
     (cons index-artifact page-artifacts)))
 
