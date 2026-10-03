@@ -22,7 +22,7 @@
                              stx #'filename))
          (datum->syntax stx
            `(quote ,(call-with-include-port
-                      (datum->syntax #'filename source)
+                      (datum->syntax #'filename (canonicalize-path source))
                       get-string-all))))))))
 
 (define lipsum-source
