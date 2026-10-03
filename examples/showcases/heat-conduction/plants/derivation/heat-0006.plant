@@ -13,10 +13,16 @@
 
 @paragraph{In Cartesian coordinates, @tex-math{\nabla^2u=u_{xx}+u_{yy}+u_{zz}} in three dimensions, or the corresponding sum over the coordinates of the domain. The source @tex-math{f(x,y,z,t)} is a heat source measured in temperature change per time, not a wave source.}
 
-@heading{Dimensional check}
-@paragraph{Conductivity has units @tex-math{\mathrm{W\,m^{-1}K^{-1}}}; mass density is @tex-math{\mathrm{kg\,m^{-3}}}; and specific heat is @tex-math{\mathrm{J\,kg^{-1}K^{-1}}}. Therefore @tex-math{k/(\rho_m c)} has units @tex-math{\mathrm{m^2s^{-1}}}. Since a second spatial derivative contributes inverse length squared, @tex-math{\alpha\nabla^2u} has units temperature per time, matching @tex-math{u_t}.}
+@subtree[#:id "heat-0006-dimensional-check"]{
+  @title{Dimensional check}
+  @paragraph{Conductivity has units @tex-math{\mathrm{W\,m^{-1}K^{-1}}}; mass density is @tex-math{\mathrm{kg\,m^{-3}}}; and specific heat is @tex-math{\mathrm{J\,kg^{-1}K^{-1}}}. Therefore @tex-math{k/(\rho_m c)} has units @tex-math{\mathrm{m^2s^{-1}}}. Since a second spatial derivative contributes inverse length squared, @tex-math{\alpha\nabla^2u} has units temperature per time, matching @tex-math{u_t}.}
 
-@heading{When properties vary}
-@paragraph{If conductivity varies with position, conservation gives @tex-math{\rho_m c u_t=\nabla\cdot(k\nabla u)+H}; one cannot in general pull @tex-math{k} outside the divergence. Anisotropic materials require a conductivity tensor. Temperature-dependent heat capacity, moving media, or phase changes need additional modeling. These are natural extensions once the constant-property equation is understood.}
+}
 
-@paragraph{The path began with @link["heat-0002"]{a flux law} and @link["heat-0003"]{a local energy balance}, then used boundary data and source terms. The overview is at @link["heat-0001"]{the site overview}.}
+@subtree[#:id "heat-0006-when-properties-vary"]{
+  @title{When properties vary}
+  @paragraph{If conductivity varies with position, conservation gives @tex-math{\rho_m c u_t=\nabla\cdot(k\nabla u)+H}; one cannot in general pull @tex-math{k} outside the divergence. Anisotropic materials require a conductivity tensor. Temperature-dependent heat capacity, moving media, or phase changes need additional modeling. These are natural extensions once the constant-property equation is understood.}
+
+  @paragraph{The path began with @link["heat-0002"]{a flux law} and @link["heat-0003"]{a local energy balance}, then used boundary data and source terms. The overview is at @link["heat-0001"]{the site overview}.}
+
+}

@@ -110,7 +110,7 @@
        (text (content->text document)))
   (test-equal "HTML renders common document structures semantically"
     '(article
-       (h2 "Details")
+       (p "Details")
        (blockquote "A short quote.")
        (ul (li "First") (li "Second"))
        (p "Run " (code "x + 1") ".")
@@ -118,7 +118,7 @@
     (content->sxml document))
   (test-equal "plain text keeps structure, bullets, and code readable"
     (string-append
-      "Details\n=======\n"
+      "Details\n"
       "> A short quote.\n"
       "- First\n- Second\n"
       "Run `x + 1`.\n"

@@ -3,4 +3,4 @@
 
 @(define-module (heat-notes commands)
   #:use-module (forester commands)
-  #:re-export (link title summary published updated))
+  #:re-export (link title subtree summary published updated))

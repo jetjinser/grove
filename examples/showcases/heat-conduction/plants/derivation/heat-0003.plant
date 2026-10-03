@@ -19,7 +19,10 @@
 
 @paragraph{For constant properties, define thermal diffusivity @tex-math{\alpha=k/(\rho_m c)}. Then @tex-math{u_t=\alpha u_{xx}}. Its units are area per time (@tex-math{\mathrm{m^2/s}}); some derivations instead write @tex-math{a^2=\alpha}, but @tex-math{a} itself is not the diffusivity.}
 
-@heading{What the limit assumes}
-@paragraph{The slice is small compared with the scale over which temperature varies, but large enough to have a meaningful local temperature. The continuum model also assumes local thermal equilibrium, no bulk motion, and no phase change. Material constants are treated as uniform and independent of temperature. Relaxing these assumptions changes the balance or the constitutive law.}
+@subtree[#:id "heat-0003-what-the-limit-assumes"]{
+  @title{What the limit assumes}
+  @paragraph{The slice is small compared with the scale over which temperature varies, but large enough to have a meaningful local temperature. The continuum model also assumes local thermal equilibrium, no bulk motion, and no phase change. Material constants are treated as uniform and independent of temperature. Relaxing these assumptions changes the balance or the constitutive law.}
 
-@paragraph{The equation alone does not fix a unique temperature field. @link["heat-0004"]{Boundary and initial data} complete a particular problem. A volume source adds another term, as shown in @link["heat-0005"]{the source note}.}
+  @paragraph{The equation alone does not fix a unique temperature field. @link["heat-0004"]{Boundary and initial data} complete a particular problem. A volume source adds another term, as shown in @link["heat-0005"]{the source note}.}
+
+}

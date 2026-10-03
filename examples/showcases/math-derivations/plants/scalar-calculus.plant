@@ -24,8 +24,11 @@
 @search-derive["differentiate(x,x)*cos(x)" #:max-depth 1]{differentiate(sin(x),x)}
 }
 
-@heading{Missing premises and invalid domains}
-@differentiate[x #:assumptions (list x) #:on-error 'show]{log(x)}
-@differentiate[x #:assumptions (list x) #:on-error 'show]{1/x}
-@differentiate[x #:assumptions (list x f) #:on-error 'show]{@φ:call[f]{x}}
-@differentiate[x #:assumptions (list x) #:on-error 'show]{log(-1)}
+@subtree[#:id "scalar-calculus-missing-premises-and-invalid-domains"]{
+  @title{Missing premises and invalid domains}
+  @differentiate[x #:assumptions (list x) #:on-error 'show]{log(x)}
+  @differentiate[x #:assumptions (list x) #:on-error 'show]{1/x}
+  @differentiate[x #:assumptions (list x f) #:on-error 'show]{@φ:call[f]{x}}
+  @differentiate[x #:assumptions (list x) #:on-error 'show]{log(-1)}
+
+}

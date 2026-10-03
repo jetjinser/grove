@@ -9,35 +9,49 @@
 
 @paragraph{Grove's ordinary derivation verifier replays registered rules. The checks below use a separate exact rational-polynomial normalizer. Its supported scope is intentionally narrower: scalar polynomials, with division only by nonzero rational constants.}
 
-@heading{Checking general scalar laws}
-@paragraph{The checker reads the existing rewrite schema, including its zero-value guard, rather than maintaining a second law annotation. It replaces metavariables with independent indeterminates and compares exact normal forms. A passing result establishes the equation for scalar-polynomial substitutions.}
+@subtree[#:id "semantic-checking-checking-general-scalar-laws"]{
+  @title{Checking general scalar laws}
+  @paragraph{The checker reads the existing rewrite schema, including its zero-value guard, rather than maintaining a second law annotation. It replaces metavariables with independent indeterminates and compares exact normal forms. A passing result establishes the equation for scalar-polynomial substitutions.}
 
-@(map (lambda (rule)
-        (φ:polynomial-check->content (φ:check-polynomial-rule rule)))
-      '(subtract-zero add-zero zero-add subtract-right-zero double-negation
-        multiply-one one-multiply multiply-zero zero-multiply power-one power-zero
-        add-commutative add-associative multiply-commutative multiply-associative))
+  @(map (lambda (rule)
+          (φ:polynomial-check->content (φ:check-polynomial-rule rule)))
+        '(subtract-zero add-zero zero-add subtract-right-zero double-negation
+          multiply-one one-multiply multiply-zero zero-multiply power-one power-zero
+          add-commutative add-associative multiply-commutative multiply-associative))
 
-@heading{Checking a recorded step}
-@paragraph{First the normal rewrite checker confirms that the handwritten line uses a registered rule. The semantic checker reads the rule's existing schema, checks the exact replacement at the recorded path, and compares whole-expression denotations using its own polynomial semantics. It reuses Grove's type inference only to establish that the supplied assumptions make the terms scalar.}
+}
 
-@(let* ((replay
-          (φ:check-chain '("x+0" "x")
-            #:assumptions '("scalar(x)") #:steps '(add-zero)))
-        (semantic
-          (φ:check-polynomial-derivation
-            (math-verification-derivation replay))))
-   (φ:polynomial-check->content semantic))
+@subtree[#:id "semantic-checking-checking-a-recorded-step"]{
+  @title{Checking a recorded step}
+  @paragraph{First the normal rewrite checker confirms that the handwritten line uses a registered rule. The semantic checker reads the rule's existing schema, checks the exact replacement at the recorded path, and compares whole-expression denotations using its own polynomial semantics. It reuses Grove's type inference only to establish that the supplied assumptions make the terms scalar.}
 
-@heading{Checking a derivative certificate}
+  @(let* ((replay
+            (φ:check-chain '("x+0" "x")
+              #:assumptions '("scalar(x)") #:steps '(add-zero)))
+          (semantic
+            (φ:check-polynomial-derivation
+              (math-verification-derivation replay))))
+     (φ:polynomial-check->content semantic))
+
+}
+
 @(define derivative
    (φ:differentiate "x^3+2*x" "x" #:assumptions '("coordinate(x)")))
-@(math-completed-report->content derivative)
-@paragraph{The same derivation record used by rewrite passes retains each rule, path, and pair of terms. The ordinary verifier replays those steps; the independent checker computes the exact polynomial derivative and compares the final term. The finite relation/schema tests exercise both variables and compound polynomial substitutions. This checks this certificate and tested instances, not the differentiation program for all inputs.}
-@(φ:polynomial-check->content
-   (φ:check-polynomial-derivation (math-report-derivation derivative)))
 
-@heading{Unsupported claims stay visible}
-@(φ:polynomial-check->content
-   (φ:check-polynomial-derivative "sin(x)" "x" "cos(x)"))
-@paragraph{An unsupported result is not accepted as a proof. Function differentiation, vector calculus, and expression-valued quotient domains remain outside this checker.}
+@subtree[#:id "semantic-checking-checking-a-derivative-certificate"]{
+  @title{Checking a derivative certificate}
+
+  @(math-completed-report->content derivative)
+  @paragraph{The same derivation record used by rewrite passes retains each rule, path, and pair of terms. The ordinary verifier replays those steps; the independent checker computes the exact polynomial derivative and compares the final term. The finite relation/schema tests exercise both variables and compound polynomial substitutions. This checks this certificate and tested instances, not the differentiation program for all inputs.}
+  @(φ:polynomial-check->content
+     (φ:check-polynomial-derivation (math-report-derivation derivative)))
+
+}
+
+@subtree[#:id "semantic-checking-unsupported-claims-stay-visible"]{
+  @title{Unsupported claims stay visible}
+  @(φ:polynomial-check->content
+     (φ:check-polynomial-derivative "sin(x)" "x" "cos(x)"))
+  @paragraph{An unsupported result is not accepted as a proof. Function differentiation, vector calculus, and expression-valued quotient domains remain outside this checker.}
+
+}

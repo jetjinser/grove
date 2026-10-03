@@ -10,15 +10,20 @@
 
 @subtree{
   @title{Difference of squares}
-  @heading{Identity}
   @tex-display-math{a^2-b^2=(a-b)(a+b)}
-  @paragraph{For more algebra, see @link["math-0001#a-few-examples"]{the examples in the algebra note}.}
+  @paragraph{For more algebra, see @link["math-0001-a-few-examples"]{the examples in the algebra note}.}
 }
 
-@heading{First use: factorization}
-@paragraph{Apply the identity to @tex-math{x^2-9}:}
-@transclude["unstable-0"]
+@subtree[#:id "math-0003-first-use-factorization"]{
+  @title{First use: factorization}
+  @paragraph{Apply the identity to @tex-math{x^2-9}:}
+  @transclude["unstable-0"]
 
-@heading{Second use: geometric interpretation}
-@paragraph{The same relation can compare the areas of two squares:}
-@transclude["unstable-0"]
+}
+
+@subtree[#:id "math-0003-second-use-geometric-interpretation"]{
+  @title{Second use: geometric interpretation}
+  @paragraph{The same relation can compare the areas of two squares:}
+  @transclude["unstable-0"]
+
+}

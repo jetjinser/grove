@@ -9,18 +9,24 @@
 
 @paragraph{This small site follows energy as it moves through a solid. It begins with @link["heat-0002"]{Fourier's law}, applies @link["heat-0003"]{energy conservation to a thin slice}, and arrives at the heat equation. Later notes add boundary conditions, internal sources, and higher dimensions.}
 
-@heading{The route through the model}
-@itemize{
-  @item{@link["heat-0002"]{A constitutive law}: how temperature gradients drive heat flux.}
-  @item{@link["heat-0003"]{A local balance}: how a flux difference changes stored energy.}
-  @item{@link["heat-0004"]{Boundary data}: what the equation says at equilibrium.}
-  @item{@link["heat-0005"]{Internal heating}: how a source term enters, including Joule heating.}
-  @item{@link["heat-0006"]{More dimensions}: the Laplacian form and its assumptions.}
+@subtree[#:id "heat-0001-the-route-through-the-model"]{
+  @title{The route through the model}
+  @itemize{
+    @item{@link["heat-0002"]{A constitutive law}: how temperature gradients drive heat flux.}
+    @item{@link["heat-0003"]{A local balance}: how a flux difference changes stored energy.}
+    @item{@link["heat-0004"]{Boundary data}: what the equation says at equilibrium.}
+    @item{@link["heat-0005"]{Internal heating}: how a source term enters, including Joule heating.}
+    @item{@link["heat-0006"]{More dimensions}: the Laplacian form and its assumptions.}
+  }
+
 }
 
-@heading{Notation}
-@paragraph{Temperature is @tex-math{u(x,t)}. The material has constant mass density @tex-math{\rho_m}, specific heat @tex-math{c}, and thermal conductivity @tex-math{k}. The thermal diffusivity is @tex-math{\alpha=k/(\rho_m c)}. Subscripts denote partial derivatives.}
+@subtree[#:id "heat-0001-notation"]{
+  @title{Notation}
+  @paragraph{Temperature is @tex-math{u(x,t)}. The material has constant mass density @tex-math{\rho_m}, specific heat @tex-math{c}, and thermal conductivity @tex-math{k}. The thermal diffusivity is @tex-math{\alpha=k/(\rho_m c)}. Subscripts denote partial derivatives.}
 
-@tex-display-math{\frac{\partial u}{\partial t}=\alpha\frac{\partial^2u}{\partial x^2}}
+  @tex-display-math{\frac{\partial u}{\partial t}=\alpha\frac{\partial^2u}{\partial x^2}}
 
-@paragraph{The notes are an original exposition of the standard derivation, with equations checked independently. They were prompted by 顾樵《数学物理方法》（科学出版社，2012），第 5.2 节，ISBN 978-7-03-033064-2. The book excerpt itself is not reproduced here; no open license for it was identified.}
+  @paragraph{The notes are an original exposition of the standard derivation, with equations checked independently. They were prompted by 顾樵《数学物理方法》（科学出版社，2012），第 5.2 节，ISBN 978-7-03-033064-2. The book excerpt itself is not reproduced here; no open license for it was identified.}
+
+}
