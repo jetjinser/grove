@@ -68,7 +68,27 @@
 ;; This is private storage, not another public content representation. Only
 ;; data-only values are accepted: queries with closures must be evaluated anew.
 (define (pack value)
-  (let ((active (make-hash-table)))
+  (let ((active (make-hash-table))
+        (data-active (make-hash-table))
+        (data-known (make-hash-table)))
+    (define (atomic-datum? value)
+      (or (null? value) (boolean? value) (string? value) (symbol? value)
+          (number? value) (char? value) (keyword? value)))
+    (define (plain-data? value)
+      (cond
+        ((atomic-datum? value) #t)
+        ((pair? value)
+         (when (hashq-ref data-active value) (throw 'uncacheable-content))
+         (let ((known (hashq-get-handle data-known value)))
+           (if known (cdr known)
+               (begin
+                 (hashq-set! data-active value #t)
+                 (let ((plain? (and (plain-data? (car value))
+                                    (plain-data? (cdr value)))))
+                   (hashq-remove! data-active value)
+                   (hashq-set! data-known value plain?)
+                   plain?)))))
+        (else #f)))
     (define (visit value)
       (when (hashq-ref active value) (throw 'uncacheable-content))
       (hashq-set! active value #t)
@@ -99,9 +119,12 @@
         ((html-attributes? value)
          (list 'attributes (visit (html-attributes-assoc value))))
         ((html-tag? value) (list 'tag (html-tag-name value)))
-        ((pair? value) (list 'pair (visit (car value)) (visit (cdr value))))
-        ((or (null? value) (boolean? value) (string? value) (symbol? value)
-             (number? value) (char? value) (keyword? value))
+        ;; Preserve ordinary data as one datum. Only pairs containing IR records
+        ;; need structural encoding; properties and source locations do not.
+        ((pair? value)
+         (if (plain-data? value) (list 'datum value)
+             (list 'pair (visit (car value)) (visit (cdr value)))))
+        ((atomic-datum? value)
          (list 'datum value))
         (else (throw 'uncacheable-content))))
 
