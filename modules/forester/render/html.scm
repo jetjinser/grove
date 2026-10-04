@@ -11,6 +11,7 @@
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove render html)
+  #:use-module (grove highlight)
   #:use-module (grove render html routes)
   #:use-module (grove site)
   #:use-module (forester backmatter)
@@ -57,7 +58,8 @@
                                         (content-element-property element 'target))))
                            ,@children))))))
 
-(define* (subtree-content-sxml forest routes page #:optional (anchor-prefix "") (depth 1))
+(define* (subtree-content-sxml forest routes page
+                              #:optional (anchor-prefix "") (depth 1) (highlighters '()))
   (let ((position 0))
     (define (render-tree element _render)
       (set! position (1+ position))
@@ -68,13 +70,14 @@
           (if (eq? (content-element-kind element) 'subtree)
               "inline-subtree" "transclusion")
           id (site-page-title target) (html-page-url routes id)
-          (subtree-content-sxml forest routes target (string-append anchor "--") (1+ depth))
+          (subtree-content-sxml forest routes target (string-append anchor "--") (1+ depth) highlighters)
           #:anchor anchor #:depth (1+ depth)
           #:open? (if (assq 'open? (content-element-properties element))
                       (content-element-property element 'open?) #t))))
     (content->sxml
       (site-page-document page)
       #:id-prefix anchor-prefix
+      #:highlighters highlighters
       #:handlers (page-content-handlers forest routes page anchor-prefix)
       #:lazy-handlers (map (lambda (kind) (cons kind render-tree))
                           '(subtree transclude query-transclude)))))
@@ -302,9 +305,9 @@
 
 (define* (page-html forest page style routes mathjax-src backmatter labels
                     reference-taxon-id
-                    #:optional (inline-stylesheets? #f))
+                    #:optional (inline-stylesheets? #f) (highlighters '()))
   (let* ((site (site forest))
-         (body (subtree-content-sxml forest routes page))
+         (body (subtree-content-sxml forest routes page "" 1 highlighters))
          (article (append body
                           (backmatter-sxml forest page routes backmatter
                                            labels reference-taxon-id))))
@@ -323,7 +326,7 @@
 
 (define (render-html-changed forest style routes mathjax-src backmatter labels
                              reference-taxon-id
-                                    changed old-artifacts)
+                             changed old-artifacts highlighters)
   (check-html-input forest style routes mathjax-src)
   (let* ((site (site forest))
          (index-sources (source-paths forest))
@@ -338,7 +341,7 @@
                     (reuse-artifact path sources old-artifacts changed
                       (lambda ()
                         (page-html forest page style routes mathjax-src
-                                   backmatter labels reference-taxon-id)))))
+                                   backmatter labels reference-taxon-id #f highlighters)))))
                 (pages forest))))
     (append (html-style-artifacts style)
             (cons index-artifact page-artifacts))))
@@ -359,6 +362,7 @@
 
 (define* (site->html forest #:key
                        (style default-html-style)
+                       (highlighters '())
                        routes
                        (mathjax-src default-mathjax-src)
                        (backmatter default-backmatter-sections)
@@ -377,11 +381,12 @@
              (cons (site-page-id page)
                    (page-html forest page style routes mathjax-src
                               backmatter backmatter-labels
-                              reference-taxon-id #t)))
+                              reference-taxon-id #t highlighters)))
            (pages forest)))))
 
 (define* (render-html forest #:key
                              (style default-html-style)
+                             (highlighters '())
                              routes
                              (mathjax-src default-mathjax-src)
                              (backmatter default-backmatter-sections)
@@ -401,12 +406,13 @@
              (make-artifact
                (html-page-path routes (site-page-id page))
                (page-html forest page style routes mathjax-src backmatter
-                          backmatter-labels reference-taxon-id)
+                          backmatter-labels reference-taxon-id #f highlighters)
                (page-source-paths forest page)))
            (pages forest)))))
 
 (define* (make-html-renderer #:key
                                       (style default-html-style)
+                                      (highlighters '())
                                       routes
                                       (mathjax-src default-mathjax-src)
                                       (backmatter default-backmatter-sections)
@@ -419,6 +425,7 @@
   (let ((render (lambda (forest)
                   (render-html forest
                                       #:style style
+                                      #:highlighters highlighters
                                       #:routes routes
                                       #:mathjax-src mathjax-src
                                       #:backmatter backmatter
@@ -433,16 +440,24 @@
                   (html-index-url routes)
                   (html-page-url routes (html-home-page routes))
                   mathjax-src backmatter backmatter-labels reference-taxon-id
+                  (map (lambda (entry)
+                         (list (car entry) (highlighter-configuration (cdr entry))))
+                       highlighters)
                   (map (lambda (artifact)
                          (list (artifact-path artifact)
                                (content-fingerprint (artifact-content artifact))))
                        (html-style-artifacts style))))
           #:inputs (lambda ()
-                     (append-map (lambda (artifact) (or (artifact-sources artifact) '()))
-                                 (html-style-artifacts style)))
+                     (append
+                       (append-map (lambda (entry) (highlighter-inputs (cdr entry))) highlighters)
+                       (append-map (lambda (artifact) (or (artifact-sources artifact) '()))
+                                   (html-style-artifacts style))))
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
-            (render-html-changed forest style routes mathjax-src backmatter
-                                        backmatter-labels
-                                        reference-taxon-id
-                                        changed old-artifacts)))))
+            (if (any (lambda (entry)
+                       (any (lambda (path) (member path changed string=?))
+                            (highlighter-inputs (cdr entry)))) highlighters)
+                (render forest)
+                (render-html-changed forest style routes mathjax-src backmatter
+                                     backmatter-labels reference-taxon-id
+                                     changed old-artifacts highlighters))))))

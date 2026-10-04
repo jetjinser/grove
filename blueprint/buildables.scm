@@ -91,6 +91,7 @@
     "grove/render/static.scm"
     "grove/render/text.scm"
     "grove/style/html.scm"
+    "grove/style/highlight.scm"
     "language/scribble/command.scm"
     "language/scribble/flow.scm"
     "language/scribble/commands.scm"
@@ -116,7 +117,7 @@
     "forester/relations.scm"))
 
 (define grove-modules
-  (map
+  (append (map
     (λ (source)
       (guile-module
         (inputs source)
@@ -124,7 +125,11 @@
         (load-path #%~(list #%?srcdir))
         (optimizations
           '(#:seal-private-binddings? #t))))
-    +grove-sources+))
+    +grove-sources+)
+    (list (template-file
+            (inputs "grove/style/highlight.css")
+            (outputs "grove/style/highlight.css")
+            (install-location #%~(string-append #%?guile-module-dir "/grove/style"))))))
 
 (define forester-modules
   (append

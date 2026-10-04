@@ -74,9 +74,14 @@
   (set! body (command-body body))
   (make-content-element 'code body #:style style))
 
-(define*-public (code-block #:key (style #f) . body)
+(define*-public (code-block #:key (style #f) (language #f) . body)
   (set! body (command-body body))
-  (make-content-element 'code-block body #:style style #:flow-kind 'block))
+  (unless (or (not language) (symbol? language))
+    (error "code-block language must be a symbol or #f" language))
+  (make-content-element 'code-block
+    (list (make-content-text (content-verbatim-string body)))
+    #:properties (if language `((language . ,language)) '())
+    #:style style #:flow-kind 'block))
 
 (define*-public (math #:key (style #f) . source)
   (set! source (command-body source))

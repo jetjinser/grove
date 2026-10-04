@@ -200,6 +200,33 @@ expression reading, Semantic (`◆:`) for computational values, and Notation
 (`◇:`) for display structure. Read the [math guide](math.md) for examples
 and supported operations.
 
+### Code highlighting
+
+Code blocks accept a language symbol: `@code-block[#:language 'scheme]{(define x 2)}`.
+Configure the HTML renderer with `#:highlighters`, an association list of
+language symbols and values created by `(grove highlight)`:
+
+```scheme
+(define scheme-highlight
+  (make-highlighter "/absolute/path/scheme.so" "tree_sitter_scheme"
+    "(symbol) @variable (number) @number"))
+(make-html-renderer #:routes routes
+  #:highlighters (list (cons 'scheme scheme-highlight)))
+```
+
+Import `(grove highlight)` alongside `(forester render html)`. The same option
+is available on `render-html`, `site->html`, and Grove's `content->sxml`.
+Without a configured highlighter, a named language produces a warning and plain
+code. Blocks without a language remain plain code without a warning.
+
+Forester's default style includes `highlight.css`. Custom styles can compose
+`default-highlight-style` from `(grove style highlight)` through
+`compose-html-styles`. Later stylesheets can override `.syntax-keyword` and
+other `.syntax-*` classes, or set variables such as `--syntax-keyword` on
+`pre`. Dotted capture names become hyphenated classes, for example
+`function.builtin` becomes `syntax-function-builtin`. Text output preserves the
+source without highlight markup. Grammar packaging is not yet provided.
+
 ## Document inputs and effects
 
 Ordinary documents need no cache configuration. Imported Scheme modules are

@@ -6,6 +6,7 @@
   #:use-module (grove output)
   #:use-module (grove string-fun)
   #:use-module (grove style html)
+  #:use-module (grove style highlight)
   #:export (default-html-style))
 
 (define forester-stylesheet
@@ -16,4 +17,6 @@
           "modules/forester/style/default.css")))
 
 (define default-html-style
-  (make-html-style #:stylesheets (list forester-stylesheet)))
+  (compose-html-styles
+    (make-html-style #:stylesheets (list forester-stylesheet))
+    default-highlight-style))

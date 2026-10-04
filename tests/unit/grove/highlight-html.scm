@@ -1,0 +1,107 @@
+;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+;;; SPDX-License-Identifier: GPL-3.0-or-later
+
+(use-modules (grove highlight) (grove ir) (grove build) (grove output)
+             (grove render html) (grove render text) (grove render html routes)
+             (grove style) (grove style html) (grove style highlight)
+             (forester render html) (forester site) (grove site)
+             ((language scribble commands) #:prefix command:)
+             (tests unit forester fixtures)
+             (srfi srfi-1) (srfi srfi-13) (srfi srfi-64))
+
+(define grammar
+  (or (getenv "GROVE_TEST_SCHEME_GRAMMAR")
+      (string-append (getenv "HOME")
+        "/.local/share/nvim/lazy/nvim-treesitter/parser/scheme.so")))
+(define query "(symbol) @variable (string) @string
+               ((symbol) @keyword (#eq? @keyword \"define\"))")
+(define highlights `((scheme . ,(make-highlighter grammar "tree_sitter_scheme" query))))
+(define (html block) (sxml->html (content->sxml block #:highlighters highlights)))
+
+(test-begin "HTML code highlighting")
+(define document (evaluate-document "@code-block[#:language 'scheme]{(define 平方 \"<&>\")}"))
+(define block (car (content-document-children document)))
+(test-equal "at-exp records the language without interpreting source"
+  'scheme (content-element-property block 'language))
+(test-equal "source remains plain text in Content IR"
+  "(define 平方 \"<&>\")" (content-verbatim-string (content-element-children block)))
+(test-assert "HTML emits language and syntax classes with escaped text"
+  (let ((output (html block)))
+    (and (string-contains output "class=\"language-scheme\"")
+         (string-contains output "class=\"syntax-keyword\">define</span>")
+         (string-contains output "class=\"syntax-variable\">平方</span>")
+         (string-contains output "&lt;&amp;&gt;")
+         (not (string-contains output "<&>")))))
+(test-equal "blocks without a language remain plain code"
+  "<pre><code>&lt;&amp;&gt;</code></pre>"
+  (html (command:code-block "<&>")))
+(test-assert "unknown languages warn and retain escaped source"
+  (let* ((port (open-output-string))
+         (output (parameterize ((current-error-port port))
+                   (html (command:code-block #:language 'unknown "<&>")))))
+    (and (string-contains output "&lt;&amp;&gt;")
+         (not (string-contains output "<span"))
+         (string-contains (get-output-string port) "unknown"))))
+(test-equal "text rendering preserves source without highlight markup"
+  "```\n(define 平方 \"<&>\")\n```\n" (content->text block))
+(test-assert "existing style attributes apply to the outer pre"
+  (string-contains
+    (html (command:code-block #:language 'scheme
+            #:style (make-content-style 'example
+                      (list (make-html-attributes '((id . "sample"))))) "x"))
+    "<pre class=\"example\" id=\"sample\">"))
+(test-error "invalid language options fail at the call site" #t
+  (command:code-block #:language "scheme" "x"))
+(test-error "invalid renderer mappings fail explicitly" #t
+  (content->sxml block #:highlighters '((scheme . invalid))))
+(test-assert "incomplete code still renders"
+  (string-contains (html (command:code-block #:language 'scheme "(define x"))
+                   "syntax-keyword"))
+
+(define forest
+  (make-forest
+    (make-site
+      (list (make-site-page "home" "Home" (evaluate-document "@transclude[\"code\"]"))
+            (make-site-page "code" "Code" document)))))
+(define routes (make-html-routes #:home-page "home"))
+(define renderer (make-html-renderer #:routes routes #:highlighters highlights))
+(define artifacts ((cached-renderer-procedure renderer) forest))
+(test-assert "standalone pages and transclusions both receive the highlighters"
+  (every (lambda (path)
+           (string-contains
+             (artifact-content (find (lambda (artifact) (string=? path (artifact-path artifact))) artifacts))
+             "syntax-keyword")) '("home.html" "code.html")))
+(test-assert "incremental rendering also retains highlighting"
+  (let ((updated ((cached-renderer-render-changed renderer) forest '() '() '())))
+    (string-contains
+      (artifact-content (find (lambda (artifact) (string=? "code.html" (artifact-path artifact))) updated))
+      "syntax-keyword")))
+(test-assert "default pages load the highlight stylesheet"
+  (string-contains
+    (artifact-content (find (lambda (artifact) (string=? "code.html" (artifact-path artifact))) artifacts))
+    "href=\"/highlight.css\""))
+(test-assert "grammar libraries are renderer input dependencies"
+  (member (canonicalize-path grammar) ((cached-renderer-inputs renderer))))
+(test-assert "changed grammars prevent reuse of old highlighted pages"
+  (let* ((old (map (lambda (artifact)
+                    (if (string=? "code.html" (artifact-path artifact))
+                        (make-artifact "code.html" "stale" (artifact-sources artifact))
+                        artifact)) artifacts))
+         (updated ((cached-renderer-render-changed renderer)
+                   forest (list (canonicalize-path grammar)) '() old)))
+    (string-contains
+      (artifact-content (find (lambda (artifact) (string=? "code.html" (artifact-path artifact))) updated))
+      "syntax-keyword")))
+(test-assert "query changes participate in renderer cache configuration"
+  (not (equal? ((cached-renderer-configuration renderer) forest)
+               ((cached-renderer-configuration
+                  (make-html-renderer #:routes routes
+                    #:highlighters `((scheme . ,(make-highlighter grammar "tree_sitter_scheme" "(symbol) @name")))))
+                forest))))
+(test-assert "consumers can compose a stylesheet after the default palette"
+  (equal? '("highlight.css" "custom.css")
+    (map artifact-path
+      (html-style-stylesheets
+        (compose-html-styles default-highlight-style
+          (make-html-style #:stylesheets (list (make-artifact "custom.css" "pre { --syntax-keyword: red; }"))))))))
+(test-end "HTML code highlighting")

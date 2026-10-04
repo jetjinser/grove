@@ -216,7 +216,7 @@
                #:routes (make-html-routes #:home-page "algebra")
                #:style (compose-html-styles default-html-style
                          (make-html-style #:stylesheets (list custom)))))
-           (stylesheet-paths (map artifact-path (take styled-artifacts 2)))
+           (stylesheet-paths (map artifact-path (take styled-artifacts 3)))
            (styled-index
              (artifact-content
                (find (lambda (artifact)
@@ -229,7 +229,7 @@
                      styled-artifacts)))
            (base-position (string-contains styled-algebra "forester.css"))
            (custom-position (string-contains styled-algebra "custom.css")))
-      (and (equal? stylesheet-paths '("forester.css" "custom.css"))
+      (and (equal? stylesheet-paths '("forester.css" "highlight.css" "custom.css"))
            base-position
            custom-position
            (< base-position custom-position))))

@@ -6,13 +6,22 @@
   #:use-module (grove ir)
   #:use-module (grove style)
   #:use-module (grove style html)
+  #:use-module (grove highlight)
+  #:use-module (ice-9 format)
+  #:use-module (ice-9 string-fun)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:use-module (sxml simple)
   #:export (content->sxml
             sxml->html))
 
-(define* (content->sxml content #:key (handlers '()) (lazy-handlers '()) (id-prefix ""))
+(define* (content->sxml content #:key (handlers '()) (lazy-handlers '()) (id-prefix "")
+                        (highlighters '()))
+  (unless (and (list? highlighters)
+               (every (lambda (entry)
+                        (and (pair? entry) (symbol? (car entry))
+                             (highlighter? (cdr entry)))) highlighters))
+    (error "HTML highlighters must be language/highlighter pairs" highlighters))
   (define math-variant (make-parameter #f))
   (define (render content)
     (cond
@@ -108,6 +117,25 @@
                                        merged))))
              ,@children))))))
 
+  (define (render-code-block element)
+    (let* ((language (content-element-property element 'language))
+           (highlighter (and language (assq-ref highlighters language)))
+           (source (content-verbatim-string (content-element-children element))))
+      (when (and language (not highlighter))
+        (format (current-error-port)
+          "WARNING: no code highlighter configured for ~a; displaying plain text~%" language))
+      `(pre (code
+              ,@(if language `((@ (class ,(string-append "language-" (symbol->string language))))) '())
+              ,@(if highlighter
+                    (map (lambda (piece)
+                           (if (car piece)
+                               `(span (@ (class ,(string-append "syntax-"
+                                                  (string-replace-substring (car piece) "." "-"))))
+                                      ,(cdr piece))
+                               (cdr piece)))
+                         (highlight-code highlighter source))
+                    (list source))))))
+
   (define (render-element element)
     (let* ((kind (content-element-kind element))
            (lazy-handler (assq-ref lazy-handlers kind))
@@ -127,7 +155,7 @@
                         ((itemize) (cons 'ul children))
                         ((item) (cons 'li children))
                         ((code) (cons 'code children))
-                        ((code-block) `(pre (code ,@children)))
+                        ((code-block) (render-code-block element))
                         ((verbatim) (cons 'pre children))
                         ((details) (cons 'details children))
                         ((summary) (cons 'summary children))

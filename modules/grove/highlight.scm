@@ -9,14 +9,17 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
-  #:export (make-highlighter highlighter? highlight-code))
+  #:export (make-highlighter highlighter? highlight-code
+            highlighter-configuration highlighter-inputs))
 
 (define-record-type <highlighter>
-  (%make-highlighter language query patterns)
+  (%make-highlighter language query patterns configuration inputs)
   highlighter?
   (language highlighter-language)
   (query highlighter-query)
-  (patterns highlighter-patterns))
+  (patterns highlighter-patterns)
+  (configuration highlighter-configuration)
+  (inputs highlighter-inputs))
 
 (define (byte-text bytes start end)
   (let ((slice (make-bytevector (- end start))))
@@ -90,7 +93,9 @@ other predicates/directives are rejected rather than silently ignored."
          (query (ts-query-new language query-source)))
     (%make-highlighter language query
       (list->vector (map (lambda (index) (compile-pattern query index))
-                        (iota (ts-query-pattern-count query)))))))
+                        (iota (ts-query-pattern-count query))))
+      (list library entry query-source)
+      (if (file-exists? library) (list (canonicalize-path library)) '()))))
 
 ;; Each span is #(start end category priority pattern). Larger priority wins;
 ;; ties prefer the later query pattern, then the narrower capture.

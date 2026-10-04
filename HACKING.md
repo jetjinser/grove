@@ -194,5 +194,4 @@ The standalone `(grove highlight)` module compiles a grammar and query with
 `make-highlighter`; reuse that value with `highlight-code`. Results are ordered
 `(category . text)` pieces, with `#f` for unstyled text. Its tests temporarily
 use the local Neovim Scheme grammar; set `GROVE_TEST_SCHEME_GRAMMAR` to an
-absolute library path elsewhere. Grammar packaging and renderer integration
-are separate steps.
+absolute library path elsewhere. Grammar packaging is a separate step.

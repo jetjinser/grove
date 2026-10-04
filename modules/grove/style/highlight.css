@@ -1,0 +1,12 @@
+/* SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+ * SPDX-License-Identifier: GPL-3.0-or-later */
+
+pre code .syntax-comment { color: var(--syntax-comment, #59665b); }
+pre code [class^=syntax-keyword],
+pre code .syntax-boolean { color: var(--syntax-keyword, #7b287d); }
+pre code [class^=syntax-string],
+pre code .syntax-character { color: var(--syntax-string, #246739); }
+pre code .syntax-number { color: var(--syntax-number, #8a4118); }
+pre code [class^=syntax-function] { color: var(--syntax-function, #245a91); }
+pre code .syntax-operator { color: var(--syntax-operator, #70451e); }
+pre code [class^=syntax-punctuation] { color: var(--syntax-punctuation, #626262); }
