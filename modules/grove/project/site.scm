@@ -22,7 +22,7 @@
                             (analyze (lambda (site) site))
                             (renderers '())
                             output-directory
-                            (cache-key #f))
+                            (cache? #t))
   (unless (procedure? read-page)
     (error "site project requires a page reader" read-page))
   (unless (procedure? analyze)
@@ -49,4 +49,4 @@
         (analyze site)))
     #:renderers renderers
     #:output-directory output-directory
-    #:cache-key cache-key))
+    #:cache? cache?))

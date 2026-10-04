@@ -273,7 +273,7 @@
                                       (backmatter default-backmatter-sections)
                                       (backmatter-labels '())
                                       (reference-taxon-id default-reference-taxon-id)
-                                      (cache-key #f))
+                                      (cache? #t))
   (validate-backmatter-sections backmatter)
   (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
   (check-reference-taxon-id reference-taxon-id)
@@ -292,19 +292,14 @@
                     (if prefix
                         (prefix-artifacts prefix artifacts)
                         artifacts)))))
-    (if cache-key
-        (make-cached-renderer
-          render
-          #:cache-key (string-append "forester-text-v5:" cache-key
-                                     ":backmatter="
-                                     (format #f "~s" backmatter)
-                                     ":labels="
-                                     (format #f "~s" backmatter-labels)
-                                     ":reference-taxon="
-                                     reference-taxon-id)
+    (make-cached-renderer render #:cache? cache?
+          #:configuration
+          (lambda (forest)
+            (list 'text prefix (site-title (site forest)) (site-description (site forest))
+                  (text-index-path routes)
+                  backmatter backmatter-labels reference-taxon-id))
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
             (render-text-changed forest prefix routes backmatter
                                  backmatter-labels reference-taxon-id
-                                 changed old-artifacts)))
-        render)))
+                                 changed old-artifacts)))))

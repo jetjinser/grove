@@ -63,26 +63,20 @@
     #:renderers
     (list (make-html-renderer
             #:style notes-style
-            #:routes notes-routes
-            #:cache-key "linked-notes-html-v2")
+            #:routes notes-routes)
           (make-text-renderer
             #:prefix "text"
-            #:routes notes-text-routes
-            #:cache-key "linked-notes-text-v2")
+            #:routes notes-text-routes)
           (make-rss-renderer
             #:site-url "https://notes.example"
-            #:routes notes-routes
-            #:cache-key "linked-notes-rss-v2")
+            #:routes notes-routes)
           (make-sitemap-renderer
             #:site-url "https://notes.example"
-            #:routes notes-routes
-            #:cache-key "linked-notes-sitemap-v2")
+            #:routes notes-routes)
           (make-graph-renderer
-            #:path "forest-graph.scm"
-            #:cache-key "linked-notes-graph-v1")
+            #:path "forest-graph.scm")
           (make-static-assets-renderer
             #:source-directory (string-append examples-directory "/static")))
-    #:output-directory output-directory
-    #:cache-key "linked-notes-project-v2"))
+    #:output-directory output-directory))
 
 notes-project

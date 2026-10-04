@@ -34,8 +34,7 @@
       (collect-directory source-directory)))))
    (make-cached-renderer
     (lambda (_model) (render-all-assets))
-   #:cache-key (format #f "static-assets-v1:~a:~a"
-                        source-directory (or prefix ""))
+    #:configuration (list 'static source-directory prefix)
     #:inputs (lambda () (collect-directory source-directory))
     #:render-changed
     (lambda (_model changed _dirty-paths old-artifacts)

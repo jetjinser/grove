@@ -68,12 +68,11 @@
     (list (make-artifact path content (source-paths forest)))))
 
 (define* (make-graph-renderer #:key (path "forest-graph.scm")
-                                      (cache-key #f))
+                                      (cache? #t))
   (unless (artifact-path? path)
     (error "Forester graph path must be a relative artifact path" path))
   (let ((render (lambda (forest) (render-graph forest #:path path))))
-    (if cache-key
-        (make-cached-renderer
-          render
-          #:cache-key (string-append "forester-graph-v1:" cache-key))
-        render)))
+    (make-cached-renderer render #:cache? cache?
+          #:configuration
+          (lambda (forest)
+            (list 'graph path (site-title (site forest)) (site-description (site forest)))))))

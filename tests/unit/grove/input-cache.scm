@@ -13,6 +13,9 @@
   #:use-module (grove output)
   #:use-module (grove render html)
   #:use-module (ice-9 ftw)
+  #:use-module (ice-9 textual-ports)
+  #:use-module (system base compile)
+  #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64))
 
 (define root (format #f "/tmp/grove-input-cache-~a" (getpid)))
@@ -27,12 +30,11 @@
   (call-with-output-file path (lambda (port) (display value port))))
 (define reader
   (make-scribble-document-reader
-    #:cacheable? (const #t)
     #:cache-dependencies (lambda () (list dependency))
     #:timings (lambda (path phase seconds)
                 (when (eq? phase 'evaluate)
                   (set! evaluations (+ evaluations 1))))))
-(define (project key)
+(define (project cache?)
   (make-project
     #:collect-sources (lambda () (list source))
     #:read-source reader
@@ -43,12 +45,12 @@
     (let ((render (lambda (document)
                     (list (make-artifact "page.html"
                             (sxml->html (content->sxml document)) (list source))))))
-      (list (make-cached-renderer render #:cache-key "renderer"
+      (list (make-cached-renderer render #:configuration 'html
               #:render-changed
               (lambda (document changed dirty old)
                 (set! partial-renders (+ partial-renders 1))
                 (render document)))))
-    #:cache-key key #:output-directory output))
+    #:cache? cache? #:output-directory output))
 (define rich-document
   (make-content-document
     (list (make-content-element 'paragraph
@@ -66,26 +68,26 @@
 (dynamic-wind
   (lambda () (mkdir root) (put source "First") (put dependency "one"))
   (lambda ()
-    (build-project (project "key") #:progress
+    (build-project (project #t) #:progress
       (lambda (stage detail)
         (when (eq? stage 'input-cache) (set! statuses (cons detail statuses)))))
-    (build-project (project "key") #:progress
+    (build-project (project #t) #:progress
       (lambda (stage detail)
         (when (eq? stage 'input-cache) (set! statuses (cons detail statuses)))))
     (test-equal "unchanged source evaluates once" 1 evaluations)
     (test-equal "whole model is analyzed even on an input hit" 2 analyses)
     (test-equal "progress reports miss then hit" '((1 . 1) (0 . 1)) statuses)
     (put source "Second")
-    (build-project (project "key"))
+    (build-project (project #t))
     (test-equal "source change invalidates its result" 2 evaluations)
     (test-equal "ordinary source changes retain incremental rendering" 1 partial-renders)
     (put dependency "two")
     (test-assert "dependency changes also invalidate renderer cache"
-      (build-report-rendered? (build-project/report (project "key"))))
+      (build-report-rendered? (build-project/report (project #t))))
     (test-equal "declared dependency change invalidates result" 3 evaluations)
     (test-equal "reader dependencies conservatively force a full render" 1 partial-renders)
-    (build-project (project "new-key"))
-    (test-equal "project key change invalidates result" 4 evaluations)
+    (build-project (project #f))
+    (test-equal "disabling project cache forces evaluation" 4 evaluations)
     (let* ((directory (string-append output "/.grove-input-cache"))
            (entry (string-append directory "/"
                     (car (scandir directory (lambda (name)
@@ -94,23 +96,23 @@
         (let ((info (stat entry)))
           (list (file-fingerprint entry) (stat:ino info) (stat:mtime info))))
       (let ((before (snapshot)))
-        (check-project (project "new-key"))
+        (check-project (project #t))
         (test-equal "check preserves the cache file without rewriting it"
           before (snapshot))))
     (test-equal "check always evaluates the source" 5 evaluations)
-    (build-project (project "new-key"))
+    (build-project (project #t))
     (test-equal "check does not replace the stored entry" 5 evaluations)
     (let* ((directory (string-append output "/.grove-input-cache"))
            (entry (string-append directory "/"
                     (car (scandir directory (lambda (name)
                                              (not (member name '("." "..")))))))))
       (put entry "malformed")
-      (build-project (project "new-key"))
+      (build-project (project #t))
       (test-equal "corrupt cache falls back to source evaluation" 6 evaluations))
     (reader source)
     (test-equal "standalone reader evaluates normally" 7 evaluations)
     (parameterize ((current-input-cache
-                    (make-input-cache-context output "codec" (list dependency))))
+                    (make-input-cache-context output #t (list dependency))))
       (cached-document source "codec" '() (lambda () rich-document) (lambda _ #t))
       (let ((decoded (cached-document source "codec" '()
                        (lambda () (error "expected a cache hit")) (lambda _ #t))))
@@ -141,7 +143,7 @@
                       (list (make-content-element 'forest-query '()
                               #:properties `((query . ,(lambda _ #t))))))))
       (parameterize ((current-input-cache
-                      (make-input-cache-context output "closure" '())))
+                      (make-input-cache-context output #t '())))
         (do ((index 0 (+ index 1))) ((= index 2))
           (cached-document source "closure" '()
             (lambda () (set! reads (+ reads 1)) document) (lambda _ #t))))
@@ -153,7 +155,7 @@
           (lambda () ((@@ (grove private input cache) pack) cycle) #f)
           (lambda _ #t))))
     (parameterize ((current-input-cache
-                    (make-input-cache-context output "changed-during-read" '())))
+                    (make-input-cache-context output #t '())))
       (let ((reads 0))
         (define (read-changing-source)
           (set! reads (+ reads 1))
@@ -162,7 +164,112 @@
         (cached-document source "unstable" '() read-changing-source (lambda _ #t))
         (cached-document source "unstable" '() read-changing-source (lambda _ #t))
         (test-equal "an input changed during evaluation is not cached" 2 reads)))
-    (prune-input-cache! (make-input-cache-context output "none" '()))
+
+    (let ((provider (string-append root "/provider.scm")))
+      (define (load-provider value)
+        (put provider
+          (format #f "(define-module (tests cache-provider) #:export (cached-value))\n(define (cached-value) ~s)\n" value))
+        (save-module-excursion (lambda () (primitive-load provider))))
+      (load-provider "one")
+      (put source "@use-modules[(tests cache-provider)]\n@(cached-value)")
+      (build-project (project #t))
+      (let ((before evaluations))
+        (build-project (project #t))
+        (test-equal "module-backed documents reuse results by default" before evaluations)
+        (load-provider "two")
+        (build-project (project #t))
+        (test-equal "imported code changes invalidate documents without declarations"
+          (+ before 1) evaluations)
+        (test-assert "module changes reach renderer outputs too"
+          (string-contains
+            (call-with-input-file (string-append output "/page.html") get-string-all)
+            "two"))))
+    (let* ((provider (string-append root "/provider.scm"))
+           (compiled (string-append root "/provider.go"))
+           (original (call-with-input-file provider get-string-all))
+           (old-source-path %load-path)
+           (old-compiled-path %load-compiled-path))
+      (dynamic-wind
+        (lambda ()
+          (set! %load-path (cons root %load-path))
+          (set! %load-compiled-path (cons root %load-compiled-path)))
+        (lambda ()
+          (build-project (project #t))
+          (let ((before evaluations))
+            (build-project (project #t))
+            (test-equal "absent compiled inputs permit reuse" before evaluations)
+            (compile-file provider #:output-file compiled)
+            (save-module-excursion (lambda () (load-compiled compiled)))
+            (build-project (project #t))
+            (test-equal "adding a preferred compiled module invalidates a cached source"
+              (+ before 1) evaluations))
+          (let ((before evaluations))
+            (put provider "(define-module (tests cache-provider) #:export (cached-value))\n(define (cached-value) \"three\")\n")
+            (compile-file provider #:output-file compiled)
+            (put provider original)
+            (save-module-excursion (lambda () (load-compiled compiled)))
+            (build-project (project #t))
+            (test-equal "compiled module changes invalidate an unchanged source"
+              (+ before 1) evaluations)
+            (test-assert "new compiled code reaches rendered output"
+              (string-contains
+                (call-with-input-file (string-append output "/page.html") get-string-all)
+                "three"))))
+        (lambda ()
+          (set! %load-path old-source-path)
+          (set! %load-compiled-path old-compiled-path))))
+    (let ((data (string-append root "/data.txt")))
+      (put data "alpha")
+      (put source (format #f
+        "@use-modules[(grove input scribble) (ice-9 textual-ports)]\n@(call-with-input-file (depend-on! ~s) get-string-all)" data))
+      (build-project (project #t))
+      (let ((before evaluations))
+        (build-project (project #t))
+        (test-equal "declared external data is reusable" before evaluations)
+        (put data "beta")
+        (let ((report (build-project/report (project #t))))
+          (test-equal "file inputs registered during evaluation invalidate the document"
+            (+ before 1) evaluations)
+          (test-assert "registered data participates in watching"
+            (member data (build-report-sources report)))
+          (test-assert "registered data updates rendered output"
+            (string-contains
+              (call-with-input-file (string-append output "/page.html") get-string-all)
+              "beta")))))
+    (put source "@use-modules[(grove input scribble)]\n@(disable-cache!)\nAlways execute")
+    (let ((before evaluations))
+      (build-project (project #t))
+      (test-assert "document opt-out also prevents renderer reuse"
+        (build-report-rendered? (build-project/report (project #t))))
+      (test-equal "document opt-out evaluates on every build" (+ before 2) evaluations))
+    (put source "@(define-module (tests cached-article-module))\nModule body")
+    (let ((before evaluations))
+      (build-project (project #t))
+      (build-project (project #t))
+      (test-equal "named module definitions are never skipped" (+ before 2) evaluations))
+    (let* ((renders 0)
+           (render (lambda (_)
+                     (set! renders (+ renders 1))
+                     (list (make-artifact "plain.txt" "constant"))))
+           (plain (make-project
+                    #:collect-sources (lambda () (list source))
+                    #:read-source (lambda (path) (call-with-input-file path get-string-all))
+                    #:renderers (list render)
+                    #:output-directory (string-append root "/plain"))))
+      (build-project plain)
+      (build-project plain)
+      (test-equal "plain project renderers cache by default without keys" 1 renders)
+      (build-project (project-with-options plain #:cache? #f))
+      (test-equal "project opt-out forces rendering" 2 renders)
+      (let ((uncached (make-project
+                       #:collect-sources (lambda () (list source))
+                       #:read-source (lambda (path) (call-with-input-file path get-string-all))
+                       #:renderers (list (make-cached-renderer render #:cache? #f))
+                       #:output-directory (string-append root "/plain"))))
+        (build-project uncached)
+        (build-project uncached)
+        (test-equal "renderer opt-out forces rendering on every build" 4 renders)))
+    (prune-input-cache! (make-input-cache-context output #t '()))
     (test-equal "entries outside the current selection are removed"
       '("." "..") (scandir (string-append output "/.grove-input-cache")))
     (test-error "input cache directory is reserved from artifacts" #t

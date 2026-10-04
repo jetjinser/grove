@@ -5,6 +5,7 @@
 (define-module (grove input scribble)
   #:use-module (grove collect)
   #:use-module (grove private input cache)
+  #:use-module (grove private input dependencies)
   #:use-module (system base language)
   #:use-module (srfi srfi-13)
   #:use-module (grove ir)
@@ -12,7 +13,8 @@
                 #:select (scribble scribble-evaluate-document))
   #:export (load-scribble-modules!
             make-scribble-module-setup
-            make-scribble-document-reader))
+            make-scribble-document-reader)
+  #:re-export (depend-on! disable-cache!))
 
 (define (scribble-source-file? filename)
   (string-suffix? ".plant" filename))
@@ -46,31 +48,34 @@ The hook returns the loaded paths so Grove can track them as build inputs."
 (define* (make-scribble-document-reader
            #:optional (environment #f)
            #:key (timings #f)
-           (cacheable? (lambda (path) #f))
+           (cache? (lambda (path) #t))
            (cache-dependencies (lambda () '()))
            (environment-factory
                    (lambda () (default-environment scribble))))
-  "Cache only explicitly selected, deterministic documents during builds.
-CACHE-DEPENDENCIES returns every imported code/data input beyond project
-preparation and extra sources. Bump the project cache key for changes not
-represented by files. Shared environments, checks, and non-data results are
-never reused."
+  "Reuse data-only documents by default during builds. CACHE? may be a boolean
+or path predicate. Imported modules are tracked automatically; register other
+file inputs with DEPEND-ON! or CACHE-DEPENDENCIES. DISABLE-CACHE! opts out from
+within a document. Shared environments and checks always evaluate sources."
   (define (read-document path)
     (call-with-input-file path
       (lambda (port)
-        (let ((document
+        (let* ((environment (or environment (environment-factory)))
+               (document
                 (scribble-evaluate-document port
-                                            (or environment
-                                                (environment-factory))
+                                            environment
                                             path
+                                            #:module-changed (lambda (_) (disable-cache!))
                                             #:timings (and timings
                                                        (lambda (phase seconds)
                                                          (timings path phase seconds))))))
+          (when (current-input-trace) (record-module-inputs! environment))
           (unless (content-document? document)
             (error "Scribble source requires a content document" path))
           document))))
   (lambda (path)
-    (if (and (not environment) (cacheable? path) (current-input-cache))
+    (if (current-input-cache)
         (cached-document path "scribble" (cache-dependencies)
-                         (lambda () (read-document path)) (lambda _ #t))
+                         (lambda () (read-document path)) (lambda _ #t)
+                         (and (not environment)
+                              (if (procedure? cache?) (cache? path) cache?)))
         (read-document path))))

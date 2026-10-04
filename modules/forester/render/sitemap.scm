@@ -67,12 +67,16 @@
 (define* (make-sitemap-renderer #:key site-url
                                          (sitemap-path "sitemap.xml")
                                          (routes (make-html-routes #:home-page "index"))
-                                         (cache-key #f))
+                                         (cache? #t))
   (let ((render (lambda (forest)
                   (render-sitemap forest
                                          #:site-url site-url
                                          #:sitemap-path sitemap-path
                                          #:routes routes))))
-    (if cache-key
-        (make-cached-renderer render #:cache-key cache-key)
-        render)))
+    (make-cached-renderer render #:cache? cache?
+          #:configuration
+          (lambda (forest)
+            (list 'sitemap site-url sitemap-path
+                  (site-title (site forest)) (site-description (site forest))
+                  (html-index-url routes)
+                  (html-page-url routes (html-home-page routes)))))))

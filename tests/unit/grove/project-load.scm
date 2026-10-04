@@ -24,9 +24,7 @@
   #:source-directory \"sources\"
   #:read-source (lambda (path) (call-with-input-file path get-string-all))
   #:renderers (list (make-cached-renderer
-                     (lambda (_) (list (make-artifact \"result.txt\" ~s)))
-                     #:cache-key \"renderer\"))
-  #:cache-key \"project\"
+                     (lambda (_) (list (make-artifact \"result.txt\" ~s)))))
   #:output-directory \"output\")\n" result)))
 
 (define (error-stage thunk)

@@ -9,35 +9,42 @@
   #:use-module (srfi srfi-9)
   #:export (render-model
             cached-renderer?
-            cached-renderer-cache-key
+            cached-renderer-cache?
+            cached-renderer-configuration
             cached-renderer-procedure
             cached-renderer-render-changed
             cached-renderer-inputs
             make-cached-renderer
-            renderer-cache-keys))
+            renderer-configurations))
 
 (define-record-type <cached-renderer>
-  (%make-cached-renderer cache-key procedure render-changed inputs)
+  (%make-cached-renderer cache? configuration procedure render-changed inputs)
   cached-renderer?
-  (cache-key cached-renderer-cache-key)
+  (cache? cached-renderer-cache?)
+  (configuration cached-renderer-configuration)
   (procedure cached-renderer-procedure)
   (render-changed cached-renderer-render-changed)
   (inputs cached-renderer-inputs))
 
-(define* (make-cached-renderer procedure #:key cache-key render-changed inputs)
+(define* (make-cached-renderer procedure #:key (cache? #t) (configuration '()) render-changed inputs)
+  (unless (boolean? cache?)
+    (error "renderer cache option must be a boolean" cache?))
   (unless (procedure? procedure)
     (error "cached renderer requires a procedure" procedure))
-  (unless (non-empty-string? cache-key)
-    (error "cached renderer requires a non-empty cache key" cache-key))
   (unless (or (not render-changed) (procedure? render-changed))
     (error "incremental renderer must be a procedure or #f" render-changed))
   (unless (or (not inputs) (procedure? inputs))
     (error "renderer input collector must be a procedure or #f" inputs))
-  (%make-cached-renderer cache-key procedure render-changed inputs))
+  (%make-cached-renderer cache? configuration procedure render-changed inputs))
 
-(define (renderer-cache-keys renderers)
-  (and (every cached-renderer? renderers)
-       (map cached-renderer-cache-key renderers)))
+(define (renderer-configurations model renderers)
+  ;; Configuration describes data, never procedure identity or memory addresses.
+  (and (every (lambda (renderer)
+                (and (cached-renderer? renderer) (cached-renderer-cache? renderer))) renderers)
+       (map (lambda (renderer)
+              (let ((configuration (cached-renderer-configuration renderer)))
+                (if (procedure? configuration) (configuration model) configuration)))
+            renderers)))
 
 (define (render-model model renderers)
   (apply append

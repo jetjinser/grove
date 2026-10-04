@@ -3,6 +3,7 @@
 
 (define-module (grove private input cache)
   #:use-module (grove ir)
+  #:use-module (grove private input dependencies)
   #:use-module (grove style)
   #:use-module (grove style html)
   #:use-module (grove build state)
@@ -10,16 +11,23 @@
   #:use-module (ice-9 ftw)
   #:use-module (srfi srfi-1)
   #:export (current-input-cache make-input-cache-context
-            input-cache-dependencies input-cache-summary prune-input-cache!
+            input-cache-dependencies input-cache-summary input-cache-disabled? prune-input-cache!
+            register-input-dependencies!
             cached-document))
 
 ;; A build scopes this parameter; checks and standalone reads never reuse results.
 (define current-input-cache (make-parameter #f))
 
-(define (make-input-cache-context directory key dependencies)
-  (and key (list (string-append directory "/.grove-input-cache")
-                 key dependencies (make-hash-table) (make-hash-table)
-                 (make-hash-table))))
+(define (make-input-cache-context directory enabled? dependencies)
+  (and enabled?
+    (let ((globals (make-hash-table)))
+      (for-each (lambda (path) (hash-set! globals path #t)) dependencies)
+      (list (string-append directory "/.grove-input-cache")
+            enabled? dependencies (make-hash-table) (make-hash-table) globals))))
+
+(define (register-input-dependencies! context paths)
+  (when context
+    (for-each (lambda (path) (hash-set! (list-ref context 5) path #t)) paths)))
 
 (define (input-cache-dependencies context)
   (if context
@@ -33,15 +41,21 @@
               (hash-count (const #t) statuses)))
       '(0 . 0)))
 
+(define (input-cache-disabled? context)
+  (and context
+       (> (hash-count (lambda (path status) (eq? status 'disabled))
+                      (list-ref context 4)) 0)))
+
 (define (prune-input-cache! context)
   (when context
     (match context
-      ((directory key dependencies memo statuses globals)
+      ((directory enabled? dependencies memo statuses globals)
        (when (file-exists? directory)
-         (let ((retained (hash-map->list
+         (let ((retained (filter identity (hash-map->list
                            (lambda (path status)
-                             (content-fingerprint (canonicalize-path path)))
-                           statuses)))
+                             (and (memq status '(hit miss))
+                                  (content-fingerprint (canonicalize-path path))))
+                           statuses))))
            (for-each
              (lambda (name)
                (let ((path (string-append directory "/" name)))
@@ -139,50 +153,71 @@
       (lambda ()
         (when (file-exists? temporary) (delete-file temporary))))))
 
-(define (cached-document path key dependencies read-document status)
-  (let ((context (current-input-cache)))
+(define* (cached-document path reader dependencies read-document status
+                          #:optional (reuse? #t))
+  (let ((context (current-input-cache))
+        (canonical (canonicalize-path path)))
     (if (not context)
         (read-document)
         (match context
-          ((directory project-key shared memo statuses globals)
+          ((directory enabled? shared memo statuses globals)
            (define (report result)
              (hash-set! statuses path result)
              (status path result))
            (define (fingerprint file)
-             (or (hash-ref memo file)
-                 (let ((value (file-fingerprint file)))
+             (let ((entry (hash-get-handle memo file)))
+               (if entry (cdr entry)
+                 (let ((value (input-fingerprint file)))
                    (hash-set! memo file value)
-                   value)))
-           (for-each (lambda (file) (hash-set! globals file #t))
-                     (append shared dependencies))
+                   value))))
+           (define (register files)
+             (for-each (lambda (file)
+                         (unless (string=? file canonical) (hash-set! globals file #t))) files))
+           (register (append shared dependencies))
            (let* ((paths (delete-duplicates (cons path (append shared dependencies))
                                            string=?))
                   (snapshot (map (lambda (file) (list file (fingerprint file))) paths))
-                  (identity (list key project-key (version) (setlocale LC_CTYPE) snapshot))
-                  ;; One entry per source, replaced after changes; no unbounded
-                  ;; history of old content-addressed variants.
+                  (identity (list reader (version) (setlocale LC_CTYPE)
+                                  %load-path %load-compiled-path snapshot))
                   (entry-path (string-append directory "/"
                                 (content-fingerprint (canonicalize-path path))))
-                  (entry (read-entry entry-path))
+                  (entry (and reuse? (read-entry entry-path)))
                   (hit (catch #t
                          (lambda ()
                            (match entry
-                             ((stored document)
-                              (and (equal? stored identity) (unpack document)))
+                             ((stored extra reusable? document)
+                              (and (equal? stored identity)
+                                   reusable?
+                                   (every (lambda (input)
+                                            (match input
+                                              ((file digest)
+                                               (equal? digest (fingerprint file)))
+                                              (_ #f))) extra)
+                                   (begin (register (map car extra))
+                                          (unpack document))))
                              (_ #f)))
                          (lambda _ #f))))
              (if (content-document? hit)
                  (begin (report 'hit) hit)
-                 (let ((document (read-document)))
+                 (let* ((trace (make-hash-table))
+                        (document (call-with-input-trace trace read-document))
+                        (extra (sort
+                                 (hash-fold (lambda (file digest inputs)
+                                              (if (and (string? file) (not (string=? file canonical)))
+                                                  (cons (list file digest) inputs) inputs))
+                                            '() trace)
+                                 (lambda (a b) (string<? (car a) (car b))))))
+                   (register (map car extra))
                    (report 'miss)
                    (catch 'uncacheable-content
                      (lambda ()
-                       (let ((encoded (pack document)))
-                         ;; Don't publish an entry if a declared input changed
-                         ;; during evaluation. Cache I/O errors remain visible.
-                         (when (equal? snapshot
-                                 (map (lambda (file)
-                                        (list file (file-fingerprint file))) paths))
-                           (save-entry entry-path (list identity encoded)))))
+                       (let* ((reusable? (and reuse? (not (hash-ref trace 'uncached))))
+                              (encoded (and reusable? (pack document))))
+                         (unless reusable? (report 'disabled))
+                         ;; Compare real files again, not the memoized snapshot.
+                         (when (and reusable? (every (lambda (input)
+                                        (equal? (cadr input) (input-fingerprint (car input))))
+                                      (append snapshot extra)))
+                           (save-entry entry-path (list identity extra reusable? encoded)))))
                      (lambda _ (report 'uncacheable)))
                    document))))))))

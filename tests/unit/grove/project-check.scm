@@ -25,9 +25,7 @@
             (lambda (_)
               (set! renders (+ renders 1))
               (when broken? (error "renderer failure"))
-              artifacts)
-            #:cache-key "renderer"))
-    #:cache-key "project"
+              artifacts)))
     #:output-directory output))
 
 (define (snapshot)

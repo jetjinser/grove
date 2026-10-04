@@ -9,19 +9,17 @@
 (test-begin "grove build")
 
 (test-error "cached renderers require procedures" #t
-  (make-cached-renderer #f #:cache-key "renderer-v1"))
+  (make-cached-renderer #f))
 
-(test-error "cached renderers require non-empty keys" #t
-  (make-cached-renderer (lambda (site) '()) #:cache-key ""))
+(test-assert "default renderer configuration needs no key"
+  (cached-renderer? (make-cached-renderer (lambda (site) '()))))
 
 (test-error "incremental callbacks must be procedures" #t
   (make-cached-renderer (lambda (site) '())
-    #:cache-key "renderer-v1"
     #:render-changed #t))
 
 (test-error "renderer input collectors must be procedures" #t
   (make-cached-renderer (lambda (site) '())
-    #:cache-key "renderer-v1"
     #:inputs '()))
 
 (test-end "grove build")

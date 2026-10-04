@@ -4,9 +4,20 @@
 (define-module (grove project load)
   #:use-module (grove project)
   #:use-module (grove project diagnostic)
-  #:use-module (grove build state)
+  #:use-module (grove private input dependencies)
   #:use-module (ice-9 ftw)
   #:export (call-with-loaded-project))
+
+(define (read-project path)
+  (save-module-excursion
+    (lambda ()
+      (let ((environment (make-fresh-user-module)))
+        (set-current-module environment)
+        (let ((value (primitive-load path)))
+          (record-module-inputs! environment)
+          (unless (project? value)
+            (error "project file must return a Grove project" value))
+          value)))))
 
 (define* (call-with-loaded-project filename procedure
                                    #:key (output-directory #f))
@@ -22,23 +33,14 @@ OUTPUT-DIRECTORY, when supplied, is resolved relative to the caller's directory.
     (dynamic-wind
       (lambda () (chdir (dirname path)))
       (lambda ()
-        (let* ((project
-                 (call-with-project-stage 'load path
-                   (lambda ()
-                     (let ((value
-                             (save-module-excursion
-                               (lambda ()
-                                 (set-current-module (make-fresh-user-module))
-                                 (primitive-load path)))))
-                       (unless (project? value)
-                         (error "project file must return a Grove project" value))
-                       value))))
-               (key (project-cache-key project))
+        (let* ((trace (make-hash-table))
+               (project (call-with-project-stage 'load path
+                          (lambda ()
+                            (call-with-input-trace trace
+                              (lambda () (read-project path))))))
                (configured
                  (project-with-options project
                    #:output-directory (or output (project-output-directory project))
-                   #:extra-sources (list path)
-                   #:cache-key
-                   (and key (format #f "~s" (list key path (file-fingerprint path)))))))
+                   #:extra-sources (cons path (trace-inputs trace)))))
           (procedure configured)))
       (lambda () (chdir caller-directory)))))

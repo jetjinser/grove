@@ -162,23 +162,29 @@ its output paths and behavior. In particular, the RSS renderer uses the site
 URL and page dates, the sitemap uses routed page URLs and update dates, and
 the graph renderer writes a Scheme-readable representation of the Forest.
 
-## Renderer caching
+## Caching
 
-Caching is opt-in. Wrap a deterministic renderer with
-`make-cached-renderer` or use a Forester renderer's `#:cache-key` option. Set
-the project `#:cache-key` as well. Keys are caller-managed versions for the
-reader, analyzer, project options, and renderer configuration; Grove does not
-hash Scheme procedures. Change a key when the behavior it covers changes.
-Declare file inputs with `#:extra-sources` or as artifact dependencies so
-their contents can invalidate affected outputs.
+Projects, Scribble documents, and built-in renderers enable caching by default.
+Grove fingerprints the project file, imported modules, framework source/data,
+and compiled modules. Module search paths and absent preferred compiled files
+are inputs too, so adding compiled code also invalidates a result. Built-in renderers describe their effective configuration
+(routes, styles, backmatter, and output options). There are no user-maintained
+cache keys or version numbers. Set `#:cache? #f` on a project, reader, or built-in
+renderer to turn caching off; a reader also accepts a path predicate.
 
-A cache hit reuses renderer artifacts, but the build still runs the
-preparation hook, reads every source (possibly reusing a document result),
-and runs the analyzer over the current
-project. Incremental renderer callbacks can update only affected outputs;
-they must return the complete artifact set. This keeps analysis predictable
-while avoiding work in renderers. See the linked-notes example for a complete
-configuration.
+Preparation and whole-project analysis always run. Document hits reuse Content
+IR; renderer hits reuse artifacts. Ordinary source edits can use incremental
+rendering. Changes to shared code or declared computation inputs conservatively
+force full rendering. `check` always evaluates and renders without accessing
+published cache state. Standalone reader calls also evaluate normally.
+
+Plain renderer callbacks are treated as deterministic under tracked project
+inputs and cached by default. Use `make-cached-renderer` to describe additional
+inputs/configuration, or set its `#:cache? #f` for callbacks with untracked
+effects. Its optional `#:configuration` is data (or a model-to-data procedure)
+that describes settings affecting its output; `#:inputs` collects file inputs.
+Grove cannot inspect arbitrary closure state. Built-in factories supply this
+information themselves.
 
 ## Scribble documents
 
@@ -194,35 +200,32 @@ expression reading, Semantic (`◆:`) for computational values, and Notation
 (`◇:`) for display structure. Read the [math guide](math.md) for examples
 and supported operations.
 
-## Document result caching
+## Document inputs and effects
 
-The Scribble reader can reuse the Content IR of explicitly selected documents:
+Ordinary documents need no cache configuration. Imported Scheme modules are
+tracked automatically, including their compiled files. Calls through Guile's
+loader are observed too. Named module definitions automatically remain uncached
+so other sources can import their bindings in every build process.
+
+Arbitrary Scheme I/O is not intercepted. Register an additional file before
+reading it:
 
 ```scheme
-(make-scribble-document-reader
-  #:cacheable? (lambda (path) (string-suffix? "-computation.plant" path))
-  #:cache-dependencies (lambda () computation-inputs))
+(use-modules (grove input scribble) (ice-9 textual-ports))
+(call-with-input-file (depend-on! "data.txt") get-string-all)
 ```
 
-Set the project's `#:cache-key` too. Selecting a document promises that its
-result depends only on its source, declared files, and project configuration;
-skipping its Scheme effects must be safe. Declare imported Scheme code and
-other files read during evaluation in `computation-inputs`. If loading explicit
-compiled modules, include their `.go` files too. Prepared sources
-and project extra sources are included automatically. Change the project key
-when the reader's environment or behavior changes without a corresponding file
-change. Time, randomness, external state, and shared mutable environments are
-not tracked automatically; leave such documents uncached.
+The file's content participates in document invalidation, renderer invalidation,
+and file watching. A reader's `#:cache-dependencies` collector can also declare
+file inputs in bulk. For time, randomness, network state, or effects that must
+run every time, call `disable-cache!` inside the document, or turn off its reader
+cache. These opt-outs also force fresh rendering. Skipping effects must be safe; a serializable result alone does not make
+arbitrary Scheme code deterministic. Routing and other custom procedures must
+likewise depend on tracked files/configuration, rather than hidden mutable state.
 
-Entries live in `OUTPUT/.grove-input-cache`, with at most one entry per source
-path. Successful builds remove entries for sources no longer selected.
-Source or dependency changes invalidate an entry. The same dependencies
-also invalidate renderer outputs and participate in watching. The CLI reports
-`Reused N/M document results` when any selected documents hit the cache.
-
-Only data-only Content IR is saved, including style and source locations.
-Results containing query procedures, unsupported records, or cyclic data are
-re-evaluated normally. Corrupt entries are treated as misses. Preparation and
-whole-project analysis still run, so queries, links, and transclusion see the
-current Forest. `check` and standalone reader calls always evaluate sources
-and never access this cache.
+Entries live in `OUTPUT/.grove-input-cache`, with one entry per source path.
+Successful builds remove entries outside the current selection. Only data-only
+Content IR is saved, including presentation annotations and source locations.
+Query closures, unsupported records, and cyclic data are re-evaluated. Corrupt
+entries are misses. The CLI reports `Reused N/M document results` when documents
+hit the cache.

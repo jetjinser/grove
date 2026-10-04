@@ -5,6 +5,7 @@
 (define-module (grove project)
   #:use-module (grove string-fun)
   #:use-module (grove private input cache)
+  #:use-module (grove private input dependencies)
   #:use-module (grove build)
   #:use-module (grove build state)
   #:use-module (grove collect)
@@ -20,7 +21,7 @@
             project-source-directory
             project-extra-sources
             project-output-directory
-            project-cache-key
+            project-cache?
             project-with-options
             project-input?
             project-input-path
@@ -68,7 +69,7 @@
 (define-record-type <project>
   (%make-project source-directory source-filter collect-sources prepare
                  extra-sources read-source analyze renderers
-                 output-directory cache-key)
+                 output-directory cache?)
   project?
   (source-directory project-source-directory)
   (source-filter project-source-filter)
@@ -79,7 +80,7 @@
   (analyze project-analyze)
   (renderers project-renderers)
   (output-directory project-output-directory)
-  (cache-key project-cache-key))
+  (cache? project-cache?))
 
 (define* (make-project #:key
                        (source-directory #f)
@@ -92,7 +93,7 @@
                        (analyze (lambda (context) context))
                        (renderers '())
                        output-directory
-                       (cache-key #f))
+                       (cache? #t))
   (unless (and (or (not source-directory) (string? source-directory))
                (procedure? source-filter)
                (or (not collect-sources) (procedure? collect-sources))
@@ -116,19 +117,21 @@
            renderers))
   (unless (string? output-directory)
     (error "project requires an output directory" output-directory))
-  (unless (or (not cache-key)
-              (non-empty-string? cache-key))
-    (error "project cache key must be a non-empty string or #f" cache-key))
+  (unless (boolean? cache?)
+    (error "project cache option must be a boolean" cache?))
   (%make-project source-directory source-filter collect-sources prepare
-                 extra-sources read-source analyze renderers
-                 output-directory cache-key))
+                 extra-sources read-source analyze
+                 (map (lambda (renderer)
+                        (if (cached-renderer? renderer) renderer
+                            (make-cached-renderer renderer))) renderers)
+                 output-directory cache?))
 
 (define* (project-with-options project
                                #:key
                                (output-directory
                                  (project-output-directory project))
                                (extra-sources '())
-                               (cache-key (project-cache-key project)))
+                               (cache? (project-cache? project)))
   "Copy PROJECT with execution options and additional tracked source paths."
   (make-project
     #:source-directory (project-source-directory project)
@@ -142,7 +145,7 @@
     #:analyze (project-analyze project)
     #:renderers (project-renderers project)
     #:output-directory output-directory
-    #:cache-key cache-key))
+    #:cache? cache?))
 
 (define (read-source-with-context path read-source)
   (call-with-project-stage 'read path (lambda () (read-source path))))
@@ -274,15 +277,12 @@
                           artifacts))
               #f)))))
 
-(define (project-renderer-cache-key project)
-  (let ((renderer-keys (renderer-cache-keys (project-renderers project)))
-        (project-key (project-cache-key project)))
-    (and project-key renderer-keys
-         (call-with-output-string
-           (lambda (port)
-             (write (list 'grove-render-cache-v2
-                          project-key renderer-keys)
-                    port))))))
+(define (project-renderer-identity project model)
+  (let ((configurations (renderer-configurations model (project-renderers project))))
+    (and (project-cache? project) configurations
+         (content-fingerprint
+           (call-with-output-string
+             (lambda (port) (write (list (version) (setlocale LC_CTYPE) configurations) port)))))))
 
 (define (render-all model renderers)
   (let loop ((renderers renderers)
@@ -393,13 +393,14 @@
                                (build-state-sources previous-state) '()))
          (previous-artifacts (if previous-state
                                  (build-state-artifacts previous-state) '()))
-         (previous-cache-key (and previous-state
-                                  (build-state-cache-key previous-state)))
+         (previous-identity (and previous-state
+                                  (build-state-identity previous-state)))
          (input-cache-context
            (and write?
              (make-input-cache-context
-               (project-output-directory project) (project-cache-key project)
-               (append prepared-sources (project-extra-sources project)))))
+               (project-output-directory project) (project-cache? project)
+               (append prepared-sources (project-extra-sources project)
+                       (runtime-inputs)))))
          (inputs
            (parameterize ((current-input-cache input-cache-context))
              (map (lambda (path)
@@ -411,8 +412,19 @@
                 source-paths)))
          (_ (let ((summary (input-cache-summary input-cache-context)))
               (when (> (cdr summary) 0) (progress 'input-cache summary))))
+         (context
+           (make-project-context inputs prepared-sources
+                                 (project-extra-sources project)))
+         (analysis-trace (make-hash-table))
+         (model (call-with-project-stage 'analyze #f
+                  (lambda ()
+                    (progress 'analyze #f)
+                    (call-with-input-trace analysis-trace
+                      (lambda () ((project-analyze project) context))))))
+         (_ (register-input-dependencies! input-cache-context
+                                         (trace-inputs analysis-trace)))
          (current-sources
-           (map (lambda (path) (list path (file-fingerprint path)))
+           (map (lambda (path) (list path (input-fingerprint path)))
              (delete-duplicates
                   (append prepared-sources source-paths
                           (input-cache-dependencies input-cache-context)
@@ -425,13 +437,6 @@
                             (project-renderers project))
                           (project-extra-sources project))
                   string=?)))
-         (context
-           (make-project-context inputs prepared-sources
-                                 (project-extra-sources project)))
-         (model (call-with-project-stage 'analyze #f
-                  (lambda ()
-                    (progress 'analyze #f)
-                    ((project-analyze project) context))))
          (source-changes
            (call-with-values
              (lambda () (changed-sources previous-sources current-sources))
@@ -440,21 +445,19 @@
          (modified (cadr source-changes))
          (removed (caddr source-changes))
          (changed (append added modified removed))
-         (cache-key (project-renderer-cache-key project))
+         (identity (project-renderer-identity project model))
          (cache-ready?
-           (and cache-key previous-state
-                (equal? cache-key previous-cache-key)
-                ;; Declared reader inputs conservatively affect the whole model,
-                ;; even when a partial renderer cannot see those dependencies.
-                (not (paths-intersect?
-                       (input-cache-dependencies input-cache-context) changed))
-                (not (and (> (cdr (input-cache-summary input-cache-context)) 0)
-                          (any (lambda (path)
-                                 (not (member path source-paths string=?)))
-                               removed)))
+           (and identity previous-state
+                (equal? identity previous-identity)
                 (load-cached-artifacts (project-output-directory project)
                                        previous-artifacts)))
-         (cache-hit? (and cache-ready? (null? changed)))
+         (global-inputs-changed?
+           (or (input-cache-disabled? input-cache-context)
+               (hash-ref analysis-trace 'uncached)
+               (paths-intersect? (input-cache-dependencies input-cache-context) changed)
+               (and (> (cdr (input-cache-summary input-cache-context)) 0)
+                    (any (lambda (path) (not (file-exists? path))) removed))))
+         (cache-hit? (and cache-ready? (null? changed) (not global-inputs-changed?)))
          (render-result
            (cond
              (cache-hit?
@@ -464,6 +467,9 @@
                                  (build-state-artifact-renderer entry)))
                          previous-artifacts)
                     '()))
+             (global-inputs-changed?
+              (progress 'render #f)
+              (render-all model (project-renderers project)))
              (cache-ready?
               (progress 'render #f)
               (render-with-cache model (project-renderers project)
@@ -477,12 +483,12 @@
          (affected
            (cond
              (cache-hit? '())
-             ((and cache-key previous-state
-                   (equal? cache-key previous-cache-key)
+             ((and identity previous-state
+                   (equal? identity previous-identity)
                    (not cache-ready?))
               (map artifact-path artifacts))
              ((and previous-state
-                   (not (equal? cache-key previous-cache-key)))
+                   (not (equal? identity previous-identity)))
               (append (map artifact-path artifacts)
                       (map car
                            (filter (lambda (entry)
@@ -505,7 +511,7 @@
           (progress 'write (project-output-directory project))
           (write-artifacts (project-output-directory project) artifacts)
           (write-build-state state-path state-temp-path current-sources artifacts
-                             owners cache-key)
+                             owners identity)
           (prune-input-cache! input-cache-context))))
     (%make-build-report (map build-state-source-path current-sources) artifacts added modified removed affected
                         (not cache-hit?))))

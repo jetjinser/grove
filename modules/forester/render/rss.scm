@@ -124,12 +124,16 @@
 (define* (make-rss-renderer #:key site-url
                                      (feed-path "feed.xml")
                                      (routes (make-html-routes #:home-page "index"))
-                                     (cache-key #f))
+                                     (cache? #t))
   (let ((render (lambda (forest)
                   (render-rss forest
                                      #:site-url site-url
                                      #:feed-path feed-path
                                      #:routes routes))))
-    (if cache-key
-        (make-cached-renderer render #:cache-key cache-key)
-        render)))
+    (make-cached-renderer render #:cache? cache?
+          #:configuration
+          (lambda (forest)
+            (list 'rss site-url feed-path
+                  (site-title (site forest)) (site-description (site forest))
+                  (html-index-url routes)
+                  (html-page-url routes (html-home-page routes)))))))

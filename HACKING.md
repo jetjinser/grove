@@ -63,8 +63,10 @@ minimal setup and renderer options.
 The current project I/O contract uses local paths. Artifacts can contain text
 or bytes. Source files, preparation paths, extra sources, and artifact
 dependencies are tracked by path. A renderer cache hit reuses artifacts, but
-the build still reads the sources and runs the analyzer. Keep cache keys in
-sync with reader, analyzer, renderer code, and configuration.
+the build still prepares modules and runs whole-project analysis. Document
+results and renderer outputs are cached by default. Module source/compiled
+files, loader dependencies, and effective renderer settings supply automatic
+fingerprints; external effects must declare inputs or opt out.
 
 The CLI template includes the installed Grove library directories and the
 canonical source and compiled directories of its runtime dependencies. Resolve

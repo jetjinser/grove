@@ -4,6 +4,7 @@
 
 (define-module (forester render html)
   #:use-module (grove build)
+  #:use-module (grove build state)
   #:use-module (grove string-fun)
   #:use-module (forester render artifact)
   #:use-module (forester site)
@@ -411,7 +412,7 @@
                                       (backmatter default-backmatter-sections)
                                       (backmatter-labels '())
                                       (reference-taxon-id default-reference-taxon-id)
-                                      (cache-key #f))
+                                      (cache? #t))
   (validate-backmatter-sections backmatter)
   (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
   (check-reference-taxon-id reference-taxon-id)
@@ -424,20 +425,24 @@
                                       #:backmatter-labels backmatter-labels
                                       #:reference-taxon-id
                                       reference-taxon-id))))
-    (if cache-key
-        (make-cached-renderer
-          render
-          #:cache-key (string-append "forester-html-v18:" cache-key ":home="
-                                     (html-home-page routes) ":backmatter="
-                                     (format #f "~s" backmatter)
-                                     ":labels="
-                                     (format #f "~s" backmatter-labels)
-                                     ":reference-taxon="
-                                     reference-taxon-id)
+    (make-cached-renderer render #:cache? cache?
+          #:configuration
+          (lambda (forest)
+            (list 'html (site-title (site forest)) (site-description (site forest))
+                  (html-home-page routes) (html-index-path routes)
+                  (html-index-url routes)
+                  (html-page-url routes (html-home-page routes))
+                  mathjax-src backmatter backmatter-labels reference-taxon-id
+                  (map (lambda (artifact)
+                         (list (artifact-path artifact)
+                               (content-fingerprint (artifact-content artifact))))
+                       (html-style-artifacts style))))
+          #:inputs (lambda ()
+                     (append-map (lambda (artifact) (or (artifact-sources artifact) '()))
+                                 (html-style-artifacts style)))
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
             (render-html-changed forest style routes mathjax-src backmatter
                                         backmatter-labels
                                         reference-taxon-id
-                                        changed old-artifacts)))
-        render)))
+                                        changed old-artifacts)))))

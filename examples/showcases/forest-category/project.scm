@@ -16,6 +16,5 @@
   #:home-page "cat-0001"
   #:description "A CC0 excerpt adapted from two trees in Jinser Kafka's forest."
   #:site-url "https://category.example"
-  #:output-directory output-directory
-  #:cache-key "forest-category")
+  #:output-directory output-directory)
 

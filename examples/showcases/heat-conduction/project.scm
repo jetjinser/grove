@@ -16,6 +16,5 @@
   #:home-page "heat-0001"
   #:description "A linked, worked derivation of the heat equation."
   #:site-url "https://heat.example"
-  #:output-directory output-directory
-  #:cache-key "heat-conduction")
+  #:output-directory output-directory)
 

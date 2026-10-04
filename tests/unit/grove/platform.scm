@@ -84,7 +84,8 @@
                      (list theme-source))))
       (test-equal "build reports track generic and auxiliary inputs"
         (list beta-source alpha-source theme-source)
-        (build-report-added-sources first-report))
+        (filter (lambda (path) (member path (list beta-source alpha-source theme-source)))
+                (build-report-added-sources first-report)))
       (test-equal "readers can return non-page project values"
         '("beta" "alpha")
         (car rendered-models))

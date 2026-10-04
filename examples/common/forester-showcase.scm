@@ -20,7 +20,7 @@
 
 (define* (make-forester-showcase directory
                                  #:key title description site-url home-page
-                                 output-directory cache-key)
+                                 output-directory)
   (let* ((source-directory (string-append directory "/plants"))
          (module-directory (string-append directory "/modules"))
          (stylesheet-path (string-append directory "/style.css"))
@@ -46,23 +46,10 @@
              (make-page-reader (make-scribble-document-reader))
              #:analyze make-forest
              #:renderers
-             (list (make-html-renderer
-                     #:style style #:routes routes
-                     #:cache-key (string-append cache-key "-html-v1"))
-                   (make-text-renderer
-                     #:prefix "text"
-                     #:cache-key (string-append cache-key "-text-v1"))
-                   (make-rss-renderer
-                     #:site-url site-url #:routes routes
-                     #:cache-key (string-append cache-key "-rss-v1:" site-url))
-                   (make-sitemap-renderer
-                     #:site-url site-url #:routes routes
-                     #:cache-key
-                     (string-append cache-key "-sitemap-v1:" site-url))
-                   (make-graph-renderer
-                     #:path "forest-graph.scm"
-                     #:cache-key (string-append cache-key "-graph-v1")))
-             #:output-directory output-directory
-             #:cache-key
-             (string-append cache-key "-project-v1:" title ":" description))))
+             (list (make-html-renderer #:style style #:routes routes)
+                   (make-text-renderer #:prefix "text")
+                   (make-rss-renderer #:site-url site-url #:routes routes)
+                   (make-sitemap-renderer #:site-url site-url #:routes routes)
+                   (make-graph-renderer #:path "forest-graph.scm"))
+             #:output-directory output-directory)))
     project))

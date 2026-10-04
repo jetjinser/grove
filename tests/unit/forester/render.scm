@@ -453,7 +453,7 @@
     (lambda (name)
       (let* ((style (make-html-style
                       #:stylesheets (list (make-artifact name "body { color: teal; }"))))
-             (artifacts ((make-html-renderer #:routes routes #:style style) forest))
+             (artifacts (render-model forest (list (make-html-renderer #:routes routes #:style style))))
              (html (artifact-content
                      (find (lambda (artifact) (string=? (artifact-path artifact) "algebra.html"))
                            artifacts))))

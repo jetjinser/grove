@@ -65,16 +65,7 @@
            (call-with-loaded-project filename
              (lambda (project)
                (let* ((modules (existing-files (append previous-modules loaded)))
-                      (key (project-cache-key project))
-                      (configured
-                        (project-with-options project
-                          #:extra-sources modules
-                          #:cache-key
-                          (and key
-                               (format #f "~s"
-                                 (list key
-                                   (map (lambda (path) (list path (file-fingerprint path)))
-                                        (sort (list-copy modules) string<?)))))))
+                      (configured project)
                       (output (absolute-path (project-output-directory configured)))
                       (files (map absolute-path
                                   (append previous-files

@@ -12,5 +12,4 @@
   #:home-page "vector-analysis"
   #:description "Vector identities and scalar calculus with replayable steps."
   #:site-url "https://math.example"
-  #:output-directory output-directory
-  #:cache-key "math-derivations")
+  #:output-directory output-directory)

@@ -142,9 +142,7 @@
                 (map (lambda (input)
                        (make-artifact (string-append (basename (project-input-path input)) \".html\")
                                       (project-input-value input)))
-                     (project-context-inputs context)))))
-          #:cache-key \"renderer\"))
-  #:cache-key \"project\"
+                     (project-context-inputs context)))))))
   #:output-directory \"output\")\n"
         (string-append external "/theme.txt"))))
   (lambda ()

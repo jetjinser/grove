@@ -41,9 +41,7 @@
   #:source-directory \"sources\"
   #:read-source (lambda (path) (call-with-input-file path get-string-all))
   #:renderers (list (make-cached-renderer
-                     (lambda (_) (list (make-artifact \"page.txt\" \"page\")))
-                     #:cache-key \"renderer\"))
-  #:cache-key \"project\"
+                     (lambda (_) (list (make-artifact \"page.txt\" \"page\")))))
   #:output-directory \"output\")\n"))
   (lambda ()
     (define original-config (call-with-input-file config get-string-all))

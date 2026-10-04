@@ -428,13 +428,10 @@
                            #:home-page "algebra"
                            #:page-path
                            (lambda (id)
-                             (string-append "notes/" id ".html")))
-                         #:cache-key "forester-html-test-v1")
+                             (string-append "notes/" id ".html"))))
                        (make-text-renderer
-                         #:prefix "text"
-                         #:cache-key "forester-text-test-v1"))
-                 #:output-directory cache-output-directory
-                 #:cache-key "forester-project-test-v1"))
+                         #:prefix "text"))
+                 #:output-directory cache-output-directory))
              (first (build-project/report incremental-project)))
         (test-assert "cached Forester HTML renderer performs initial render"
           (build-report-rendered? first))
@@ -533,69 +530,6 @@
       (test-error "project analysis rejects unresolved links before output"
         #t
         (build-project project)))))
-  (lambda ()
-    (when (file-exists? (string-append mathematics-directory "/limits.plant"))
-      (delete-file (string-append mathematics-directory "/limits.plant")))
-    (for-each
-      (lambda (path)
-        (when (file-exists? path)
-          (delete-file path)))
-      (list (string-append output-directory "/text/quadratic-equations.txt")
-            (string-append output-directory "/notes/quadratic-equations.html")
-            (string-append output-directory "/index.html")
-            (string-append output-directory "/forester.css")
-            (string-append output-directory "/feed.xml")
-            (string-append output-directory "/sitemap.xml")
-            (string-append output-directory "/notes/algebra.html")
-            (string-append output-directory "/notes/limits.html")
-            (string-append output-directory "/notes/unlinked.html")
-            (string-append output-directory "/notes/orphan.html")
-            (string-append output-directory "/text/index.txt")
-            (string-append output-directory "/text/algebra.txt")
-            (string-append output-directory "/text/limits.txt")
-            (string-append output-directory "/text/unlinked.txt")
-            (string-append output-directory "/text/orphan.txt")
-            (string-append output-directory "/.grove-artifacts")
-            (string-append output-directory "/.grove-artifacts.tmp")
-            (string-append output-directory "/.grove-build-state")
-            (string-append output-directory "/.grove-build-state.tmp")
-            (string-append cache-output-directory "/notes/quadratic-equations.html")
-            (string-append cache-output-directory "/text/quadratic-equations.txt")
-            (string-append cache-output-directory "/index.html")
-            (string-append cache-output-directory "/forester.css")
-            (string-append cache-output-directory "/notes/algebra.html")
-            (string-append cache-output-directory "/notes/limits.html")
-            (string-append cache-output-directory "/notes/unlinked.html")
-            (string-append cache-output-directory "/notes/orphan.html")
-            (string-append cache-output-directory "/text/index.txt")
-            (string-append cache-output-directory "/text/algebra.txt")
-            (string-append cache-output-directory "/text/limits.txt")
-            (string-append cache-output-directory "/text/unlinked.txt")
-            (string-append cache-output-directory "/text/orphan.txt")
-            (string-append cache-output-directory "/.grove-artifacts")
-            (string-append cache-output-directory "/.grove-artifacts.tmp")
-            (string-append cache-output-directory "/.grove-build-state")
-            (string-append cache-output-directory "/.grove-build-state.tmp")
-            (string-append module-directory "/commands.plant")
-            (string-append source-directory "/algebra.plant")
-            (string-append mathematics-directory "/limits.plant")
-            (string-append source-directory "/unlinked.plant")
-            (string-append source-directory "/orphan.plant")
-            (string-append source-directory "/broken.plant")))
-    (for-each
-      (lambda (path)
-        (when (file-exists? path)
-          (rmdir path)))
-      (list (string-append output-directory "/notes")
-            (string-append output-directory "/text")
-            (string-append cache-output-directory "/notes")
-            (string-append cache-output-directory "/text")
-            cache-output-directory
-            output-directory
-            module-directory
-            (string-append mathematics-directory "/limits.plant")
-            mathematics-directory
-            source-directory
-            project-root))))
+  (lambda () (system* "rm" "-rf" project-root)))
 
 (test-end "forester project")

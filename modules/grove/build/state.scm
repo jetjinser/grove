@@ -12,7 +12,7 @@
             build-state-temp-name
             build-state-sources
             build-state-artifacts
-            build-state-cache-key
+            build-state-identity
             build-state-source-path
             build-state-source-fingerprint
             build-state-artifact-path
@@ -31,7 +31,7 @@
 ;; Keep the on-disk S-expression layout behind named accessors.
 (define-inlinable (build-state-sources state) (list-ref state 1))
 (define-inlinable (build-state-artifacts state) (list-ref state 2))
-(define-inlinable (build-state-cache-key state) (list-ref state 3))
+(define-inlinable (build-state-identity state) (list-ref state 3))
 (define-inlinable (build-state-source-path entry) (list-ref entry 0))
 (define-inlinable (build-state-source-fingerprint entry) (list-ref entry 1))
 (define-inlinable (build-state-artifact-path entry) (list-ref entry 0))
@@ -73,7 +73,8 @@
   (and (list? entry)
        (= (length entry) 2)
        (string? (build-state-source-path entry))
-       (valid-fingerprint? (build-state-source-fingerprint entry))))
+       (or (not (build-state-source-fingerprint entry))
+           (valid-fingerprint? (build-state-source-fingerprint entry)))))
 
 (define (valid-fingerprint? value)
   (and (string? value)
@@ -110,8 +111,8 @@
        (every valid-output-entry? (build-state-artifacts state))
        (distinct-paths? (build-state-artifacts state)
                         build-state-artifact-path)
-       (or (not (build-state-cache-key state))
-           (string? (build-state-cache-key state)))))
+       (or (not (build-state-identity state))
+           (string? (build-state-identity state)))))
 
 (define (read-build-state path)
   (if (not (file-exists? path))
@@ -123,7 +124,7 @@
                  (eof-object? (read port))
                  state))))))
 
-(define (write-build-state path temp-path sources artifacts owners cache-key)
+(define (write-build-state path temp-path sources artifacts owners identity)
   (let ((state
           (list 'grove-build-state
                 sources
@@ -135,7 +136,7 @@
                              (if (string? (artifact-content artifact))
                                  'text 'bytes)))
                      artifacts)
-                cache-key)))
+                identity)))
     (unless (valid-build-state? state)
       (error "refusing to write invalid Grove build state" state))
     (call-with-output-file temp-path

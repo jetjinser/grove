@@ -89,7 +89,7 @@
   (use-interface-if-needed! module '(language scribble commands)))
 
 (define* (scribble-evaluate-document port environment #:optional (source #f)
-                                     #:key (timings #f))
+                                     #:key (timings #f) (module-changed #f))
   "Evaluate a document; TIMINGS optionally receives each reading phase and seconds."
   (define elapsed (make-hash-table))
   (define (measure phase thunk)
@@ -128,6 +128,7 @@
               ;; define-module changes Guile's current module while evaluating
               ;; the form. Preserve the language's default bindings there too.
               (unless (eq? module active-module)
+                (when module-changed (module-changed module))
                 (use-document-interfaces! module))
               (if (or (content-value? value) (content-sequence? value))
                   (let ((produced

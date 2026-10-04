@@ -110,7 +110,8 @@
         (list (string-append module-directory "/shared.plant")
               (string-append source-directory "/first.plant")
               external-source-path)
-        (build-report-added-sources generic-report)))
+        (filter (lambda (path) (string-prefix? project-root path))
+                (build-report-added-sources generic-report))))
     (let ((events '())
           (observed-site-title #f)
           (observed-site-description #f))
@@ -185,7 +186,8 @@
           (list (string-append module-directory "/shared.plant")
                 (string-append source-directory "/first.plant")
                 (string-append source-directory "/second.plant"))
-          (build-report-added-sources report))
+          (filter (lambda (path) (string-prefix? project-root path))
+                (build-report-added-sources report)))
         (test-equal "first build reports its output as affected"
           '("text/summary.txt" "pages/first.txt" "pages/second.txt"
             "opaque.txt")
@@ -196,8 +198,8 @@
             (append (build-report-added-sources unchanged)
                     (build-report-modified-sources unchanged)
                     (build-report-removed-sources unchanged)))
-          (test-equal "unknown renderer dependencies remain conservatively affected"
-            '("opaque.txt")
+          (test-equal "unchanged inputs allow reuse without per-artifact dependencies"
+            '()
             (build-report-affected-artifacts unchanged)))
         (write-test-file (string-append source-directory "/first.plant")
                          "first modified")
@@ -234,7 +236,7 @@
                                    (list external-source-path))))))
                (cached-renderer
                  (make-cached-renderer
-                   render #:cache-key "summary-renderer-v1"))
+                   render #:configuration '(summary (precision . 1))))
                (cached-project
                (make-site-project
                    #:source-directory source-directory
@@ -249,8 +251,7 @@
                      (set! analysis-count (+ analysis-count 1))
                      site)
                    #:renderers (list cached-renderer)
-                   #:output-directory cache-output-directory
-                   #:cache-key "test-analysis-v1")))
+                   #:output-directory cache-output-directory)))
           (let ((first (build-project/report cached-project)))
             (test-equal "cached renderer runs on the first build"
               1 render-count)
@@ -311,7 +312,7 @@
               5 render-count))
           (let* ((changed-renderer
                    (make-cached-renderer
-                     render #:cache-key "summary-renderer-v2"))
+                     render #:configuration '(summary (precision . 2))))
                  (changed-project
                  (make-site-project
                      #:source-directory source-directory
@@ -325,12 +326,11 @@
                        (set! analysis-count (+ analysis-count 1))
                        site)
                      #:renderers (list changed-renderer)
-                     #:output-directory cache-output-directory
-                     #:cache-key "test-analysis-v1"))
+                     #:output-directory cache-output-directory))
                  (key-change (build-project/report changed-project)))
-            (test-equal "renderer cache-key changes force rendering"
+            (test-equal "renderer configuration changes force rendering"
               6 render-count)
-            (test-equal "renderer cache-key changes invalidate its output"
+            (test-equal "renderer configuration changes invalidate its output"
               '("summary.txt")
               (build-report-affected-artifacts key-change))
             (let* ((changed-project-key
@@ -348,12 +348,12 @@
                          site)
                        #:renderers (list changed-renderer)
                        #:output-directory cache-output-directory
-                       #:cache-key "test-analysis-v2"))
+                       #:cache? #f))
                    (project-key-change
                      (build-project/report changed-project-key)))
-              (test-equal "project cache-key changes force rendering"
+              (test-equal "disabling project caching force rendering"
                 7 render-count)
-              (test-equal "project cache-key changes invalidate its outputs"
+              (test-equal "disabling project caching invalidate its outputs"
                 '("summary.txt")
               (build-report-affected-artifacts project-key-change))))
         (let* ((full-count 0)
@@ -374,7 +374,6 @@
                                 (site-page-id page)
                                 (list (site-page-source page))))
                             (site-pages site))))
-                   #:cache-key "incremental-v1"
                    #:render-changed
                    (lambda (site changed-paths dirty-paths old-artifacts)
                      (set! partial-count (+ partial-count 1))
@@ -412,8 +411,7 @@
                      (let ((id (string-drop-right (basename path) (string-length ".plant"))))
                        (make-site-page id id (make-content-document '()) path)))
                    #:renderers (list incremental-renderer)
-                   #:output-directory incremental-output-directory
-                   #:cache-key "incremental-analysis-v1")))
+                   #:output-directory incremental-output-directory)))
           (build-project/report incremental-project)
           (test-equal "incremental renderer performs initial full render"
             1 full-count)
