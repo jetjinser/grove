@@ -163,3 +163,8 @@ with the relevant [project](docs/project.md), [math](docs/math.md),
 [relations](docs/relations.md), or
 [composition](docs/forester-composition.md) guide. Update examples when a
 documented form changes.
+
+To measure document reading, pass `#:timings` to
+`make-scribble-document-reader`. Its callback receives `(path phase seconds)`
+for `parse`, `translate`, `evaluate`, and `decode`. Timings are disabled by
+default. Use Guile's `statprof` to locate hotspots inside evaluation.

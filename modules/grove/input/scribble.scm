@@ -44,7 +44,8 @@ The hook returns the loaded paths so Grove can track them as build inputs."
 
 (define* (make-scribble-document-reader
            #:optional (environment #f)
-           #:key (environment-factory
+           #:key (timings #f)
+           (environment-factory
                    (lambda () (default-environment scribble))))
   (lambda (path)
     (call-with-input-file path
@@ -53,7 +54,10 @@ The hook returns the loaded paths so Grove can track them as build inputs."
                 (scribble-evaluate-document port
                                             (or environment
                                                 (environment-factory))
-                                            path)))
+                                            path
+                                            #:timings (and timings
+                                                       (lambda (phase seconds)
+                                                         (timings path phase seconds))))))
           (unless (content-document? document)
             (error "Scribble source requires a content document" path))
           document)))))

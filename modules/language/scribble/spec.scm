@@ -88,21 +88,38 @@
   (use-interface-if-needed! module '(grove ir))
   (use-interface-if-needed! module '(language scribble commands)))
 
-(define* (scribble-evaluate-document port environment #:optional (source #f))
+(define* (scribble-evaluate-document port environment #:optional (source #f)
+                                     #:key (timings #f))
+  "Evaluate a document; TIMINGS optionally receives each reading phase and seconds."
+  (define elapsed (make-hash-table))
+  (define (measure phase thunk)
+    (if timings
+        (let* ((start (get-internal-real-time)) (value (thunk)))
+          (hashq-set! elapsed phase
+            (+ (hashq-ref elapsed phase 0)
+               (/ (- (get-internal-real-time) start) internal-time-units-per-second)))
+          value)
+        (thunk)))
   (when source (set-port-filename! port source))
   (save-module-excursion
     (lambda ()
       (set-current-module environment)
-      (let loop ((fragments (parse-with-context port source))
+      (let loop ((fragments (measure 'parse (lambda () (parse-with-context port source))))
                  (children '())
                  (active-module environment)
                  (form-number 1))
         (if (null? fragments)
-            (make-content-document (decode-flow (reverse children)) source)
+            (let ((document (measure 'decode
+                              (lambda ()
+                                (make-content-document (decode-flow (reverse children)) source)))))
+              (when timings
+                (for-each (lambda (phase) (timings phase (hashq-ref elapsed phase 0)))
+                          '(parse translate evaluate decode)))
+              document)
             (let* ((fragment (car fragments))
-                   (value (evaluate-with-context
-                            (fragment->expression fragment)
-                            source form-number))
+                   (expression (measure 'translate (lambda () (fragment->expression fragment))))
+                   (value (measure 'evaluate
+                            (lambda () (evaluate-with-context expression source form-number))))
                    (location (fragment-source-location fragment))
                    (value (if location
                               (content-with-source-location value location)

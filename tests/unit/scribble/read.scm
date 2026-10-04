@@ -541,4 +541,16 @@
             (cadr (content-element-children second-paragraph))
             'source-location))))))
 
+(let ((phases '()))
+  (let ((document
+          (scribble-evaluate-document (open-input-string "@bold{timed}")
+            (default-environment scribble)
+            #:timings (lambda (phase seconds)
+                        (set! phases (append phases (list (cons phase seconds))))))))
+    (test-assert "timed evaluation still produces document content" (content-document? document))
+    (test-equal "timings cover distinct reading passes"
+      '(parse translate evaluate decode) (map car phases))
+    (test-assert "timings report non-negative durations"
+      (every (lambda (entry) (and (number? (cdr entry)) (>= (cdr entry) 0))) phases))))
+
 (test-end "scribble read")
