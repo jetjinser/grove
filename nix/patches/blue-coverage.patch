@@ -1,0 +1,175 @@
+# SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
+diff --git a/blue/debugging/coverage.scm b/blue/debugging/coverage.scm
+index 3e7ddf6..f902ace 100644
+--- a/blue/debugging/coverage.scm
++++ b/blue/debugging/coverage.scm
+@@ -21,6 +21,7 @@ (define-module (blue debugging coverage)
+   #:use-module (ice-9 rdelim)
+   #:use-module (ice-9 regex)
+   #:use-module (srfi srfi-11)
++  #:use-module (srfi srfi-1)
+   #:use-module (srfi srfi-43)
+   #:use-module ((system vm coverage) #:prefix vm:)
+   #:use-module (system vm vm)
+@@ -164,27 +165,18 @@ (define (find-excluded-lines path)
+                         (values chunks current-chunk bit-left)))
+                 (lambda (chunks current-chunk bit-left)
+                   (let* ((bit-offset (remainder linum %bitvector-chunk-size))
+-                         (still-in-exclusion?
+-                          (cond
+-                           ((regexp-exec %coverage-excl-regex line) =>
+-                            (lambda (excl-match)
+-                              (let ((type (match:substring excl-match 1)))
+-                                (cond
+-                                 ((string=? type "start")
+-                                  #t)
+-                                 ((string=? type "stop")
+-                                  #f)
+-                                 (else
+-                                  #t)))))
+-                           (else in-exclusion))))
+-                    (when in-exclusion
++                         (marker (regexp-exec %coverage-excl-regex line))
++                         (type (and marker (match:substring marker 1)))
++                         (next-exclusion
++                          (cond ((equal? type "start") #t)
++                                ((equal? type "stop") #f)
++                                (else in-exclusion))))
++                    (when (or in-exclusion marker)
+                       (bitvector-set-bit! current-chunk bit-offset))
+-                    (loop (1+ linum)
+-                          still-in-exclusion?
+-                          chunks
+-                          current-chunk
++                    (loop (1+ linum) next-exclusion chunks current-chunk
+                           (1- bit-left)))))))))))
+ 
++
+ ;;; Modification made:
+ ;;;
+ ;;; Instead of passing a list of paths to filter, pass a predicate for
+@@ -230,20 +222,21 @@ (define source-files
+   (for-each (lambda (file)
+               (let ((path (search-path %load-path file)))
+                 (if (string? path)
+-                    (let ((excluded (find-excluded-lines path)))
++                    (let* ((excluded (find-excluded-lines path))
++                           (counts (filter
++                                    (lambda (line+count)
++                                      (not (excluded-line? excluded (car line+count))))
++                                    (vm:line-execution-counts data file))))
+                       (format port "SF:~A~%" path)
+                       #;
+                       (for-each dump-function procs)
+                       (for-each (lambda (line+count)
+                                   (let ((line  (car line+count))
+                                         (count (cdr line+count)))
+-                                    (unless (excluded-line? excluded line)
+-                                      (format port "DA:~A,~A~%" (1+ line) count))))
+-                                (vm:line-execution-counts data file))
+-                      (let-values (((instr exec)
+-                                    (vm:instrumented/executed-lines data file)))
+-                        (format port "LH: ~A~%" exec)
+-                        (format port "LF: ~A~%" instr))
++                                    (format port "DA:~A,~A~%" (1+ line) count)))
++                                counts)
++                      (format port "LH:~A~%" (count (lambda (entry) (positive? (cdr entry))) counts))
++                      (format port "LF:~A~%" (length counts))
+                       (format port "end_of_record~%"))
+                     (begin
+                       (format (current-error-port)
+diff --git a/blueprint/tests.scm b/blueprint/tests.scm
+index f6fc7ef..986e4db 100644
+--- a/blueprint/tests.scm
++++ b/blueprint/tests.scm
+@@ -69,6 +69,7 @@ (define +test-sources+
+     "tests/unit/blue/computation.scm"
+     "tests/unit/blue/types/configuration.scm"
+     "tests/unit/blue/debugging/advice.scm"
++    "tests/unit/blue/debugging/coverage.scm"
+     "tests/unit/blue/file-system/find.scm"
+     "tests/unit/blue/file-system/path.scm"
+     "tests/unit/blue/graph/sort.scm"
+diff --git a/tests/unit/blue/debugging/coverage.scm b/tests/unit/blue/debugging/coverage.scm
+new file mode 100644
+index 0000000..a90f7bf
+--- /dev/null
++++ b/tests/unit/blue/debugging/coverage.scm
+@@ -0,0 +1,50 @@
++;;; SPDX-License-Identifier: LGPL-3.0-or-later
++;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
++
++(define-module (tests unit blue debugging coverage)
++  #:use-module (blue debugging coverage)
++  #:use-module (blue stencils guile test-driver)
++  #:use-module (ice-9 textual-ports)
++  #:use-module (ice-9 string-fun)
++  #:use-module (srfi srfi-1)
++  #:use-module (srfi srfi-13)
++  #:use-module (system base compile)
++  #:use-module (tests test-suite))
++
++(test-begin "coverage export")
++(let* ((root (mkdtemp "/tmp/blue-coverage-test-XXXXXX"))
++       (source (string-append root "/fixture.scm"))
++       (object (string-append root "/fixture.go"))
++       (entry (string-append root "/run.scm"))
++       (report (string-append root "/fixture.cov")))
++  (dynamic-wind
++    (lambda ()
++      (call-with-output-file source
++        (lambda (port)
++          (display "(define-module (coverage-fixture) #:use-module (srfi srfi-64) #:export (run-fixture))\n(define (run-fixture)\n(test-begin \"fixture\")\n(test-assert \"excluded assertion\" #t) ; coverage-exclude-line\n(test-assert \"included assertion\" #t)\n(test-end \"fixture\"))\n" port)))
++      (compile-file source #:output-file object)
++      (call-with-output-file entry (lambda (port) (write `(begin (load-compiled ,object) ((module-ref (resolve-module '(coverage-fixture)) 'run-fixture))) port))))
++    (lambda ()
++      (test-assert "coverage without an explicit filter executes successfully"
++        (run-test entry #:enable-coverage? #t #:cov-file report
++          #:load-path (list (getenv "BLUE_SRCDIR"))
++          #:load-compiled-path (if (getenv "BLUE_TEST_OBJECTS")
++                                  (list (getenv "BLUE_TEST_OBJECTS")) %load-compiled-path)
++          #:time-limit 60))
++      (let* ((text (call-with-input-file report get-string-all))
++             (lines (string-split text #\newline))
++             (start (find-tail (lambda (line) (string=? line (string-append "SF:" source))) lines))
++             (record (and start (take-while (lambda (line) (not (string=? line "end_of_record"))) (cdr start)))))
++        (test-assert "the default filter includes the tested source" record)
++        (when record
++          (let* ((data (filter (lambda (line) (string-prefix? "DA:" line)) record))
++                 (hit (count (lambda (line) (positive? (string->number (cadr (string-split line #\,))))) data)))
++            (test-assert "excluded source lines are absent from DA records"
++              (not (any (lambda (line) (string-prefix? "DA:4," line)) data)))
++            (test-assert "line records contain executions" (positive? hit))
++            (test-assert "LF agrees with the emitted line records"
++              (member (format #f "LF:~a" (length data)) record))
++            (test-assert "LH agrees with the emitted execution counts"
++              (member (format #f "LH:~a" hit) record))))))
++    (lambda () (system* "rm" "-rf" root))))
++(test-end "coverage export")
+--- a/blue/stencils/guile/test-driver.scm
++++ b/blue/stencils/guile/test-driver.scm
+@@ -191,7 +191,7 @@
+                     (trs-file "/dev/null")
+                     (enable-coverage? #f)
+                     (cov-file #f)
+-                    (cov-filter-globs '())
++                    (cov-filter-globs '("*"))
+                     (time-limit 10)
+                     #:allow-other-keys
+                     #:rest rest)
+@@ -271,11 +271,12 @@
+ ;; use `primitive-fork' to then call `%run-test'.  Instead, apply the arguments
+ ;; to a subprocess.
+ (define* (run-test #:key auto-compile? load-path load-compiled-path
++                   (enable-coverage? #f)
+                    #:allow-other-keys #:rest rest)
+   (and=> (status:exit-val (apply-in-subprocess
+                            (blue stencils guile test-driver) %run-test rest
+                            (cond-list '("--no-debug" "--no-auto-compile")
+-                             (auto-compile?
++                             ((and auto-compile? (not enable-coverage?))
+                               '("--auto-compile"))
+                              (load-path
+                               (append-map
