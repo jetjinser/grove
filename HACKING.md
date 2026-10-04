@@ -185,3 +185,5 @@ preview workers. Merge these records by source file and line, using only files
 from the current run. Cancelled or killed workers cannot flush a report.
 Coverage counts executed compiled code; module initialization outside tracing
 and modules never loaded are not part of its denominator.
+Tests asserting source provenance must provide explicit reader locations;
+compiled Scheme strings do not preserve those properties.

@@ -3,6 +3,7 @@
 
 (use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math expression) (grove math derivation)
              ((grove math semantic) #:prefix ◆:)
+             (tests unit grove source-fixtures)
              (ice-9 match) (srfi srfi-1) (srfi srfi-64))
 (define facts '("coordinate(x); coordinate(y); nonzero(x); nonzero(y)"))
 
@@ -112,7 +113,8 @@
   (math-report-final (φ:normalize "E*x" #:assumptions '("vector(E); scalar(x)"))))
 (test-assert "normalization provenance is retained"
   (any math-origin-generated?
-    (math-derivation-sources (math-report-derivation (φ:normalize "y*x" #:assumptions facts)))))
+    (math-derivation-sources (math-report-derivation
+      (φ:normalize (located-text "y*x") #:assumptions facts)))))
 (for-each
   (lambda (source)
     (let ((report (φ:simplify source #:assumptions '("coordinate(x)"))))

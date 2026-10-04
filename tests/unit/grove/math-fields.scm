@@ -5,6 +5,7 @@
              (grove math context) (grove math rewrite) (grove math premise)
              (grove math layout) (grove ir) (grove render html)
              ((grove math semantic) #:prefix ◆:)
+             (tests unit grove source-fixtures)
              (srfi srfi-1) (srfi srfi-64))
 (define r3 (◆:space 'x 'y 'z))
 (define f (◆:field 'f #:space r3))
@@ -47,7 +48,8 @@
 
 (for-each
   (lambda (fixture)
-    (let* ((report (φ:rewrite (car fixture) #:assumptions c1 #:rules (list (caddr fixture))))
+    (let* ((report (φ:rewrite (located-text (car fixture))
+                    #:assumptions c1 #:rules (list (caddr fixture))))
            (certificate (math-report-derivation report)))
       (test-equal "field product rule has the specified result"
         (φ:term (cadr fixture)) (math-report-final report))

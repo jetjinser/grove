@@ -96,6 +96,7 @@
 (define +fixture-resources+
   '("unit/grove/cartesian-fixtures.scm"
     "unit/grove/subprocess.scm"
+    "unit/grove/source-fixtures.scm"
     "unit/grove/polynomial-oracle.scm"
     "unit/forester/fixtures.scm"))
 

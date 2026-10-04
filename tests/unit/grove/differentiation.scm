@@ -5,6 +5,7 @@
              (grove math differentiation) (grove relation)
              (grove math layout) (grove ir) (grove render html)
              (grove math source)
+             (tests unit grove source-fixtures)
              (ice-9 match) (srfi srfi-1) (srfi srfi-64))
 
 (define (expansion report) (math-report-derivation (car (math-report-passes report))))
@@ -57,7 +58,7 @@
 (test-begin "polynomial differentiation")
 (for-each
   (lambda (fixture)
-    (let ((report (φ:differentiate (car fixture) "x"
+    (let ((report (φ:differentiate (located-text (car fixture)) "x"
                     #:assumptions '("coordinate(x); parameter(a); positive(x)"))))
       (test-equal "elementary acceptance derivative"
         (φ:term (cadr fixture)) (math-report-final report))

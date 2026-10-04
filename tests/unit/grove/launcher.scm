@@ -10,7 +10,7 @@
 
 (define sources (getenv "GROVE_SRCDIR"))
 (define repository (dirname sources))
-(add-to-load-path repository)
+(set! %load-path (cons repository %load-path))
 (resolve-interface '(blueprint buildables))
 (define runtime-library-paths
   (module-ref (resolve-module '(blueprint buildables)) 'runtime-library-paths))
