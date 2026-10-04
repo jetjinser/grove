@@ -4,7 +4,7 @@
 (define-module (tests unit grove polynomial-oracle)
   #:use-module (srfi srfi-1)
   #:use-module (ice-9 match)
-  #:export (evaluate normalize scalar vector curl divergence partial at-origin coordinates))
+  #:export (evaluate make-evaluator normalize scalar vector curl divergence partial at-origin coordinates))
 
 ;; Independent sparse polynomials in three coordinates. Coefficients are exact
 ;; rationals; exponent vectors are ordinary lists, not Grove's expression IR.
@@ -59,7 +59,7 @@
   (unless (eq? (car a) (car b)) (error "oracle type mismatch" a b))
   (if (eq? (car a) 'scalar) (scalar (add (cdr a) (cdr b)))
       (vector (map add (cdr a) (cdr b)))))
-(define (evaluate term environment)
+(define (make-evaluator environment)
   ;; Adjacent certificate terms share large subexpressions. Cache pure oracle
   ;; values within this fixed environment; no Grove computation is consulted.
   (define cache (make-hash-table))
@@ -137,7 +137,10 @@
        (unless template (error "oracle unknown field" name))
        (map-value (lambda (polynomial) (substitute polynomial arguments)) template)))
     (_ (error "oracle unsupported expression" term))))
-  (go term))
+  go)
+
+(define (evaluate term environment)
+  ((make-evaluator environment) term))
 (define coordinates
   (map (lambda (name index) (cons name (scalar (list (cons 1 (map (lambda (i) (if (= i index) 1 0)) '(0 1 2)))))))
        '(x y z) '(0 1 2)))

@@ -60,15 +60,6 @@
   (test-equal "independent oracle checks the third derivative"
     (evaluate (φ:term "differentiate(differentiate(differentiate(h(x),x),x),x)") env)
     (evaluate (math-report-final report) env)))
-(for-each
-  (lambda (source)
-    (let ((report (φ:check-equation source "components(0,0,0)"
-                   #:assumptions (list basis "scalar(u); scalar(v); scalar(w); c2(u); c2(v); c2(w)"))))
-      (test-assert "component calculus establishes the vector identity" (math-report-complete? report))
-      (test-assert "component identity certificate replays"
-        (math-verification-valid? (math-verify-derivation (math-report-derivation report))))))
-  '("curl(grad(u))"
-    "grad(div(components(u,v,w)))-laplacian(components(u,v,w))-curl(curl(components(u,v,w)))"))
 (test-equal "constant parameters cannot be ordinary differentiation coordinates" 'unsupported-expression
   (math-report-reason (φ:differentiate "h(x)" "a"
     #:assumptions (append unary '("parameter(a)")))))

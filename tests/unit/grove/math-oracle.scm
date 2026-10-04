@@ -18,6 +18,13 @@
       (math-rewrite-answers facts input (math-rule-names) #f))))
 
 (test-begin "independent mathematical rule oracle")
+(let ((coordinate-oracle (make-evaluator coordinates))
+      (constant-oracle (make-evaluator '((x . (scalar (7 0 0 0)))))))
+  (test-equal "reusable oracle agrees with fresh evaluation"
+    (evaluate '(+ (var x) (var x)) coordinates)
+    (coordinate-oracle '(+ (var x) (var x))))
+  (test-equal "oracle caches are isolated by environment"
+    '(scalar (7 0 0 0)) (constant-oracle '(var x))))
 (for-each
   (lambda (seed)
     (let* ((f (normalize `((,seed 3 1 0) (2 0 2 1) (-1 1 0 2) (1 0 0 0))))
