@@ -173,7 +173,7 @@
                          (begin
                            (let ((id next-id))
                              (set! next-id (1+ next-id))
-                             (format #f "unstable-~d" id))))))
+                             (format #f "unstable-~a" id))))))
                 (children (map transform (content-element-children content)))
                 (properties
                   (filter (lambda (entry)

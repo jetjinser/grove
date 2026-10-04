@@ -5,6 +5,7 @@
 (define-module (grove site)
   #:use-module (grove string-fun)
   #:use-module (grove ir)
+  #:use-module (ice-9 format)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-1)
   #:export (site-page?
