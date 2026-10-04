@@ -51,7 +51,12 @@ sources → prepare hook → reader → inputs → analyzer → model → render
 ```
 
 The reader and analyzer are project callbacks. Each renderer consumes the
-same analyzer result and returns artifacts. The writer updates output files
+same analyzer result and returns artifacts. Shared artifact validation runs
+before writing; `check-project` uses the same execution flow with full rendering
+and no output-state access. CLI loading lives in `(grove project load)`, with
+argument handling and diagnostic presentation in `(grove cli)`. The loader
+scopes the working directory for synchronous execution; it is not a
+thread-local path environment. The writer updates output files
 and the artifact manifest. See the [project guide](docs/project.md) for a
 minimal setup and renderer options.
 

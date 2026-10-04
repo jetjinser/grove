@@ -53,6 +53,32 @@ and follow its links. For smaller demonstrations, build one of these examples:
 Examples write to `/tmp` by default and accept an output directory as their
 first argument.
 
+## Command line
+
+Install the CLI and modules to a local prefix from the development shell:
+
+```sh
+blue configure --prefix=/tmp/grove-install
+blue build
+blue install
+```
+
+A CLI project has a `project.scm` whose final expression returns a Grove project.
+From its directory, run:
+
+```sh
+/tmp/grove-install/bin/grove build
+/tmp/grove-install/bin/grove check
+```
+
+`build` updates outputs using the existing renderer cache. `check` runs the full
+pipeline, including rendering and artifact validation, without reading or writing
+output state. It does not undo side effects in project code. Use `--project PATH`
+to select a project, `build --output PATH` to override its output directory,
+and `--debug` for the original exception and backtrace. See the
+[project guide](docs/project.md#command-line-projects) for a complete project file.
+The repository examples still use the direct Scheme entry points shown above.
+
 ## What you can build
 
 - Read text or Scheme-based sources into any Scheme data model.

@@ -24,7 +24,7 @@
        (cons command options))
       ((argument . rest)
        (cond
-         ((member argument '("build"))
+         ((member argument '("build" "check"))
           (when command (usage-error "unexpected command: ~a" argument))
           (loop rest argument options))
          ((member argument '("--help" "-h" "--debug"))
@@ -49,10 +49,17 @@
 
 (define (print-help command)
   (display
-    (if command
-        "Usage: grove build [OPTIONS]\n\nBuild the project and update its outputs.\n"
-        "Usage: grove COMMAND [OPTIONS]\n\nCommands:\n  build  Build the project and update its outputs.\n"))
-  (display "\nOptions:\n  --project PATH  Project file (default: ./project.scm).\n  --output PATH   Override the output directory.\n  --debug         Show the original exception and backtrace.\n  -h, --help      Show help.\n\nOption paths are relative to the invocation directory.\nProject paths are relative to the project file's directory.\n"))
+    (cond
+      ((equal? command "build")
+       "Usage: grove build [OPTIONS]\n\nBuild the project and update its outputs.\n")
+      ((equal? command "check")
+       "Usage: grove check [OPTIONS]\n\nRead, analyze, render, and validate without writing outputs.\n")
+      (else
+       "Usage: grove COMMAND [OPTIONS]\n\nCommands:\n  build  Build the project and update its outputs.\n  check  Validate the complete pipeline without writing outputs.\n")))
+  (display "\nOptions:\n  --project PATH  Project file (default: ./project.scm).\n")
+  (unless (equal? command "check")
+    (display "  --output PATH   Override the output directory (build only).\n"))
+  (display "  --debug         Show the original exception and backtrace.\n  -h, --help      Show help.\n\nOption paths are relative to the invocation directory.\nProject paths are relative to the project file's directory.\n"))
 
 (define (print-project-error error debug?)
   (let* ((port (current-error-port))
@@ -80,13 +87,17 @@
   (let ((filename (or (assq-ref options 'project) "project.scm")))
     (call-with-loaded-project filename
       (lambda (project)
-        (let ((report (build-project/report project)))
-          (format #t "Built ~d artifact~:p (~d affected).~%Output: ~a~%"
-                  (length (build-report-artifacts report))
-                  (length (build-report-affected-artifacts report))
-                  (canonicalize-path (project-output-directory project)))
-          (unless (build-report-rendered? report)
-            (display "Renderer cache hit.\n"))))
+        (if (string=? command "check")
+            (let ((report (check-project project)))
+              (format #t "Checked ~d artifact~:p.\n"
+                      (length (build-report-artifacts report))))
+            (let ((report (build-project/report project)))
+              (format #t "Built ~d artifact~:p (~d affected).~%Output: ~a~%"
+                      (length (build-report-artifacts report))
+                      (length (build-report-affected-artifacts report))
+                      (canonicalize-path (project-output-directory project)))
+              (unless (build-report-rendered? report)
+                (display "Renderer cache hit.\n")))))
       #:output-directory (assq-ref options 'output))))
 
 (define (main arguments)

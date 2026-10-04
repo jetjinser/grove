@@ -20,6 +20,55 @@ Grove does not require pages, content IR, or HTML. See
 project-owned model, and [`examples/inventory/build.scm`](../examples/inventory/build.scm)
 for CSV and Scheme output without Grove's document IR.
 
+## Command-line projects
+
+The CLI loads `project.scm` from the current directory, or the file selected by
+`--project PATH`. The file's final expression must return a `project` value; it
+must not call `build-project` itself. For example, this generic project copies
+text inputs into an output artifact:
+
+```scheme
+(use-modules (grove project)
+             (grove output)
+             (ice-9 textual-ports))
+
+(make-project
+  #:source-directory "sources"
+  #:read-source
+  (lambda (path) (call-with-input-file path get-string-all))
+  #:renderers
+  (list (lambda (context)
+          (list (make-artifact "combined.txt"
+                  (apply string-append
+                    (map project-input-value
+                         (project-context-inputs context)))))))
+  #:output-directory "build")
+```
+
+Create `sources/` with text files, then run `grove build` or `grove check`.
+Forester projects use `make-site-project` in exactly the same way.
+
+CLI option paths are relative to the directory where the command was invoked.
+Paths inside the project are relative to the project file's directory throughout
+loading and execution. The loader restores the caller's directory and uses a
+fresh top-level evaluation module. Named Guile modules still have their normal
+process-wide lifetime. The CLI tracks the project file and includes its content
+fingerprint in configured renderer cache keys.
+
+`build` uses renderer caching and writes validated artifacts. `check` always
+runs the renderers, ignores published cache state, and does not create or modify
+the output directory. Both validate duplicate, reserved, and conflicting output
+paths. Checking does not sandbox Scheme callbacks or perform browser layout
+validation. Output writing is not transactional across the entire directory.
+
+Use `grove --help` or `grove check --help` for options. Success exits with `0`,
+project execution failure with `1`, and invalid arguments with `2`. Summaries go
+to stdout, diagnostics to stderr; `--debug` includes the original exception and
+backtrace. Existing Scheme callers can use `check-project` alongside
+`build-project/report`; both return the same build-report structure. A check
+has no previous output state, so its report describes all tracked sources as
+added and all produced artifacts as affected.
+
 ## A linked-page project
 
 For a Forester site, use `(grove project site)` with Forester's reader,
