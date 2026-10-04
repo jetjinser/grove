@@ -86,7 +86,8 @@
           #:port (or (assq-ref options 'port) 8080)
           #:watch? (not (assq-ref options 'no-watch))
           #:debug? (assq-ref options 'debug))
-        (let* ((checking? (string=? command "check"))
+        (let* ((started (cli-seconds))
+               (checking? (string=? command "check"))
                (result
                  (call-with-cli-progress (if checking? "Checking" "Building")
                    filename
@@ -103,16 +104,8 @@
                        #:output-directory (assq-ref options 'output)))))
                (output (car result))
                (report (cdr result)))
-          (if checking?
-              (format #t "Checked ~d artifact~:p.\n"
-                      (length (build-report-artifacts report)))
-              (begin
-                (format #t "Built ~d artifact~:p (~d affected).~%Output: ~a~%"
-                        (length (build-report-artifacts report))
-                        (length (build-report-affected-artifacts report))
-                        output)
-                (unless (build-report-rendered? report)
-                  (display "Renderer cache hit.\n"))))
+          (print-cli-summary report (- (cli-seconds) started)
+            #:checked? checking? #:output output)
           0))))
 
 (define (main arguments)

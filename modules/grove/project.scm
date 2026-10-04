@@ -375,7 +375,9 @@
   (let* ((source-paths (call-with-project-stage 'collect #f
                          (lambda ()
                            (progress 'collect #f)
-                           (collect-project-sources project))))
+                           (let ((paths (collect-project-sources project)))
+                             (progress 'sources (length paths))
+                             paths))))
          (prepared-sources (begin
                             (progress 'prepare #f)
                             (prepare-project-sources (project-prepare project))))
@@ -395,10 +397,10 @@
          (inputs
            (map (lambda (path)
                   (progress 'read path)
-                  (make-project-input
-                    path
-                    (read-source-with-context path
-                                              (project-read-source project))))
+                  (let ((value (read-source-with-context path
+                                 (project-read-source project))))
+                    (progress 'read-done path)
+                    (make-project-input path value)))
                 source-paths))
          (current-sources
            (map (lambda (path) (list path (file-fingerprint path)))
@@ -490,7 +492,7 @@
                         (not cache-hit?))))
 
 (define* (build-project/report project #:key (progress (lambda (stage path) #t)))
-  "Build PROJECT, notifying PROGRESS with a stage symbol and optional path."
+  "Build PROJECT, notifying PROGRESS with a stage symbol and detail."
   (execute-project project #t progress))
 
 (define* (check-project project #:key (progress (lambda (stage path) #t)))

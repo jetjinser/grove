@@ -50,7 +50,8 @@
 (define (build-preview request result-path)
   (match request
     ((filename output previous-modules previous-roots previous-files debug?)
-     (let ((loaded '()) (loaded-stamps '()) (old-hook %load-hook))
+     (let ((started (cli-seconds))
+           (loaded '()) (loaded-stamps '()) (old-hook %load-hook))
        (dynamic-wind
          (lambda ()
            (set! %load-hook
@@ -103,11 +104,7 @@
                               (build-report-artifacts report)))
                        port)
                      (newline port)))
-                 (format #t "Built ~d artifact~:p (~d affected).~%Output: ~a~%"
-                         (length (build-report-artifacts report))
-                         (length (build-report-affected-artifacts report)) output)
-                 (unless (build-report-rendered? report)
-                   (display "Renderer cache hit.\n"))))
+                 (print-cli-summary report (- (cli-seconds) started) #:output output)))
              #:output-directory output))
          (lambda () (set! %load-hook old-hook)))))
     (_ (error "invalid preview worker request" request))))

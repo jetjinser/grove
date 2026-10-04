@@ -151,6 +151,9 @@
     (set! port (free-port))
     (let ((pid (start-server)))
       (test-assert "initial build serves its complete result" (await-text "one|module-1|css-1"))
+      (test-assert "idle preview reports watching"
+        (wait-for (lambda ()
+                    (string-contains (read-file (string-append root "/.stderr")) "Watching"))))
       (test-equal "binary HTTP response preserves bytes" '(0 255 128)
         (bytevector->u8-list (cadr (request "/blob.bin"))))
       (test-equal "cache metadata is not an HTTP resource" 404
@@ -215,6 +218,8 @@
       (await-text "rapid-two|")
       (write-file article "fixed-new")
       (usleep 1200000)
+      (test-assert "--no-watch does not report watching"
+        (not (string-contains (read-file (string-append root "/.stderr")) "Watching")))
       (test-assert "--no-watch keeps its initial snapshot" (string-contains (page) "rapid-two|"))
       (test-assert "serve honors the output override"
         (file-exists? (string-append root "/fixed/index.html")))

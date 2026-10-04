@@ -75,8 +75,11 @@ From its directory, run:
 /tmp/grove-install/bin/grove serve --port 8080
 ```
 
-Progress shows the current source and processing stage on stderr: terminal
-updates stay on one line, while redirected logs use plain lines.
+Progress starts with `Building` or `Checking` for the project, then keeps a
+`Reading` line for each source on stderr.
+A separate terminal progress bar shows completed reads and the current file;
+it disappears when reading ends. Stage lines and the elapsed-time summary remain
+visible. Redirected logs use plain lines without the dynamic bar.
 
 `build` updates outputs using the existing renderer cache. `check` runs the full
 pipeline, including rendering and artifact validation, without reading or writing

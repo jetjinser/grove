@@ -3,6 +3,7 @@
 
 (define-module (grove serve)
   #:use-module (grove output)
+  #:use-module (grove private cli progress)
   #:use-module (grove project diagnostic)
   #:use-module (grove private preview http)
   #:use-module (grove private preview watch)
@@ -54,6 +55,7 @@
          (workspace #f)
          (listener #f)
          (server-started? #f)
+         (idle? #f)
          (sigint #f) (sigterm #f) (sigpipe #f))
     (define (start-build!)
       (let ((request (string-append workspace "/request.scm"))
@@ -63,6 +65,7 @@
           (lambda (port)
             (write (list filename override modules roots files debug?) port)))
         (set! generation (+ generation 1))
+        (set! idle? #f)
         (force-output)
         (call-with-blocked-asyncs
           (lambda ()
@@ -80,8 +83,7 @@
     (define (start-http!)
       (listen listener 128)
       (set! server-started? #t)
-      (format #t "Serving http://127.0.0.1:~a/~a~%" port
-              (if watch? " (watching for changes)" ""))
+      (print-cli-status "Serving" (format #f "http://127.0.0.1:~a/" port))
       (force-output))
     (define (accept-result!)
       (match (call-with-input-file (string-append workspace "/result.scm") read)
@@ -164,9 +166,11 @@
                                   (current-error-port))
                          (force-output (current-error-port)))))))
                 (when (and watch? (not pid) (pair? pending) (>= now deadline))
-                  (display "Rebuilding…\n")
                   (start-build!)
                   (set! pending '()))
+                (when (and watch? server-started? (not pid) (null? pending) (not idle?))
+                  (print-cli-status "Watching" "for changes (Ctrl-C to stop)" (current-error-port))
+                  (set! idle? #t))
                 (if server-started?
                     (let ((ready (select (list listener) '() '() 0 50000)))
                       (when (pair? (car ready))

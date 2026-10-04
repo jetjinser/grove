@@ -2,38 +2,102 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove private cli progress)
+  #:use-module (grove project)
   #:use-module (ice-9 format)
   #:use-module (srfi srfi-13)
-  #:export (call-with-cli-progress))
+  #:export (call-with-cli-progress cli-seconds print-cli-status print-cli-summary))
+
+(define (cli-seconds)
+  (/ (get-internal-real-time) internal-time-units-per-second))
+
+(define (terminal-output? port)
+  (and (isatty? port) (not (equal? (getenv "TERM") "dumb"))))
 
 (define (display-path path)
   (let ((prefix (string-append (getcwd) "/")))
     (if (string-prefix? prefix path)
         (substring path (string-length prefix)) path)))
 
+(define* (status-line port label message #:optional (color "1;32"))
+  (let ((color? (and (terminal-output? port) (not (getenv "NO_COLOR")))))
+    (when color? (format port "\x1b[~am" color))
+    (format port "~12@a" label)
+    (when color? (display "\x1b[0m" port))
+    (unless (string-null? message) (format port " ~a" message))))
+
+(define* (print-cli-status label message #:optional (port (current-output-port)))
+  (status-line port label message)
+  (newline port)
+  (force-output port))
+
+(define* (print-cli-summary report elapsed #:key output (checked? #f))
+  (print-cli-status "Finished"
+    (if checked?
+        (format #f "~d artifact~:p checked in ~,2fs"
+                (length (build-report-artifacts report)) elapsed)
+        (format #f "~d artifact~:p (~d affected) in ~,2fs"
+                (length (build-report-artifacts report))
+                (length (build-report-affected-artifacts report)) elapsed)))
+  (when output (print-cli-status "Output" output))
+  (unless (build-report-rendered? report)
+    (print-cli-status "Cached" "Renderer cache hit.")))
+
+(define (progress-bar completed total width)
+  (let ((filled (if (zero? total) width (quotient (* completed width) total))))
+    (string-append "[" (make-string filled #\=)
+                   (if (< filled width)
+                       (string-append ">" (make-string (- width filled 1) #\space)) "")
+                   "]")))
+
 (define (call-with-cli-progress action filename procedure)
-  "Run PROCEDURE with a progress callback; keep terminal updates on one line."
+  "Keep one status line per input and a separate transient reading progress bar."
   (let* ((port (current-error-port))
-         (terminal? (isatty? port))
-         (report
-           (lambda (stage path)
-             (let ((label (case stage
-                            ((load read) action)
-                            ((analyze) "Analyzing")
-                            ((render) "Rendering")
-                            ((validate) "Validating")
-                            ((write) "Writing")
-                            (else #f))))
-               (when label
-                 (when terminal? (display "\r\x1b[2K" port))
-                 (format port "~a~a~a" label (if path " " "")
-                         (if path (display-path path) ""))
-                 (unless terminal? (newline port))
-                 (force-output port))))))
+         (terminal? (terminal-output? port))
+         (columns (let ((value (string->number (or (getenv "COLUMNS") "80"))))
+                    (if (and (exact-integer? value) (> value 20)) value 80)))
+         (bar-width (max 4 (min 28 (- columns 40))))
+         (total 0)
+         (completed 0)
+         (active? #f))
+    (define (clear-progress)
+      (when active?
+        (display "\r\x1b[2K" port)
+        (set! active? #f)
+        (force-output port)))
+    (define (draw-progress path)
+      (when terminal?
+        (clear-progress)
+        (let* ((message (format #f "~a ~d/~d: ~a"
+                          (progress-bar completed total bar-width)
+                          completed total (display-path path)))
+               (available (- columns 14))
+               (message (if (> (string-length message) available)
+                            (string-append (substring message 0 (- available 1)) "…")
+                            message)))
+          (status-line port "Reading" message "1;36")
+          (set! active? #t)
+          (force-output port))))
+    (define (report stage detail)
+      (case stage
+        ((sources) (set! total detail))
+        ((read)
+         (clear-progress)
+         (print-cli-status "Reading" (display-path detail) port)
+         (draw-progress detail))
+        ((read-done)
+         (set! completed (+ completed 1))
+         (draw-progress detail))
+        (else
+         (let ((label (case stage
+                        ((analyze) "Analyzing")
+                        ((render) "Rendering")
+                        ((validate) "Validating")
+                        ((write) "Writing")
+                        (else #f))))
+           (when label
+             (clear-progress)
+             (print-cli-status label (if detail (display-path detail) "") port))))))
     (dynamic-wind
-      (lambda () (report 'load filename))
+      (lambda () (print-cli-status action (display-path filename) port))
       (lambda () (procedure report))
-      (lambda ()
-        (when terminal?
-          (display "\r\x1b[2K" port)
-          (force-output port))))))
+      clear-progress)))

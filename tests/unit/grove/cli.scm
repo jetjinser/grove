@@ -74,23 +74,31 @@
     (let ((result (run "check" "--project" config)))
       (test-equal "check succeeds before the first build" 0 (car result))
       (test-assert "check summary reports validated artifacts"
-        (string-contains (cadr result) "Checked 1 artifact."))
+        (string-contains (cadr result) "1 artifact checked in "))
       (test-assert "check progress identifies the input on stderr"
-        (string-contains (caddr result) "Checking sources/input.txt"))
+        (string-contains (caddr result) "Reading sources/input.txt"))
       (test-assert "check progress never reports writing"
         (not (string-contains (caddr result) "Writing")))
       (test-assert "check creates no output directory"
         (not (file-exists? (string-append root "/output")))))
+    (write-file (string-append root "/sources/second.txt") "second")
+    (let ((result (run "check" "--project" config)))
+      (test-assert "progress preserves a status line for each input"
+        (string-contains (caddr result) "Reading sources/second.txt")))
+    (delete-file (string-append root "/sources/second.txt"))
     (let ((result (run "build" "--project" config)))
       (test-equal "build succeeds outside the project directory" 0 (car result))
-      (test-assert "build summary reports artifacts" (string-contains (cadr result) "Built 1 artifact"))
+      (test-assert "build summary reports artifacts" (string-contains (cadr result) "1 artifact (1 affected) in "))
+      (test-assert "finished summary includes elapsed time"
+        (and (string-contains (cadr result) "Finished")
+             (string-contains (cadr result) " in ")))
       (test-assert "build progress identifies the input on stderr"
-        (string-contains (caddr result) "Building sources/input.txt"))
+        (string-contains (caddr result) "Reading sources/input.txt"))
       (test-assert "redirected progress contains no terminal control sequences"
         (and (not (string-index (caddr result) #\return))
              (not (string-index (caddr result) #\esc))))
       (test-assert "progress leaves stdout for the summary"
-        (not (string-contains (cadr result) "Building sources/input.txt")))
+        (not (string-contains (cadr result) "Reading sources/input.txt")))
       (test-assert "build uses project-relative output directory"
         (file-exists? (string-append root "/output/page.txt"))))
     (let ((result (run "build" "--project" config)))

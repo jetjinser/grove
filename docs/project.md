@@ -105,8 +105,11 @@ that group. `--no-watch` performs one build and serves that fixed snapshot.
 
 Scheme runners remain silent by default. `build-project`, `build-project/report`,
 and `check-project` accept `#:progress`, a callback receiving a stage symbol and
-an optional path. Stages are `collect`, `prepare`, `read`, `analyze`, `render`,
-`validate`, and `write`; `read` identifies each source, and `render` is skipped
+a detail value. Stages are `collect`, `sources`, `prepare`, `read`, `analyze`,
+`read-done`, `render`, `validate`, and `write`. The `sources` detail is the number of inputs;
+`read` identifies the source about to be read, and `read-done` reports that source
+after a successful read. `write` identifies the output directory, and other
+details are `#f`. `render` is skipped
 on a complete renderer cache hit. CLI formatting uses this same callback.
 
 ## A linked-page project
