@@ -7,6 +7,8 @@
   #:use-module (blue stencils guile)
   #:use-module (blue stencils template-file)
   #:use-module (blue stencils texinfo)
+  #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-13)
   #:export (grove-modules forester-modules grove-programs))
 
 (define +grove-sources+
@@ -141,6 +143,22 @@
         (outputs "forester/style/default.css")
         (install-location #%~(string-append #%?guile-module-dir "/forester/style"))))))
 
+(define (runtime-library-paths paths extension required?)
+  ;; Resolve devshell symlinks to the dependency packages themselves.
+  (delete-duplicates
+    (filter-map
+      (lambda (module)
+        (let* ((filename (string-append module extension))
+               (path (search-path paths filename)))
+          (cond
+            (path
+             (string-drop-right (canonicalize-path path)
+                                (+ 1 (string-length filename))))
+            (required? (error "missing Grove runtime dependency" module))
+            (else #f))))
+      '("gcrypt/hash" "faster-minikanren/mk-guile"))
+    string=?))
+
 (define grove-programs
   (list
     (template-file
@@ -150,5 +168,9 @@
       (install-permissions #o755)
       (local-variables
         #%~(list (cons 'GUILE_MODULE_DIR #%?guile-module-dir)
-                 (cons 'GUILE_OBJECT_DIR #%?guile-object-dir)))
+                 (cons 'GUILE_OBJECT_DIR #%?guile-object-dir)
+                 (cons 'GUILE_RUNTIME_LOAD_PATH
+                       (format #f "~s" (runtime-library-paths %load-path ".scm" #t)))
+                 (cons 'GUILE_RUNTIME_COMPILED_PATH
+                       (format #f "~s" (runtime-library-paths %load-compiled-path ".go" #f)))))
       (install-location #%~#%?bindir))))

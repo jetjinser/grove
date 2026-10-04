@@ -66,6 +66,12 @@ dependencies are tracked by path. A renderer cache hit reuses artifacts, but
 the build still reads the sources and runs the analyzer. Keep cache keys in
 sync with reader, analyzer, renderer code, and configuration.
 
+The CLI template includes the installed Grove library directories and the
+canonical source and compiled directories of its runtime dependencies. Resolve
+those directories from the build environment, rather than recording the whole
+devshell path. The launcher test runs with an empty environment to catch
+accidental dependence on development load paths or a user compilation cache.
+
 Preview execution lives in `(grove serve)`. A single event loop supervises a
 fresh build process, polls source changes, and handles local HTTP requests.
 The private preview modules separate file observation, HTTP artifact handling,

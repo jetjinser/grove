@@ -3,8 +3,10 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-;; Installed libraries and optional caller paths share Guile's normal load paths.
-(set! %load-path (cons "@GUILE_MODULE_DIR@" %load-path))
-(set! %load-compiled-path (cons "@GUILE_OBJECT_DIR@" %load-compiled-path))
+;; Include runtime dependencies resolved at build time, without relying on devshell.
+(set! %load-path
+  (append (list "@GUILE_MODULE_DIR@") '@GUILE_RUNTIME_LOAD_PATH@ %load-path))
+(set! %load-compiled-path
+  (append (list "@GUILE_OBJECT_DIR@") '@GUILE_RUNTIME_COMPILED_PATH@ %load-compiled-path))
 (use-modules (grove cli))
 (exit (main (cdr (command-line))))

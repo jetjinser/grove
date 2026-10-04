@@ -75,6 +75,7 @@
     "unit/grove/project-check.scm"
     "unit/grove/project-load.scm"
     "unit/grove/cli.scm"
+    "unit/grove/launcher.scm"
     "unit/grove/preview.scm"
     "unit/grove/serve.scm"
     "unit/grove/platform.scm"

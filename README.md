@@ -66,6 +66,10 @@ blue prefix=/tmp/grove-install exec-prefix=/tmp/grove-install \
 export PATH=/tmp/grove-install/bin:$PATH
 ```
 
+The installed launcher records the build-time Guile runtime dependency paths
+(`guile-gcrypt` and `faster-minikanren`), so it also works outside the development
+shell.
+
 A CLI project has a `project.scm` whose final expression returns a Grove project.
 From its directory, run:
 
