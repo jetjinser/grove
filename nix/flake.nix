@@ -46,6 +46,7 @@
               guile-quickcheck
               self'.packages.blue
               self'.packages.faster-minikanren
+              self'.packages.guile-ts
 
               reuse
             ];
