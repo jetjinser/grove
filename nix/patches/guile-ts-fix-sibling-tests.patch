@@ -1,0 +1,51 @@
+# SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Retain the protected tree object through node finalization; looking it up
+# through the weak table during finalization can lose its identity.
+# Keep query inputs alive while a cursor is consuming captures.
+# Make sibling flags optional with a false default and correct test API calls.
+diff --git a/ts/tree.c b/ts/tree.c
+--- a/ts/tree.c
++++ b/ts/tree.c
+@@ -9,1 +9,2 @@
+   TSNode node;
++  SCM tree;
+@@ -22,1 +23,2 @@
+-  scm_gc_protect_object(node_tree(tsn));
++  node->tree = node_tree(tsn);
++  scm_gc_protect_object(node->tree);
+@@ -36,1 +38,1 @@
+-  scm_gc_unprotect_object(node_tree(node->node));
++  scm_gc_unprotect_object(node->tree);
+@@ -342,1 +344,1 @@
+-  TSNode tsn= scm_is_true(named)
++  TSNode tsn= (!SCM_UNBNDP(named) && scm_to_bool(named))
+@@ -348,1 +348,1 @@
+-SCM_DEFINE(tsn_prev_sibling, "ts-node-prev-sibling", 2, 0, 0,
++SCM_DEFINE(tsn_prev_sibling, "ts-node-prev-sibling", 1, 1, 0,
+@@ -352,1 +354,1 @@
+-  TSNode tsn= scm_is_true(named)
++  TSNode tsn= (!SCM_UNBNDP(named) && scm_to_bool(named))
+diff --git a/ts/query.c b/ts/query.c
+--- a/ts/query.c
++++ b/ts/query.c
+@@ -264,2 +264,4 @@
+                        node_ref(node));
++  scm_set_object_property_x(qc, scm_from_utf8_symbol("query"), q);
++  scm_set_object_property_x(qc, scm_from_utf8_symbol("node"), tnode);
+   scm_remember_upto_here_1(qc);
+diff --git a/tests/api.scm b/tests/api.scm
+--- a/tests/api.scm
++++ b/tests/api.scm
+@@ -286,1 +286,0 @@
+-          1
+@@ -294,1 +293,1 @@
+-        (- (ts-node-named-child-count root) 1) #t)
++        (- (ts-node-child-count root #t) 1) #t)
+diff --git a/tests/tcursor.scm b/tests/tcursor.scm
+--- a/tests/tcursor.scm
++++ b/tests/tcursor.scm
+@@ -66,1 +66,1 @@
+-        #f (ts-tree-cursor-goto-first-child-for-byte cursor (cons 0 50))))
++        #f (ts-tree-cursor-goto-first-child-for-point cursor (cons 0 50))))
