@@ -103,6 +103,12 @@ worker's process group, exiting with `130`. SIGTERM performs the same cleanup
 and exits with `143`. Detached processes created by project code are outside
 that group. `--no-watch` performs one build and serves that fixed snapshot.
 
+Scheme runners remain silent by default. `build-project`, `build-project/report`,
+and `check-project` accept `#:progress`, a callback receiving a stage symbol and
+an optional path. Stages are `collect`, `prepare`, `read`, `analyze`, `render`,
+`validate`, and `write`; `read` identifies each source, and `render` is skipped
+on a complete renderer cache hit. CLI formatting uses this same callback.
+
 ## A linked-page project
 
 For a Forester site, use `(grove project site)` with Forester's reader,

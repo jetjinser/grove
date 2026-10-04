@@ -75,6 +75,9 @@ From its directory, run:
 /tmp/grove-install/bin/grove serve --port 8080
 ```
 
+Progress shows the current source and processing stage on stderr: terminal
+updates stay on one line, while redirected logs use plain lines.
+
 `build` updates outputs using the existing renderer cache. `check` runs the full
 pipeline, including rendering and artifact validation, without reading or writing
 output state. It does not undo side effects in project code. Use `--project PATH`

@@ -4,6 +4,7 @@
 (define-module (grove cli)
   #:use-module (grove project)
   #:use-module (grove serve)
+  #:use-module (grove private cli progress)
   #:use-module (grove project load)
   #:use-module (grove project diagnostic)
   #:use-module (ice-9 format)
@@ -85,21 +86,33 @@
           #:port (or (assq-ref options 'port) 8080)
           #:watch? (not (assq-ref options 'no-watch))
           #:debug? (assq-ref options 'debug))
-        (begin
-          (call-with-loaded-project filename
-            (lambda (project)
-              (if (string=? command "check")
-                  (let ((report (check-project project)))
-                    (format #t "Checked ~d artifact~:p.\n"
-                            (length (build-report-artifacts report))))
-                  (let ((report (build-project/report project)))
-                    (format #t "Built ~d artifact~:p (~d affected).~%Output: ~a~%"
-                            (length (build-report-artifacts report))
-                            (length (build-report-affected-artifacts report))
-                            (canonicalize-path (project-output-directory project)))
-                    (unless (build-report-rendered? report)
-                      (display "Renderer cache hit.\n")))))
-            #:output-directory (assq-ref options 'output))
+        (let* ((checking? (string=? command "check"))
+               (result
+                 (call-with-cli-progress (if checking? "Checking" "Building")
+                   filename
+                   (lambda (progress)
+                     (call-with-loaded-project filename
+                       (lambda (project)
+                         (let ((report
+                                 (if checking?
+                                     (check-project project #:progress progress)
+                                     (build-project/report project #:progress progress))))
+                           (cons (and (not checking?)
+                                      (canonicalize-path (project-output-directory project)))
+                                 report)))
+                       #:output-directory (assq-ref options 'output)))))
+               (output (car result))
+               (report (cdr result)))
+          (if checking?
+              (format #t "Checked ~d artifact~:p.\n"
+                      (length (build-report-artifacts report)))
+              (begin
+                (format #t "Built ~d artifact~:p (~d affected).~%Output: ~a~%"
+                        (length (build-report-artifacts report))
+                        (length (build-report-affected-artifacts report))
+                        output)
+                (unless (build-report-rendered? report)
+                  (display "Renderer cache hit.\n"))))
           0))))
 
 (define (main arguments)

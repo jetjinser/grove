@@ -75,16 +75,29 @@
       (test-equal "check succeeds before the first build" 0 (car result))
       (test-assert "check summary reports validated artifacts"
         (string-contains (cadr result) "Checked 1 artifact."))
+      (test-assert "check progress identifies the input on stderr"
+        (string-contains (caddr result) "Checking sources/input.txt"))
+      (test-assert "check progress never reports writing"
+        (not (string-contains (caddr result) "Writing")))
       (test-assert "check creates no output directory"
         (not (file-exists? (string-append root "/output")))))
     (let ((result (run "build" "--project" config)))
       (test-equal "build succeeds outside the project directory" 0 (car result))
       (test-assert "build summary reports artifacts" (string-contains (cadr result) "Built 1 artifact"))
-      (test-equal "successful build has no diagnostics" "" (caddr result))
+      (test-assert "build progress identifies the input on stderr"
+        (string-contains (caddr result) "Building sources/input.txt"))
+      (test-assert "redirected progress contains no terminal control sequences"
+        (and (not (string-index (caddr result) #\return))
+             (not (string-index (caddr result) #\esc))))
+      (test-assert "progress leaves stdout for the summary"
+        (not (string-contains (cadr result) "Building sources/input.txt")))
       (test-assert "build uses project-relative output directory"
         (file-exists? (string-append root "/output/page.txt"))))
-    (test-assert "subsequent builds report renderer cache reuse"
-      (string-contains (cadr (run "build" "--project" config)) "cache hit"))
+    (let ((result (run "build" "--project" config)))
+      (test-assert "subsequent builds report renderer cache reuse"
+        (string-contains (cadr result) "cache hit"))
+      (test-assert "cache hits do not claim to render"
+        (not (string-contains (caddr result) "Rendering"))))
     (let ((target (string-append root "/override")))
       (test-equal "equals-style options support output overrides" 0
         (car (run "build" (string-append "--project=" config)

@@ -4,6 +4,7 @@
 (define-module (grove private preview worker)
   #:use-module (grove project)
   #:use-module (grove project load)
+  #:use-module (grove private cli progress)
   #:use-module (grove project diagnostic)
   #:use-module (grove build state)
   #:use-module (grove output)
@@ -82,7 +83,9 @@
                                        (watch-roots filename project files modules))
                                string=?))
                       (before (watch-snapshot roots files output))
-                      (report (build-project/report configured))
+                      (report (call-with-cli-progress "Building" filename
+                                (lambda (progress)
+                                  (build-project/report configured #:progress progress))))
                       (modules (existing-files (append modules loaded)))
                       (files (delete-duplicates
                                (append (map absolute-path (build-report-sources report)) modules)

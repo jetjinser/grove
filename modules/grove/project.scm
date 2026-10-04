@@ -369,13 +369,16 @@
                 (append artifacts current)
                 (append owners current-owners))))))
 
-(define (execute-project project write?)
+(define (execute-project project write? progress)
   (unless (project? project)
     (error "project execution requires a Grove project" project))
   (let* ((source-paths (call-with-project-stage 'collect #f
-                         (lambda () (collect-project-sources project))))
-         (prepared-sources (prepare-project-sources
-                             (project-prepare project)))
+                         (lambda ()
+                           (progress 'collect #f)
+                           (collect-project-sources project))))
+         (prepared-sources (begin
+                            (progress 'prepare #f)
+                            (prepare-project-sources (project-prepare project))))
          (state-path
            (string-append (project-output-directory project) "/"
                           build-state-name))
@@ -391,6 +394,7 @@
                                   (build-state-cache-key previous-state)))
          (inputs
            (map (lambda (path)
+                  (progress 'read path)
                   (make-project-input
                     path
                     (read-source-with-context path
@@ -413,7 +417,9 @@
            (make-project-context inputs prepared-sources
                                  (project-extra-sources project)))
          (model (call-with-project-stage 'analyze #f
-                  (lambda () ((project-analyze project) context))))
+                  (lambda ()
+                    (progress 'analyze #f)
+                    ((project-analyze project) context))))
          (source-changes
            (call-with-values
              (lambda () (changed-sources previous-sources current-sources))
@@ -439,10 +445,12 @@
                          previous-artifacts)
                     '()))
              (cache-ready?
+              (progress 'render #f)
               (render-with-cache model (project-renderers project)
                                  previous-artifacts cache-ready?
                                  previous-sources changed))
              (else
+              (progress 'render #f)
               (render-all model (project-renderers project)))))
          (artifacts (car render-result))
          (owners (cadr render-result))
@@ -468,22 +476,26 @@
              (else
               (affected-artifacts artifacts previous-artifacts changed)))))
     (call-with-project-stage 'validate #f
-      (lambda () (validate-artifacts artifacts)))
+      (lambda ()
+        (progress 'validate #f)
+        (validate-artifacts artifacts)))
     (when write?
       (call-with-project-stage 'write (project-output-directory project)
         (lambda ()
+          (progress 'write (project-output-directory project))
           (write-artifacts (project-output-directory project) artifacts)
           (write-build-state state-path state-temp-path current-sources artifacts
                              owners cache-key))))
     (%make-build-report (map build-state-source-path current-sources) artifacts added modified removed affected
                         (not cache-hit?))))
 
-(define (build-project/report project)
-  (execute-project project #t))
+(define* (build-project/report project #:key (progress (lambda (stage path) #t)))
+  "Build PROJECT, notifying PROGRESS with a stage symbol and optional path."
+  (execute-project project #t progress))
 
-(define (check-project project)
+(define* (check-project project #:key (progress (lambda (stage path) #t)))
   "Read, analyze, render, and validate PROJECT without accessing output state."
-  (execute-project project #f))
+  (execute-project project #f progress))
 
-(define (build-project project)
-  (build-report-artifacts (build-project/report project)))
+(define* (build-project project #:key (progress (lambda (stage path) #t)))
+  (build-report-artifacts (build-project/report project #:progress progress)))
