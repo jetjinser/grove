@@ -23,6 +23,7 @@
 
 (define +test-resources+
   '("unit/scribble/read.scm"
+    "unit/grove/cli-progress.scm"
     "unit/grove/math.scm"
     "unit/grove/differentiation.scm"
     "unit/grove/arithmetic.scm"
