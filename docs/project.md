@@ -173,7 +173,8 @@ Declare file inputs with `#:extra-sources` or as artifact dependencies so
 their contents can invalidate affected outputs.
 
 A cache hit reuses renderer artifacts, but the build still runs the
-preparation hook, reads every source, and runs the analyzer over the current
+preparation hook, reads every source (possibly reusing a document result),
+and runs the analyzer over the current
 project. Incremental renderer callbacks can update only affected outputs;
 they must return the complete artifact set. This keeps analysis predictable
 while avoiding work in renderers. See the linked-notes example for a complete
@@ -192,3 +193,36 @@ Math documents use separate entry points: Formula (`φ:`) for convenient
 expression reading, Semantic (`◆:`) for computational values, and Notation
 (`◇:`) for display structure. Read the [math guide](math.md) for examples
 and supported operations.
+
+## Document result caching
+
+The Scribble reader can reuse the Content IR of explicitly selected documents:
+
+```scheme
+(make-scribble-document-reader
+  #:cacheable? (lambda (path) (string-suffix? "-computation.plant" path))
+  #:cache-dependencies (lambda () computation-inputs))
+```
+
+Set the project's `#:cache-key` too. Selecting a document promises that its
+result depends only on its source, declared files, and project configuration;
+skipping its Scheme effects must be safe. Declare imported Scheme code and
+other files read during evaluation in `computation-inputs`. If loading explicit
+compiled modules, include their `.go` files too. Prepared sources
+and project extra sources are included automatically. Change the project key
+when the reader's environment or behavior changes without a corresponding file
+change. Time, randomness, external state, and shared mutable environments are
+not tracked automatically; leave such documents uncached.
+
+Entries live in `OUTPUT/.grove-input-cache`, with at most one entry per source
+path. Successful builds remove entries for sources no longer selected.
+Source or dependency changes invalidate an entry. The same dependencies
+also invalidate renderer outputs and participate in watching. The CLI reports
+`Reused N/M document results` when any selected documents hit the cache.
+
+Only data-only Content IR is saved, including style and source locations.
+Results containing query procedures, unsupported records, or cyclic data are
+re-evaluated normally. Corrupt entries are treated as misses. Preparation and
+whole-project analysis still run, so queries, links, and transclusion see the
+current Forest. `check` and standalone reader calls always evaluate sources
+and never access this cache.

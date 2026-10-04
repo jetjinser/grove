@@ -4,6 +4,7 @@
 
 (define-module (grove input scribble)
   #:use-module (grove collect)
+  #:use-module (grove private input cache)
   #:use-module (system base language)
   #:use-module (srfi srfi-13)
   #:use-module (grove ir)
@@ -45,9 +46,16 @@ The hook returns the loaded paths so Grove can track them as build inputs."
 (define* (make-scribble-document-reader
            #:optional (environment #f)
            #:key (timings #f)
+           (cacheable? (lambda (path) #f))
+           (cache-dependencies (lambda () '()))
            (environment-factory
                    (lambda () (default-environment scribble))))
-  (lambda (path)
+  "Cache only explicitly selected, deterministic documents during builds.
+CACHE-DEPENDENCIES returns every imported code/data input beyond project
+preparation and extra sources. Bump the project cache key for changes not
+represented by files. Shared environments, checks, and non-data results are
+never reused."
+  (define (read-document path)
     (call-with-input-file path
       (lambda (port)
         (let ((document
@@ -60,4 +68,9 @@ The hook returns the loaded paths so Grove can track them as build inputs."
                                                          (timings path phase seconds))))))
           (unless (content-document? document)
             (error "Scribble source requires a content document" path))
-          document)))))
+          document))))
+  (lambda (path)
+    (if (and (not environment) (cacheable? path) (current-input-cache))
+        (cached-document path "scribble" (cache-dependencies)
+                         (lambda () (read-document path)) (lambda _ #t))
+        (read-document path))))

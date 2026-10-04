@@ -82,7 +82,8 @@
          (or (string=? path reserved)
              (string-prefix? (string-append reserved "/") path)))
        (list artifact-manifest-name artifact-manifest-temp-name
-             ".grove-build-state" ".grove-build-state.tmp")))
+             ".grove-build-state" ".grove-build-state.tmp"
+             ".grove-input-cache")))
 
 (define (read-artifact-manifest path)
   (if (not (file-exists? path))

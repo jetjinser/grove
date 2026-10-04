@@ -4,6 +4,7 @@
 
 (define-module (grove project)
   #:use-module (grove string-fun)
+  #:use-module (grove private input cache)
   #:use-module (grove build)
   #:use-module (grove build state)
   #:use-module (grove collect)
@@ -394,18 +395,27 @@
                                  (build-state-artifacts previous-state) '()))
          (previous-cache-key (and previous-state
                                   (build-state-cache-key previous-state)))
+         (input-cache-context
+           (and write?
+             (make-input-cache-context
+               (project-output-directory project) (project-cache-key project)
+               (append prepared-sources (project-extra-sources project)))))
          (inputs
-           (map (lambda (path)
+           (parameterize ((current-input-cache input-cache-context))
+             (map (lambda (path)
                   (progress 'read path)
                   (let ((value (read-source-with-context path
                                  (project-read-source project))))
                     (progress 'read-done path)
                     (make-project-input path value)))
-                source-paths))
+                source-paths)))
+         (_ (let ((summary (input-cache-summary input-cache-context)))
+              (when (> (cdr summary) 0) (progress 'input-cache summary))))
          (current-sources
            (map (lambda (path) (list path (file-fingerprint path)))
              (delete-duplicates
                   (append prepared-sources source-paths
+                          (input-cache-dependencies input-cache-context)
                           (append-map
                             (lambda (renderer)
                               (if (and (cached-renderer? renderer)
@@ -434,6 +444,14 @@
          (cache-ready?
            (and cache-key previous-state
                 (equal? cache-key previous-cache-key)
+                ;; Declared reader inputs conservatively affect the whole model,
+                ;; even when a partial renderer cannot see those dependencies.
+                (not (paths-intersect?
+                       (input-cache-dependencies input-cache-context) changed))
+                (not (and (> (cdr (input-cache-summary input-cache-context)) 0)
+                          (any (lambda (path)
+                                 (not (member path source-paths string=?)))
+                               removed)))
                 (load-cached-artifacts (project-output-directory project)
                                        previous-artifacts)))
          (cache-hit? (and cache-ready? (null? changed)))
@@ -487,7 +505,8 @@
           (progress 'write (project-output-directory project))
           (write-artifacts (project-output-directory project) artifacts)
           (write-build-state state-path state-temp-path current-sources artifacts
-                             owners cache-key))))
+                             owners cache-key)
+          (prune-input-cache! input-cache-context))))
     (%make-build-report (map build-state-source-path current-sources) artifacts added modified removed affected
                         (not cache-hit?))))
 

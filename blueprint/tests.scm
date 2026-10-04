@@ -65,6 +65,7 @@
     "unit/grove/build.scm"
     "unit/grove/collect.scm"
     "unit/grove/state.scm"
+    "unit/grove/input-cache.scm"
     "unit/grove/content.scm"
     "unit/grove/string.scm"
     "unit/grove/relation.scm"

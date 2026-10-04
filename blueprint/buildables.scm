@@ -17,6 +17,7 @@
     "grove/collect.scm"
     "grove/cli.scm"
     "grove/private/cli/progress.scm"
+    "grove/private/input/cache.scm"
     "grove/serve.scm"
     "grove/private/preview/http.scm"
     "grove/private/preview/watch.scm"

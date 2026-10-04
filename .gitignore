@@ -13,3 +13,5 @@ result*
 .grove-artifacts.tmp
 .grove-build-state
 .grove-build-state.tmp
+
+.grove-input-cache/

@@ -85,7 +85,7 @@ A separate terminal progress bar shows completed reads and the current file;
 it disappears when reading ends. Stage lines and the elapsed-time summary remain
 visible. Redirected logs use plain lines without the dynamic bar.
 
-`build` updates outputs using the existing renderer cache. `check` runs the full
+`build` updates outputs using configured renderer and document result caches. `check` runs the full
 pipeline, including rendering and artifact validation, without reading or writing
 output state. It does not undo side effects in project code. Use `--project PATH`
 to select a project, `build --output PATH` to override its output directory,

@@ -84,6 +84,11 @@
          (clear-progress)
          (print-cli-status "Reading" (display-path detail) port)
          (draw-progress detail))
+        ((input-cache)
+         (when (> (car detail) 0)
+           (clear-progress)
+           (print-cli-status "Reused"
+             (format #f "~d/~d document results" (car detail) (cdr detail)) port)))
         ((read-done)
          (set! completed (+ completed 1))
          (draw-progress detail))
