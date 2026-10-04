@@ -79,6 +79,10 @@ From its directory, run:
 /tmp/grove-install/bin/grove serve --port 8080
 ```
 
+Configure `#:default-prefix "jsk"` on the project to use `grove new`: it creates
+`jsk-0001.plant`, then the next available base36 address. `grove new math`
+chooses another prefix; `--dest PATH` overrides the source directory.
+
 Progress starts with `Building` or `Checking` for the project, then keeps a
 `Reading` line for each source on stderr.
 A separate terminal progress bar shows completed reads and the current file;

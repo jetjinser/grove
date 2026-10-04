@@ -67,7 +67,8 @@
         ("build" "--no-watch") ("check" "--port" "8080")
         ("serve" "--port" "0") ("serve" "--port" "65536")
         ("serve" "--port" "abc") ("serve" "--port" "1.5")
-        ("serve" "--port")))
+        ("serve" "--port") ("new" "--output" "x")
+        ("build" "--dest" "x") ("new" "a" "b")))
     (test-equal "check help describes validation without build-only options" #t
       (let ((result (run "check" "--help")))
         (and (= (car result) 0)
@@ -153,6 +154,64 @@
         (test-equal "CLI check ignores malformed published cache state" 0
           (car (run "check" "--project" config)))
         (test-equal "CLI check does not repair or overwrite that state" before (snapshot))))
+    ;; Creation needs only filenames, even when all execution hooks fail.
+    (write-file config
+      "(use-modules (grove project site))\n(make-site-project #:source-directory \"sources\" #:default-prefix \"jsk\" #:prepare (lambda () (error \"must not prepare\")) #:read-page (lambda (_) (error \"must not read\")) #:analyze (lambda (_) (error \"must not analyze\")) #:output-directory \"output\")\n")
+    (mkdir (string-append root "/sources/nested"))
+    (write-file (string-append root "/sources/nested/jsk-000z.plant") "invalid source")
+    (write-file (string-append root "/sources/jsk-invalid!.plant") "ignored suffix")
+    (write-file (string-append root "/sources/other-zzzz.plant") "other namespace")
+    (let ((result (run "new" "--project" config)))
+      (test-equal "new uses the configured prefix and scans nested sources" 0 (car result))
+      (test-equal "new prints only the absolute created path"
+        (string-append root "/sources/jsk-0010.plant\n") (cadr result))
+      (test-assert "new includes a title and publication date"
+        (let ((body (call-with-input-file (string-append root "/sources/jsk-0010.plant") get-string-all)))
+          (and (string-prefix? "@title{}\n@published{" body)
+               (string-suffix? "}\n" body)))))
+    (test-equal "new advances past the previously created file"
+      (string-append root "/sources/jsk-0011.plant\n")
+      (cadr (run "new" "--project" config)))
+    (write-file (string-append root "/sources/math-zzzz.plant") "overflow")
+    (test-equal "explicit prefix overrides the default and grows beyond four digits"
+      (string-append root "/sources/math-10000.plant\n")
+      (cadr (run "new" "math" "--project" config)))
+    (mkdir (string-append root "/new-destination"))
+    (let ((caller (getcwd)))
+      (dynamic-wind
+        (lambda () (chdir root))
+        (lambda ()
+          (test-equal "dest is relative to the invocation directory"
+            (string-append root "/new-destination/jsk-0012.plant\n")
+            (cadr (run "new" "--project" config "--dest" "new-destination"))))
+        (lambda () (chdir caller))))
+    (for-each
+      (lambda (prefix)
+        (test-equal "unsafe or noncanonical prefixes fail" 1
+          (car (run "new" prefix "--project" config))))
+      '("../escape" "UPPER" "bad-"))
+    (test-equal "missing destination fails without creating it" 1
+      (car (run "new" "--project" config "--dest" (string-append root "/absent"))))
+    (write-file config original-config)
+    (test-equal "missing default prefix requires an explicit prefix" 1
+      (car (run "new" "--project" config)))
+    (test-equal "explicit prefix works without a default" 0
+      (car (run "new" "note" "--project" config)))
+    (test-equal "command names can also be prefixes" 0
+      (car (run "new" "build" "--project" config)))
+    (mkdir (string-append root "/sources/note-0002.plant"))
+    (test-equal "exclusive creation skips occupied paths without overwriting"
+      (string-append root "/sources/note-0003.plant\n")
+      (cadr (run "new" "note" "--project" config)))
+    (test-assert "occupied directory remains intact"
+      (file-is-directory? (string-append root "/sources/note-0002.plant")))
+    (write-file config
+      "(use-modules (grove project))\n(make-project #:collect-sources (lambda () '()) #:default-prefix \"jsk\" #:read-source (lambda (_) (error \"must not read\")) #:output-directory \"output\")\n")
+    (test-equal "collector-only projects require an explicit destination" 1
+      (car (run "new" "--project" config)))
+    (test-equal "collector-only projects scan existing destination IDs"
+      (string-append root "/new-destination/jsk-0013.plant\n")
+      (cadr (run "new" "--project" config "--dest" (string-append root "/new-destination"))))
     (write-file config "(throw 'misc-error #f \"~A\" (list (make-string 2000 #\\x)) #f)\n")
     (let ((short (run "build" "--project" config))
           (debug (run "build" "--project" config "--debug")))
@@ -160,5 +219,5 @@
       (test-assert "default diagnostics remain bounded" (< (string-length (caddr short)) 1000))
       (test-assert "debug includes the full diagnostic" (> (string-length (caddr debug)) 2000))))
   (lambda () (system* "rm" "-rf" root)))
-(test-subprocess-coverage '("grove/cli.scm" "grove/private/cli/progress.scm"))
+(test-subprocess-coverage '("grove/cli.scm" "grove/project/new.scm" "grove/private/cli/progress.scm"))
 (test-end "grove CLI")

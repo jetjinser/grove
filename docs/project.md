@@ -264,3 +264,29 @@ Content IR is saved, including presentation annotations and source locations.
 Query closures, unsupported records, and cyclic data are re-evaluated. Corrupt
 entries are misses. The CLI reports `Reused N/M document results` when documents
 hit the cache.
+
+## Creating trees
+
+Set `#:default-prefix "jsk"` on `make-site-project` (or `make-project`).
+Then `grove new` creates `plants/jsk-0001.plant` when the configured source
+directory is `plants`. `grove new math` instead uses the `math` prefix.
+Prefixes use lowercase ASCII letters, digits, and internal hyphens.
+
+IDs use lowercase base36, padded to at least four digits: `0009`, `000a`,
+`000z`, `0010`. Creation scans project source filenames recursively and takes
+one more than the largest matching suffix, without filling gaps.
+Deleting the highest-numbered tree can therefore allow its number to be reused.
+Other prefixes and malformed suffixes do not affect the sequence. Existing
+files are never overwritten. Directories do not form separate ID namespaces.
+
+`grove new --dest plants/drafts` overrides the destination. This directory
+must already exist; `--dest` is relative to the invocation directory, while
+configured paths are relative to `project.scm`. Projects with only a custom
+source collector must supply `--dest`. Destination files are also scanned to
+avoid collisions when the destination is outside the collected sources.
+
+The command prints the absolute created path. A new file contains an empty
+`@title{}` and today's `@published{YYYY-MM-DD}`. Edit the title and body, then
+link or transclude the tree where appropriate. Creation does not evaluate
+articles, invoke preparation or analysis, build outputs, or change the home
+page. The project configuration itself is still evaluated.

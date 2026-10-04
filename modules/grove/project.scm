@@ -19,6 +19,8 @@
   #:export (project?
             make-project
             project-source-directory
+            project-default-prefix
+            collect-project-sources
             project-extra-sources
             project-output-directory
             project-cache?
@@ -69,7 +71,7 @@
 (define-record-type <project>
   (%make-project source-directory source-filter collect-sources prepare
                  extra-sources read-source analyze renderers
-                 output-directory cache?)
+                 output-directory cache? default-prefix)
   project?
   (source-directory project-source-directory)
   (source-filter project-source-filter)
@@ -80,7 +82,8 @@
   (analyze project-analyze)
   (renderers project-renderers)
   (output-directory project-output-directory)
-  (cache? project-cache?))
+  (cache? project-cache?)
+  (default-prefix project-default-prefix))
 
 (define* (make-project #:key
                        (source-directory #f)
@@ -93,7 +96,8 @@
                        (analyze (lambda (context) context))
                        (renderers '())
                        output-directory
-                       (cache? #t))
+                       (cache? #t)
+                       (default-prefix #f))
   (unless (and (or (not source-directory) (string? source-directory))
                (procedure? source-filter)
                (or (not collect-sources) (procedure? collect-sources))
@@ -119,12 +123,14 @@
     (error "project requires an output directory" output-directory))
   (unless (boolean? cache?)
     (error "project cache option must be a boolean" cache?))
+  (unless (or (not default-prefix) (non-empty-string? default-prefix))
+    (error "project default prefix must be a non-empty string" default-prefix))
   (%make-project source-directory source-filter collect-sources prepare
                  extra-sources read-source analyze
                  (map (lambda (renderer)
                         (if (cached-renderer? renderer) renderer
                             (make-cached-renderer renderer))) renderers)
-                 output-directory cache?))
+                 output-directory cache? default-prefix))
 
 (define* (project-with-options project
                                #:key
@@ -145,7 +151,8 @@
     #:analyze (project-analyze project)
     #:renderers (project-renderers project)
     #:output-directory output-directory
-    #:cache? cache?))
+    #:cache? cache?
+    #:default-prefix (project-default-prefix project)))
 
 (define (read-source-with-context path read-source)
   (call-with-project-stage 'read path (lambda () (read-source path))))

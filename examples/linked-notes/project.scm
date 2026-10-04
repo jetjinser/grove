@@ -52,6 +52,7 @@
 
 (define notes-project
   (make-site-project
+    #:default-prefix "note"
     #:title "Linked Notes"
     #:description "Connected notes on mathematics and its ideas."
     #:source-directory source-directory

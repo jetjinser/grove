@@ -17,6 +17,7 @@
     "grove/build/state.scm"
     "grove/collect.scm"
     "grove/cli.scm"
+    "grove/project/new.scm"
     "grove/private/cli/progress.scm"
     "grove/private/input/cache.scm"
     "grove/private/input/dependencies.scm"

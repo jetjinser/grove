@@ -22,7 +22,8 @@
                             (analyze (lambda (site) site))
                             (renderers '())
                             output-directory
-                            (cache? #t))
+                            (cache? #t)
+                            (default-prefix #f))
   (unless (procedure? read-page)
     (error "site project requires a page reader" read-page))
   (unless (procedure? analyze)
@@ -49,4 +50,5 @@
         (analyze site)))
     #:renderers renderers
     #:output-directory output-directory
-    #:cache? cache?))
+    #:cache? cache?
+    #:default-prefix default-prefix))
