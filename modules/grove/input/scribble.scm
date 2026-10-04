@@ -59,6 +59,7 @@ within a document. Shared environments and checks always evaluate sources."
   (define (read-document path)
     (call-with-input-file path
       (lambda (port)
+        (set-port-encoding! port "UTF-8")
         (let* ((environment (or environment (environment-factory)))
                (document
                 (scribble-evaluate-document port

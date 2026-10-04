@@ -231,7 +231,7 @@
                    (set! render-count (+ render-count 1))
                    (list (make-artifact
                            "summary.txt"
-                           (number->string (length (site-pages site)))
+                           (string-append "平方：" (number->string (length (site-pages site))))
                            (append (site-sources site)
                                    (list external-source-path))))))
                (cached-renderer
@@ -263,16 +263,17 @@
               (member external-source-path
                       (build-report-added-sources first)
                       string=?)))
-          (let ((second (build-project/report cached-project)))
-            (test-equal "unchanged inputs reuse cached renderer output"
-              1 render-count)
-            (test-equal "cache hit still reads every page"
-              4 reader-count)
-            (test-assert "cache hit reports that rendering was skipped"
-              (not (build-report-rendered? second)))
-            (test-equal "cache hit has no affected artifacts"
-              '()
-              (build-report-affected-artifacts second)))
+          (with-fluids ((%default-port-encoding "ISO-8859-1"))
+            (let ((second (build-project/report cached-project)))
+              (test-equal "UTF-8 cache reuse is independent of default port encoding"
+                1 render-count)
+              (test-equal "cache hit still reads every page"
+                4 reader-count)
+              (test-assert "cache hit reports that rendering was skipped"
+                (not (build-report-rendered? second)))
+              (test-equal "cache hit has no affected artifacts"
+                '()
+                (build-report-affected-artifacts second))))
           (test-equal "cache hit still analyzes the complete site"
             2 analysis-count)
           (delete-file cache-output-path)
@@ -288,7 +289,7 @@
             (test-equal "modified cached outputs are rendered again"
               3 render-count)
             (test-equal "modified cached outputs are restored"
-              "2"
+              "平方：2"
               (call-with-input-file cache-output-path get-string-all))
             (test-assert "modified cached output reports rendering"
               (build-report-rendered? tampered-output)))

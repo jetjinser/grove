@@ -119,6 +119,7 @@
       #f
       (call-with-input-file path
         (lambda (port)
+          (set-port-encoding! port "UTF-8")
           (let ((state (read port)))
             (and (valid-build-state? state)
                  (eof-object? (read port))
@@ -141,6 +142,7 @@
       (error "refusing to write invalid Grove build state" state))
     (call-with-output-file temp-path
       (lambda (port)
+        (set-port-encoding! port "UTF-8")
         (write state port)
         (newline port)))
     (rename-file temp-path path)))

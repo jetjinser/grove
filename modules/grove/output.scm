@@ -90,6 +90,7 @@
       '()
       (call-with-input-file path
         (lambda (port)
+          (set-port-encoding! port "UTF-8")
           (let ((manifest (read port)))
             (unless (and (list? manifest)
                          (= (length manifest) 2)
@@ -107,6 +108,7 @@
 (define (write-artifact-manifest path temp-path paths)
   (call-with-output-file temp-path
     (lambda (port)
+      (set-port-encoding! port "UTF-8")
       (write (list 'grove-artifacts-v1 paths) port)
       (newline port)))
   (rename-file temp-path path))
@@ -119,6 +121,7 @@
            (if (string? content)
                (call-with-input-file path
                  (lambda (port)
+                   (set-port-encoding! port "UTF-8")
                    (string=? content (get-string-all port))))
                (let ((port (open-file path "rb")))
                  (dynamic-wind
@@ -163,6 +166,7 @@
             (if (string? (artifact-content artifact))
                 (call-with-output-file path
                   (lambda (port)
+                    (set-port-encoding! port "UTF-8")
                     (display (artifact-content artifact) port)))
                 (let ((port (open-file path "wb")))
                   (dynamic-wind

@@ -264,7 +264,10 @@
                                   (lambda () #t)
                                   (lambda () (get-bytevector-all port))
                                   (lambda () (close-port port))))
-                              (call-with-input-file path get-string-all)))
+                              (call-with-input-file path
+                                (lambda (port)
+                                  (set-port-encoding! port "UTF-8")
+                                  (get-string-all port)))))
                         (lambda args #f)))))
           (if (and content
                    (equal? (content-fingerprint content)

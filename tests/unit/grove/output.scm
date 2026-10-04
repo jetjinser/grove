@@ -68,6 +68,21 @@
     (write-artifacts output-directory '())
     (test-assert "empty builds remove previously generated artifacts"
       (not (file-exists? output-path)))
+    (with-fluids ((%default-port-encoding "ISO-8859-1"))
+      (let* ((text "平方 ◆:x")
+             (artifacts (list (make-artifact "nested/page.txt" text))))
+        (write-artifacts output-directory artifacts)
+        (test-assert "text artifacts use UTF-8 independently of default port encoding"
+          (let ((port (open-file output-path "rb")))
+            (dynamic-wind
+              (lambda () #t)
+              (lambda () (bytevector=? (string->utf8 text) (get-bytevector-all port)))
+              (lambda () (close-port port)))))
+        (utime output-path 0 0)
+        (write-artifacts output-directory artifacts)
+        (test-equal "UTF-8 comparison preserves unchanged artifacts" 0
+          (stat:mtime (stat output-path)))
+        (write-artifacts output-directory '())))
     (test-error "artifact manifest path is reserved" #t
       (write-artifacts output-directory
         (list (make-artifact ".grove-artifacts" "user data"))))
