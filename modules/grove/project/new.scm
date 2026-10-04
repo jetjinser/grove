@@ -30,6 +30,10 @@
                                    (char<=? #\a (char-downcase c) #\z))) digits)
                 (string->number digits 36))))))
 
+(define (default-tree-template id date)
+  (string-append "@use-modules[(forester commands)]\n\n@title{}\n@published{"
+                 date "}\n"))
+
 (define* (create-tree project #:key
                       (prefix (project-default-prefix project))
                       (destination (project-source-directory project)))
@@ -51,11 +55,18 @@ No source reader, preparation hook, analyzer, or renderer is invoked."
              (id (string-append prefix "-"
                    (make-string (max 0 (- 4 (string-length digits))) #\0) digits))
              (path (string-append directory "/" id ".plant"))
-             (port (catch 'system-error
+             ;; Evaluate and validate before reserving the file: a faulty template
+             ;; must not leave a new, empty source behind.
+             (body ((or (project-tree-template project) default-tree-template)
+                    id (strftime "%Y-%m-%d" (localtime (current-time)))))
+             (port (begin
+                     (unless (string? body)
+                       (error "tree template must return source text" body))
+                     (catch 'system-error
                      (lambda () (open path (logior O_WRONLY O_CREAT O_EXCL) #o644))
                      (lambda arguments
                        (if (= EEXIST (system-error-errno arguments)) #f
-                           (apply throw arguments))))))
+                           (apply throw arguments)))))))
         (if (not port)
             (loop (+ number 1))
             (begin
@@ -63,8 +74,6 @@ No source reader, preparation hook, analyzer, or renderer is invoked."
                 (lambda () #t)
                 (lambda ()
                   (set-port-encoding! port "UTF-8")
-                  (display "@title{}\n" port)
-                  (format port "@published{~a}~%"
-                    (strftime "%Y-%m-%d" (localtime (current-time)))))
+                  (display body port))
                 (lambda () (close-port port)))
               path))))))

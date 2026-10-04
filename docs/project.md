@@ -285,8 +285,28 @@ configured paths are relative to `project.scm`. Projects with only a custom
 source collector must supply `--dest`. Destination files are also scanned to
 avoid collisions when the destination is outside the collected sources.
 
-The command prints the absolute created path. A new file contains an empty
-`@title{}` and today's `@published{YYYY-MM-DD}`. Edit the title and body, then
+The command prints the absolute created path. The default template imports
+`(forester commands)` and contains an empty `@title{}` and today's
+`@published{YYYY-MM-DD}`. Fill in the title before building. Edit the body, then
 link or transclude the tree where appropriate. Creation does not evaluate
 articles, invoke preparation or analysis, build outputs, or change the home
 page. The project configuration itself is still evaluated.
+
+A project can supply `#:tree-template`, a procedure receiving the allocated ID
+and the local date as strings and returning the complete UTF-8 source text:
+
+```scheme
+#:tree-template
+(lambda (id date)
+  (string-append
+    "@use-modules[(flora commands) (language scribble commands)]\n\n"
+    "@title{}\n"
+    "@published{" date "}\n"))
+```
+
+The example is configuration for a consumer that provides `(flora commands)`;
+Grove does not depend on that module. The callback can use the ID in the source,
+add metadata, or return text loaded from a project template file. `#:prepare`
+loads project modules for later imports; it does not import them into each
+article. Consequently, a template must include the imports its commands need.
+Template errors or non-string results fail before creating a file.

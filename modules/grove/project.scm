@@ -19,6 +19,7 @@
   #:export (project?
             make-project
             project-source-directory
+            project-tree-template
             project-default-prefix
             collect-project-sources
             project-extra-sources
@@ -71,7 +72,7 @@
 (define-record-type <project>
   (%make-project source-directory source-filter collect-sources prepare
                  extra-sources read-source analyze renderers
-                 output-directory cache? default-prefix)
+                 output-directory cache? default-prefix tree-template)
   project?
   (source-directory project-source-directory)
   (source-filter project-source-filter)
@@ -83,7 +84,8 @@
   (renderers project-renderers)
   (output-directory project-output-directory)
   (cache? project-cache?)
-  (default-prefix project-default-prefix))
+  (default-prefix project-default-prefix)
+  (tree-template project-tree-template))
 
 (define* (make-project #:key
                        (source-directory #f)
@@ -97,7 +99,8 @@
                        (renderers '())
                        output-directory
                        (cache? #t)
-                       (default-prefix #f))
+                       (default-prefix #f)
+                       (tree-template #f))
   (unless (and (or (not source-directory) (string? source-directory))
                (procedure? source-filter)
                (or (not collect-sources) (procedure? collect-sources))
@@ -125,12 +128,14 @@
     (error "project cache option must be a boolean" cache?))
   (unless (or (not default-prefix) (non-empty-string? default-prefix))
     (error "project default prefix must be a non-empty string" default-prefix))
+  (unless (or (not tree-template) (procedure? tree-template))
+    (error "project tree template must be a procedure" tree-template))
   (%make-project source-directory source-filter collect-sources prepare
                  extra-sources read-source analyze
                  (map (lambda (renderer)
                         (if (cached-renderer? renderer) renderer
                             (make-cached-renderer renderer))) renderers)
-                 output-directory cache? default-prefix))
+                 output-directory cache? default-prefix tree-template))
 
 (define* (project-with-options project
                                #:key
@@ -152,7 +157,8 @@
     #:renderers (project-renderers project)
     #:output-directory output-directory
     #:cache? cache?
-    #:default-prefix (project-default-prefix project)))
+    #:default-prefix (project-default-prefix project)
+    #:tree-template (project-tree-template project)))
 
 (define (read-source-with-context path read-source)
   (call-with-project-stage 'read path (lambda () (read-source path))))

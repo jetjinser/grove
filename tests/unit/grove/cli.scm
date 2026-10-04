@@ -167,7 +167,7 @@
         (string-append root "/sources/jsk-0010.plant\n") (cadr result))
       (test-assert "new includes a title and publication date"
         (let ((body (call-with-input-file (string-append root "/sources/jsk-0010.plant") get-string-all)))
-          (and (string-prefix? "@title{}\n@published{" body)
+          (and (string-prefix? "@use-modules[(forester commands)]\n\n@title{}\n@published{" body)
                (string-suffix? "}\n" body)))))
     (test-equal "new advances past the previously created file"
       (string-append root "/sources/jsk-0011.plant\n")
@@ -192,6 +192,39 @@
       '("../escape" "UPPER" "bad-"))
     (test-equal "missing destination fails without creating it" 1
       (car (run "new" "--project" config "--dest" (string-append root "/absent"))))
+    ;; Exercise generated source through the real document/page reader.
+    (mkdir (string-append root "/template-sources"))
+    (write-file config
+      "(use-modules (grove project site) (grove input scribble) (forester input scribble))\n(make-site-project #:source-directory \"template-sources\" #:default-prefix \"tutorial\" #:tree-template (lambda (id date) (string-append \"@use-modules[(forester commands) (language scribble commands)]\\n@title{教程：\" id \"}\\n@published{\" date \"}\\nHello.\\n\")) #:read-page (make-page-reader (make-scribble-document-reader)) #:output-directory \"output\")\n")
+    (test-equal "site projects preserve custom templates through CLI loading" 0
+      (car (run "new" "--project" config)))
+    (test-assert "custom templates receive the allocated ID and preserve Unicode"
+      (string-contains
+        (call-with-input-file (string-append root "/template-sources/tutorial-0001.plant") get-string-all)
+        "@title{教程：tutorial-0001}"))
+    (test-equal "custom generated article passes real reading and analysis" 0
+      (car (run "check" "--project" config)))
+    (write-file config
+      "(use-modules (grove project site) (grove input scribble) (forester input scribble))\n(make-site-project #:source-directory \"template-sources\" #:default-prefix \"plain\" #:read-page (make-page-reader (make-scribble-document-reader)) #:output-directory \"output\")\n")
+    (test-equal "default template creates an article with explicit imports" 0
+      (car (run "new" "--project" config)))
+    (let ((path (string-append root "/template-sources/plain-0001.plant")))
+      (write-file path
+        (string-replace-substring (call-with-input-file path get-string-all)
+                                  "@title{}" "@title{Plain}")))
+    (test-equal "default generated article builds after filling its title" 0
+      (car (run "check" "--project" config)))
+    (let ((valid-config (call-with-input-file config get-string-all)))
+      (for-each
+        (lambda (template)
+          (write-file config
+            (string-replace-substring valid-config "#:default-prefix"
+              (string-append "#:tree-template " template " #:default-prefix")))
+          (test-equal "invalid templates fail before creating a file" 1
+            (car (run "new" "--project" config)))
+          (test-assert "failed template leaves no empty article"
+            (not (file-exists? (string-append root "/template-sources/plain-0002.plant")))))
+        '("(lambda (id date) 42)" "(lambda (id date) (error \"template failure\"))" "42")))
     (write-file config original-config)
     (test-equal "missing default prefix requires an explicit prefix" 1
       (car (run "new" "--project" config)))

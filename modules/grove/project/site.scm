@@ -23,7 +23,8 @@
                             (renderers '())
                             output-directory
                             (cache? #t)
-                            (default-prefix #f))
+                            (default-prefix #f)
+                            (tree-template #f))
   (unless (procedure? read-page)
     (error "site project requires a page reader" read-page))
   (unless (procedure? analyze)
@@ -51,4 +52,5 @@
     #:renderers renderers
     #:output-directory output-directory
     #:cache? cache?
-    #:default-prefix default-prefix))
+    #:default-prefix default-prefix
+    #:tree-template tree-template))
