@@ -19,6 +19,7 @@
             artifact-content
             artifact-sources
             prefix-artifacts
+            validate-artifacts
             write-artifacts))
 
 (define-record-type <artifact>
@@ -125,17 +126,33 @@
                    (lambda () (close-port port))))))
          (lambda args #f))))
 
+(define (validate-artifacts artifacts)
+  "Validate the complete output set without accessing the filesystem."
+  (unless (and (list? artifacts) (every artifact? artifacts))
+    (error "renderers must return a list of artifacts" artifacts))
+  (let ((paths (map artifact-path artifacts)))
+    (unless (= (length paths) (length (delete-duplicates paths string=?)))
+      (error "duplicate artifact path" paths))
+    (when (any reserved-artifact-path? paths)
+      (error "artifact path is reserved for Grove metadata" paths))
+    (for-each
+      (lambda (path)
+        (let loop ((parent (dirname path)))
+          (unless (string=? parent ".")
+            (when (member parent paths string=?)
+              (error "artifact paths conflict as file and directory" parent path))
+            (loop (dirname parent)))))
+      paths))
+  artifacts)
+
 (define (write-artifacts directory artifacts)
+  (validate-artifacts artifacts)
   (let* ((paths (map artifact-path artifacts))
          (manifest-path
            (string-append directory "/" artifact-manifest-name))
          (manifest-temp-path
            (string-append directory "/" artifact-manifest-temp-name))
          (previous-paths (read-artifact-manifest manifest-path)))
-    (unless (= (length paths) (length (delete-duplicates paths string=?)))
-      (error "duplicate artifact path" paths))
-    (when (any reserved-artifact-path? paths)
-      (error "artifact path is reserved for Grove metadata" paths))
     (ensure-directory directory)
     (for-each
       (lambda (artifact)

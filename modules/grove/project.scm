@@ -30,7 +30,8 @@
             build-report-affected-artifacts
             build-report-rendered?
             build-project/report
-            build-project))
+            build-project
+            check-project))
 
 (define-record-type <project-input>
   (make-project-input path value)
@@ -342,9 +343,9 @@
                 (append artifacts current)
                 (append owners current-owners))))))
 
-(define (build-project/report project)
+(define (execute-project project write?)
   (unless (project? project)
-    (error "build-project/report requires a Grove project" project))
+    (error "project execution requires a Grove project" project))
   (let* ((source-paths (collect-project-sources project))
          (prepared-sources (prepare-project-sources
                              (project-prepare project)))
@@ -354,7 +355,7 @@
          (state-temp-path
            (string-append (project-output-directory project) "/"
                           build-state-temp-name))
-         (previous-state (read-build-state state-path))
+         (previous-state (and write? (read-build-state state-path)))
          (previous-sources (if previous-state
                                (build-state-sources previous-state) '()))
          (previous-artifacts (if previous-state
@@ -438,11 +439,20 @@
                                    previous-artifacts))))
              (else
               (affected-artifacts artifacts previous-artifacts changed)))))
-    (write-artifacts (project-output-directory project) artifacts)
-    (write-build-state state-path state-temp-path current-sources artifacts
-                       owners cache-key)
+    (validate-artifacts artifacts)
+    (when write?
+      (write-artifacts (project-output-directory project) artifacts)
+      (write-build-state state-path state-temp-path current-sources artifacts
+                         owners cache-key))
     (%make-build-report artifacts added modified removed affected
                         (not cache-hit?))))
+
+(define (build-project/report project)
+  (execute-project project #t))
+
+(define (check-project project)
+  "Read, analyze, render, and validate PROJECT without accessing output state."
+  (execute-project project #f))
 
 (define (build-project project)
   (build-report-artifacts (build-project/report project)))
