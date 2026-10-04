@@ -76,13 +76,39 @@
   (and (memq mode (math-rewrite-rule-modes rule))
        (if (eq? mode 'backward) (rule-backward rule) (rule-relation rule))))
 
-(define (math-rules-stepo rules assumptions input output name mode)
+(define (candidate-rules rules term mode)
+  ;; A known root operator can reject impossible schemas before constructing
+  ;; their relational goals. Unknown roots and opaque rules retain all choices.
+  (if (and (pair? term) (symbol? (car term)))
+      (filter
+        (lambda (rule)
+          (let* ((spec (math-rewrite-rule-spec rule))
+                 (pattern (and spec (if (eq? mode 'backward)
+                                        (math-rule-spec-right spec)
+                                        (math-rule-spec-left spec)))))
+            (or (not (pair? pattern)) (not (symbol? (car pattern)))
+                (eq? (car pattern) 'unquote) (eq? (car pattern) (car term)))))
+        rules)
+      rules))
+
+(define (selected-rules-stepo rules candidates assumptions input output name mode)
+  ;; Keep the original conde tree: pruning its branches would change fair
+  ;; interleaving and therefore the first derivation chosen by bounded search.
   (if (null? rules) fail
-      (let* ((rule (car rules)) (relation (math-rewrite-rule-relation rule mode)))
+      (let* ((rule (car rules))
+             (relation (and (memq rule candidates)
+                            (math-rewrite-rule-relation rule mode))))
         (conde
           ((== name (math-rewrite-rule-name rule))
            (if relation (relation assumptions input output) fail))
-          ((math-rules-stepo (cdr rules) assumptions input output name mode))))))
+          ((selected-rules-stepo (cdr rules) candidates
+                                 assumptions input output name mode))))))
+
+(define (math-rules-stepo rules assumptions input output name mode)
+  (project (input output)
+    (selected-rules-stepo rules
+      (candidate-rules rules (if (eq? mode 'backward) output input) mode)
+      assumptions input output name mode)))
 
 (define (facto assumptions fact)
   (conde

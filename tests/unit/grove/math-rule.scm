@@ -92,4 +92,25 @@
   (run* (input)
     (unrewrite-rooto '((vector (var E)) (smooth (var E)))
                     input '(num "0") 'div-curl-zero)))
+(let* ((rules
+          (list (math-rule 'foo-to-bar "foo(X) = bar(X)" "always" 'example
+                  (facts x) (foo ,x) (bar ,x) () () #:backward #t)
+                (math-rule 'other-to-bar "other(X) = bar(X)" "always" 'example
+                  (facts x) (other ,x) (bar ,x) () () #:backward #t))))
+  (define (reference rules input output name mode)
+    (if (null? rules) fail
+        (conde
+          ((== name (math-rewrite-rule-name (car rules)))
+           ((math-rewrite-rule-relation (car rules) mode) '() input output))
+          ((reference (cdr rules) input output name mode)))))
+  (test-equal "root pruning preserves partially ground forward answers"
+    (run* (x output name) (reference rules `(foo ,x) output name 'forward))
+    (run* (x output name) (math-rules-stepo rules '() `(foo ,x) output name 'forward)))
+  (test-equal "root pruning preserves inverse enumeration"
+    (run* (input name) (reference rules input '(bar (num "1")) name 'backward))
+    (run* (input name) (math-rules-stepo rules '() input '(bar (num "1")) name 'backward)))
+  (test-equal "open relational roots retain all rules"
+    (run* (input output name) (reference rules input output name 'forward))
+    (run* (input output name) (math-rules-stepo rules '() input output name 'forward))))
+
 (test-end "math rule contracts")
