@@ -560,11 +560,22 @@
         (vector-ref index id)
         (error "unknown content node" id))))
 
-(define (make-forest site)
+(define* (make-forest site #:key (timings #f))
+  (define-syntax-rule (measure phase expression)
+    (if (not timings) expression
+        (let* ((start (get-internal-real-time))
+               (result expression))
+          (timings phase (/ (- (get-internal-real-time) start)
+                            internal-time-units-per-second))
+          result)))
   (unless (site? site)
     (error "forest requires a Grove site" site))
-  (let* ((root-pages (assign-subtree-identifiers (site-pages site)))
-         (subtrees (subtree-pages root-pages))
+  (unless (or (not timings) (procedure? timings))
+    (error "forest timings must be a procedure" timings))
+  (let* ((root-pages
+           (measure 'identify-trees
+             (assign-subtree-identifiers (site-pages site))))
+         (subtrees (measure 'extract-trees (subtree-pages root-pages)))
          (pages (append root-pages subtrees))
          (_ (make-site pages
                        #:title (site-title site)
@@ -575,7 +586,7 @@
                         (hash-set! page-index (site-page-id page) page))
                       pages))
          (reference-facts
-           (append-map
+           (measure 'references (append-map
              (lambda (source-page)
                (let* ((source-id (site-page-id source-page))
                       (elements
@@ -602,9 +613,9 @@
                              target-page-id
                              (content->plain-text element))))
                    elements (iota (length elements) 1))))
-             pages))
+             pages)))
          (transclusion-index
-           (map
+           (measure 'transclusions (map
              (lambda (source-tree)
                (let* ((source-id (site-page-id source-tree))
                       (elements
@@ -636,22 +647,22 @@
                            source-id transclusion-id target-id)))
                      elements
                      (iota (length elements) 1)))))
-             pages))
+             pages)))
          (reference-relation
-           (make-reference-relation reference-facts))
+           (measure 'reference-index (make-reference-relation reference-facts)))
          (page-relation
-           (make-page-relation
+           (measure 'page-index (make-page-relation
              (map (lambda (page)
                     (list (site-page-id page)
                           (site-page-title page)
                           (site-page-metadata page)))
-                  pages)))
+                  pages))))
          (content-node-state
-           (call-with-values
+           (measure 'content (call-with-values
              (lambda () (content-node-facts pages))
-             list))
+             list)))
          (composition
-           (composition:make-composition
+           (measure 'composition (composition:make-composition
              (append-map
                (lambda (page)
                  (map (lambda (element)
@@ -661,16 +672,16 @@
                       (direct-subtree-elements
                         (site-page-document page))))
                pages)
-             (append-map cdr transclusion-index)))
+             (append-map cdr transclusion-index))))
          (_ (validate-tree-cycles! pages
               (lambda (page)
                 (composition:target-ids composition (site-page-id page))))))
-    (resolve-forest-queries
+    (measure 'queries (resolve-forest-queries
       (%make-forest site pages
                     reference-relation composition page-index page-relation
                     (car content-node-state)
                     (cadr content-node-state)
-                    '()))))
+                    '())))))
 
 (define (find-page forest id)
   (or (hash-ref (page-index forest) id)

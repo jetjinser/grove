@@ -28,6 +28,21 @@
 
 (test-begin "forester site")
 
+(let* ((phases '())
+       (page (make-site-page "measured" "Measured"
+                            (evaluate-document "A paragraph.")))
+       (forest (make-forest (make-site (list page))
+                 #:timings (lambda (phase seconds)
+                             (set! phases (cons (cons phase seconds) phases))))))
+  (test-equal "timing observation preserves the page"
+    "Measured" (site-page-title (find-page forest "measured")))
+  (test-equal "forest timings follow analysis order"
+    '(identify-trees extract-trees references transclusions reference-index
+      page-index content composition queries)
+    (map car (reverse phases)))
+  (test-assert "forest timings report nonnegative seconds"
+    (every (lambda (entry) (>= (cdr entry) 0)) phases)))
+
 (define (document-paragraph-texts document)
   (map (lambda (paragraph)
          (content-text-value

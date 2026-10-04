@@ -75,7 +75,9 @@
   (unless (every (lambda (fact) (every vector-free-term? fact)) facts)
     (error "relation facts cannot contain vectors; miniKanren uses them for logic variables" facts))
   (let* ((facts (unique-facts facts))
-         (indexes (map (lambda (position) (make-index facts position))
+         ;; A content relation has nine columns; most queries bind only one or
+         ;; two. Build each index on first use and share it within this snapshot.
+         (indexes (map (lambda (position) (delay (make-index facts position)))
                        (iota arity))))
     (%make-relation arity facts indexes)))
 
@@ -110,7 +112,7 @@
         (membero terms (relation-facts relation))
         (if (ground-term? (car remaining))
             (membero terms
-                     (indexed-values (car indexes) (car remaining)))
+                     (indexed-values (force (car indexes)) (car remaining)))
             (find-candidates (cdr remaining)
                              (cdr indexes))))))
 

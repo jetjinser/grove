@@ -170,3 +170,8 @@ To measure document reading, pass `#:timings` to
 `make-scribble-document-reader`. Its callback receives `(path phase seconds)`
 for `parse`, `translate`, `evaluate`, and `decode`. Timings are disabled by
 default. Use Guile's `statprof` to locate hotspots inside evaluation.
+
+For forest analysis, `make-forest` accepts `#:timings` with a callback receiving
+`(phase seconds)`. It measures tree extraction, references, content facts,
+composition, and query resolution separately. Measure cold and warm builds in
+separate processes; do not recompile files while measuring cache reuse.
