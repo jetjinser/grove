@@ -6,6 +6,7 @@
              (grove ir) (grove render html) (grove render text)
              ((grove math semantic) #:prefix ◆:)
              ((grove math notation) #:prefix ◇:)
+             (tests unit grove source-fixtures)
              (language scribble spec) (language scribble parser) (system base language)
              (srfi srfi-1) (srfi srfi-13) (srfi srfi-64))
 (define r3 (◆:space 'x 'y 'z))
@@ -72,7 +73,7 @@
        (not (math-value? (◇:column "a" "b")))))
 (for-each
   (lambda (fixture)
-    (let* ((report (derive (car fixture) (cadr fixture)))
+    (let* ((report (derive (located-text (car fixture)) (cadr fixture)))
            (certificate (math-report-derivation report)))
       (test-assert (string-append "partial completes: " (car fixture)) (math-report-complete? report))
       (test-equal "partial has the expected simplified result"
