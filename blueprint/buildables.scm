@@ -13,6 +13,7 @@
 
 (define +grove-sources+
   '("grove/build.scm"
+    "grove/highlight.scm"
     "grove/build/state.scm"
     "grove/collect.scm"
     "grove/cli.scm"
