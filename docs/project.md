@@ -69,6 +69,40 @@ backtrace. Existing Scheme callers can use `check-project` alongside
 has no previous output state, so its report describes all tracked sources as
 added and all produced artifacts as affected.
 
+### Local preview
+
+```sh
+grove serve
+grove serve --port 8081
+grove serve --no-watch --output /tmp/preview
+```
+
+The first build must succeed before HTTP preview starts. An occupied port fails
+without running a build. The server binds to `127.0.0.1` and serves only generated
+artifacts, with `/` selecting an existing `index.html`; it does not list
+directories or expose project files and cache metadata. GET and HEAD are
+supported, including binary assets and MIME types. Browser caching is disabled.
+
+Each build runs in a new Guile process, so edits to project modules take effect.
+The watcher polls file identity, size, and precise timestamps, then uses Grove's
+existing fingerprints and renderer caching during builds. It tracks the project
+directory, source directories, declared file dependencies, and loaded Scheme
+sources. Discovered external input directories are monitored for new files too.
+Nested directory symlinks and hidden entries are skipped during recursive scans;
+explicit source-directory symlinks are resolved and tracked file dependencies
+remain observed. Keep outputs in a separate directory: generated outputs are
+excluded from watching.
+
+Builds run one at a time. Changes observed during a build queue another build.
+After success, the server replaces its entire in-memory artifact set; failure
+keeps the previous set available. Scheme output cannot corrupt the private
+worker protocol. The browser does not refresh automatically.
+
+Ctrl-C stops the server, its active worker, and project subprocesses in the
+worker's process group, exiting with `130`. SIGTERM performs the same cleanup
+and exits with `143`. Detached processes created by project code are outside
+that group. `--no-watch` performs one build and serves that fixed snapshot.
+
 ## A linked-page project
 
 For a Forester site, use `(grove project site)` with Forester's reader,

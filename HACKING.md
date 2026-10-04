@@ -66,6 +66,19 @@ dependencies are tracked by path. A renderer cache hit reuses artifacts, but
 the build still reads the sources and runs the analyzer. Keep cache keys in
 sync with reader, analyzer, renderer code, and configuration.
 
+Preview execution lives in `(grove serve)`. A single event loop supervises a
+fresh build process, polls source changes, and handles local HTTP requests.
+The private preview modules separate file observation, HTTP artifact handling,
+and worker execution. Workers use the same project loader and
+`build-project/report`; their file protocol transfers artifacts and dependency
+metadata, not a new public project representation. HTTP reads the successful
+in-memory artifact set rather than files being rewritten. The build report's
+`build-report-sources` accessor provides the complete tracked input paths.
+
+The preview integration suite opens localhost sockets and exercises module
+reloads, failure recovery, queued edits, and process cleanup. It needs an
+environment that permits local socket creation.
+
 ## Module boundaries
 
 Grove owns generic project orchestration, content records, rendering helpers,

@@ -69,13 +69,17 @@ From its directory, run:
 ```sh
 /tmp/grove-install/bin/grove build
 /tmp/grove-install/bin/grove check
+/tmp/grove-install/bin/grove serve --port 8080
 ```
 
 `build` updates outputs using the existing renderer cache. `check` runs the full
 pipeline, including rendering and artifact validation, without reading or writing
 output state. It does not undo side effects in project code. Use `--project PATH`
 to select a project, `build --output PATH` to override its output directory,
-and `--debug` for the original exception and backtrace. See the
+and `--debug` for the original exception and backtrace. `serve` previews at
+`http://127.0.0.1:8080/`, rebuilds on changes, and keeps the last successful
+outputs available when a rebuild fails. Use `--no-watch` for a fixed preview;
+reload the browser to see a successful update. See the
 [project guide](docs/project.md#command-line-projects) for a complete project file.
 The repository examples still use the direct Scheme entry points shown above.
 
