@@ -178,6 +178,8 @@ separate processes; do not recompile files while measuring cache reuse.
 
 For line coverage, build first, then run
 `GROVE_TESTS_ENABLE_COVERAGE=1 GROVE_TESTS_TIME_LIMIT=600 blue check`.
+The vector identity suite can exceed 600 seconds under VM tracing. Run it
+separately with `GROVE_TESTS_TIME_LIMIT=1200`; keep coverage enabled.
 The patched Blue compiles test files before tracing their execution. Each suite
 writes an LCOV `.cov` file beside its test log. CLI and preview tests also write
 `build/coverage-child-*.cov` for their child processes, including completed
