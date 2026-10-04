@@ -184,8 +184,8 @@ composition facts from another source while using the same semantic queries.
 The runnable [linked-notes example](../examples/linked-notes/plants/algebra/math-0003.plant)
 defines a reusable identity, links from its body to another named tree, and
 transcludes it twice. A second [source file](../examples/linked-notes/plants/algebra/math-0004.plant)
-also transcludes that subtree. Run `guile -L modules examples/linked-notes/build.scm`; output
-goes to `/tmp/grove-linked-notes` unless another output directory is passed.
+also transcludes that subtree. Run `grove build --project examples/linked-notes/project.scm`; output
+goes to the example’s `build/` directory unless `--output PATH` is supplied.
 
 ## Styles
 

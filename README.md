@@ -28,16 +28,16 @@ linked-notes example:
 nix develop ./nix
 ```
 
-Then, inside that shell, run:
+Install the CLI as described below, then run:
 
 ```sh
-guile -L modules examples/linked-notes/build.scm /tmp/grove-preview
+grove build --project examples/linked-notes/project.scm --output /tmp/grove-preview
 ```
 
 Open `/tmp/grove-preview/index.html`. The example's home page is selected in
 its build configuration; Grove does not generate a page-list index. The build
-also writes plain text, RSS, a sitemap, a graph, and static assets. Omit the
-output argument to write to `/tmp/grove-linked-notes`.
+also writes plain text, RSS, a sitemap, a graph, and static assets. Omit
+`--output` to write to the example’s `build/` directory.
 
 To see the authoring syntax, start with the
 [`math-0001.plant`](examples/linked-notes/plants/algebra/math-0001.plant) page
@@ -45,22 +45,25 @@ and follow its links. For smaller demonstrations, build one of these examples:
 
 | Example | Focus |
 | --- | --- |
-| [`catalog`](examples/catalog/build.scm) | A custom model rendered as HTML and text, without Forester. |
-| [`inventory`](examples/inventory/build.scm) | CSV input and data outputs, without Grove content or HTML. |
-| [`math-derivations`](examples/showcases/math-derivations/build.scm) | Executable math articles, checked derivations, search, and diagnostics. |
-| [`forest-category`](examples/showcases/forest-category/build.scm) | A compact cross-linked collection of authored pages. |
+| [`catalog`](examples/catalog/project.scm) | A custom model rendered as HTML and text, without Forester. |
+| [`inventory`](examples/inventory/project.scm) | CSV input and data outputs, without Grove content or HTML. |
+| [`math-derivations`](examples/showcases/math-derivations/project.scm) | Executable math articles, checked derivations, search, and diagnostics. |
+| [`forest-category`](examples/showcases/forest-category/project.scm) | A compact cross-linked collection of authored pages. |
 
-Examples write to `/tmp` by default and accept an output directory as their
-first argument.
+Each example returns a project from `project.scm` and writes to its own `build/`
+directory. Use `--output` to choose another location.
 
 ## Command line
 
 Install the CLI and modules to a local prefix from the development shell:
 
 ```sh
-blue configure --prefix=/tmp/grove-install
-blue build
-blue install
+blue prefix=/tmp/grove-install exec-prefix=/tmp/grove-install \
+  bindir=/tmp/grove-install/bin \
+  guile-module-dir=/tmp/grove-install/share/guile/site/3.0 \
+  guile-object-dir=/tmp/grove-install/lib/guile/3.0/site-ccache \
+  build -- install
+export PATH=/tmp/grove-install/bin:$PATH
 ```
 
 A CLI project has a `project.scm` whose final expression returns a Grove project.
@@ -81,7 +84,7 @@ and `--debug` for the original exception and backtrace. `serve` previews at
 outputs available when a rebuild fails. Use `--no-watch` for a fixed preview;
 reload the browser to see a successful update. See the
 [project guide](docs/project.md#command-line-projects) for a complete project file.
-The repository examples still use the direct Scheme entry points shown above.
+The same commands work from each example directory, using its `project.scm`.
 
 ## What you can build
 

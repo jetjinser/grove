@@ -37,7 +37,7 @@ blue -j 1 check
 ```
 
 Build a runnable example from the repository root with
-`guile -L modules examples/linked-notes/build.scm /tmp/grove-preview`.
+`grove build --project examples/linked-notes/project.scm --output /tmp/grove-preview`.
 Examples are integration fixtures as well as demonstrations; keep them small
 and focused on a feature. Flora is the place for longer teaching examples.
 

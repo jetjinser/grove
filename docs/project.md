@@ -16,8 +16,8 @@ paths → reader → project inputs → analyzer → model → renderers → art
 The reader and analyzer belong to the project. Renderers receive the same
 model and can produce unrelated formats. The model can be any Scheme value;
 Grove does not require pages, content IR, or HTML. See
-[`examples/catalog/build.scm`](../examples/catalog/build.scm) for a compact
-project-owned model, and [`examples/inventory/build.scm`](../examples/inventory/build.scm)
+[`examples/catalog/project.scm`](../examples/catalog/project.scm) for a compact
+project-owned model, and [`examples/inventory/project.scm`](../examples/inventory/project.scm)
 for CSV and Scheme output without Grove's document IR.
 
 ## Command-line projects
@@ -107,7 +107,7 @@ that group. `--no-watch` performs one build and serves that fixed snapshot.
 
 For a Forester site, use `(grove project site)` with Forester's reader,
 analyzer, and renderers. The complete runnable setup is
-[`examples/linked-notes/build.scm`](../examples/linked-notes/build.scm); it
+[`examples/linked-notes/project.scm`](../examples/linked-notes/project.scm); it
 also configures CSS, text routes, a feed, a sitemap, a graph, and static files.
 
 The site needs an explicit home page ID. For example,
