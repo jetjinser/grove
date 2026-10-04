@@ -5,6 +5,28 @@
              (grove relation) (srfi srfi-1) (srfi srfi-64))
 
 (test-begin "math rule contracts")
+(for-each
+  (lambda (fixture)
+    (let ((input (car fixture)) (rule (cadr fixture)) (path (caddr fixture))
+          (facts '((scalar (var x)) (scalar (var y)))))
+      (test-equal "local certificate checks agree with relational traversal"
+        (run* (output)
+          ((@@ (grove math rewrite) step-in-modeo)
+            facts input output rule path 'check))
+        (run* (output) (check-stepo facts input output rule path)))))
+  '(((+ (var x) (num "0")) add-zero ())
+    ((+ (+ (var x) (num "0")) (var y)) add-zero (0))
+    ((+ (var x) (+ (var y) (num "0"))) add-zero (1))
+    ((+ (var x) (num "1")) add-zero ())
+    ((+ (var x) (num "0")) add-zero (9))
+    ((+ (var x) (num "0")) missing-rule ())))
+(test-equal "unknown certificate locations retain relational answers"
+  (run* (output path)
+    ((@@ (grove math rewrite) step-in-modeo) '((scalar (var x)))
+      '(+ (var x) (num "0")) output 'add-zero path 'check))
+  (run* (output path)
+    (check-stepo '((scalar (var x)))
+      '(+ (var x) (num "0")) output 'add-zero path)))
 (test-equal "registry names are unique" (length math-rewrite-rules)
   (length (delete-duplicates (map math-rewrite-rule-name math-rewrite-rules))))
 (for-each

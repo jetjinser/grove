@@ -3,6 +3,8 @@
 
 (define-module (grove math rewrite)
   #:use-module (grove relation)
+  #:use-module (grove private minikanren)
+  #:use-module ((grove relation dsl) #:select (project))
   #:use-module (grove math rule)
   #:use-module (grove math term)
   #:use-module (grove math vector)
@@ -92,8 +94,31 @@
 
 (define (rewrite-stepo assumptions input output rule path)
   (step-in-modeo assumptions input output rule path 'forward))
+(define (replace-term term path replacement)
+  (if (null? path) replacement
+      (cons (car term)
+        (map (lambda (child index)
+               (if (= index (car path))
+                   (replace-term child (cdr path) replacement) child))
+             (cdr term) (iota (length (cdr term)))))))
+
 (define (check-stepo assumptions input output rule path)
-  (step-in-modeo assumptions input output rule path 'check))
+  (project (assumptions input rule path)
+    (if (and (ground-term? assumptions) (ground-term? input)
+             (symbol? rule) (ground-term? path))
+        ;; A certificate already names its rule and location. Check that local
+        ;; relation and rebuild its context, rather than searching the tree.
+        (let* ((metadata (math-rewrite-rule-ref rule))
+               (local (math-term-at-path input path))
+               (relation (and metadata
+                              (math-rewrite-rule-relation metadata 'check))))
+          (if (and local relation)
+              (fresh (replacement)
+                (relation assumptions local replacement)
+                (project (replacement)
+                  (== output (replace-term input path replacement))))
+              fail))
+        (step-in-modeo assumptions input output rule path 'check))))
 (define (unrewrite-stepo assumptions input output rule path)
   (step-in-modeo assumptions input output rule path 'backward))
 (define (unrewrite-rooto assumptions input output rule)
@@ -130,12 +155,6 @@
                         (map (lambda (path) (cons index path)) (paths child)))
                       (cdr term) (iota (length (cdr term)))))
       '(())))
-  (define (replace term path replacement)
-    (if (null? path) replacement
-        (cons (car term)
-          (map (lambda (child index)
-                 (if (= index (car path)) (replace child (cdr path) replacement) child))
-               (cdr term) (iota (length (cdr term)))))))
   (let visit ((remaining (paths term)))
     (and (pair? remaining)
          (let* ((path (car remaining)) (local (math-term-at-path term path))
@@ -146,7 +165,7 @@
                            (let ((results (run 1 (output)
                                             ((math-rewrite-rule-relation rule 'forward) assumptions local output))))
                              (and (pair? results)
-                                  (list (replace term path (car results)) (math-rewrite-rule-name rule) path)))))
+                                  (list (replace-term term path (car results)) (math-rewrite-rule-name rule) path)))))
                     rules)))
            (or answer (visit (cdr remaining)))))))
 

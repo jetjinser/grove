@@ -81,14 +81,6 @@
                        (iota arity))))
     (%make-relation arity facts indexes)))
 
-(define (ground-term? term)
-  (cond
-    ((logic-variable? term) #f)
-    ((pair? term)
-     (and (ground-term? (car term))
-          (ground-term? (cdr term))))
-    (else #t)))
-
 (define (membero value values)
   (conde
     ((fresh (rest)
