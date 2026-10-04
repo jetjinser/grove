@@ -11,8 +11,7 @@
 
 (define grammar
   (or (getenv "GROVE_TEST_SCHEME_GRAMMAR")
-      (string-append (getenv "HOME")
-        "/.local/share/nvim/lazy/nvim-treesitter/parser/scheme.so")))
+      (car (highlighter-configuration (assq-ref (default-highlighters) 'scheme)))))
 (define query "(symbol) @variable (string) @string
                ((symbol) @keyword (#eq? @keyword \"define\"))")
 (define highlights `((scheme . ,(make-highlighter grammar "tree_sitter_scheme" query))))
@@ -23,6 +22,14 @@
 (define block (car (content-document-children document)))
 (test-equal "at-exp records the language without interpreting source"
   'scheme (content-element-property block 'language))
+(test-assert "HTML uses packaged Scheme highlighting without explicit configuration"
+  (string-contains (sxml->html (content->sxml block)) "syntax-keyword"))
+(test-assert "an empty mapping disables default highlighting"
+  (let* ((port (open-output-string))
+         (output (parameterize ((current-error-port port))
+                   (sxml->html (content->sxml block #:highlighters '())))))
+    (and (not (string-contains output "<span"))
+         (string-contains (get-output-string port) "scheme"))))
 (test-equal "source remains plain text in Content IR"
   "(define 平方 \"<&>\")" (content-verbatim-string (content-element-children block)))
 (test-assert "HTML emits language and syntax classes with escaped text"

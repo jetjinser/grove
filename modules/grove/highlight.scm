@@ -5,12 +5,13 @@
   #:use-module (ts)
   #:use-module (ice-9 match)
   #:use-module (ice-9 regex)
+  #:use-module (ice-9 textual-ports)
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
   #:export (make-highlighter highlighter? highlight-code
-            highlighter-configuration highlighter-inputs))
+            highlighter-configuration highlighter-inputs default-highlighters))
 
 (define-record-type <highlighter>
   (%make-highlighter language query patterns configuration inputs)
@@ -84,7 +85,7 @@
       (ts-query-predicates-for-pattern query index))
     (cons priority predicates)))
 
-(define (make-highlighter library entry query-source)
+(define* (make-highlighter library entry query-source #:key (inputs '()))
   "Load a grammar library and compile its highlight query once.
 Supported predicates: eq?, not-eq?, match?, not-match?, any-of?, not-any-of?.
 Regexes use Guile's POSIX extended syntax. Only set! priority is supported;
@@ -95,7 +96,27 @@ other predicates/directives are rejected rather than silently ignored."
       (list->vector (map (lambda (index) (compile-pattern query index))
                         (iota (ts-query-pattern-count query))))
       (list library entry query-source)
-      (if (file-exists? library) (list (canonicalize-path library)) '()))))
+      (delete-duplicates
+        (map canonicalize-path
+          (append (if (file-exists? library) (list library) '()) inputs)) string=?))))
+
+(define packaged-highlighters
+  (delay
+    (map
+      (match-lambda
+        ((name library entry query)
+         (cons name (make-highlighter library entry
+                      (call-with-input-file query
+                        (lambda (port)
+                          (set-port-encoding! port "UTF-8")
+                          (get-string-all port)))
+                      #:inputs (list query)))))
+      (module-ref (resolve-interface '(grove highlight languages)) 'languages))))
+
+(define (default-highlighters)
+  "Load the packaged language table once, on first use. Explicit renderer
+highlighter mappings can replace these defaults, including an empty mapping."
+  (force packaged-highlighters))
 
 ;; Each span is #(start end category priority pattern). Larger priority wins;
 ;; ties prefer the later query pattern, then the narrower capture.

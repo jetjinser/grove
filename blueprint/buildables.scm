@@ -165,7 +165,7 @@
                                 (+ 1 (string-length filename))))
             (required? (error "missing Grove runtime dependency" module))
             (else #f))))
-      '("gcrypt/hash" "faster-minikanren/mk-guile"))
+      '("gcrypt/hash" "faster-minikanren/mk-guile" "ts" "grove/highlight/languages"))
     string=?))
 
 (define grove-programs

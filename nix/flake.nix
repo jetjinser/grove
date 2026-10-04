@@ -36,6 +36,10 @@
           packages = lib.packagesFromDirectoryRecursive {
             inherit (pkgs) callPackage;
             directory = ./pkgs;
+          } // {
+            grove-highlights = pkgs.callPackage ./pkgs/grove-highlights.nix {
+              guile-ts = self'.packages.guile-ts;
+            };
           };
           devshells.default = {
             packages = with pkgs; [
@@ -47,6 +51,7 @@
               self'.packages.blue
               self'.packages.faster-minikanren
               self'.packages.guile-ts
+              self'.packages.grove-highlights
 
               reuse
             ];

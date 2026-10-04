@@ -362,7 +362,7 @@
 
 (define* (site->html forest #:key
                        (style default-html-style)
-                       (highlighters '())
+                       (highlighters (default-highlighters))
                        routes
                        (mathjax-src default-mathjax-src)
                        (backmatter default-backmatter-sections)
@@ -386,7 +386,7 @@
 
 (define* (render-html forest #:key
                              (style default-html-style)
-                             (highlighters '())
+                             (highlighters (default-highlighters))
                              routes
                              (mathjax-src default-mathjax-src)
                              (backmatter default-backmatter-sections)
@@ -412,7 +412,7 @@
 
 (define* (make-html-renderer #:key
                                       (style default-html-style)
-                                      (highlighters '())
+                                      (highlighters (default-highlighters))
                                       routes
                                       (mathjax-src default-mathjax-src)
                                       (backmatter default-backmatter-sections)

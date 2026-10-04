@@ -203,8 +203,10 @@ and supported operations.
 ### Code highlighting
 
 Code blocks accept a language symbol: `@code-block[#:language 'scheme]{(define x 2)}`.
-Configure the HTML renderer with `#:highlighters`, an association list of
-language symbols and values created by `(grove highlight)`:
+Scheme highlighting is included by default in the Nix devshell and installed
+CLI. No project configuration is needed for `#:language 'scheme`.
+To replace the defaults, configure the HTML renderer with `#:highlighters`, an
+association list of language symbols and values created by `(grove highlight)`:
 
 ```scheme
 (define scheme-highlight
@@ -216,8 +218,10 @@ language symbols and values created by `(grove highlight)`:
 
 Import `(grove highlight)` alongside `(forester render html)`. The same option
 is available on `render-html`, `site->html`, and Grove's `content->sxml`.
-Without a configured highlighter, a named language produces a warning and plain
-code. Blocks without a language remain plain code without a warning.
+Use `#:highlighters '()` to disable the defaults, or combine your mapping with
+`(default-highlighters)` to keep Scheme support. Without a configured
+highlighter, a named language produces a warning and plain code. Blocks without
+a language remain plain code without a warning.
 
 Forester's default style includes `highlight.css`. Custom styles can compose
 `default-highlight-style` from `(grove style highlight)` through
@@ -225,7 +229,9 @@ Forester's default style includes `highlight.css`. Custom styles can compose
 other `.syntax-*` classes, or set variables such as `--syntax-keyword` on
 `pre`. Dotted capture names become hyphenated classes, for example
 `function.builtin` becomes `syntax-function-builtin`. Text output preserves the
-source without highlight markup. Grammar packaging is not yet provided.
+source without highlight markup. The `grove-highlights` Nix package includes
+the grammar, its matching upstream query, and the grammar's license; their
+version is fixed by `nix/flake.lock`.
 
 ## Document inputs and effects
 

@@ -20,6 +20,6 @@
     @item{The @code{x^2+y^2=z^2} identity describes a right triangle.}
   }
   @blockquote{Definitions make relationships easier to follow.}
-  @code-block{(define square (lambda (x) (* x x)))}
+  @code-block[#:language 'scheme]{(define square (lambda (x) (* x x)))}
 
 }

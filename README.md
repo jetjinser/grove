@@ -104,6 +104,7 @@ The same commands work from each example directory, using its `project.scm`.
   formats and artifact data.
 - Write `.plant` documents with executable Scheme, reusable commands, and
   automatic paragraphs for ordinary prose.
+- Highlight Scheme code blocks at build time with Tree-sitter and customizable CSS.
 - Use Forester for page links, named content trees, transclusion, and
   miniKanren queries over pages and document content, including deferred
   `@forest-query` blocks in authored pages.

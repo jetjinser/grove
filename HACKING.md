@@ -192,6 +192,10 @@ compiled Scheme strings do not preserve those properties.
 
 The standalone `(grove highlight)` module compiles a grammar and query with
 `make-highlighter`; reuse that value with `highlight-code`. Results are ordered
-`(category . text)` pieces, with `#f` for unstyled text. Its tests temporarily
-use the local Neovim Scheme grammar; set `GROVE_TEST_SCHEME_GRAMMAR` to an
-absolute library path elsewhere. Grammar packaging is a separate step.
+`(category . text)` pieces, with `#f` for unstyled text. `default-highlighters`
+loads the packaged Scheme grammar and its matching query once. Both come from
+the locked nixpkgs grammar package; `grove-highlights` validates them against
+the actual Grove highlighter during its Nix build. The devshell includes the
+generated `(grove highlight languages)` table, and the installed CLI records
+its canonical runtime path alongside guile-ts. Tests use this grammar by
+default; `GROVE_TEST_SCHEME_GRAMMAR` can select an alternative library.

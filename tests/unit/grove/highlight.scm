@@ -3,17 +3,25 @@
 
 (use-modules (grove highlight) (srfi srfi-1) (srfi srfi-64))
 
-;; Temporary grammar source until grammars are packaged with Grove.
-;; CI or non-Neovim setups can supply an absolute shared-library path.
+;; Exercise the packaged grammar by default; an explicit path allows alternatives.
 (define grammar
   (or (getenv "GROVE_TEST_SCHEME_GRAMMAR")
-      (string-append (getenv "HOME")
-        "/.local/share/nvim/lazy/nvim-treesitter/parser/scheme.so")))
+      (car (highlighter-configuration (assq-ref (default-highlighters) 'scheme)))))
 (define (highlighter query) (make-highlighter grammar "tree_sitter_scheme" query))
 (define (styled query source)
   (filter car (highlight-code (highlighter query) source)))
 
 (test-begin "Tree-sitter highlighting")
+(test-assert "packaged Scheme highlighting loads once with its query dependency"
+  (let* ((defaults (default-highlighters))
+         (h (assq-ref defaults 'scheme))
+         (source "(define 平方 2) ; 中文")
+         (pieces (highlight-code h source)))
+    (and (eq? defaults (default-highlighters))
+         (= 2 (length (highlighter-inputs h)))
+         (equal? source (apply string-append (map cdr pieces)))
+         (member '("keyword" . "define") pieces)
+         (member '("comment" . "; 中文") pieces))))
 (define basic
   (highlighter "(symbol) @variable (number) @number (string) @string (comment) @comment
                 ((symbol) @keyword (#eq? @keyword \"define\"))"))

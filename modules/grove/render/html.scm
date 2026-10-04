@@ -16,7 +16,7 @@
             sxml->html))
 
 (define* (content->sxml content #:key (handlers '()) (lazy-handlers '()) (id-prefix "")
-                        (highlighters '()))
+                        (highlighters (default-highlighters)))
   (unless (and (list? highlighters)
                (every (lambda (entry)
                         (and (pair? entry) (symbol? (car entry))
