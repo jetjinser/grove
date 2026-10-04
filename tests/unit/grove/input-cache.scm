@@ -9,6 +9,7 @@
   #:use-module (grove style html)
   #:use-module (grove input scribble)
   #:use-module (grove private input cache)
+  #:use-module (grove private input dependencies)
   #:use-module (grove project)
   #:use-module (grove output)
   #:use-module (grove render html)
@@ -68,6 +69,18 @@
 (dynamic-wind
   (lambda () (mkdir root) (put source "First") (put dependency "one"))
   (lambda ()
+    (parameterize ((current-input-fingerprints (make-hash-table)))
+      (let* ((before (input-fingerprint dependency))
+             (info (stat dependency)))
+        (put dependency "two")
+        (utime dependency (stat:atime info) (stat:mtime info))
+        (test-assert "same-size edits with restored mtime invalidate the build memo"
+          (not (equal? before (input-fingerprint dependency))))
+        (delete-file dependency)
+        (test-equal "deletions invalidate the build memo" #f (input-fingerprint dependency))
+        (put dependency "one")
+        (test-equal "restoring an absent input invalidates the build memo"
+          before (input-fingerprint dependency))))
     (build-project (project #t) #:progress
       (lambda (stage detail)
         (when (eq? stage 'input-cache) (set! statuses (cons detail statuses)))))
@@ -154,7 +167,8 @@
         (catch 'uncacheable-content
           (lambda () ((@@ (grove private input cache) pack) cycle) #f)
           (lambda _ #t))))
-    (parameterize ((current-input-cache
+    (parameterize ((current-input-fingerprints (make-hash-table))
+                  (current-input-cache
                     (make-input-cache-context output #t '())))
       (let ((reads 0))
         (define (read-changing-source)

@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove private preview watch)
+  #:use-module (grove private files)
   #:use-module (ice-9 ftw)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
@@ -27,12 +28,7 @@
       (string-prefix? (string-append directory "/") path)))
 
 (define (file-stamp path)
-  (let ((info (stat path #f)))
-    (cons path
-      (and info
-           (list (stat:type info) (stat:ino info) (stat:size info)
-                 (stat:mtime info) (stat:mtimensec info)
-                 (stat:ctime info) (stat:ctimensec info))))))
+  (cons path (file-signature path)))
 
 (define (watch-snapshot roots files output)
   "Record file identity and high-resolution timestamps, detecting additions too.

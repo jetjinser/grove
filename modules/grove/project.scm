@@ -373,6 +373,7 @@
 (define (execute-project project write? progress)
   (unless (project? project)
     (error "project execution requires a Grove project" project))
+  (parameterize ((current-input-fingerprints (make-hash-table)))
   (let* ((source-paths (call-with-project-stage 'collect #f
                          (lambda ()
                            (progress 'collect #f)
@@ -514,7 +515,7 @@
                              owners identity)
           (prune-input-cache! input-cache-context))))
     (%make-build-report (map build-state-source-path current-sources) artifacts added modified removed affected
-                        (not cache-hit?))))
+                        (not cache-hit?)))))
 
 (define* (build-project/report project #:key (progress (lambda (stage path) #t)))
   "Build PROJECT, notifying PROGRESS with a stage symbol and detail."

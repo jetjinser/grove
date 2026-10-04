@@ -4,14 +4,16 @@
 (define-module (grove private input dependencies)
   #:use-module (grove collect)
   #:use-module (grove build state)
+  #:use-module (grove private files)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (runtime-inputs input-fingerprint record-module-inputs!
+  #:export (runtime-inputs input-fingerprint current-input-fingerprints record-module-inputs!
             current-input-trace call-with-input-trace trace-inputs depend-on! disable-cache!))
 
 ;; Each document owns a trace. External effects must either register their
 ;; inputs before reading them or opt out; arbitrary Scheme I/O isn't intercepted.
 (define current-input-trace (make-parameter #f))
+(define current-input-fingerprints (make-parameter #f))
 
 (define (trace-inputs trace)
   (hash-fold (lambda (path digest paths)
@@ -57,8 +59,17 @@
         '())))
 
 (define (input-fingerprint path)
-  ;; Absence matters too: adding a preferred compiled module changes resolution.
-  (and (file-exists? path) (file-fingerprint path)))
+  ;; Only share digests inside one build. Re-stat on every observation, including
+  ;; the post-evaluation check; edits invalidate the memo even if size/mtime match.
+  (let* ((memo (current-input-fingerprints))
+         (signature (file-signature path))
+         (entry (and memo (hash-get-handle memo path))))
+    (if (and entry (equal? signature (cadr entry)))
+        (cddr entry)
+        (let ((digest (and signature (file-fingerprint path))))
+          (when (and memo (equal? signature (file-signature path)))
+            (hash-set! memo path (cons signature digest)))
+          digest))))
 
 (define (depend-on! path)
   "Register a file input before reading it; return its absolute path."

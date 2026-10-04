@@ -23,20 +23,20 @@
     (let ((globals (make-hash-table)))
       (for-each (lambda (path) (hash-set! globals path #t)) dependencies)
       (list (string-append directory "/.grove-input-cache")
-            enabled? dependencies (make-hash-table) (make-hash-table) globals))))
+            enabled? dependencies (make-hash-table) globals))))
 
 (define (register-input-dependencies! context paths)
   (when context
-    (for-each (lambda (path) (hash-set! (list-ref context 5) path #t)) paths)))
+    (for-each (lambda (path) (hash-set! (list-ref context 4) path #t)) paths)))
 
 (define (input-cache-dependencies context)
   (if context
-      (hash-map->list (lambda (path fingerprint) path) (list-ref context 5))
+      (hash-map->list (lambda (path fingerprint) path) (list-ref context 4))
       '()))
 
 (define (input-cache-summary context)
   (if context
-      (let ((statuses (list-ref context 4)))
+      (let ((statuses (list-ref context 3)))
         (cons (hash-count (lambda (path status) (eq? status 'hit)) statuses)
               (hash-count (const #t) statuses)))
       '(0 . 0)))
@@ -44,12 +44,12 @@
 (define (input-cache-disabled? context)
   (and context
        (> (hash-count (lambda (path status) (eq? status 'disabled))
-                      (list-ref context 4)) 0)))
+                      (list-ref context 3)) 0)))
 
 (define (prune-input-cache! context)
   (when context
     (match context
-      ((directory enabled? dependencies memo statuses globals)
+      ((directory enabled? dependencies statuses globals)
        (when (file-exists? directory)
          (let ((retained (filter identity (hash-map->list
                            (lambda (path status)
@@ -160,23 +160,17 @@
     (if (not context)
         (read-document)
         (match context
-          ((directory enabled? shared memo statuses globals)
+          ((directory enabled? shared statuses globals)
            (define (report result)
              (hash-set! statuses path result)
              (status path result))
-           (define (fingerprint file)
-             (let ((entry (hash-get-handle memo file)))
-               (if entry (cdr entry)
-                 (let ((value (input-fingerprint file)))
-                   (hash-set! memo file value)
-                   value))))
            (define (register files)
              (for-each (lambda (file)
                          (unless (string=? file canonical) (hash-set! globals file #t))) files))
            (register (append shared dependencies))
            (let* ((paths (delete-duplicates (cons path (append shared dependencies))
                                            string=?))
-                  (snapshot (map (lambda (file) (list file (fingerprint file))) paths))
+                  (snapshot (map (lambda (file) (list file (input-fingerprint file))) paths))
                   (identity (list reader (version) (setlocale LC_CTYPE)
                                   %load-path %load-compiled-path snapshot))
                   (entry-path (string-append directory "/"
@@ -191,7 +185,7 @@
                                    (every (lambda (input)
                                             (match input
                                               ((file digest)
-                                               (equal? digest (fingerprint file)))
+                                               (equal? digest (input-fingerprint file)))
                                               (_ #f))) extra)
                                    (begin (register (map car extra))
                                           (unpack document))))
