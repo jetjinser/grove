@@ -6,6 +6,7 @@
   #:use-module (grove private preview http)
   #:use-module (grove private preview watch)
   #:use-module (ice-9 ftw)
+  #:use-module (ice-9 binary-ports)
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-64)
   #:use-module (web request)
@@ -99,4 +100,26 @@
   (lambda ()
     (system* "rm" "-rf" root)
     (when (file-exists? external) (delete-file external))))
+(let ((listener (socket AF_INET SOCK_STREAM 0)))
+  (dynamic-wind
+    (lambda () (bind listener AF_INET INADDR_LOOPBACK 0) (listen listener 4))
+    (lambda ()
+      (define (exchange headers)
+        (let ((client (socket AF_INET SOCK_STREAM 0)))
+          (dynamic-wind
+            (lambda () (connect client (getsockname listener)))
+            (lambda ()
+              (send client (string->utf8 headers))
+              (serve-ready-client listener handler)
+              (let ((response (get-bytevector-all client)))
+                (if (eof-object? response) "" (utf8->string response))))
+            (lambda () (close-port client)))))
+      (test-assert "the socket server sends an encoded HTTP response"
+        (string-contains (exchange "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n")
+          (utf8->string (hash-ref table "index.html"))))
+      (test-equal "malformed requests close the connection without a response" ""
+        (exchange "INVALID\r\n\r\n"))
+      (test-equal "incomplete requests expire without blocking the server" ""
+        (exchange "GET / HTTP/1.1\r\n")))
+    (lambda () (close-port listener))))
 (test-end "preview artifacts and watching")

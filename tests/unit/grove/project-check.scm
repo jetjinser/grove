@@ -6,6 +6,7 @@
   #:use-module (grove build state)
   #:use-module (grove output)
   #:use-module (grove project)
+  #:use-module (grove project diagnostic)
   #:use-module (ice-9 ftw)
   #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-64))
@@ -83,4 +84,20 @@
       (null? (build-report-artifacts (check-project project)))))
   (lambda ()
     (system* "rm" "-rf" root)))
+(let* ((message (string-append (make-string 900 #\x) "END-OF-DIAGNOSTIC"))
+       (error (catch 'grove-project-error
+                (lambda () (call-with-project-stage 'read "broken.plant"
+                             (lambda () (throw 'misc-error #f "~a" (list message) #f))))
+                (lambda (key error) error))))
+  (define (printed debug?)
+    (call-with-output-string
+      (lambda (port)
+        (parameterize ((current-error-port port)) (print-project-error error debug?)))))
+  (test-assert "ordinary diagnostics keep the source path and truncate long errors"
+    (let ((text (printed #f)))
+      (and (string-contains text "broken.plant")
+           (string-contains text "--debug")
+           (not (string-contains text "END-OF-DIAGNOSTIC")))))
+  (test-assert "debug diagnostics retain the complete original message"
+    (string-contains (printed #t) "END-OF-DIAGNOSTIC")))
 (test-end "project checks")

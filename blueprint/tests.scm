@@ -103,6 +103,7 @@
        #:load-path (list #%?srcdir)
        #:load-compiled-path (list #%?builddir)
        #:enable-coverage? (->bool (getenv "GROVE_TESTS_ENABLE_COVERAGE"))
+       #:cov-filter-globs '("grove/*" "forester/*" "language/scribble/*")
        #:time-limit (or (and=> (getenv "GROVE_TESTS_TIME_LIMIT") string->number)
                         60)))
 
