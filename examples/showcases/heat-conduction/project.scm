@@ -5,14 +5,12 @@
 (use-modules (ice-9 ftw))
 
 (define example-directory (dirname (current-filename)))
-(define output-directory
-  (or (and (pair? (cdr (command-line))) (cadr (command-line)))
-      "/tmp/grove-heat-conduction"))
+(define output-directory "build")
 
 (primitive-load
   (string-append example-directory "/../../common/forester-showcase.scm"))
 
-(build-forester-showcase
+(make-forester-showcase
   example-directory
   #:title "Heat: a derivation in notes"
   #:home-page "heat-0001"
@@ -21,6 +19,3 @@
   #:output-directory output-directory
   #:cache-key "heat-conduction")
 
-(display "Wrote heat-conduction site to ")
-(display output-directory)
-(newline)

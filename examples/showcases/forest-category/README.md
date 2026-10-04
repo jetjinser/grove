@@ -18,8 +18,9 @@ cross-reference pattern.
 Build it from the Grove repository root:
 
 ```sh
-guile -L modules examples/showcases/category/build.scm
+grove build --project examples/showcases/forest-category/project.scm
 ```
 
-Outputs go to `/tmp/grove-category`. Pass a different directory as the
-first argument to the build script to choose another output location.
+Outputs go to this example’s `build/` directory. Use `--output PATH` to
+choose another location, or `grove serve --project examples/showcases/forest-category/project.scm`
+to preview it locally.

@@ -18,9 +18,9 @@
              (grove render html routes)
              (grove style html))
 
-(define* (build-forester-showcase directory
-                                  #:key title description site-url home-page
-                                  output-directory cache-key)
+(define* (make-forester-showcase directory
+                                 #:key title description site-url home-page
+                                 output-directory cache-key)
   (let* ((source-directory (string-append directory "/plants"))
          (module-directory (string-append directory "/modules"))
          (stylesheet-path (string-append directory "/style.css"))
@@ -38,7 +38,9 @@
              #:title title
              #:description description
              #:source-directory source-directory
-             #:extra-sources (list stylesheet-path)
+             #:extra-sources
+             (list stylesheet-path
+                   (string-append directory "/../../common/forester-showcase.scm"))
              #:prepare (make-scribble-module-setup module-directory)
              #:read-page
              (make-page-reader (make-scribble-document-reader))
@@ -63,4 +65,4 @@
              #:output-directory output-directory
              #:cache-key
              (string-append cache-key "-project-v1:" title ":" description))))
-    (build-project project)))
+    project))

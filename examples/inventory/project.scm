@@ -30,9 +30,7 @@
 (define data-directory (string-append example-directory "/data"))
 (define products-path (string-append data-directory "/products.csv"))
 (define categories-path (string-append data-directory "/categories.txt"))
-(define output-directory
-  (or (and (pair? (cdr (command-line))) (cadr (command-line)))
-      "/tmp/grove-inventory"))
+(define output-directory "build")
 
 (define (read-product-file path)
   (let ((lines (call-with-input-file path
@@ -125,7 +123,4 @@
     #:renderers (list render-summary-csv render-scheme-data)
     #:output-directory output-directory))
 
-(build-project project)
-(display "Wrote the inventory exports to ")
-(display output-directory)
-(newline)
+project

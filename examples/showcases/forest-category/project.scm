@@ -5,14 +5,12 @@
 (use-modules (ice-9 ftw))
 
 (define example-directory (dirname (current-filename)))
-(define output-directory
-  (or (and (pair? (cdr (command-line))) (cadr (command-line)))
-      "/tmp/grove-forest-category"))
+(define output-directory "build")
 
 (primitive-load
   (string-append example-directory "/../../common/forester-showcase.scm"))
 
-(build-forester-showcase
+(make-forester-showcase
   example-directory
   #:title "A Small Category Theory Forest"
   #:home-page "cat-0001"
@@ -21,6 +19,3 @@
   #:output-directory output-directory
   #:cache-key "forest-category")
 
-(display "Wrote category forest outputs to ")
-(display output-directory)
-(newline)

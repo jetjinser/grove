@@ -30,9 +30,7 @@
 (define example-directory (dirname (current-filename)))
 (define quote-directory (string-append example-directory "/quotes"))
 (define catalog-css-path (string-append example-directory "/style.css"))
-(define output-directory
-  (or (and (pair? (cdr (command-line))) (cadr (command-line)))
-      "/tmp/grove-catalog"))
+(define output-directory "build")
 
 (define (read-quote path)
   (string-trim-both
@@ -108,7 +106,4 @@
     #:renderers (list render-catalog-html render-catalog-text)
     #:output-directory output-directory))
 
-(build-project catalog-project)
-(display "Wrote the quote catalog to ")
-(display output-directory)
-(newline)
+catalog-project

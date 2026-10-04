@@ -21,9 +21,7 @@
              (grove style html))
 
 (define examples-directory (dirname (current-filename)))
-(define output-directory
-  (or (and (pair? (cdr (command-line))) (cadr (command-line)))
-      "/tmp/grove-linked-notes"))
+(define output-directory "build")
 
 (define source-directory (string-append examples-directory "/plants"))
 (define module-directory (string-append examples-directory "/modules"))
@@ -87,8 +85,4 @@
     #:output-directory output-directory
     #:cache-key "linked-notes-project-v2"))
 
-(build-project notes-project)
-
-(display "Wrote HTML, text, RSS, sitemap, and graph outputs to ")
-(display output-directory)
-(newline)
+notes-project
