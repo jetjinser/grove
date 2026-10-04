@@ -7,12 +7,13 @@
   #:use-module (blue stencils guile)
   #:use-module (blue stencils template-file)
   #:use-module (blue stencils texinfo)
-  #:export (grove-modules forester-modules))
+  #:export (grove-modules forester-modules grove-programs))
 
 (define +grove-sources+
   '("grove/build.scm"
     "grove/build/state.scm"
     "grove/collect.scm"
+    "grove/cli.scm"
     "grove/ir.scm"
     "grove/string-fun.scm"
     "grove/style.scm"
@@ -128,7 +129,21 @@
     (list
       (template-file
         (inputs "forester/data/lipsum-la.txt")
-        (outputs "forester/data/lipsum-la.txt"))
+        (outputs "forester/data/lipsum-la.txt")
+        (install-location #%~(string-append #%?guile-module-dir "/forester/data")))
       (template-file
         (inputs "forester/style/default.css")
-        (outputs "forester/style/default.css")))))
+        (outputs "forester/style/default.css")
+        (install-location #%~(string-append #%?guile-module-dir "/forester/style"))))))
+
+(define grove-programs
+  (list
+    (template-file
+      (inputs "../bin/grove.in")
+      (outputs "bin/grove")
+      (mode #o755)
+      (install-permissions #o755)
+      (local-variables
+        #%~(list (cons 'GUILE_MODULE_DIR #%?guile-module-dir)
+                 (cons 'GUILE_OBJECT_DIR #%?guile-object-dir)))
+      (install-location #%~#%?bindir))))

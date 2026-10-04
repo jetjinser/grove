@@ -48,7 +48,7 @@
 (blueprint
   (configuration grove-configuration)
   (buildables
-    (append grove-modules forester-modules))
+    (append grove-modules forester-modules grove-programs))
   (commands
     (list install-command
           parse-command))
