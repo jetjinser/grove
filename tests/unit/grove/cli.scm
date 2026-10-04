@@ -60,7 +60,11 @@
           (test-assert "usage errors provide diagnostics" (not (string-null? (caddr result))))))
       '(() ("unknown") ("build" "--project") ("build" "--output=")
         ("build" "--unknown") ("build" "--project" "a" "--project" "b")
-        ("build" "build") ("check" "--output" "preview")))
+        ("build" "build") ("check" "--output" "preview")
+        ("build" "--no-watch") ("check" "--port" "8080")
+        ("serve" "--port" "0") ("serve" "--port" "65536")
+        ("serve" "--port" "abc") ("serve" "--port" "1.5")
+        ("serve" "--port")))
     (test-equal "check help describes validation without build-only options" #t
       (let ((result (run "check" "--help")))
         (and (= (car result) 0)

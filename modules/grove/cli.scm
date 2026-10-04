@@ -3,6 +3,7 @@
 
 (define-module (grove cli)
   #:use-module (grove project)
+  #:use-module (grove serve)
   #:use-module (grove project load)
   #:use-module (grove project diagnostic)
   #:use-module (ice-9 format)
@@ -21,25 +22,36 @@
          (usage-error "expected a command; use 'grove --help'"))
        (when (and (equal? command "check") (assq 'output options))
          (usage-error "check does not accept --output"))
+       (when (and (not (equal? command "serve"))
+                  (or (assq 'port options) (assq 'no-watch options)))
+         (usage-error "--port and --no-watch are serve options"))
        (cons command options))
       ((argument . rest)
        (cond
-         ((member argument '("build" "check"))
+         ((member argument '("build" "check" "serve"))
           (when command (usage-error "unexpected command: ~a" argument))
           (loop rest argument options))
-         ((member argument '("--help" "-h" "--debug"))
+         ((member argument '("--help" "-h" "--debug" "--no-watch"))
           (loop rest command
-                (acons (if (string=? argument "--debug") 'debug 'help) #t options)))
-         ((member argument '("--project" "--output"))
-          (let ((key (if (string=? argument "--project") 'project 'output)))
+                (acons (cond ((string=? argument "--debug") 'debug)
+                             ((string=? argument "--no-watch") 'no-watch)
+                             (else 'help)) #t options)))
+         ((member argument '("--project" "--output" "--port"))
+          (let ((key (cond ((string=? argument "--project") 'project)
+                           ((string=? argument "--output") 'output)
+                           (else 'port))))
             (when (assq key options)
               (usage-error "duplicate option: ~a" argument))
             (match rest
               (((? (lambda (value)
                      (and (not (string-null? value))
                           (not (string-prefix? "-" value)))) value) . tail)
-               (loop tail command (acons key value options)))
-              (_ (usage-error "~a requires a path" argument)))))
+               (let ((value (if (eq? key 'port) (string->number value) value)))
+                 (when (and (eq? key 'port)
+                            (not (and (exact-integer? value) (<= 1 value 65535))))
+                   (usage-error "--port requires an integer from 1 to 65535"))
+                 (loop tail command (acons key value options))))
+              (_ (usage-error "~a requires a value" argument)))))
          ((and (string-prefix? "--" argument) (string-index argument #\=))
           (let ((index (string-index argument #\=)))
             (loop (cons (substring argument 0 index)
@@ -54,51 +66,41 @@
        "Usage: grove build [OPTIONS]\n\nBuild the project and update its outputs.\n")
       ((equal? command "check")
        "Usage: grove check [OPTIONS]\n\nRead, analyze, render, and validate without writing outputs.\n")
+      ((equal? command "serve")
+       "Usage: grove serve [OPTIONS]\n\nServe successful build outputs on localhost and watch for changes.\n")
       (else
-       "Usage: grove COMMAND [OPTIONS]\n\nCommands:\n  build  Build the project and update its outputs.\n  check  Validate the complete pipeline without writing outputs.\n")))
+       "Usage: grove COMMAND [OPTIONS]\n\nCommands:\n  build  Build the project and update its outputs.\n  check  Validate the complete pipeline without writing outputs.\n  serve  Preview on localhost and rebuild when inputs change.\n")))
   (display "\nOptions:\n  --project PATH  Project file (default: ./project.scm).\n")
   (unless (equal? command "check")
-    (display "  --output PATH   Override the output directory (build only).\n"))
+    (display "  --output PATH   Override the output directory (build and serve).\n"))
+  (when (or (not command) (equal? command "serve"))
+    (display "  --port NUMBER   Listen on this port (serve only; default: 8080).\n  --no-watch      Serve without automatic rebuilding (serve only).\n"))
   (display "  --debug         Show the original exception and backtrace.\n  -h, --help      Show help.\n\nOption paths are relative to the invocation directory.\nProject paths are relative to the project file's directory.\n"))
-
-(define (print-project-error error debug?)
-  (let* ((port (current-error-port))
-         (message
-           (call-with-output-string
-             (lambda (output)
-               (print-exception output #f
-                                (project-error-key error)
-                                (project-error-arguments error))))))
-    (format port "grove: ~a failed~a~%"
-            (project-error-stage error)
-            (if (project-error-path error)
-                (format #f " (~a)" (project-error-path error)) ""))
-    (if debug?
-        (begin
-          (when (project-error-stack error)
-            (display-backtrace (project-error-stack error) port))
-          (display message port))
-        (begin
-          (display (string-take message (min 700 (string-length message))) port)
-          (when (> (string-length message) 700)
-            (display "\n… use --debug for the full diagnostic.\n" port))))))
 
 (define (run-command command options)
   (let ((filename (or (assq-ref options 'project) "project.scm")))
-    (call-with-loaded-project filename
-      (lambda (project)
-        (if (string=? command "check")
-            (let ((report (check-project project)))
-              (format #t "Checked ~d artifact~:p.\n"
-                      (length (build-report-artifacts report))))
-            (let ((report (build-project/report project)))
-              (format #t "Built ~d artifact~:p (~d affected).~%Output: ~a~%"
-                      (length (build-report-artifacts report))
-                      (length (build-report-affected-artifacts report))
-                      (canonicalize-path (project-output-directory project)))
-              (unless (build-report-rendered? report)
-                (display "Renderer cache hit.\n")))))
-      #:output-directory (assq-ref options 'output))))
+    (if (string=? command "serve")
+        (serve-project filename
+          #:output-directory (assq-ref options 'output)
+          #:port (or (assq-ref options 'port) 8080)
+          #:watch? (not (assq-ref options 'no-watch))
+          #:debug? (assq-ref options 'debug))
+        (begin
+          (call-with-loaded-project filename
+            (lambda (project)
+              (if (string=? command "check")
+                  (let ((report (check-project project)))
+                    (format #t "Checked ~d artifact~:p.\n"
+                            (length (build-report-artifacts report))))
+                  (let ((report (build-project/report project)))
+                    (format #t "Built ~d artifact~:p (~d affected).~%Output: ~a~%"
+                            (length (build-report-artifacts report))
+                            (length (build-report-affected-artifacts report))
+                            (canonicalize-path (project-output-directory project)))
+                    (unless (build-report-rendered? report)
+                      (display "Renderer cache hit.\n")))))
+            #:output-directory (assq-ref options 'output))
+          0))))
 
 (define (main arguments)
   "Run Grove with ARGUMENTS (excluding the program name), returning an exit code."
@@ -112,8 +114,7 @@
             (catch 'grove-project-error
               (lambda ()
                 (call-with-project-stage 'execute #f
-                  (lambda () (run-command command options)))
-                0)
+                  (lambda () (run-command command options))))
               (lambda (_ error)
                 (print-project-error error (assq-ref options 'debug))
                 1)))))

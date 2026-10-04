@@ -16,6 +16,8 @@
   #:use-module (srfi srfi-9)
   #:export (project?
             make-project
+            project-source-directory
+            project-extra-sources
             project-output-directory
             project-cache-key
             project-with-options
@@ -27,6 +29,7 @@
             project-context-prepared-sources
             project-context-extra-sources
             build-report?
+            build-report-sources
             build-report-artifacts
             build-report-added-sources
             build-report-modified-sources
@@ -51,8 +54,9 @@
   (extra-sources project-context-extra-sources))
 
 (define-record-type <build-report>
-  (%make-build-report artifacts added modified removed affected rendered?)
+  (%make-build-report sources artifacts added modified removed affected rendered?)
   build-report?
+  (sources build-report-sources)
   (artifacts build-report-artifacts)
   (added build-report-added-sources)
   (modified build-report-modified-sources)
@@ -471,7 +475,7 @@
           (write-artifacts (project-output-directory project) artifacts)
           (write-build-state state-path state-temp-path current-sources artifacts
                              owners cache-key))))
-    (%make-build-report artifacts added modified removed affected
+    (%make-build-report (map build-state-source-path current-sources) artifacts added modified removed affected
                         (not cache-hit?))))
 
 (define (build-project/report project)
