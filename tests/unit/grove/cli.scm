@@ -6,6 +6,7 @@
   #:use-module (ice-9 textual-ports)
   #:use-module (ice-9 string-fun)
   #:use-module (grove build state)
+  #:use-module (tests unit grove subprocess)
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64))
 
@@ -22,7 +23,10 @@
           (apply system* "sh" "-c"
             "out=$1; err=$2; shift 2; exec \"$@\" >\"$out\" 2>\"$err\""
             "grove-test" out err "env"
-            (string-append "XDG_CACHE_HOME=" root "/cache") "guile" "--no-auto-compile" "-L" sources
+            (string-append "XDG_CACHE_HOME=" root "/cache") "guile" "--no-auto-compile"
+            "-L" (dirname sources) "-L" sources
+            "-C" (string-append (dirname sources) "/build")
+            "-C" root
             script arguments)))
     (list (status:exit-val status)
           (call-with-input-file out get-string-all)
@@ -32,9 +36,10 @@
 (dynamic-wind
   (lambda ()
     (mkdir root)
+    (prepare-subprocess root)
     (mkdir (string-append root "/sources"))
     (write-file (string-append root "/sources/input.txt") "input")
-    (write-file script "(use-modules (grove cli))\n(exit (main (cdr (command-line))))\n")
+    (write-file script "(use-modules (tests unit grove subprocess))\n(exit (cli-entry (cdr (command-line))))\n")
     (write-file config
       "(use-modules (grove project) (grove build) (grove output) (ice-9 textual-ports))
 (make-project
@@ -155,4 +160,5 @@
       (test-assert "default diagnostics remain bounded" (< (string-length (caddr short)) 1000))
       (test-assert "debug includes the full diagnostic" (> (string-length (caddr debug)) 2000))))
   (lambda () (system* "rm" "-rf" root)))
+(test-subprocess-coverage '("grove/cli.scm" "grove/private/cli/progress.scm"))
 (test-end "grove CLI")

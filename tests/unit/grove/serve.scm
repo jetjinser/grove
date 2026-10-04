@@ -8,6 +8,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64)
+  #:use-module (tests unit grove subprocess)
   #:use-module (web client)
   #:use-module (web response))
 
@@ -27,7 +28,12 @@
 (define (helper-text label)
   (format #f "(define-module (probe helper) #:export (label))\n(define label ~s)\n" label))
 (define (wait-for thunk)
-  (let ((deadline (+ (get-internal-real-time) (* 10 internal-time-units-per-second))))
+  ;; Instruction tracing also runs inside rebuild workers. Keep the ordinary
+  ;; responsiveness bound, but allow its instrumentation overhead in coverage.
+  (let ((deadline (+ (get-internal-real-time)
+                     (* (if (equal? (getenv "GROVE_TESTS_ENABLE_COVERAGE") "1")
+                            60 10)
+                        internal-time-units-per-second))))
     (let loop ()
       (let ((value (thunk)))
         (cond (value value)
@@ -66,7 +72,10 @@
       (lambda ()
         (let ((pid
                 (spawn "guile"
-                  (append (list "guile" "--no-auto-compile" "-L" sources
+                  (append (list "guile" "--no-auto-compile"
+                                "-L" (dirname sources) "-L" sources
+                                "-C" (string-append (dirname sources) "/build")
+                                "-C" root
                                 (string-append root "/.entry.scm") "serve"
                                 "--project" config "--port" (number->string port)) options)
                   #:input input #:output output #:error error
@@ -95,6 +104,7 @@
 (dynamic-wind
   (lambda ()
     (mkdir root)
+    (prepare-subprocess root)
     (mkdir external)
     (mkdir inputs)
     (mkdir (string-append inputs "/nested"))
@@ -106,7 +116,7 @@
     (write-file (string-append external "/theme.txt") "css-1")
     (write-file helper (helper-text "module-1"))
     (write-file (string-append root "/.entry.scm")
-      "(use-modules (grove cli))\n(exit (main (cdr (command-line))))\n")
+      "(use-modules (tests unit grove subprocess))\n(exit (cli-entry (cdr (command-line))))\n")
     (write-file config
       (format #f
         "(add-to-load-path \"modules\")
@@ -247,4 +257,5 @@
                 (catch 'system-error (lambda () (kill (- pid) SIGKILL)) (lambda _ #f)))))))
       '(".worker.pid" ".helper.pid"))
     (system* "rm" "-rf" root external inputs)))
+(test-subprocess-coverage '("grove/serve.scm" "grove/private/preview/worker.scm"))
 (test-end "serve lifecycle")

@@ -175,3 +175,13 @@ For forest analysis, `make-forest` accepts `#:timings` with a callback receiving
 `(phase seconds)`. It measures tree extraction, references, content facts,
 composition, and query resolution separately. Measure cold and warm builds in
 separate processes; do not recompile files while measuring cache reuse.
+
+For line coverage, build first, then run
+`GROVE_TESTS_ENABLE_COVERAGE=1 GROVE_TESTS_TIME_LIMIT=600 blue check`.
+The patched Blue compiles test files before tracing their execution. Each suite
+writes an LCOV `.cov` file beside its test log. CLI and preview tests also write
+`build/coverage-child-*.cov` for their child processes, including completed
+preview workers. Merge these records by source file and line, using only files
+from the current run. Cancelled or killed workers cannot flush a report.
+Coverage counts executed compiled code; module initialization outside tracing
+and modules never loaded are not part of its denominator.
