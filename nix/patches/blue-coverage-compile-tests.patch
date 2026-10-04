@@ -1,0 +1,62 @@
+# SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
+--- a/blue/stencils/guile/test-driver.scm
++++ b/blue/stencils/guile/test-driver.scm
+@@ -47,6 +47,7 @@
+   #:use-module (srfi srfi-1)
+   #:use-module (srfi srfi-26)
+   #:use-module (srfi srfi-64)
++  #:use-module ((system base compile) #:select (compile-file))
+   #:use-module (system vm vm)
+   #:export (
+             %run-test
+@@ -231,11 +232,13 @@
+             (flush-all-ports)
+             (primitive-exit EXIT_FAILURE))
+         (lambda ()
++          (define compiled-test #f)
+           (define run-tests
+             (lambda ()
+               (call-with-time-limit time-limit
+                (lambda ()
+-                 (load-from-path test-name))
++                 (if compiled-test (load-compiled compiled-test)
++                     (load-from-path test-name)))
+                (lambda ()
+                  (raise-exception
+                   (make-exception
+@@ -245,14 +248,25 @@
+                     "Test-suite timeout after LIMIT")))))))
+           (cond
+            ((and enable-coverage? cov-file)
+-            (let ((coverage-data (with-code-coverage run-tests)))
+-              (call-with-output-file cov-file
+-                (lambda (cov-port)
+-                  (let ((globs (map compile-glob-pattern cov-filter-globs)))
+-                    (coverage-data->lcov coverage-data cov-port
+-                                         #:match-modules?
+-                                         (lambda (path)
+-                                           (find (cut <> path) globs))))))))
++            ;; Compile before tracing: macro expansion and the interpreter
++            ;; are not test execution and can be extremely costly under hooks.
++            (let* ((port (mkstemp (string-append (or (getenv "TMPDIR") "/tmp")
++                                               "/blue-coverage-XXXXXX")))
++                   (object (port-filename port)))
++              (close-port port)
++              (dynamic-wind
++                (lambda () #t)
++                (lambda ()
++                  (compile-file test-name #:output-file object)
++                  (set! compiled-test object)
++                  (let ((coverage-data (with-code-coverage run-tests)))
++                    (call-with-output-file cov-file
++                      (lambda (cov-port)
++                        (let ((globs (map compile-glob-pattern cov-filter-globs)))
++                          (coverage-data->lcov coverage-data cov-port
++                            #:match-modules?
++                            (lambda (path) (find (cut <> path) globs))))))))
++                (lambda () (delete-file object)))))
+            (else
+             (run-tests))))))
+ 

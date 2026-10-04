@@ -23,7 +23,10 @@ stdenv.mkDerivation (finalAttrs: {
 
   strictDeps = true;
 
-  patches = [ ../patches/blue-coverage.patch ];
+  patches = [
+    ../patches/blue-coverage.patch
+    ../patches/blue-coverage-compile-tests.patch
+  ];
 
   buildInputs = [ guile ];
   nativeBuildInputs = [
