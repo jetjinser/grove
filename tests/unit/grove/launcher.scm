@@ -71,7 +71,7 @@
   #:analyze (lambda (_) (run* (q) (== q 'ready)))
   #:renderers (list (lambda (answers)
                      (let ((html (sxml->html (content->sxml code-document))))
-                       (unless (and (string-contains html \"syntax-keyword\")
+                       (unless (and (string-contains html \"data-syntax\")
                                     (string-contains html \"平方\")
                                     (string-contains html \"中文\"))
                          (error \"standalone code highlighting failed\"))

@@ -8,7 +8,6 @@
   #:use-module (grove style html)
   #:use-module (grove highlight)
   #:use-module (ice-9 format)
-  #:use-module (ice-9 string-fun)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:use-module (sxml simple)
@@ -125,12 +124,11 @@
         (format (current-error-port)
           "WARNING: no code highlighter configured for ~a; displaying plain text~%" language))
       `(pre (code
-              ,@(if language `((@ (class ,(string-append "language-" (symbol->string language))))) '())
+              ,@(if language `((@ (data-language ,(symbol->string language)))) '())
               ,@(if highlighter
                     (map (lambda (piece)
                            (if (car piece)
-                               `(span (@ (class ,(string-append "syntax-"
-                                                  (string-replace-substring (car piece) "." "-"))))
+                               `(span (@ (data-syntax ,(car piece)))
                                       ,(cdr piece))
                                (cdr piece)))
                          (highlight-code highlighter source))

@@ -225,10 +225,12 @@ a language remain plain code without a warning.
 
 Forester's default style includes `highlight.css`. Custom styles can compose
 `default-highlight-style` from `(grove style highlight)` through
-`compose-html-styles`. Later stylesheets can override `.syntax-keyword` and
-other `.syntax-*` classes, or set variables such as `--syntax-keyword` on
-`pre`. Dotted capture names become hyphenated classes, for example
-`function.builtin` becomes `syntax-function-builtin`. Text output preserves the
+`compose-html-styles`. Later stylesheets can select `[data-syntax="keyword"]`
+or set variables such as `--syntax-keyword` on `pre`. Capture names are preserved
+verbatim, for example `data-syntax="function.builtin"`. Select a category and
+its subcategories with `[data-syntax="function"], [data-syntax^="function."]`.
+The code tag carries `data-language="scheme"`; class remains available for
+author styles. Text output preserves the
 source without highlight markup. The `grove-highlights` Nix package includes
 the grammar, its matching upstream query, and the grammar's license; their
 version is fixed by `nix/flake.lock`.

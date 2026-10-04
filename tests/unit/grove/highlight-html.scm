@@ -23,7 +23,7 @@
 (test-equal "at-exp records the language without interpreting source"
   'scheme (content-element-property block 'language))
 (test-assert "HTML uses packaged Scheme highlighting without explicit configuration"
-  (string-contains (sxml->html (content->sxml block)) "syntax-keyword"))
+  (string-contains (sxml->html (content->sxml block)) "data-syntax=\"keyword\""))
 (test-assert "an empty mapping disables default highlighting"
   (let* ((port (open-output-string))
          (output (parameterize ((current-error-port port))
@@ -32,13 +32,24 @@
          (string-contains (get-output-string port) "scheme"))))
 (test-equal "source remains plain text in Content IR"
   "(define 平方 \"<&>\")" (content-verbatim-string (content-element-children block)))
-(test-assert "HTML emits language and syntax classes with escaped text"
+(test-assert "HTML emits language and syntax attributes with escaped text"
   (let ((output (html block)))
-    (and (string-contains output "class=\"language-scheme\"")
-         (string-contains output "class=\"syntax-keyword\">define</span>")
-         (string-contains output "class=\"syntax-variable\">平方</span>")
+    (and (string-contains output "data-language=\"scheme\"")
+         (string-contains output "data-syntax=\"keyword\">define</span>")
+         (string-contains output "data-syntax=\"variable\">平方</span>")
+         (not (string-contains output "class=\"syntax-"))
+         (not (string-contains output "class=\"language-"))
          (string-contains output "&lt;&amp;&gt;")
          (not (string-contains output "<&>")))))
+(test-assert "dotted and hyphenated capture names remain distinct"
+  (let* ((h (make-highlighter grammar "tree_sitter_scheme"
+              "(symbol) @function.builtin
+               ((symbol) @function-builtin (#eq? @function-builtin \"x\"))"))
+         (output (sxml->html
+                   (content->sxml (command:code-block #:language 'scheme "(f x)")
+                     #:highlighters `((scheme . ,h))))))
+    (and (string-contains output "data-syntax=\"function.builtin\">f</span>")
+         (string-contains output "data-syntax=\"function-builtin\">x</span>"))))
 (test-equal "blocks without a language remain plain code"
   "<pre><code>&lt;&amp;&gt;</code></pre>"
   (html (command:code-block "<&>")))
@@ -63,7 +74,7 @@
   (content->sxml block #:highlighters '((scheme . invalid))))
 (test-assert "incomplete code still renders"
   (string-contains (html (command:code-block #:language 'scheme "(define x"))
-                   "syntax-keyword"))
+                   "data-syntax=\"keyword\""))
 
 (define forest
   (make-forest
@@ -77,12 +88,12 @@
   (every (lambda (path)
            (string-contains
              (artifact-content (find (lambda (artifact) (string=? path (artifact-path artifact))) artifacts))
-             "syntax-keyword")) '("home.html" "code.html")))
+             "data-syntax=\"keyword\"")) '("home.html" "code.html")))
 (test-assert "incremental rendering also retains highlighting"
   (let ((updated ((cached-renderer-render-changed renderer) forest '() '() '())))
     (string-contains
       (artifact-content (find (lambda (artifact) (string=? "code.html" (artifact-path artifact))) updated))
-      "syntax-keyword")))
+      "data-syntax=\"keyword\"")))
 (test-assert "default pages load the highlight stylesheet"
   (string-contains
     (artifact-content (find (lambda (artifact) (string=? "code.html" (artifact-path artifact))) artifacts))
@@ -98,7 +109,7 @@
                    forest (list (canonicalize-path grammar)) '() old)))
     (string-contains
       (artifact-content (find (lambda (artifact) (string=? "code.html" (artifact-path artifact))) updated))
-      "syntax-keyword")))
+      "data-syntax=\"keyword\"")))
 (test-assert "query changes participate in renderer cache configuration"
   (not (equal? ((cached-renderer-configuration renderer) forest)
                ((cached-renderer-configuration
