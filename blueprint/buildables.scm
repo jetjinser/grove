@@ -67,6 +67,8 @@
     "grove/relation.scm"
     "grove/output.scm"
     "grove/project.scm"
+    "grove/project/diagnostic.scm"
+    "grove/project/load.scm"
     "grove/project/site.scm"
     "grove/private/minikanren.scm"
     "grove/relation/dsl.scm"

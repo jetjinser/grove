@@ -8,6 +8,7 @@
   #:use-module (grove build state)
   #:use-module (grove collect)
   #:use-module (grove output)
+  #:use-module (grove project diagnostic)
   #:use-module (ice-9 binary-ports)
   #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-1)
@@ -15,6 +16,9 @@
   #:use-module (srfi srfi-9)
   #:export (project?
             make-project
+            project-output-directory
+            project-cache-key
+            project-with-options
             project-input?
             project-input-path
             project-input-value
@@ -114,12 +118,29 @@
                  extra-sources read-source analyze renderers
                  output-directory cache-key))
 
+(define* (project-with-options project
+                               #:key
+                               (output-directory
+                                 (project-output-directory project))
+                               (extra-sources '())
+                               (cache-key (project-cache-key project)))
+  "Copy PROJECT with execution options and additional tracked source paths."
+  (make-project
+    #:source-directory (project-source-directory project)
+    #:source-filter (project-source-filter project)
+    #:collect-sources (project-collect-sources project)
+    #:prepare (project-prepare project)
+    #:extra-sources (delete-duplicates
+                     (append (project-extra-sources project) extra-sources)
+                     string=?)
+    #:read-source (project-read-source project)
+    #:analyze (project-analyze project)
+    #:renderers (project-renderers project)
+    #:output-directory output-directory
+    #:cache-key cache-key))
+
 (define (read-source-with-context path read-source)
-  (catch #t
-    (lambda () (read-source path))
-    (lambda (key . args)
-      (error (format #f "failed to read project source ~a (~a): ~s"
-                     path key args)))))
+  (call-with-project-stage 'read path (lambda () (read-source path))))
 
 (define (collect-project-sources project)
   (let ((paths
@@ -138,11 +159,7 @@
 
 (define (prepare-project-sources prepare)
   (let ((paths
-          (catch #t
-            (lambda () (prepare))
-            (lambda (key . args)
-              (error (format #f "project preparation failed (~a): ~s"
-                              key args))))))
+          (call-with-project-stage 'prepare #f prepare)))
     (unless (and (list? paths)
                  (every (lambda (path)
                           (non-empty-string? path))
@@ -269,7 +286,8 @@
              (owners '()))
     (if (null? renderers)
         (list artifacts owners)
-        (let ((generated (render-model model (list (car renderers)))))
+        (let ((generated (call-with-project-stage 'render #f
+                           (lambda () (render-model model (list (car renderers)))))))
           (loop (cdr renderers)
                 (+ index 1)
                 (append artifacts generated)
@@ -319,16 +337,20 @@
                (dirty-paths (map car dirty-entries))
                (generated
                  (and partial?
-                      (changed-proc model changed dirty-paths old-artifacts)))
+                      (call-with-project-stage 'render #f
+                        (lambda ()
+                          (changed-proc model changed dirty-paths old-artifacts)))))
                (rendered-fully? (or (not partial?) (not generated)))
                (new-artifacts
-                 (if rendered-fully?
-                     (render-model model (list renderer))
-                     (begin
-                       (unless (and (list? generated) (every artifact? generated))
-                         (error "incremental renderer must return artifacts or #f"
-                                generated))
-                       generated)))
+                 (call-with-project-stage 'render #f
+                   (lambda ()
+                     (if rendered-fully?
+                         (render-model model (list renderer))
+                         (begin
+                           (unless (and (list? generated) (every artifact? generated))
+                             (error "incremental renderer must return artifacts or #f"
+                                    generated))
+                           generated)))))
                ;; An incremental callback returns the complete current output
                ;; set for its renderer. This lets it preserve unaffected
                ;; artifacts from OLD-ARTIFACTS and omit outputs that vanished.
@@ -346,7 +368,8 @@
 (define (execute-project project write?)
   (unless (project? project)
     (error "project execution requires a Grove project" project))
-  (let* ((source-paths (collect-project-sources project))
+  (let* ((source-paths (call-with-project-stage 'collect #f
+                         (lambda () (collect-project-sources project))))
          (prepared-sources (prepare-project-sources
                              (project-prepare project)))
          (state-path
@@ -385,7 +408,8 @@
          (context
            (make-project-context inputs prepared-sources
                                  (project-extra-sources project)))
-         (model ((project-analyze project) context))
+         (model (call-with-project-stage 'analyze #f
+                  (lambda () ((project-analyze project) context))))
          (source-changes
            (call-with-values
              (lambda () (changed-sources previous-sources current-sources))
@@ -439,11 +463,14 @@
                                    previous-artifacts))))
              (else
               (affected-artifacts artifacts previous-artifacts changed)))))
-    (validate-artifacts artifacts)
+    (call-with-project-stage 'validate #f
+      (lambda () (validate-artifacts artifacts)))
     (when write?
-      (write-artifacts (project-output-directory project) artifacts)
-      (write-build-state state-path state-temp-path current-sources artifacts
-                         owners cache-key))
+      (call-with-project-stage 'write (project-output-directory project)
+        (lambda ()
+          (write-artifacts (project-output-directory project) artifacts)
+          (write-build-state state-path state-temp-path current-sources artifacts
+                             owners cache-key))))
     (%make-build-report artifacts added modified removed affected
                         (not cache-hit?))))
 

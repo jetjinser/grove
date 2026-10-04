@@ -73,6 +73,7 @@
     "unit/grove/static.scm"
     "unit/grove/project.scm"
     "unit/grove/project-check.scm"
+    "unit/grove/project-load.scm"
     "unit/grove/platform.scm"
     "unit/grove/test-registry.scm"
     "unit/forester/commands.scm"
