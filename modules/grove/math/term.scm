@@ -11,6 +11,7 @@
             math-term-size
             math-term->source
             math-term-at-path
+            math-term-replace-at-path
             math-term-paths
             math-path-label))
 
@@ -42,6 +43,19 @@
              (and (not (memq (car term) '(var num zero)))
                   (< (car path) (length (cdr term)))
                   (walk (list-ref (cdr term) (car path)) (cdr path)))))))
+
+(define (math-term-replace-at-path term path replacement)
+  (and (math-term-at-path term path)
+       (let replace ((term term) (path path))
+         (if (null? path)
+             replacement
+             (let ((index (car path)))
+               (cons (car term)
+                 (map (lambda (child position)
+                        (if (= position index)
+                            (replace child (cdr path))
+                            child))
+                      (cdr term) (iota (length (cdr term))))))))))
 
 (define (math-term-paths term)
   (if (memq (car term) '(var num zero))

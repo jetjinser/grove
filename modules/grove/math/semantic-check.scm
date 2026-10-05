@@ -346,20 +346,6 @@ natural powers. Division is accepted only by a nonzero rational constant."
   (let ((inferred (math-infer-type assumptions term)))
     (and inferred (eq? (math-typed-term-type inferred) 'scalar))))
 
-(define (replace-at-path term path replacement)
-  (if (null? path) replacement
-      (and (pair? term)
-           (let ((index (car path)) (operands (cdr term)))
-             (and (<= 0 index) (< index (length operands))
-                  (let loop ((operands operands) (position 0) (result '()))
-                    (if (null? operands)
-                        (cons (car term) (reverse result))
-                        (loop (cdr operands) (+ position 1)
-                          (cons (if (= position index)
-                                    (replace-at-path (car operands) (cdr path) replacement)
-                                    (car operands))
-                                result)))))))))
-
 (define* (math-polynomial-check-step assumptions from to rule-name path)
   "Independently check a scalar-polynomial instance and its whole-term result."
   (let* ((law-check (math-polynomial-check-rule rule-name))
@@ -395,7 +381,7 @@ natural powers. Division is accepted only by a nonzero rational constant."
             (semantic-check 'rejected (list from to rule-name path)
               "the local input does not match the rule schema"))
            ((not (and (equal? expected local-to)
-                      (equal? (replace-at-path from path expected) to)))
+                      (equal? (math-term-replace-at-path from path expected) to)))
             (semantic-check 'rejected (list from to rule-name path)
               "the recorded step is not exactly the declared local replacement"))
            ((not (every (lambda (premise)

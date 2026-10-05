@@ -96,20 +96,6 @@
     ((pair? form) (map (lambda (part) (instantiate-guard part substitution)) form))
     (else form)))
 
-(define (replace-at-path term path replacement)
-  (if (null? path) replacement
-      (and (pair? term)
-           (let ((index (car path)) (operands (cdr term)))
-             (and (integer? index) (<= 0 index) (< index (length operands))
-                  (let loop ((remaining operands) (position 0) (result '()))
-                    (if (null? remaining)
-                        (cons (car term) (reverse result))
-                        (loop (cdr remaining) (+ position 1)
-                          (cons (if (= position index)
-                                    (replace-at-path (car remaining) (cdr path) replacement)
-                                    (car remaining))
-                                result)))))))))
-
 (define (guard-type-bindings guards substitution assumptions)
   (filter-map
     (lambda (guard)
@@ -251,7 +237,7 @@
          (unless (and local-from local-to
                       (equal? (math-term-at-path from path) local-from)
                       (equal? (math-term-at-path to path) local-to)
-                      (equal? (replace-at-path from path local-to) to))
+                      (equal? (math-term-replace-at-path from path local-to) to))
            (proof-error 'rejected "congruence does not preserve the stated context"))
          (values from to))))
     (_ (proof-error 'rejected "unknown proof inference"))))

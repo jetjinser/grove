@@ -94,13 +94,6 @@
 
 (define (rewrite-stepo assumptions input output rule path)
   (step-in-modeo assumptions input output rule path 'forward))
-(define (replace-term term path replacement)
-  (if (null? path) replacement
-      (cons (car term)
-        (map (lambda (child index)
-               (if (= index (car path))
-                   (replace-term child (cdr path) replacement) child))
-             (cdr term) (iota (length (cdr term)))))))
 
 (define (check-stepo assumptions input output rule path)
   (project (assumptions input rule path)
@@ -116,7 +109,7 @@
               (fresh (replacement)
                 (relation assumptions local replacement)
                 (project (replacement)
-                  (== output (replace-term input path replacement))))
+                  (== output (math-term-replace-at-path input path replacement))))
               fail))
         (step-in-modeo assumptions input output rule path 'check))))
 (define (unrewrite-stepo assumptions input output rule path)
@@ -165,7 +158,9 @@
                            (let ((results (run 1 (output)
                                             ((math-rewrite-rule-relation rule 'forward) assumptions local output))))
                              (and (pair? results)
-                                  (list (replace-term term path (car results)) (math-rewrite-rule-name rule) path)))))
+                                  (list (math-term-replace-at-path
+                                          term path (car results))
+                                        (math-rewrite-rule-name rule) path)))))
                     rules)))
            (or answer (visit (cdr remaining)))))))
 
