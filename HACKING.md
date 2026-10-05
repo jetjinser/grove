@@ -50,6 +50,13 @@ blue check
 reuse --no-multiprocessing lint
 ```
 
+Profile the polling watcher against a Flora-sized synthetic project (without
+starting a server or touching Flora):
+
+```sh
+guile --no-auto-compile -L modules -C build tests/perf/serve-watch.scm
+```
+
 Build before testing CLI changes: subprocess tests load compiled modules.
 The preview tests require permission to bind localhost sockets. Use
 `blue -j 1 check` when diagnosing interference between parallel fixtures.
