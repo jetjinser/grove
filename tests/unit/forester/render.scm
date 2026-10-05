@@ -40,6 +40,16 @@
        (limits-html (assoc-ref rendered "limits")))
   (test-assert "at-exp link resolves to a page"
     (string-contains algebra-html "href=\"/limits.html\">limits</a>"))
+  (test-assert "standalone pages use the open tree disclosure"
+    (and (string-contains algebra-html
+                          "class=\"forest-tree-block page-tree\" data-tree-id=\"algebra\"")
+         (string-contains algebra-html
+                          "<details open=\"open\"><summary><h1 class=\"forest-tree-title\"><span>Algebra &amp; limits</span>")
+         (string-contains algebra-html "class=\"forest-tree-content\"><p>")))
+  (test-assert "page title and body share the collapsible tree"
+    (and (not (string-contains algebra-html
+                              "</header><h1>Algebra &amp; limits"))
+         (string-contains algebra-html "id=\"tree-root-algebra\"")))
   (test-assert "links produce reverse links"
     (and (string-contains algebra-html "class=\"backmatter backlinks\"")
          (string-contains algebra-html

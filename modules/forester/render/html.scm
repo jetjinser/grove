@@ -232,7 +232,7 @@
 (define fragment-reveal-script
   "(function () {\n  function revealFragment() {\n    if (!location.hash) return;\n    var id = location.hash.slice(1);\n    try { id = decodeURIComponent(id); } catch (error) {}\n    var target = document.getElementById(id);\n    if (!target) return;\n    var node = target;\n    while (node) {\n      if (node.tagName === 'DETAILS') node.open = true;\n      node = node.parentElement;\n    }\n    window.requestAnimationFrame(function () { target.scrollIntoView(); });\n  }\n  window.addEventListener('hashchange', revealFragment);\n  revealFragment();\n}());")
 
-(define (html-document title title-id description body math? home-title style
+(define (html-document title description body math? home-title style
                        routes mathjax-src inline-stylesheets?)
   `(html
      (head
@@ -261,17 +261,7 @@
                (list `(nav (@ (aria-label "Site"))
                            (a (@ (href ,(html-index-url routes)))
                               ,home-title)))
-               '())
-       (h1 ,title
-           ,@(if title-id
-                 (list `(a (@ (class "forest-tree-id")
-                             (href ,(html-page-url routes title-id))
-                             (aria-label ,(string-append
-                                            "Open tree "
-                                            (display-tree-id title-id)
-                                            " as a page")))
-                          "[" ,(display-tree-id title-id) "]"))
-                 '())))
+               '()))
        ,@body
        (script ,fragment-reveal-script))))
 
@@ -308,13 +298,17 @@
                     #:optional (inline-stylesheets? #f) (highlighters '()))
   (let* ((site (site forest))
          (body (subtree-content-sxml forest routes page "" 1 highlighters))
-         (article (append body
+         (tree (tree-block-sxml
+                 "page-tree" (site-page-id page) (site-page-title page)
+                 (html-page-url routes (site-page-id page)) body
+                 #:anchor (string-append "tree-root-" (site-page-id page))
+                 #:depth 1))
+         (article (append (list tree)
                           (backmatter-sxml forest page routes backmatter
                                            labels reference-taxon-id))))
     (serialize-html-document
       (html-document
         (site-page-title page)
-        (site-page-id page)
         (page-description site page)
         (append (table-of-contents-sxml forest page) (list article))
         (content-has-tex-math? (site-page-document page))

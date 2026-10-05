@@ -70,7 +70,8 @@
                           #:mathjax-src #f)
                         "collapsed")))
       (and (string-contains collapsed-html "<summary>")
-           (not (string-contains collapsed-html "<details open=\"open\">"))
+           (string-contains collapsed-html
+                            "<details><summary><h2 class=\"forest-tree-title\"><span>Collapsed</span>")
            (string-contains collapsed-html "Hidden until opened."))))
   (test-assert "host promotes addressable disclosures to indexed subtrees"
     (let* ((page
@@ -88,8 +89,8 @@
                        "addressable")))
       (and (find-page forest "unstable-0")
            (string-contains rendered "class=\"forest-tree-block inline-subtree\"")
-           (string-contains rendered "<summary>")
-           (not (string-contains rendered "<details open=\"open\">")))))
+           (string-contains rendered
+                            "<details><summary><h2 class=\"forest-tree-title\"><span>Generated steps</span>"))))
   (test-assert "inline subtree can be explicitly set to open"
     (let* ((open-root
              (make-site-page
@@ -101,7 +102,8 @@
                           (make-forest (make-site (list open-root)))
                           #:mathjax-src #f)
                         "explicit-open")))
-      (string-contains open-html "<details open=\"open\">")))
+      (string-contains open-html
+                       "<details open=\"open\"><summary><h2 class=\"forest-tree-title\"><span>Open</span>")))
   (test-assert "inline tree title is a native disclosure control"
     (string-contains (assoc-ref html "root") "<summary>"))
   (test-assert "site->html embeds the Forester stylesheet"
@@ -166,8 +168,8 @@
     expected (make-pages))
   (test-equal "subtree IDs reset deterministically for each analysis"
     expected (make-pages))
-  (test-equal "nested subtrees each render as an open disclosure"
-    3
+  (test-equal "page and nested subtrees each render as open disclosures"
+    4
     (let loop ((start 0) (count 0))
       (let ((found (string-contains nested-html "<details open=\"open\">"
                                     start)))
