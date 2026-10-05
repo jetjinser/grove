@@ -136,4 +136,5 @@
             (list 'rss site-url feed-path
                   (site-title (site forest)) (site-description (site forest))
                   (html-index-url routes)
-                  (html-page-url routes (html-home-page routes)))))))
+                  (html-route-table routes
+                                    (map site-page-id (pages forest))))))))

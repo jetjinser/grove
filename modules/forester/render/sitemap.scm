@@ -34,28 +34,29 @@
     (error "Sitemap path must be a relative artifact path" sitemap-path))
   (unless (html-routes? routes)
     (error "Forester sitemap renderer requires HTML routes" routes))
+  (unless (find-page forest (html-home-page routes))
+    (error "configured HTML home page was not found" (html-home-page routes)))
   (let* ((base (web-base-url site-url))
+         (route-table
+           (html-route-table routes (map site-page-id (pages forest))))
          (urls
-           (cons
-             (string-append
-               "    <url>\n      <loc>"
-               (web-xml-escape
-                 (web-absolute-route-url base (html-index-url routes)))
-               "</loc>\n    </url>")
-             (map (lambda (page)
+           (map (lambda (page)
                     (let ((lastmod (page-lastmod page)))
                       (string-append
                         "    <url>\n      <loc>"
                         (web-xml-escape
                           (web-absolute-route-url
-                            base (html-page-url routes (site-page-id page))))
+                            base
+                            (html-asset-url
+                              routes
+                              (cdr (assoc (site-page-id page) route-table)))))
                         "</loc>\n"
                         (if lastmod
                             (string-append "      <lastmod>" lastmod
                                            "</lastmod>\n")
                             "")
                         "    </url>")))
-                  (pages forest))))
+                  (pages forest)))
          (content
            (string-append
              "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
@@ -79,4 +80,5 @@
             (list 'sitemap site-url sitemap-path
                   (site-title (site forest)) (site-description (site forest))
                   (html-index-url routes)
-                  (html-page-url routes (html-home-page routes)))))))
+                  (html-route-table routes
+                                    (map site-page-id (pages forest))))))))

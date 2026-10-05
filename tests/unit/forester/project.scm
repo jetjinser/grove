@@ -129,7 +129,7 @@
            (paths (map artifact-path artifacts))
            (algebra-html
              (read-test-file
-               (string-append output-directory "/notes/algebra.html")))
+               (string-append output-directory "/index.html")))
            (limits-html
              (read-test-file
                (string-append output-directory "/notes/limits.html")))
@@ -173,7 +173,7 @@
              (algebra-html-artifact
                (find (lambda (artifact)
                        (string=? (artifact-path artifact)
-                                 "notes/algebra.html"))
+                                 "index.html"))
                      artifacts))
              (algebra-text-artifact
                (find (lambda (artifact)
@@ -386,13 +386,14 @@
              (member "feed.xml" paths)
              (member "sitemap.xml" paths)
              (member "forester.css" paths)
-             (member "notes/algebra.html" paths)
+             (not (member "notes/algebra.html" paths))
              (member "notes/limits.html" paths)
              (member "text/index.txt" paths)
              (member "text/algebra.txt" paths)))
       (test-assert "sitemap output uses the same routed page URLs"
-        (and (string-contains
-               sitemap "https://notes.example/notes/algebra.html")
+        (and (string-contains sitemap "https://notes.example/index.html")
+             (not (string-contains sitemap
+                                   "https://notes.example/notes/algebra.html"))
              (string-contains sitemap "<lastmod>2026-09-28</lastmod>")))
         (test-assert "HTML project output resolves page links"
         (string-contains algebra-html
@@ -410,7 +411,7 @@
           "href=\"/notes/quadratic-equations.html\">about quadratics</a>"))
       (test-assert "HTML project output contains reverse links"
         (string-contains limits-html
-          "href=\"/notes/algebra.html#ref-1\">Algebra</a>"))
+          "href=\"/index.html#ref-1\">Algebra</a>"))
       (test-assert "HTML project output preserves TeX for MathJax"
         (and (string-contains algebra-html "\\(x^2+y^2=z^2\\)")
              (string-contains algebra-html
@@ -449,7 +450,7 @@
           "@use-modules[(tests unit forester linked commands)]\n@title{Unlinked}\n@paragraph{Changed standalone page.}")
         (let ((updated (build-project/report incremental-project)))
           (test-equal "unrelated pages are omitted from affected HTML outputs"
-            '("index.html" "notes/unlinked.html" "text/index.txt"
+            '("notes/unlinked.html" "text/index.txt"
               "text/unlinked.txt")
             (build-report-affected-artifacts updated))
           (test-assert "partial Forester render keeps backlink pages current"
@@ -476,7 +477,7 @@
             "Read @link[\"quadratic-equations\"]{about polynomials}.}"))
         (let ((changed-links (build-project/report incremental-project)))
           (test-equal "new links update the newly linked page's backlinks"
-            '("index.html" "notes/algebra.html" "notes/limits.html"
+            '("index.html" "notes/limits.html"
               "notes/unlinked.html" "notes/quadratic-equations.html" "text/index.txt" "text/algebra.txt"
               "text/limits.txt" "text/unlinked.txt" "text/quadratic-equations.txt")
             (build-report-affected-artifacts changed-links))
@@ -494,7 +495,7 @@
           (test-assert "changed tree title updates its display"
             (string-contains
               (read-test-file
-                (string-append cache-output-directory "/notes/algebra.html"))
+                (string-append cache-output-directory "/index.html"))
               "<h2 class=\"forest-tree-title\"><span>Polynomial equations</span>"))
           (test-assert "tree references resolve in cached builds"
             (string-contains
@@ -513,7 +514,7 @@
             (list (string-append module-directory "/commands.plant"))
             (build-report-modified-sources changed-module))
           (test-equal "shared module changes affect all rendered pages"
-            '("index.html" "notes/algebra.html" "notes/limits.html"
+            '("index.html" "notes/limits.html"
               "notes/orphan.html" "notes/unlinked.html" "notes/quadratic-equations.html" "text/index.txt"
               "text/algebra.txt" "text/limits.txt" "text/orphan.txt"
               "text/unlinked.txt" "text/quadratic-equations.txt")
@@ -521,7 +522,7 @@
         (delete-file (string-append source-directory "/orphan.plant"))
         (let ((removed-page (build-project/report incremental-project)))
           (test-equal "removing a page affects indexes and its own outputs"
-            '("index.html" "text/index.txt" "notes/orphan.html"
+            '("text/index.txt" "notes/orphan.html"
               "text/orphan.txt")
             (build-report-affected-artifacts removed-page))
           (test-assert "removed page output is cleaned from HTML and text targets"

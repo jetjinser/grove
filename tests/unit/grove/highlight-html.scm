@@ -88,7 +88,7 @@
   (every (lambda (path)
            (string-contains
              (artifact-content (find (lambda (artifact) (string=? path (artifact-path artifact))) artifacts))
-             "data-syntax=\"keyword\"")) '("home.html" "code.html")))
+             "data-syntax=\"keyword\"")) '("index.html" "code.html")))
 (test-assert "incremental rendering also retains highlighting"
   (let ((updated ((cached-renderer-render-changed renderer) forest '() '() '())))
     (string-contains

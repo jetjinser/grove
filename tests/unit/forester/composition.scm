@@ -29,14 +29,16 @@
            (evaluate-document
              "@subtree{@title{Inline section}@paragraph{Owned text. @link[\"root\"]{Home}.}}")))
        (forest (make-forest (make-site (list root))))
-       (html (render-test-html forest #:mathjax-src #f))
+       (routes (make-html-routes #:home-page "root"))
+       (html (site->html forest #:routes routes #:mathjax-src #f))
        (text (site->text forest))
        (rss (artifact-content
-              (car (render-rss forest
-                                      #:site-url "https://notes.example"))))
+              (car (render-rss forest #:site-url "https://notes.example"
+                                     #:routes routes))))
        (sitemap (artifact-content
                   (car (render-sitemap
-                         forest #:site-url "https://notes.example"))))
+                         forest #:site-url "https://notes.example"
+                         #:routes routes))))
        (inline (find-page forest "unstable-0")))
   (test-equal "inline subtrees become independently addressable trees"
     '("root" "unstable-0")
@@ -120,10 +122,10 @@
          (string-contains (assoc-ref html "root") "node.open = true")
          (not (string-contains (assoc-ref html "root") "&quot;"))
          (string-contains (assoc-ref html "root") "target.scrollIntoView()")))
-  (test-assert "HTML index redirects to the configured home tree"
-    (and (string-contains (assoc-ref html "index")
-                          "content=\"0;url=/root.html\"")
-         (not (string-contains (assoc-ref html "index") "Inline section"))))
+  (test-assert "HTML home tree is rendered once at the index route"
+    (and (string-contains (assoc-ref html "root") "Root")
+         (string-contains (assoc-ref html "root") "Inline section")
+         (equal? '("root" "unstable-0") (map car html))))
   (test-assert "subtrees receive standalone HTML routes"
     (string-contains (assoc-ref html "unstable-0") "Owned text."))
   (test-assert "subtrees receive standalone text routes"
@@ -267,7 +269,7 @@
                           "class=\"backmatter context\"")
          (string-contains (assoc-ref html "reusable") "<h2>Context</h2>")
          (string-contains (assoc-ref html "reusable")
-                          "href=\"/host.html\">Host</a>")))
+                          "href=\"/index.html\">Host</a>")))
   (test-assert "default text backmatter shows transclusion context"
     (and (string-contains (assoc-ref text "reusable") "Context:")
          (string-contains (assoc-ref text "reusable") "Host (host.txt)")))

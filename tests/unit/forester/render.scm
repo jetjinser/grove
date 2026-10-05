@@ -56,7 +56,7 @@
                           "href=\"/limits.html#ref-1\">Limits</a>")))
   (test-assert "reverse links point back to their source"
     (string-contains limits-html
-                     "href=\"/algebra.html#ref-1\">Algebra &amp; limits</a>"))
+                     "href=\"/index.html#ref-1\">Algebra &amp; limits</a>"))
   (test-assert "backlinks have a semantic heading"
     (string-contains limits-html "<h2>Backlinks</h2>"))
   (test-assert "backmatter labels can be customized in HTML and text"
@@ -185,12 +185,8 @@
        (algebra-html (artifact-content
                        (find (lambda (artifact)
                                (string=? (artifact-path artifact)
-                                         "algebra.html"))
+                                         "index.html"))
                              artifacts)))
-       (index-html (artifact-content
-                     (find (lambda (artifact)
-                             (string=? (artifact-path artifact) "index.html"))
-                           artifacts)))
        (algebra-text (artifact-content
                        (find (lambda (artifact)
                                (string=? (artifact-path artifact)
@@ -198,7 +194,8 @@
                              artifacts))))
   (test-assert "HTML, text, and RSS renderers compose into one artifact set"
     (and (member "index.html" paths)
-         (member "algebra.html" paths)
+         (not (member "algebra.html" paths))
+         (member "limits.html" paths)
          (member "forester.css" paths)
          (member "feed.xml" paths)
          (member "text/index.txt" paths)
@@ -232,13 +229,8 @@
                (find (lambda (artifact)
                        (string=? (artifact-path artifact) "index.html"))
                      styled-artifacts)))
-           (styled-algebra
-             (artifact-content
-               (find (lambda (artifact)
-                       (string=? (artifact-path artifact) "algebra.html"))
-                     styled-artifacts)))
-           (base-position (string-contains styled-algebra "forester.css"))
-           (custom-position (string-contains styled-algebra "custom.css")))
+           (base-position (string-contains styled-index "forester.css"))
+           (custom-position (string-contains styled-index "custom.css")))
       (and (equal? stylesheet-paths '("forester.css" "highlight.css" "custom.css"))
            base-position
            custom-position
@@ -246,12 +238,14 @@
   (test-assert "RSS emits escaped metadata and absolute routed links"
     (and (string-contains feed "<title>Algebra &amp; limits</title>")
          (string-contains feed
-           "https://notes.example/notes/algebra.html")
+           "https://notes.example/index.html")
+         (string-contains feed "https://notes.example/notes/limits.html")
          (string-contains feed "&amp;")
          (string-contains feed
            "<description>Connected notes on math.</description>")))
-  (test-assert "HTML index redirects to the configured home page"
-    (string-contains index-html "content=\"0;url=/algebra.html\""))
+  (test-assert "HTML index directly renders its configured home page"
+    (and (string-contains algebra-html "Algebra &amp; limits")
+         (not (string-contains algebra-html "http-equiv=\"refresh\""))))
   (test-assert "HTML pages prefer their own summary"
     (string-contains algebra-html
       "<meta name=\"description\" content=\"Algebra notes and mathematical ideas.\""))
@@ -260,7 +254,7 @@
       "<meta name=\"description\" content=\"Connected notes on math.\""))
   (test-assert "HTML page titles expose their stable tree ID"
     (and (string-contains algebra-html "[algebra]</a>")
-         (string-contains algebra-html "href=\"/algebra.html\"")))
+         (string-contains algebra-html "href=\"/index.html\"")))
   (test-assert "HTML renderer produces standalone HTML artifacts"
     (string-contains algebra-html "<html>"))
   (test-assert "text renderer produces independent text artifacts"
@@ -273,12 +267,22 @@
                 (find (lambda (artifact)
                         (string=? (artifact-path artifact) "index.html"))
                       artifacts))))
-  (test-assert "configured HTML home page replaces the generated page list"
-    (and (string-contains index "http-equiv=\"refresh\"")
-         (string-contains index "content=\"0;url=/algebra.html\"")
-         (not (string-contains index "href=\"/limits.html\""))))
+  (test-assert "configured home page is rendered directly at the index path"
+    (and (string-contains index "Algebra &amp; limits")
+         (string-contains index "The ")
+         (not (string-contains index "http-equiv=\"refresh\""))
+         (equal? '("index.html" "limits.html")
+                 (map artifact-path
+                      (filter (lambda (artifact)
+                                (string-suffix? ".html" (artifact-path artifact)))
+                              artifacts)))))
   (test-error "configured HTML home page must exist" #t
-    (render-html forest #:routes (make-html-routes #:home-page "missing"))))
+    (render-html forest #:routes (make-html-routes #:home-page "missing")))
+  (test-error "non-home HTML routes cannot collide with the index" #t
+    (render-html forest
+      #:routes (make-html-routes
+                 #:home-page "algebra"
+                 #:page-path (lambda (_id) "index.html")))))
 
 (let* ((html (render-test-html (make-forest (make-site (list algebra limits)))))
        (limits-html (assoc-ref html "limits")))
@@ -341,14 +345,16 @@
                          #:routes routes)))))
   (test-assert "RSS absolute links include the HTML URL prefix"
     (and (string-contains
-           feed "https://notes.example/published/notes/algebra.html")
+           feed "https://notes.example/published/index.html")
          (string-contains
-           feed "https://notes.example/published/index.html")))
+           feed "https://notes.example/published/notes/limits.html")))
   (test-assert "sitemap absolute links include the HTML URL prefix"
     (and (string-contains
-           sitemap "https://notes.example/published/notes/algebra.html")
+           sitemap "https://notes.example/published/notes/limits.html")
          (string-contains
-           sitemap "https://notes.example/published/index.html"))))
+           sitemap "https://notes.example/published/index.html")
+         (not (string-contains
+                sitemap "https://notes.example/published/notes/algebra.html"))))
 
 (let* ((pages
          (list
@@ -399,15 +405,11 @@
   (test-equal "sitemap depends on every site source"
     '("notes/a&b.plant" "notes/plain.plant")
     (artifact-sources artifact))
-  (test-assert "sitemap includes the index and routed page URLs"
+  (test-assert "sitemap lists each canonical page route once"
     (and (string-contains
            content
            "<loc>https://notes.example/home/index.html</loc>")
-         (string-contains
-           content
-           (string-append
-             "<loc>https://notes.example/notes/a&amp;b.html</loc>\n"
-             "      <lastmod>2026-09-27</lastmod>"))
+         (not (string-contains content "notes/a&amp;b.html"))
          (string-contains
            content
            "<loc>https://notes.example/notes/plain.html</loc>\n    </url>")))
@@ -418,7 +420,8 @@
           (list (make-site-page
                   "invalid" "Invalid" (make-content-document '())
                   #:metadata '((updated . "2026-02-31"))))))
-      #:site-url "https://notes.example")))
+      #:site-url "https://notes.example"
+      #:routes (make-html-routes #:home-page "invalid"))))
 
 (let* ((forest
          (make-forest
@@ -465,7 +468,7 @@
                       #:stylesheets (list (make-artifact name "body { color: teal; }"))))
              (artifacts (render-model forest (list (make-html-renderer #:routes routes #:style style))))
              (html (artifact-content
-                     (find (lambda (artifact) (string=? (artifact-path artifact) "algebra.html"))
+                     (find (lambda (artifact) (string=? (artifact-path artifact) "index.html"))
                            artifacts))))
         (test-equal "explicit style is used without filename-based composition"
           (list name)
@@ -481,6 +484,6 @@
     '("theme.css" "forester.css"))
   (test-assert "an empty style opts out of default stylesheets"
     (not (any (lambda (artifact) (string-suffix? ".css" (artifact-path artifact)))
-              (render-html forest #:routes routes #:style (make-html-style))))))
+              (render-html forest #:routes routes #:style (make-html-style)))))))
 
 (test-end "forester renderers")

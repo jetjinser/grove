@@ -268,31 +268,6 @@
 (define (serialize-html-document sxml)
   (string-append "<!DOCTYPE html>\n" (sxml->html sxml)))
 
-(define (index-redirect-html routes page)
-  (let ((url (html-page-url routes (site-page-id page))))
-    (serialize-html-document
-      `(html
-         (head
-           (meta (@ (charset "utf-8")))
-           (meta (@ (http-equiv "refresh")
-                    (content ,(string-append "0;url=" url))))
-           (link (@ (rel "canonical") (href ,url))))
-         (body
-           (p "Redirecting to "
-              (a (@ (href ,url)) ,(site-page-title page))
-              "."))))))
-
-(define (index-content forest routes)
-  (let* ((home-id (html-home-page routes))
-         (home (find-page forest home-id)))
-    (unless home
-      (error "configured HTML home page was not found" home-id))
-    (when (string=? (html-index-path routes)
-                    (html-page-path routes home-id))
-      (error "HTML home page route conflicts with the index path"
-             home-id (html-index-path routes)))
-    (index-redirect-html routes home)))
-
 (define* (page-html forest page style routes mathjax-src backmatter labels
                     reference-taxon-id
                     #:optional (inline-stylesheets? #f) (highlighters '()))
@@ -322,23 +297,18 @@
                              reference-taxon-id
                              changed old-artifacts highlighters)
   (check-html-input forest style routes mathjax-src)
-  (let* ((site (site forest))
-         (index-sources (source-paths forest))
-         (index-path (html-index-path routes))
-         (index-artifact
-           (reuse-artifact index-path index-sources old-artifacts changed
-             (lambda () (index-content forest routes))))
+  (let* ((route-table
+           (html-route-table routes (map site-page-id (pages forest))))
          (page-artifacts
            (map (lambda (page)
-                  (let* ((path (html-page-path routes (site-page-id page)))
+                  (let* ((path (cdr (assoc (site-page-id page) route-table)))
                          (sources (page-source-paths forest page)))
                     (reuse-artifact path sources old-artifacts changed
                       (lambda ()
                         (page-html forest page style routes mathjax-src
                                    backmatter labels reference-taxon-id #f highlighters)))))
                 (pages forest))))
-    (append (html-style-artifacts style)
-            (cons index-artifact page-artifacts))))
+    (append (html-style-artifacts style) page-artifacts)))
 
 (define (check-html-input forest style routes mathjax-src)
   (unless (forest? forest)
@@ -347,6 +317,9 @@
     (error "Forester HTML renderer requires an HTML style" style))
   (unless (html-routes? routes)
     (error "Forester HTML renderer requires HTML routes" routes))
+  (unless (find-page forest (html-home-page routes))
+    (error "configured HTML home page was not found" (html-home-page routes)))
+  (html-route-table routes (map site-page-id (pages forest)))
   (unless (or (not mathjax-src)
               (and (non-empty-string? mathjax-src)
                    (or (external-url? mathjax-src)
@@ -366,17 +339,12 @@
   (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
   (check-reference-taxon-id reference-taxon-id)
   (check-html-input forest style routes mathjax-src)
-  (let ((site (site forest)))
-    (when (member "index" (map site-page-id (pages forest)))
-      (error "HTML alist key conflicts with forest page" "index"))
-    (cons
-      (cons "index" (index-content forest routes))
-      (map (lambda (page)
-             (cons (site-page-id page)
-                   (page-html forest page style routes mathjax-src
-                              backmatter backmatter-labels
-                              reference-taxon-id #t highlighters)))
-           (pages forest)))))
+  (map (lambda (page)
+         (cons (site-page-id page)
+               (page-html forest page style routes mathjax-src
+                          backmatter backmatter-labels
+                          reference-taxon-id #t highlighters)))
+       (pages forest)))
 
 (define* (render-html forest #:key
                              (style default-html-style)
@@ -392,13 +360,11 @@
   (check-html-input forest style routes mathjax-src)
   (append
     (html-style-artifacts style)
-    (cons
-      (make-artifact (html-index-path routes)
-                     (index-content forest routes)
-                     (source-paths forest))
+    (let ((route-table (html-route-table routes
+                                          (map site-page-id (pages forest)))))
       (map (lambda (page)
              (make-artifact
-               (html-page-path routes (site-page-id page))
+               (cdr (assoc (site-page-id page) route-table))
                (page-html forest page style routes mathjax-src backmatter
                           backmatter-labels reference-taxon-id #f highlighters)
                (page-source-paths forest page)))
@@ -430,9 +396,8 @@
           #:configuration
           (lambda (forest)
             (list 'html (site-title (site forest)) (site-description (site forest))
-                  (html-home-page routes) (html-index-path routes)
+                  (html-home-page routes)
                   (html-index-url routes)
-                  (html-page-url routes (html-home-page routes))
                   mathjax-src backmatter backmatter-labels reference-taxon-id
                   (map (lambda (entry)
                          (list (car entry) (highlighter-configuration (cdr entry))))

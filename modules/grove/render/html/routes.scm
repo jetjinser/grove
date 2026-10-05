@@ -6,10 +6,12 @@
   #:use-module (grove string-fun)
   #:use-module (grove output)
   #:use-module (srfi srfi-9)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (html-routes?
             make-html-routes
             html-page-path
+            html-route-table
             html-index-path
             html-home-page
             html-page-url
@@ -43,10 +45,26 @@
   (%make-html-routes page-path index-path url-prefix home-page))
 
 (define (html-page-path routes id)
-  (let ((path ((html-page-path-procedure routes) id)))
+  (let ((path (if (string=? id (html-home-page routes))
+                  (html-index-path routes)
+                  ((html-page-path-procedure routes) id))))
     (unless (artifact-path? path)
       (error "HTML page requires a relative artifact path" id path))
     path))
+
+(define (html-route-table routes ids)
+  (let ((table (map (lambda (id) (cons id (html-page-path routes id))) ids)))
+    (let loop ((remaining table) (seen '()))
+      (unless (null? remaining)
+        (let* ((entry (car remaining))
+               (path (cdr entry))
+               (collision (find (lambda (other) (string=? path (cdr other)))
+                                seen)))
+          (when collision
+            (error "HTML page routes must be unique"
+                   (car collision) (car entry) path))
+          (loop (cdr remaining) (cons entry seen)))))
+    table))
 
 (define (html-asset-url routes path)
   (unless (artifact-path? path)
