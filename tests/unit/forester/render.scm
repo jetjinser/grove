@@ -443,7 +443,7 @@
          (not (string-contains content "notes/a&amp;b.html"))
          (string-contains
            content
-           "<loc>https://notes.example/notes/plain.html</loc>\n    </url>")))
+           "<loc>https://notes.example/notes/plain.html</loc>\n  </url>")))
   (test-error "sitemap rejects invalid updated dates" #t
     (render-sitemap
       (make-forest

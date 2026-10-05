@@ -10,8 +10,8 @@
   #:use-module (grove output)
   #:use-module (grove render html routes)
   #:use-module (grove site)
+  #:use-module (sxml simple)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:export (render-sitemap
             make-sitemap-renderer))
 
@@ -21,6 +21,35 @@
       (error "Forester sitemap updated metadata must use YYYY-MM-DD"
              (site-page-id page) updated))
     updated))
+
+(define (page->sitemap-url base routes route-table page)
+  (let ((lastmod (page-lastmod page))
+        (url
+          (web-absolute-route-url
+            base
+            (html-asset-url
+              routes
+              (cdr (assoc (site-page-id page) route-table))))))
+    `(url
+       "\n    " (loc ,url)
+       ,@(if lastmod (list "\n    " `(lastmod ,lastmod)) '())
+       "\n  ")))
+
+(define (sitemap-document base routes route-table pages)
+  (call-with-output-string
+    (lambda (port)
+      (sxml->xml
+        `(*TOP*
+           (*PI* xml "version=\"1.0\" encoding=\"utf-8\"")
+           "\n"
+           (urlset (@ (xmlns "http://www.sitemaps.org/schemas/sitemap/0.9"))
+             ,@(append-map
+                 (lambda (page)
+                   (list "\n  "
+                         (page->sitemap-url base routes route-table page)))
+                 pages)
+             "\n"))
+        port))))
 
 (define* (render-sitemap forest #:key site-url
                                 (sitemap-path "sitemap.xml")
@@ -39,30 +68,7 @@
   (let* ((base (web-base-url site-url))
          (route-table
            (html-route-table routes (map site-page-id (pages forest))))
-         (urls
-           (map (lambda (page)
-                    (let ((lastmod (page-lastmod page)))
-                      (string-append
-                        "    <url>\n      <loc>"
-                        (web-xml-escape
-                          (web-absolute-route-url
-                            base
-                            (html-asset-url
-                              routes
-                              (cdr (assoc (site-page-id page) route-table)))))
-                        "</loc>\n"
-                        (if lastmod
-                            (string-append "      <lastmod>" lastmod
-                                           "</lastmod>\n")
-                            "")
-                        "    </url>")))
-                  (pages forest)))
-         (content
-           (string-append
-             "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-             "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n"
-             (if (null? urls) "" (string-append (string-join urls "\n") "\n"))
-             "</urlset>\n")))
+         (content (sitemap-document base routes route-table (pages forest))))
     (list (make-artifact sitemap-path content (source-paths forest)))))
 
 (define* (make-sitemap-renderer #:key site-url
