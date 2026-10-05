@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 SPDX-License-Identifier: GPL-3.0-or-later
 -->
 
-# Grove relations
+# Relation reference
 
 Grove's relation layer uses miniKanren goals to query finite facts and to
 compose domain rules. faster-minikanren is the implementation used by Grove;
@@ -26,7 +26,7 @@ that order. Relation arity is part of the relation value and is checked when a
 goal runs. An empty relation defaults to arity two for convenience; pass
 `#:arity` to `make-relation` to construct an empty relation with another arity.
 
-The public construction and query forms are intended to be:
+Construct and query finite facts with:
 
 ```scheme
 (define references
@@ -67,8 +67,10 @@ miniKanren APIs from `(grove relation)` and adds `define-relation`, `exists`,
 ```
 
 These forms expand to faster-minikanren relations, `fresh`, `conde`, and
-`run*`; `project` exposes miniKanren's standard host-language projection and
-requires its projected terms to be ground. They add no new evaluation engine.
+`run*`; `project` exposes miniKanren's host-language projection. Host operations
+must handle the projected values, including any unbound logic variables;
+projection does not make an arbitrary Scheme function relational. These forms
+add no new evaluation engine.
 `define-relation-schema` declares
 the tuple columns once, generates a constructor with fixed arity, and creates a
 named query macro. Query clauses name columns, so omitted columns become
@@ -143,7 +145,9 @@ performs a case-sensitive substring search over the concatenated text.
 Page title and metadata are a separate relation because the page reader
 extracts `@title`, `@summary`, `@published`, and `@updated` into the Grove
 page record. Tags and taxa stay in the content IR and are queried with
-`topic-membero`. Page facts and content facts can be joined through their
+`topic-membero`. Topics have one lowercase value; ground topic selectors are
+case-insensitive and enumerated values are canonical. Page facts and content
+facts can be joined through their
 shared page ID:
 
 ```scheme
@@ -162,37 +166,9 @@ shared page ID:
       (contains-texto nodes node-id "范畴论"))))
 ```
 
-Projects can name a frequently used combination of predicates in their own
-module:
-
-```scheme
-(use-modules (forester relations) (grove relation dsl))
-
-(define-relation (short-math-paragrapho nodes paragraph-id maximum)
-  (math-containing-paragrapho nodes paragraph-id)
-  (shorter-than-o nodes paragraph-id maximum))
-
-(let ((nodes (content-node-relation forest)))
-  (query (paragraph-id)
-    (short-math-paragrapho nodes paragraph-id 120)))
-```
-
-The project owns this predicate because the length limit is a project choice.
-It receives the content relation explicitly, so it works with any Forest
-snapshot and composes with other goals. Grove and Forester do not need a
-built-in helper for each project's query policy.
-
-Forester tree composition has a separate semantic interface in
-`(forester composition)`. That module accepts typed subtree-definition and
-transclusion facts, then uses Grove's relation layer internally. Forester's
-site analyzer and renderers do not depend on its tuple layout or miniKanren
-queries. See [`forester-composition.md`](forester-composition.md) for the
-composition contract.
-
-Rules are ordinary Guile module definitions built from miniKanren goals. A
-library can export its own relation queries without changing Grove. Scheme
-remains available for I/O, model construction, and rendering; the relation
-API defines the common logic-query model.
+Project modules can export ordinary `define-relation` rules over these explicit
+snapshots; no Grove changes are required. Composition queries use the typed API
+in `(forester composition)` rather than depending on its private tuple layout.
 
 ### Deferred queries in articles
 
@@ -204,26 +180,9 @@ with ordinary Scheme to assemble the result. Place the command at the page's
 top level; its result may contain ordinary blocks, including links and copied
 content nodes.
 
-```scheme
-@use-modules[(forester commands) (forester relations) (forester site)
-             (grove ir) (grove relation dsl)]
-@(define algebra-pages
-   (lambda (forest _page-id)
-     (let* ((nodes (content-node-relation forest))
-            (matches
-              (query (page-id label)
-                (topic-membero nodes "algebra" page-id label))))
-       (make-content-document
-         (list
-           (make-content-element 'itemize
-             (map (lambda (match)
-                    (let ((page (find-page forest (car match))))
-                      (make-content-element 'item
-                        (list (link (site-page-id page)
-                                    (site-page-title page))))))
-                  matches)))))))
-@forest-query[algebra-pages]
-```
+Use the [linked-notes query example](../examples/linked-notes/plants/orphans.plant)
+for a complete authored query.
+
 
 The query result is inserted at the command's position for rendering. It does
 not become source data: generated elements are absent from page, reference,
@@ -246,23 +205,9 @@ Scheme. `=/=` is an inequality constraint, not general negation over a
 relation. By default, incoming references mean authored links; transclusions
 are represented separately by the composition API.
 
-## Recursion and tabling
+## Recursion
 
-Recursive rules are ordinary miniKanren relations and must define their own
-termination behavior. The base relation is finite, but this alone does not
-make every recursive query terminate. Grove's core relation contract does not
-promise tabling. A future tabling facility must define how it handles
-constraints, duplicate answers, recursive cycles, and the lifetime of tables;
-it can be added as an explicit extension without changing ordinary goal
-semantics.
-
-Forester reachability currently uses path-local cycle checking. A recursive
-branch cannot visit the same page twice, so cyclic graphs terminate and a
-page is never reported as reachable from itself, including when a cycle
-returns to the starting page. Multiple paths can still derive the same page;
-the public Forester query removes duplicate page IDs, and the site API returns
-pages in site order. This is an explicit finite-graph rule, not general
-tabling or a fixed-point facility. Grove keeps tabling out of core until an
-extension needs broader recursive semantics; such an extension can define
-table scope, answer deduplication, and constraint behavior without changing
-this relation API.
+Finite facts do not guarantee termination of recursive goals. Grove does not
+promise tabling. Forester reachability uses path-local cycle checking, excludes
+the starting page, and deduplicates reachable IDs; the site API returns them
+in site order. Multiple derivations remain possible in raw relation queries.

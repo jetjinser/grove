@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 SPDX-License-Identifier: GPL-3.0-or-later
 -->
 
-# Mathematics in Grove
+# Math reference
 
 Grove math lets an article use one expression for display and computation. It
 supports a focused set of symbolic rewriting and calculus operations; it is not
@@ -24,34 +24,10 @@ Grove separates formula text, mathematical meaning, and visual layout:
 Article commands accept semantic expressions, and Formula helpers wrap the
 same semantic operations for text input.
 
-```scheme
-@use-modules[((grove math semantic) #:prefix ◆:)
-             ((grove math formula) #:prefix φ:)]
-
-@(define x (◆:coordinate 'x))
-@with-assumptions[x]{
-  @math{x^3 + 2*x}
-  @differentiate[x]{x^3 + 2*x}
-}
-```
-
-`@math` displays the expression. `@differentiate` computes and displays its
-derivative. Here `x` is explicitly declared as an independent coordinate.
-
-Use the Formula reader when building a value in Scheme:
-
-```scheme
-@(define p (φ:read{x^3 + 2*x}))
-@(φ:differentiate p "x" #:assumptions '("coordinate(x)"))
-```
-
-Use Semantic constructors when an expression is easier to build directly:
-
-```scheme
-@(define p (◆:add (◆:power x (◆:constant 3))
-                   (◆:multiply (◆:constant 2) x)))
-@math[p]
-```
+Import `(grove math semantic)`, `(grove math formula)`, and
+`(grove math notation)` with the respective prefixes. The
+[math-derivations example](../examples/showcases/math-derivations/project.scm)
+shows executable usage.
 
 Formula text accepts identifiers, integer numerals, function calls,
 parentheses, unary minus, powers, equations, and the operators `+`, `-`, `*`,
@@ -101,23 +77,6 @@ Use `@compute` for component and spatial calculations, `@antiderivative` for a
 polynomial primitive, `@solve-poisson` for the particular Poisson solution,
 and `@check-equation` to check a candidate. The corresponding Formula API is
 available under `φ:`; Semantic constructors are under `◆:`.
-
-For example, a three-dimensional space and vector field can be declared and
-used as follows:
-
-```scheme
-@(define r3 (◆:space 'x 'y 'z))
-@(define e (◆:field 'E #:space r3 #:result 'vector))
-@with-assumptions[(list r3 e "smooth(E)")] {
-  @derive{curl(curl(E))}
-}
-```
-
-The curl-curl identity rewrites this to `grad(div(E)) - laplacian(E)`. If the
-article also supplies `div(E)=0`, the result simplifies further to
-`-laplacian(E)`. Grove uses the explicitly ordered Cartesian axes; it does not
-implement curvilinear coordinates, arbitrary dimensions, or general PDE
-solving.
 
 ## Derivations and checks
 
@@ -182,30 +141,14 @@ author-supplied inputs.
 
 ## Display notation
 
-Use Formula text for ordinary expressions. Use Semantic constructors to supply
-meaningful operations and values. Use Notation DSL for layout that has no
-calculation semantics, for example a fraction, matrix, or aligned derivation:
-
-```scheme
-@use-modules[((grove math notation) #:prefix ◇:)]
-
-@◇:math{
-  @◇:frac{a+b}{c}
-}
-```
-
-Notation is lowered to MathML for output and is not parsed back into a semantic
-expression. When an article needs both a calculation and a special layout,
-compute with Semantic values, then present the result with notation.
+Notation lowers to MathML and is not parsed back into a Semantic expression.
+Compute with Semantic values, then lower the result for display. Display-only
+fractions, matrices, and alignments carry no implied calculation semantics.
 
 ## Current boundaries
 
-The calculation engine is a small, typed relational rewrite system with bounded
-passes. It handles a deliberately limited set of scalar algebra, differentiation,
-Cartesian vector calculus, exact polynomial integration, and a restricted
-Poisson problem. Unsupported expressions, missing declarations, invalid types,
-and unmet domain requirements produce diagnostics rather than silently
-claiming a result.
+Unsupported expressions, missing declarations, invalid types, and unmet domain
+requirements produce diagnostics. Search and calculation passes are bounded.
 
 Polynomial integration uses exact rational coefficients and natural powers.
 The returned primitive fixes its value to zero at the selected coordinate's

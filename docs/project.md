@@ -3,204 +3,141 @@ SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 SPDX-License-Identifier: GPL-3.0-or-later
 -->
 
-# Projects
+# Project reference
 
-A Grove project connects four steps: collect source paths, read each source,
-optionally analyze the resulting inputs, and render artifacts. Grove writes
-those artifacts to a local output directory and reports which inputs changed.
+For setup and CLI usage, see the [README](../README.md). The project file's
+final expression returns a project; it must not run a build itself. Use
+[`examples/linked-notes/project.scm`](../examples/linked-notes/project.scm)
+for a site configuration, or the [catalog](../examples/catalog/project.scm)
+and [inventory](../examples/inventory/project.scm) for project-owned models.
 
-```text
-paths → reader → project inputs → analyzer → model → renderers → artifacts
-```
+## Execution and paths
 
-The reader and analyzer belong to the project. Renderers receive the same
-model and can produce unrelated formats. The model can be any Scheme value;
-Grove does not require pages, content IR, or HTML. See
-[`examples/catalog/project.scm`](../examples/catalog/project.scm) for a compact
-project-owned model, and [`examples/inventory/project.scm`](../examples/inventory/project.scm)
-for CSV and Scheme output without Grove's document IR.
+`make-project` connects source collection, preparation, reading, analysis,
+and rendering. `make-site-project` assembles page inputs into a site before
+calling its analyzer. All renderers receive the same model and return artifacts.
 
-## Command-line projects
+The default collector walks recursively in sorted order, skipping hidden
+directories. `#:source-filter` selects basenames; `#:collect-sources` supplies
+an ordered path list instead. `#:prepare` runs before reading and returns
+additional tracked paths. It can load shared modules, but does not import their
+commands into individual articles. `#:extra-sources` declares other inputs.
 
-The CLI loads `project.scm` from the current directory, or the file selected by
-`--project PATH`. The file's final expression must return a `project` value; it
-must not call `build-project` itself. For example, this generic project copies
-text inputs into an output artifact:
+CLI paths are relative to the invocation directory. Configured paths are
+relative to the project file throughout loading and synchronous execution.
+`(grove project load)` restores the caller's directory and evaluates the
+configuration in a fresh top-level module. Named Guile modules still have
+process-wide lifetime; the working directory is not thread-local.
+
+`check-project` fully evaluates, analyzes, renders, and validates without
+accessing published output state. It does not sandbox Scheme effects or check
+browser layout. Its report treats all sources as added and artifacts as affected.
+CLI exit codes are 0 for success, 1 for execution failure, and 2 for invalid
+arguments. Summaries use stdout; diagnostics use stderr.
+
+Artifacts carry relative paths, text or bytes, and optional source dependencies.
+Validation rejects duplicate, reserved, and conflicting output paths. Writing
+preserves unchanged files and removes obsolete manifest-owned artifacts; other
+files remain untouched. Writing is not transactional across the directory.
+
+Site HTML routes require an explicit `#:home-page`. File-backed tree IDs are
+basenames without `.plant`; directories do not qualify IDs. Named subtrees
+share that namespace. See [composition](forester-composition.md) for tree rules.
+
+## Dependencies and caching
+
+Projects, document readers, and built-in renderers cache by default. Set
+`#:cache? #f` to opt out; readers also accept a path predicate. Preparation and
+whole-project analysis still run. Document hits reuse Content IR; renderer
+hits reuse artifacts. Shared code changes conservatively force full rendering.
+Standalone reader calls evaluate normally; `check` bypasses published caches.
+
+Project files, imported modules, loader dependencies, framework source/data,
+compiled files, and effective renderer settings are fingerprinted automatically.
+Module search paths and absent preferred compiled files are also tracked.
+There are no user-maintained cache keys or version numbers.
+
+Arbitrary Scheme I/O is not intercepted. Declare a file before reading it:
 
 ```scheme
-(use-modules (grove project)
-             (grove output)
-             (ice-9 textual-ports))
-
-(make-project
-  #:source-directory "sources"
-  #:read-source
-  (lambda (path) (call-with-input-file path get-string-all))
-  #:renderers
-  (list (lambda (context)
-          (list (make-artifact "combined.txt"
-                  (apply string-append
-                    (map project-input-value
-                         (project-context-inputs context)))))))
-  #:output-directory "build")
+(call-with-input-file (depend-on! "data.txt") get-string-all)
 ```
 
-Create `sources/` with text files, then run `grove build` or `grove check`.
-Forester projects use `make-site-project` in exactly the same way.
+`depend-on!` and `disable-cache!` are exported by `(grove input scribble)`.
+A reader's `#:cache-dependencies` collector can declare inputs in bulk.
+Time, randomness, network state, and effects that must repeat require opting
+out with `disable-cache!` or disabling reader caching. Imported module
+definitions remain uncached so their bindings exist in every build process.
 
-CLI option paths are relative to the directory where the command was invoked.
-Paths inside the project are relative to the project file's directory throughout
-loading and execution. The loader restores the caller's directory and uses a
-fresh top-level evaluation module. Named Guile modules still have their normal
-process-wide lifetime. The CLI tracks the project file and includes its content
-fingerprint in configured renderer cache keys.
+Plain renderer callbacks are assumed deterministic under tracked inputs.
+`make-cached-renderer` adds `#:inputs` and `#:configuration` (data or a
+model-to-data procedure), or disables caching. Grove cannot infer hidden
+closure state. Built-in factories declare their settings themselves.
 
-`build` uses renderer caching and writes validated artifacts. `check` always
-runs the renderers, ignores published cache state, and does not create or modify
-the output directory. Both validate duplicate, reserved, and conflicting output
-paths. Checking does not sandbox Scheme callbacks or perform browser layout
-validation. Output writing is not transactional across the entire directory.
+Document entries live in `OUTPUT/.grove-input-cache`. Only data-only Content IR
+is saved, including styles and source locations. Closures, unsupported records,
+and cyclic data are re-evaluated. Corruption is a miss; successful builds prune
+unselected entries. Declared inputs also participate in rendering invalidation
+and file watching.
 
-Use `grove --help` or `grove check --help` for options. Success exits with `0`,
-project execution failure with `1`, and invalid arguments with `2`. Summaries go
-to stdout, diagnostics to stderr; `--debug` includes the original exception and
-backtrace. Existing Scheme callers can use `check-project` alongside
-`build-project/report`; both return the same build-report structure. A check
-has no previous output state, so its report describes all tracked sources as
-added and all produced artifacts as affected.
+## Preview and progress
 
-### Local preview
+`grove serve` binds localhost and starts only after a successful build. Each
+build uses a fresh process. Edits observed during a build queue the next one;
+failure preserves the last successful in-memory artifact set. HTTP serves
+only those artifacts, supports GET/HEAD, disables browser caching, and exposes
+neither project files nor cache metadata. The browser does not refresh itself.
 
-```sh
-grove serve
-grove serve --port 8081
-grove serve --no-watch --output /tmp/preview
+The watcher polls identity, size, and precise timestamps. It observes project
+and source directories, declared dependencies, loaded sources, and discovered
+external input directories. Recursive scans skip hidden entries and nested
+directory symlinks; explicit source-directory symlinks are resolved. Outputs
+are excluded from watching and should live in a separate directory.
+
+Ctrl-C and SIGTERM stop the server and active worker process group, returning
+130 and 143 respectively. Detached project processes are outside that group.
+`--no-watch` serves the initial successful snapshot only.
+
+Scheme runners are silent unless given `#:progress`, a `(stage detail)` callback.
+Stages are `collect`, `sources`, `prepare`, `read`, `read-done`, `analyze`,
+`render`, `validate`, and `write`. `sources` carries a count, read events carry
+a path, and `write` carries the output directory; other details are `#f`.
+Complete renderer hits skip `render`. CLI formatting uses the same events.
+
+## Tree creation
+
+`#:default-prefix` supplies the prefix for `grove new`. Explicit prefixes
+contain lowercase ASCII letters, digits, and internal hyphens. IDs use lowercase
+base36 with at least four digits. Creation takes the largest matching source
+suffix plus one, without filling gaps; deleting the maximum can reuse its number.
+Destination files are scanned too, and exclusive creation never overwrites them.
+
+The default destination is `source-directory`; collector-only projects require
+`--dest`. It must exist. Creation evaluates configuration but not article
+readers, preparation, analysis, or renderers. It prints the absolute path.
+The default template imports `(forester commands)` and includes an empty title
+and today's publication date. Fill in the title before building.
+
+A project can supply `#:tree-template`, a procedure receiving the allocated ID
+and the local date as strings and returning the complete UTF-8 source text:
+
+```scheme
+#:tree-template
+(lambda (id date)
+  (string-append
+    "@use-modules[(flora commands) (language scribble commands)]\n\n"
+    "@title{}\n"
+    "@published{" date "}\n"))
 ```
 
-The first build must succeed before HTTP preview starts. An occupied port fails
-without running a build. The server binds to `127.0.0.1` and serves only generated
-artifacts, with `/` selecting an existing `index.html`; it does not list
-directories or expose project files and cache metadata. GET and HEAD are
-supported, including binary assets and MIME types. Browser caching is disabled.
+The example is configuration for a consumer that provides `(flora commands)`;
+Grove does not depend on that module. The callback can use the ID in the source,
+add metadata, or return text loaded from a project template file. `#:prepare`
+loads project modules for later imports; it does not import them into each
+article. Consequently, a template must include the imports its commands need.
+Template errors or non-string results fail before creating a file.
 
-Each build runs in a new Guile process, so edits to project modules take effect.
-The watcher polls file identity, size, and precise timestamps, then uses Grove's
-existing fingerprints and renderer caching during builds. It tracks the project
-directory, source directories, declared file dependencies, and loaded Scheme
-sources. Discovered external input directories are monitored for new files too.
-Nested directory symlinks and hidden entries are skipped during recursive scans;
-explicit source-directory symlinks are resolved and tracked file dependencies
-remain observed. Keep outputs in a separate directory: generated outputs are
-excluded from watching.
-
-Builds run one at a time. Changes observed during a build queue another build.
-After success, the server replaces its entire in-memory artifact set; failure
-keeps the previous set available. Scheme output cannot corrupt the private
-worker protocol. The browser does not refresh automatically.
-
-Ctrl-C stops the server, its active worker, and project subprocesses in the
-worker's process group, exiting with `130`. SIGTERM performs the same cleanup
-and exits with `143`. Detached processes created by project code are outside
-that group. `--no-watch` performs one build and serves that fixed snapshot.
-
-Scheme runners remain silent by default. `build-project`, `build-project/report`,
-and `check-project` accept `#:progress`, a callback receiving a stage symbol and
-a detail value. Stages are `collect`, `sources`, `prepare`, `read`, `analyze`,
-`read-done`, `render`, `validate`, and `write`. The `sources` detail is the number of inputs;
-`read` identifies the source about to be read, and `read-done` reports that source
-after a successful read. `write` identifies the output directory, and other
-details are `#f`. `render` is skipped
-on a complete renderer cache hit. CLI formatting uses this same callback.
-
-## A linked-page project
-
-For a Forester site, use `(grove project site)` with Forester's reader,
-analyzer, and renderers. The complete runnable setup is
-[`examples/linked-notes/project.scm`](../examples/linked-notes/project.scm); it
-also configures CSS, text routes, a feed, a sitemap, a graph, and static files.
-
-The site needs an explicit home page ID. For example,
-`(make-html-routes #:home-page "index")` selects the page read from
-`plants/index.plant`. Grove does not create a page-list landing page. HTML
-routes can map IDs to files; the default page path is `<id>.html`, and the
-default index path, `index.html`, redirects to the selected home page.
-
-Forester reads each `.plant` file as a page. Its ID is the filename without
-the extension; parent directories organize files but do not affect IDs. Thus
-`plants/algebra/quadratics.plant` has ID `quadratics`. IDs must be unique.
-Links target tree IDs, such as `@link["difference-of-squares"]{the identity}`.
-A named subtree uses the same identity namespace as a file-backed tree.
-Missing link or transclusion targets fail while the Forest is built.
-
-Use `@title` for the required page title. `@summary`, `@published`, and
-`@updated` become page metadata. Tags and taxa remain in the content IR, so
-they can be rendered or queried by Forester without being treated as ordinary
-page metadata. The [relations guide](relations.md) covers content queries;
-the [composition guide](forester-composition.md) explains subtrees and
-transclusion.
-
-## Inputs and outputs
-
-The default source collector walks a directory recursively, skips hidden
-directories, and returns regular files in sorted order. Use `#:source-filter`
-to select filenames or `#:collect-sources` to provide an ordered path list.
-Preparation hooks can load shared Scheme modules before reading. Paths
-returned by the hook and paths declared with `#:extra-sources` are tracked as
-project inputs.
-
-Renderers return artifacts with relative output paths and text or byte content.
-An artifact can list
-the files it depends on; these dependencies let build reports identify
-potentially affected outputs. Grove writes a manifest of its own artifacts,
-updates unchanged files only when needed, and removes artifacts that the
-previous manifest lists but the current build no longer produces. Files not
-managed by Grove are left alone.
-
-Forester provides HTML, plain text, RSS, sitemap, and Scheme graph renderers.
-Grove provides HTML/text helpers and static asset copying. Each renderer owns
-its output paths and behavior. In particular, the RSS renderer uses the site
-URL and page dates, the sitemap uses routed page URLs and update dates, and
-the graph renderer writes a Scheme-readable representation of the Forest.
-
-## Caching
-
-Projects, Scribble documents, and built-in renderers enable caching by default.
-Grove fingerprints the project file, imported modules, framework source/data,
-and compiled modules. Module search paths and absent preferred compiled files
-are inputs too, so adding compiled code also invalidates a result. Built-in renderers describe their effective configuration
-(routes, styles, backmatter, and output options). There are no user-maintained
-cache keys or version numbers. Set `#:cache? #f` on a project, reader, or built-in
-renderer to turn caching off; a reader also accepts a path predicate.
-
-Preparation and whole-project analysis always run. Document hits reuse Content
-IR; renderer hits reuse artifacts. Ordinary source edits can use incremental
-rendering. Changes to shared code or declared computation inputs conservatively
-force full rendering. `check` always evaluates and renders without accessing
-published cache state. Standalone reader calls also evaluate normally.
-
-Plain renderer callbacks are treated as deterministic under tracked project
-inputs and cached by default. Use `make-cached-renderer` to describe additional
-inputs/configuration, or set its `#:cache? #f` for callbacks with untracked
-effects. Its optional `#:configuration` is data (or a model-to-data procedure)
-that describes settings affecting its output; `#:inputs` collects file inputs.
-Grove cannot inspect arbitrary closure state. Built-in factories supply this
-information themselves.
-
-## Scribble documents
-
-Grove's Scribble reader evaluates Guile Scheme and converts document syntax to
-content IR. Ordinary prose becomes paragraphs; commands can return content
-elements or lists of document values. Grove's standard HTML and text
-renderers handle common elements such as paragraphs, code, and
-lists. Forester adds page-specific commands such as links, tags, subtrees,
-and transclusion.
-
-Math documents use separate entry points: Formula (`φ:`) for convenient
-expression reading, Semantic (`◆:`) for computational values, and Notation
-(`◇:`) for display structure. Read the [math guide](math.md) for examples
-and supported operations.
-
-### Code highlighting
+## Highlighting
 
 Code blocks accept a language symbol: `@code-block[#:language 'scheme]{(define x 2)}`.
 Scheme highlighting is included by default in the Nix devshell and installed
@@ -235,78 +172,31 @@ source without highlight markup. The `grove-highlights` Nix package includes
 the grammar, its matching upstream query, and the grammar's license; their
 version is fixed by `nix/flake.lock`.
 
-## Document inputs and effects
+## Packaging and measurement
 
-Ordinary documents need no cache configuration. Imported Scheme modules are
-tracked automatically, including their compiled files. Calls through Guile's
-loader are observed too. Named module definitions automatically remain uncached
-so other sources can import their bindings in every build process.
+The installed launcher records canonical Guile source/compiled dependency
+paths, not the entire devshell path. Installation tests use an empty environment.
+The packaged `(grove highlight languages)` table registers grammar/query paths;
+other packagers can provide the same table. `GROVE_TEST_SCHEME_GRAMMAR` selects
+a different grammar library for tests. The Nix bundle validates the matching
+query against the actual highlighter during packaging.
 
-Arbitrary Scheme I/O is not intercepted. Register an additional file before
-reading it:
+Document reader `#:timings` callbacks receive `(path phase seconds)` for
+`parse`, `translate`, `evaluate`, and `decode`. `make-forest` callbacks receive
+`(phase seconds)` for extraction, references, content facts, composition, and
+query resolution. Use `statprof` for evaluation hotspots. Compare cold and warm
+builds in separate processes without recompiling during measurement.
 
-```scheme
-(use-modules (grove input scribble) (ice-9 textual-ports))
-(call-with-input-file (depend-on! "data.txt") get-string-all)
+For coverage, build first, then run:
+
+```sh
+GROVE_TESTS_ENABLE_COVERAGE=1 GROVE_TESTS_TIME_LIMIT=600 blue check
 ```
 
-The file's content participates in document invalidation, renderer invalidation,
-and file watching. A reader's `#:cache-dependencies` collector can also declare
-file inputs in bulk. For time, randomness, network state, or effects that must
-run every time, call `disable-cache!` inside the document, or turn off its reader
-cache. These opt-outs also force fresh rendering. Skipping effects must be safe; a serializable result alone does not make
-arbitrary Scheme code deterministic. Routing and other custom procedures must
-likewise depend on tracked files/configuration, rather than hidden mutable state.
-
-Entries live in `OUTPUT/.grove-input-cache`, with one entry per source path.
-Successful builds remove entries outside the current selection. Only data-only
-Content IR is saved, including presentation annotations and source locations.
-Query closures, unsupported records, and cyclic data are re-evaluated. Corrupt
-entries are misses. The CLI reports `Reused N/M document results` when documents
-hit the cache.
-
-## Creating trees
-
-Set `#:default-prefix "jsk"` on `make-site-project` (or `make-project`).
-Then `grove new` creates `plants/jsk-0001.plant` when the configured source
-directory is `plants`. `grove new math` instead uses the `math` prefix.
-Prefixes use lowercase ASCII letters, digits, and internal hyphens.
-
-IDs use lowercase base36, padded to at least four digits: `0009`, `000a`,
-`000z`, `0010`. Creation scans project source filenames recursively and takes
-one more than the largest matching suffix, without filling gaps.
-Deleting the highest-numbered tree can therefore allow its number to be reused.
-Other prefixes and malformed suffixes do not affect the sequence. Existing
-files are never overwritten. Directories do not form separate ID namespaces.
-
-`grove new --dest plants/drafts` overrides the destination. This directory
-must already exist; `--dest` is relative to the invocation directory, while
-configured paths are relative to `project.scm`. Projects with only a custom
-source collector must supply `--dest`. Destination files are also scanned to
-avoid collisions when the destination is outside the collected sources.
-
-The command prints the absolute created path. The default template imports
-`(forester commands)` and contains an empty `@title{}` and today's
-`@published{YYYY-MM-DD}`. Fill in the title before building. Edit the body, then
-link or transclude the tree where appropriate. Creation does not evaluate
-articles, invoke preparation or analysis, build outputs, or change the home
-page. The project configuration itself is still evaluated.
-
-A project can supply `#:tree-template`, a procedure receiving the allocated ID
-and the local date as strings and returning the complete UTF-8 source text:
-
-```scheme
-#:tree-template
-(lambda (id date)
-  (string-append
-    "@use-modules[(flora commands) (language scribble commands)]\n\n"
-    "@title{}\n"
-    "@published{" date "}\n"))
-```
-
-The example is configuration for a consumer that provides `(flora commands)`;
-Grove does not depend on that module. The callback can use the ID in the source,
-add metadata, or return text loaded from a project template file. `#:prepare`
-loads project modules for later imports; it does not import them into each
-article. Consequently, a template must include the imports its commands need.
-Template errors or non-string results fail before creating a file.
+The vector identity suite may need a separate 1200-second tracing run. Blue
+compiles tests before tracing; suites write LCOV `.cov` files beside their logs.
+CLI/preview subprocesses write `build/coverage-child-*.cov`. Merge by source
+and line using only the current run's files. Killed workers cannot flush reports.
+Coverage counts traced compiled code, not every repository line; untraced module
+initialization and unloaded modules are outside its denominator. Provenance tests
+must supply reader locations explicitly: compiled strings do not retain them.
