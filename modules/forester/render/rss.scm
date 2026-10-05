@@ -11,6 +11,7 @@
   #:use-module (grove render html routes)
   #:use-module (grove render text)
   #:use-module (grove site)
+  #:use-module (sxml simple)
   #:use-module (srfi srfi-19)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
@@ -75,6 +76,39 @@
        (not (string-null? url))
        (not (string-any char-whitespace? url))))
 
+(define (page->rss-item base routes page)
+  (let ((url (page-url base routes page))
+        (pub-date (page-pub-date page)))
+    `(item
+       (title ,(site-page-title page))
+       (link ,url)
+       (guid (@ (isPermaLink "true")) ,url)
+       ,@(if pub-date `((pubDate ,(rss-date pub-date))) '())
+       (description ,(page-description page)))))
+
+(define (rss-document site home-url items stylesheet-url stylesheet-type)
+  (append
+    (list '*TOP*
+          (list '*PI* 'xml "version=\"1.0\" encoding=\"utf-8\"")
+          "\n")
+    (if stylesheet-url
+        (list (list '*PI* 'xml-stylesheet
+                    (string-append
+                      "type=\"" (web-xml-escape stylesheet-type)
+                      "\" href=\"" (web-xml-escape stylesheet-url) "\""))
+              "\n")
+        '())
+    (list
+      `(rss (@ (version "2.0"))
+         (channel
+           (title ,(site-title site))
+           (link ,home-url)
+           (description ,(channel-description site))
+           ,@items)))))
+
+(define (serialize-rss document)
+  (call-with-output-string (lambda (port) (sxml->xml document port))))
+
 (define* (render-rss forest #:key site-url
                             (feed-path "feed.xml")
                             (routes (make-html-routes #:home-page "index"))
@@ -99,47 +133,11 @@
          (site (site forest))
          (home-url (web-absolute-route-url base (html-index-url routes)))
          (items
-           (map (lambda (page)
-                  (let ((url (page-url base routes page))
-                        (pub-date (page-pub-date page)))
-                    (string-append
-                      "    <item>\n"
-                      "      <title>" (web-xml-escape (site-page-title page))
-                      "</title>\n"
-                      "      <link>" (web-xml-escape url) "</link>\n"
-                      "      <guid isPermaLink=\"true\">"
-                      (web-xml-escape url) "</guid>\n"
-                      (if pub-date
-                          (string-append "      <pubDate>"
-                                         (rss-date pub-date)
-                                         "</pubDate>\n")
-                          "")
-                      "      <description>"
-                      (web-xml-escape (page-description page))
-                      "</description>\n"
-                      "    </item>")))
+           (map (lambda (page) (page->rss-item base routes page))
                 (feed-pages (site-pages site))))
          (content
-           (string-append
-             "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-             (if stylesheet-url
-                 (string-append
-                   "<?xml-stylesheet type=\""
-                   (web-xml-escape stylesheet-type)
-                   "\" href=\""
-                   (web-xml-escape stylesheet-url)
-                   "\"?>\n")
-                 "")
-             "<rss version=\"2.0\">\n"
-             "  <channel>\n"
-             "    <title>" (web-xml-escape (site-title site)) "</title>\n"
-             "    <link>" (web-xml-escape home-url) "</link>\n"
-             "    <description>"
-             (web-xml-escape (channel-description site))
-             "</description>\n"
-             (if (null? items) "" (string-append (string-join items "\n") "\n"))
-             "  </channel>\n"
-             "</rss>\n")))
+           (serialize-rss
+             (rss-document site home-url items stylesheet-url stylesheet-type))))
     (list (make-artifact feed-path content (source-paths forest)))))
 
 (define* (make-rss-renderer #:key site-url
