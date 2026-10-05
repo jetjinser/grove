@@ -80,6 +80,29 @@ and cyclic data are re-evaluated. Corruption is a miss; successful builds prune
 unselected entries. Declared inputs also participate in rendering invalidation
 and file watching.
 
+## Executable source and module articles
+
+The Scribble reader preserves ordinary Scheme syntax, including dotted pairs,
+rest arguments, quoted data, and macros using `...` or `#'`. Content source
+annotations apply to explicit at-commands rather than every nested Scheme pair.
+Definitions inside a command argument still follow Scheme's definition-context
+rules; writing them inside a subtree does not turn them into top-level bindings.
+
+`(language scribble source)` exports `source-text` and `source-range`. Both take
+an alist from `source-properties` (parsed data) or `syntax-source` (macro input).
+For example, a macro can call `(source-text (syntax-source #'definition))` to
+show the same definition it expands and executes. Ranges are half-open, with
+one-based lines/columns and character offsets relative to the reader input.
+Columns follow Guile's tab handling; offsets remain suitable for `substring`.
+Internal comments and whitespace are included; comments outside the expression
+are not. An escaped expression's text includes its authored `@` prefix.
+
+Parsed compound expressions retain ranges. Guile strips custom properties from
+syntax objects, so macro range lookup uses the active document evaluation's
+range table. Obtain text/ranges during expansion and keep those returned values
+if needed later. Unavailable ranges return `#f`; files are never reopened and
+there is no global source cache. Not all Guile reader extensions are supported.
+
 ## Preview and progress
 
 `grove serve` binds localhost and starts only after a successful build. Each

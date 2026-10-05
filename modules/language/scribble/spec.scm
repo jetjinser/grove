@@ -6,6 +6,7 @@
   #:use-module (system base language)
   #:use-module (language scheme compile-tree-il)
   #:use-module (language scribble parser)
+  #:use-module (language scribble source)
   #:use-module (language scribble flow)
   #:use-module (grove ir)
   #:use-module (srfi srfi-1)
@@ -33,17 +34,25 @@
   (cond
     ((string? fragment)
      (cond
-       ((string=? fragment "\n")
+       ((and top-level? (string=? fragment "\n"))
         `(make-content-layout 'newline ,fragment))
        (top-level? `(make-content-text ,fragment))
        (else fragment)))
     ((pair? fragment)
-     (let ((expression (cons (car fragment)
-                       (map (lambda (child)
-                              (fragment->expression child #f))
-                            (cdr fragment)))))
-       (set-source-properties! expression (source-properties fragment))
-       (if top-level? expression (locate-expression expression fragment))))
+     (if (memq (car fragment) '(quote quasiquote syntax quasisyntax))
+         fragment
+         (let ((expression
+                 (cons (car fragment)
+                   (let translate-tail ((tail (cdr fragment)))
+                     (if (pair? tail)
+                         (cons (fragment->expression (car tail) #f)
+                               (translate-tail (cdr tail)))
+                         tail)))))
+           (set-source-properties! expression (source-properties fragment))
+           (if (and (not top-level?)
+                    (assq-ref (source-properties fragment) 'scribble-command))
+               (locate-expression expression fragment)
+               expression))))
     (else fragment)))
 
 (define (scribble-language-reader port env)
@@ -104,45 +113,48 @@
   (save-module-excursion
     (lambda ()
       (set-current-module environment)
-      (let loop ((fragments (measure 'parse (lambda () (parse-with-context port source))))
-                 (children '())
-                 (active-module environment)
-                 (form-number 1))
-        (if (null? fragments)
-            (let ((document (measure 'decode
-                              (lambda ()
-                                (make-content-document (decode-flow (reverse children)) source)))))
-              (when timings
-                (for-each (lambda (phase) (timings phase (hashq-ref elapsed phase 0)))
-                          '(parse translate evaluate decode)))
-              document)
-            (let* ((fragment (car fragments))
-                   (expression (measure 'translate (lambda () (fragment->expression fragment))))
-                   (value (measure 'evaluate
-                            (lambda () (evaluate-with-context expression source form-number))))
-                   (location (fragment-source-location fragment))
-                   (value (if location
-                              (content-with-source-location value location)
-                              value))
-                   (module (current-module)))
-              ;; define-module changes Guile's current module while evaluating
-              ;; the form. Preserve the language's default bindings there too.
-              (unless (eq? module active-module)
-                (when module-changed (module-changed module))
-                (use-document-interfaces! module))
-              (if (or (content-value? value) (content-sequence? value))
-                  (let ((produced
-                          (if (content-sequence? value)
-                              (flatten-content-sequence value)
-                              (list value))))
-                    (loop (cdr fragments)
-                          (append (reverse produced) children)
-                          module
-                          (+ form-number 1)))
-                  ;; Definitions, imports, and other Scheme forms may return
-                  ;; values that are not document content.
-                  (loop (cdr fragments) children module
-                        (+ form-number 1)))))))))
+      (let ((parsed (measure 'parse (lambda () (parse-with-context port source)))))
+        ((@@ (language scribble source) call-with-source-context) parsed
+          (lambda ()
+            (let loop ((fragments parsed)
+                       (children '())
+                       (active-module environment)
+                       (form-number 1))
+              (if (null? fragments)
+                  (let ((document (measure 'decode
+                                    (lambda ()
+                                      (make-content-document (decode-flow (reverse children)) source)))))
+                    (when timings
+                      (for-each (lambda (phase) (timings phase (hashq-ref elapsed phase 0)))
+                                '(parse translate evaluate decode)))
+                    document)
+                  (let* ((fragment (car fragments))
+                         (expression (measure 'translate (lambda () (fragment->expression fragment))))
+                         (value (measure 'evaluate
+                                  (lambda () (evaluate-with-context expression source form-number))))
+                         (location (fragment-source-location fragment))
+                         (value (if location
+                                    (content-with-source-location value location)
+                                    value))
+                         (module (current-module)))
+                    ;; define-module changes Guile's current module while evaluating
+                    ;; the form. Preserve the language's default bindings there too.
+                    (unless (eq? module active-module)
+                      (when module-changed (module-changed module))
+                      (use-document-interfaces! module))
+                    (if (or (content-value? value) (content-sequence? value))
+                        (let ((produced
+                                (if (content-sequence? value)
+                                    (flatten-content-sequence value)
+                                    (list value))))
+                          (loop (cdr fragments)
+                                (append (reverse produced) children)
+                                module
+                                (+ form-number 1)))
+                        ;; Definitions, imports, and other Scheme forms may return
+                        ;; values that are not document content.
+                        (loop (cdr fragments) children module
+                              (+ form-number 1))))))))))))
 
 (define-language scribble
   #:title      "Scribble"

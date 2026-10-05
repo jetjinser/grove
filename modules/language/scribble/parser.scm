@@ -15,12 +15,70 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-14) ; char-set
   #:use-module (srfi srfi-13) ; string utilities
-  #:use-module (srfi srfi-26) ; cut(e)
   #:use-module (ice-9 match)
   #:use-module (ice-9 rdelim)
+  #:use-module (ice-9 textual-ports)
   #:export (scribble-read
             scribble-parse
             scribble-reader))
+
+;; All ranges share one immutable input buffer. Slices are made only when a
+;; consumer asks for source-text, rather than copying every nested expression.
+(define current-source (make-parameter #f))
+(define reading-expression? (make-parameter #f))
+
+(define (call-with-source-input in procedure)
+  (if (or (current-source) (reading-expression?))
+      (procedure in)
+      (let* ((line (port-line in)) (column (port-column in))
+             (filename (port-filename in))
+             (text (get-string-all in))
+             (offsets (make-hash-table))
+             (port (open-input-string text)))
+        (set-port-encoding! port "UTF-8")
+        ;; String ports report UTF-8 byte offsets, whereas columns expand tabs.
+        ;; Map byte boundaries once to character offsets; neither is a slice index.
+        (let loop ((character 0) (byte 0))
+          (hashv-set! offsets byte character)
+          (when (< character (string-length text))
+            (let* ((code (char->integer (string-ref text character)))
+                   (width (cond ((< code #x80) 1) ((< code #x800) 2)
+                                ((< code #x10000) 3) (else 4))))
+              (loop (+ character 1) (+ byte width)))))
+        (set-port-filename! port filename)
+        (set-port-line! port line)
+        (set-port-column! port column)
+        (dynamic-wind
+          (lambda () #t)
+          (lambda ()
+            (parameterize ((current-source (cons text offsets)))
+              (procedure port)))
+          (lambda ()
+            ;; Preserve the caller's error position even though input is buffered.
+            (set-port-line! in (port-line port))
+            (set-port-column! in (port-column port))
+            (close-port port))))))
+
+(define (position in)
+  `((filename . ,(port-filename in))
+    (line . ,(port-line in)) (column . ,(port-column in))
+    ,@(if (current-source)
+          `((offset . ,(hashv-ref (cdr (current-source)) (ftell in))))
+          '())))
+
+(define (locate! value start in)
+  (when (or (pair? value) (string? value))
+    (let* ((end (position in))
+           (range (if (current-source)
+                      `((end-line . ,(assq-ref end 'line))
+                        (end-column . ,(assq-ref end 'column))
+                        (start-offset . ,(assq-ref start 'offset))
+                        (end-offset . ,(assq-ref end 'offset))
+                        (source-buffer . ,(car (current-source))))
+                      '())))
+      (set-source-properties! value
+        (append start range (source-properties value)))))
+  value)
 
 (define default-escape-char #\@)
 
@@ -119,6 +177,14 @@
             [else (loop (cons x res))]))))
 
 (define* (scrib-read in #:optional [ec default-escape-char])
+  (let loop ()
+    (when (and (char? (peek-char in)) (char-whitespace? (peek-char in)))
+      (read-char in) (loop)))
+  (let* ((start (position in)) (value (%scrib-read in ec)))
+    (if (or (eq? value scribble-dot) (eq? value scribble-close)) value
+        (locate! value start in))))
+
+(define* (%scrib-read in #:optional [ec default-escape-char])
   (define ch (read-char in))
   (cond
     [(eof-object? ch) ch]
@@ -131,7 +197,9 @@
         [(#\} #\] #\)) scribble-close]
         [(#\.) (cond
                  [(char-delimiter? (peek-char in)) scribble-dot]
-                 [else (unread-char #\. in) (read-number in)])]
+                 [(char-numeric? (peek-char in))
+                  (unread-char #\. in) (read-number in)]
+                 [else (read-symbol in #\.)])]
         [(#\') (list 'quote (scrib-read in))]
         [(#\`) (list 'quasiquote (scrib-read in))]
         [(#\,) (cond [(eqv? #\@ (peek-char in))
@@ -149,6 +217,13 @@
                [else (read-symbol in ch)])]
         [(#\#)
          (case (peek-char in)
+           [(#\') (read-char in) (list 'syntax (scrib-read in))]
+           [(#\`) (read-char in) (list 'quasisyntax (scrib-read in))]
+           [(#\,)
+            (read-char in)
+            (if (eqv? #\@ (peek-char in))
+                (begin (read-char in) (list 'unsyntax-splicing (scrib-read in)))
+                (list 'unsyntax (scrib-read in)))]
            [(#\t #\f) (eqv? (read-char in) #\t)]
            [(#\() (list->vector (scrib-read in))]
            [(#\\)
@@ -172,7 +247,7 @@
                     [else (read-symbol in ch)])])]))
 
 (define* (scribble-read in #:optional [ec default-escape-char])
-  (let ([res (scrib-read in ec)])
+  (let ([res (parameterize ((reading-expression? #t)) (scrib-read in ec))])
     (cond [(eq? res scribble-dot)
            (error "invalid . in source")]
           [(eq? res scribble-close)
@@ -193,14 +268,14 @@
 (define (read-prefix-wrapper in)
   (let loop ([wrap identity])
     (case (peek-char in)
-      [(#\') (read-char in) (loop (cut wrap (list 'quote <>)))]
-      [(#\`) (read-char in) (loop (cut wrap (list 'quasiquote <>)))]
+      [(#\') (read-char in) (loop (lambda (value) (wrap (list 'quote value))))]
+      [(#\`) (read-char in) (loop (lambda (value) (wrap (list 'quasiquote value))))]
       [(#\,)
        (read-char in)
        (cond [(eqv? #\@ (peek-char in))
               (read-char in)
-              (loop (cut wrap (list 'unquote-splicing <>)))]
-             [else (loop (cut wrap (list 'unquote <>)))])]
+              (loop (lambda (value) (wrap (list 'unquote-splicing value))))]
+             [else (loop (lambda (value) (wrap (list 'unquote value))))])]
       [else wrap])))
 
 (define (scribble-parse-escape in ec)
@@ -239,11 +314,22 @@
                             (car body)
                             (cons 'list body)))
                   body)])
-       (wrap (if (or data? body?)
-               (append cmd data body-arguments extra-bodies)
-               (car cmd))))]))
+       (let ((expression (wrap (if (or data? body?)
+                                 (append cmd data body-arguments extra-bodies)
+                                 (car cmd)))))
+         ;; Only an at-command produces a content-boundary annotation. Ordinary
+         ;; Scheme forms, including macro input, retain their original syntax.
+         (when (and (pair? expression) (pair? cmd) (symbol? (car cmd)))
+           (set-source-property! expression 'scribble-command #t))
+         expression))]))
 
-(define* (scribble-parse in #:optional [init-punc '()]
+(define* (scribble-parse in #:optional (init-punc '())
+                                       (escape-char default-escape-char)
+                            #:key (need-close? #f))
+  (call-with-source-input in
+    (lambda (in) (%scribble-parse in init-punc escape-char #:need-close? need-close?))))
+
+(define* (%scribble-parse in #:optional [init-punc '()]
                                        [escape-char default-escape-char]
                             #:key [need-close? #f])
   (define-constant comment-char     #\;)
@@ -251,9 +337,6 @@
   (define-constant close-brace-char (char-mirror brace-char))
 
   (define text-start #f)
-  (define (position)
-    `((filename . ,(port-filename in))
-      (line . ,(port-line in)) (column . ,(port-column in))))
 
   (define-inlinable (collect str res)
     (if (pair? str)
@@ -266,7 +349,7 @@
             [(eqv? ch comment-char) (read-line in) (skip-space in)])))
 
   (define (tok str res punc depth)
-    (let* ([start (position)] [c (read-char in)])
+    (let* ([start (position in)] [c (read-char in)])
       (when (null? str) (set! text-start start))
       (cond
         [(eof-object? c)
@@ -297,7 +380,7 @@
                      [saved-start text-start]
                      [x (scribble-parse-escape in escape-char)])
                 (set! text-start saved-start)
-                (when (pair? x) (set-source-properties! x start))
+                (when (pair? x) (locate! x start in))
                 (if (string? x)
                   (tok (append (reverse (string->list x)) str) res punc depth)
                   (tok '() (cons x (collect str res)) punc depth)))]))]

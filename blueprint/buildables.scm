@@ -97,6 +97,7 @@
     "language/scribble/flow.scm"
     "language/scribble/commands.scm"
     "language/scribble/parser.scm"
+    "language/scribble/source.scm"
     "language/scribble/spec.scm"))
 
 (define +forester-sources+

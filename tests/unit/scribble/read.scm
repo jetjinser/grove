@@ -10,10 +10,12 @@
   #:use-module (system base language)
   #:use-module (language scheme spec)
   #:use-module (language scribble parser)
+  #:use-module (language scribble source)
   #:use-module ((language scribble spec)
                 #:select (scribble scribble-evaluate-document))
   #:use-module (grove input scribble)
   #:use-module (grove render html)
+  #:use-module (grove render text)
   #:use-module (grove ir))
 
 (define (read-with-scheme-language env input)
@@ -552,5 +554,69 @@
       '(parse translate evaluate decode) (map car phases))
     (test-assert "timings report non-negative durations"
       (every (lambda (entry) (and (number? (cdr entry)) (>= (cdr entry) 0))) phases))))
+
+
+(let ((env (default-environment scribble)))
+  (evaluate-document env "@(define literal-newline \"\n\")")
+  (test-equal "literal Scheme newlines remain strings, not layout constructors"
+    "\n" (module-ref env 'literal-newline)))
+
+(test-read "ellipsis is a Scheme identifier" '... "...")
+(test-read/approximate "leading decimal point remains numeric" 0.5 ".5" 0.001)
+(test-read "syntax shorthand preserves its datum" '(syntax (x ...)) "#'(x ...)")
+
+(let* ((env (default-environment scribble))
+       (document
+         (evaluate-document env
+           "@(define environment '((x . 3)))
+@(define (sum x . rest) (+ x (apply + rest)))
+@(define-syntax values-text
+   (syntax-rules ()
+     ((_ value ...) (verbatim (format #f \"~s\" (list value ...))))))
+@values-text[(sum (cdar environment) 4 5) '((x . 3))]")))
+  (test-equal "quoted pairs, rest definitions, and ellipsis macros execute in articles"
+    "(12 ((x . 3)))" (content->text document)))
+
+(let* ((env (default-environment scribble))
+       (source
+         "@use-modules[(forester commands) (language scribble source)]
+@(define-syntax program
+   (lambda (stx)
+     (syntax-case stx ()
+       ((_ id heading definition)
+        (let ((text (source-text (syntax-source #'definition))))
+          (with-syntax ((code (datum->syntax stx text)))
+            #'(begin definition
+                (subtree #:id id (title heading)
+                  (code-block #:language 'scheme code)))))))))
+@program[\"square-code\" \"Square\"]{@(define (square x) ; 内部注释
+  (* x x))}
+@verbatim[(number->string (square 7))]")
+       (document (evaluate-document env source))
+       (rendered (content->text document)))
+  (test-assert "a writer macro displays exact code without stripping internal wrappers"
+    (string-contains rendered "@(define (square x) ; 内部注释\n  (* x x))"))
+  (test-assert "the displayed definition is also executable"
+    (string-suffix? "49" rendered)))
+
+(let* ((source "; outside\n@inspect[(define (f λ) ; inside\n  λ)] ; after")
+       (port (open-input-string source)))
+  (set-port-filename! port "ranges.plant")
+  (let* ((form (find pair? (scribble-parse port)))
+         (definition (cadr form))
+         (properties (source-properties definition))
+         (range (source-range properties)))
+    (test-equal "reader exposes exact expression text with internal comments"
+      "(define (f λ) ; inside\n  λ)" (source-text properties))
+    (test-equal "range starts at the Scheme argument, not its enclosing command"
+      '(2 10) (list (assq-ref range 'line) (assq-ref range 'column)))
+    (test-equal "range offsets are characters rather than UTF-8 bytes"
+      (source-text properties)
+      (substring source (assq-ref range 'start-offset) (assq-ref range 'end-offset)))))
+(let* ((text "λ\t@inspect[(list \"λ\"\t3)]")
+       (form (find pair? (scribble-parse (open-input-string text)))))
+  (test-equal "Unicode and tab-expanded columns do not corrupt source slices"
+    "(list \"λ\"\t3)" (source-text (source-properties (cadr form)))))
+(test-equal "missing reader ranges do not invent source text" #f (source-text #f))
 
 (test-end "scribble read")
