@@ -78,7 +78,8 @@
 (define* (render-rss forest #:key site-url
                             (feed-path "feed.xml")
                             (routes (make-html-routes #:home-page "index"))
-                            stylesheet-url)
+                            stylesheet-url
+                            (stylesheet-type "text/xsl"))
   (unless (forest? forest)
     (error "Forester RSS renderer requires a forest" forest))
   (unless (web-url? site-url)
@@ -91,6 +92,9 @@
   (when (and stylesheet-url (not (rss-stylesheet-url? stylesheet-url)))
     (error "RSS stylesheet URL must be a non-empty URL without whitespace"
            stylesheet-url))
+  (unless (rss-stylesheet-url? stylesheet-type)
+    (error "RSS stylesheet type must be a non-empty media type without whitespace"
+           stylesheet-type))
   (let* ((base (web-base-url site-url))
          (site (site forest))
          (home-url (web-absolute-route-url base (html-index-url routes)))
@@ -120,7 +124,9 @@
              "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
              (if stylesheet-url
                  (string-append
-                   "<?xml-stylesheet type=\"text/xsl\" href=\""
+                   "<?xml-stylesheet type=\""
+                   (web-xml-escape stylesheet-type)
+                   "\" href=\""
                    (web-xml-escape stylesheet-url)
                    "\"?>\n")
                  "")
@@ -140,17 +146,19 @@
                                      (feed-path "feed.xml")
                                      (routes (make-html-routes #:home-page "index"))
                                      stylesheet-url
+                                     (stylesheet-type "text/xsl")
                                      (cache? #t))
   (let ((render (lambda (forest)
                   (render-rss forest
                                      #:site-url site-url
                                      #:feed-path feed-path
                                      #:routes routes
-                                     #:stylesheet-url stylesheet-url))))
+                                     #:stylesheet-url stylesheet-url
+                                     #:stylesheet-type stylesheet-type))))
     (make-cached-renderer render #:cache? cache?
           #:configuration
           (lambda (forest)
-            (list 'rss site-url feed-path stylesheet-url
+            (list 'rss site-url feed-path stylesheet-url stylesheet-type
                   (site-title (site forest)) (site-description (site forest))
                   (html-index-url routes)
                   (html-route-table routes

@@ -363,7 +363,13 @@
          (artifact-content
            (car (render-rss forest
                   #:site-url "https://notes.example"
-                  #:stylesheet-url "feed.xsl?theme=light&view=full")))))
+                  #:stylesheet-url "feed.xsl?theme=light&view=full"))))
+       (css-feed
+         (artifact-content
+           (car (render-rss forest
+                  #:site-url "https://notes.example"
+                  #:stylesheet-url "/feed.css"
+                  #:stylesheet-type "text/css")))))
   (test-assert "RSS stylesheet is omitted by default"
     (not (string-contains feed "xml-stylesheet")))
   (test-assert "RSS can link an escaped XSL stylesheet"
@@ -371,9 +377,15 @@
       (string-append
         "<?xml-stylesheet type=\"text/xsl\" "
         "href=\"feed.xsl?theme=light&amp;view=full\"?>\n<rss")))
+  (test-assert "RSS can link a CSS stylesheet"
+    (string-contains css-feed
+      "<?xml-stylesheet type=\"text/css\" href=\"/feed.css\"?>"))
   (test-error "RSS stylesheet URLs cannot contain whitespace" #t
     (render-rss forest #:site-url "https://notes.example"
-      #:stylesheet-url "feed style.xsl")))
+      #:stylesheet-url "feed style.xsl"))
+  (test-error "RSS stylesheet types cannot contain whitespace" #t
+    (render-rss forest #:site-url "https://notes.example"
+      #:stylesheet-url "feed.css" #:stylesheet-type "text/css; bad")))
 
 (let* ((pages
          (list
