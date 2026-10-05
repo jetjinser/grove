@@ -11,6 +11,8 @@
   #:use-module (language scheme spec)
   #:use-module (language scribble parser)
   #:use-module (language scribble source)
+  #:use-module (grove private input dependencies)
+  #:use-module (ice-9 textual-ports)
   #:use-module ((language scribble spec)
                 #:select (scribble scribble-evaluate-document))
   #:use-module (grove input scribble)
@@ -618,5 +620,46 @@
   (test-equal "Unicode and tab-expanded columns do not corrupt source slices"
     "(list \"λ\"\t3)" (source-text (source-properties (cadr form)))))
 (test-equal "missing reader ranges do not invent source text" #f (source-text #f))
+
+(call-with-temporary-source
+  "@(define-module (tests literate-provider) #:export (answer))\n@use-modules[(language scribble source)]\n@(define answer \"one\")\nProvider."
+  (lambda (provider)
+    (call-with-temporary-source
+      "@use-modules[(tests literate-provider)]\n@verbatim[answer]"
+      (lambda (consumer)
+        (let ((executions 0)
+              (base-reader (make-scribble-document-reader)))
+          (call-with-values
+            (lambda ()
+              (make-scribble-module-session (list provider)
+                #:read-document
+                (lambda (path)
+                  (when (string=? path provider) (set! executions (+ executions 1)))
+                  (base-reader path))))
+            (lambda (prepare read-document)
+              (prepare)
+              (test-equal "module articles record their actual .plant filename"
+                provider (module-filename (resolve-module '(tests literate-provider))))
+              (let ((trace (make-hash-table)))
+                (call-with-input-trace trace (lambda () (read-document provider)))
+                (test-assert "prepared document reuse replays module-article dependencies"
+                  (and (member (canonicalize-path provider) (trace-inputs trace))
+                       (member (canonicalize-path (%search-load-path "language/scribble/source.scm"))
+                               (trace-inputs trace)))))
+              (let ((first (read-document provider)))
+                (test-assert "module article binding and display share one execution"
+                  (eq? first (read-document provider)))
+                (test-equal "prepared module is not executed again for display" 1 executions))
+              (let ((trace (make-hash-table)))
+                (call-with-input-trace trace (lambda () (read-document consumer)))
+                (test-assert "imported .plant module is traced without blanket dependencies"
+                  (member (canonicalize-path provider) (trace-inputs trace))))
+              (call-with-output-file provider
+                (lambda (port)
+                  (display "@(define-module (tests literate-provider) #:export (answer))\n@(define answer \"two\")\nProvider." port)))
+              (prepare)
+              (test-equal "new preparation reexecutes module articles" 2 executions)
+              (test-equal "consumer sees updated bindings after preparation"
+                "two" (content->text (read-document consumer))))))))))
 
 (test-end "scribble read")

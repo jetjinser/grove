@@ -140,6 +140,9 @@
                     ;; define-module changes Guile's current module while evaluating
                     ;; the form. Preserve the language's default bindings there too.
                     (unless (eq? module active-module)
+                      (when source
+                        (set-module-filename! module
+                          (if (file-exists? source) (canonicalize-path source) source)))
                       (when module-changed (module-changed module))
                       (use-document-interfaces! module))
                     (if (or (content-value? value) (content-sequence? value))

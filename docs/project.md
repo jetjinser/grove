@@ -103,6 +103,22 @@ range table. Obtain text/ranges during expansion and keep those returned values
 if needed later. Unavailable ranges return `#f`; files are never reopened and
 there is no global source cache. Not all Guile reader extensions are supported.
 
+`make-scribble-module-session` returns a prepare hook and a reader:
+
+```scheme
+(define-values (prepare read-document)
+  (make-scribble-module-session (list "plants/interpreter.plant")))
+```
+
+Pass `prepare` as the project's `#:prepare` and use `read-document` in its page
+reader. Module articles execute once during preparation; their document results
+are reused for display. Preparing again resets the session and refreshes bindings.
+Imports retain their actual `.plant` module filenames, and dependencies captured
+while preparing are replayed when a document is reused. Normal imported-module
+tracking therefore works without making every article depend on every module.
+Supply module paths in dependency order; automatic sorting, cycle analysis, and
+standalone Guile autoloading of `.plant` modules are not provided.
+
 ## Preview and progress
 
 `grove serve` binds localhost and starts only after a successful build. Each

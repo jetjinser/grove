@@ -8,11 +8,13 @@
   #:use-module (grove private input dependencies)
   #:use-module (system base language)
   #:use-module (srfi srfi-13)
+  #:use-module (srfi srfi-1)
   #:use-module (grove ir)
   #:use-module ((language scribble spec)
                 #:select (scribble scribble-evaluate-document))
   #:export (load-scribble-modules!
             make-scribble-module-setup
+            make-scribble-module-session
             make-scribble-document-reader)
   #:re-export (depend-on! disable-cache!))
 
@@ -45,6 +47,41 @@ The hook returns the loaded paths so Grove can track them as build inputs."
       (load-modules paths)
       paths)))
 
+(define* (make-scribble-module-session paths
+                                      #:key
+                                      (read-document (make-scribble-document-reader)))
+  "Return two procedures: a project prepare hook and its document reader.
+PREPARE evaluates module articles in PATHS order, once per preparation. The
+reader reuses those document results within that preparation and delegates
+other paths. Preparing again resets reuse; this is not a persistent cache."
+  (unless (and (list? paths) (every string? paths) (procedure? read-document))
+    (error "module session requires source paths and a reader" paths read-document))
+  (let ((prepared (make-hash-table)))
+    (define (replay! trace)
+      (for-each depend-on! (trace-inputs trace))
+      (when (hash-ref trace 'uncached) (disable-cache!)))
+    (define (prepare)
+      (set! prepared (make-hash-table))
+      (let* ((next (make-hash-table))
+             (paths (delete-duplicates (map canonicalize-path paths) string=?)))
+        (for-each
+          (lambda (path)
+            (let* ((trace (make-hash-table))
+                   (document
+                     (call-with-input-trace trace
+                       (lambda () (depend-on! path) (read-document path)))))
+              (hash-set! next path (cons document trace))
+              (replay! trace)))
+          paths)
+        (set! prepared next)
+        paths))
+    (define (read path)
+      (let ((entry (hash-ref prepared (canonicalize-path path))))
+        (if entry
+            (begin (replay! (cdr entry)) (car entry))
+            (read-document path))))
+    (values prepare read)))
+
 (define* (make-scribble-document-reader
            #:optional (environment #f)
            #:key (timings #f)
@@ -61,15 +98,20 @@ within a document. Shared environments and checks always evaluate sources."
       (lambda (port)
         (set-port-encoding! port "UTF-8")
         (let* ((environment (or environment (environment-factory)))
+               (defined-modules '())
                (document
                 (scribble-evaluate-document port
                                             environment
                                             path
-                                            #:module-changed (lambda (_) (disable-cache!))
+                                            #:module-changed
+                                            (lambda (module)
+                                              (set! defined-modules (cons module defined-modules))
+                                              (disable-cache!))
                                             #:timings (and timings
                                                        (lambda (phase seconds)
                                                          (timings path phase seconds))))))
-          (when (current-input-trace) (record-module-inputs! environment))
+          (when (current-input-trace)
+            (for-each record-module-inputs! (cons environment defined-modules)))
           (unless (content-document? document)
             (error "Scribble source requires a content document" path))
           document))))
