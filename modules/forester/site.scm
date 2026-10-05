@@ -7,6 +7,7 @@
   #:use-module (grove ir)
   #:use-module (grove site)
   #:use-module ((forester private content-index) #:prefix content-index:)
+  #:use-module ((forester private query-output) #:prefix query-output:)
   #:use-module ((forester composition) #:prefix composition:)
   #:use-module (forester relations)
   #:use-module (forester input scribble)
@@ -294,60 +295,21 @@
             (or (assq-ref location 'column) 1))
           ""))))
 
-(define (query-output-content forest page request)
-  (let* ((query (content-element-property request 'query))
-         (source (query-source-label page request))
-         (result
-           (catch #t
-             (lambda () (query forest (site-page-id page)))
-             (lambda (key . args)
-               (error (format #f "Forester query failed at ~a: ~s"
-                              source (cons key args)))))))
-    (define (validate-query-link target)
-      (catch #t
-        (lambda ()
-          (find-page forest target))
-        (lambda (key . args)
-          (error (format #f "Invalid query link at ~a to ~s: ~s"
-                         source target (cons key args))))))
-    (define (prepare content)
-      (cond
-        ((content-element? content)
-         (let ((kind (content-element-kind content)))
-           (when (memq kind '(forest-query subtree))
-             (error (format #f
-               "Forester query at ~a returned unsupported ~a content"
-               source kind)))
-           (let* ((kind (case kind
-                          ((link) 'query-link)
-                          ((transclude) 'query-transclude)
-                          (else kind)))
-                  (element
-                    (make-content-element
-                      kind (map prepare (content-element-children content))
-                      (content-element-source content)
-                      #:properties (content-element-properties content)
-                      #:style (content-element-style content)
-                      #:flow-kind (content-element-flow-kind content))))
-             (when (memq kind '(query-link query-transclude))
-               (validate-query-link
-                 (content-element-property element 'target)))
-             element)))
-        (else content)))
-    (unless (content-document? result)
-      (error (format #f
-        "Forester query at ~a must return a content document, got ~s"
-        source result)))
-    (make-content-document
-      (map prepare (content-document-children result))
-      (content-document-source result))))
-
 (define (resolve-page-queries forest page)
   (define (resolve content)
     (if (and (content-element? content)
              (eq? (content-element-kind content) 'forest-query))
-        (content-document-children
-          (query-output-content forest page content))
+        (let* ((source (query-source-label page content))
+               (query (content-element-property content 'query))
+               (result
+                 (catch #t
+                   (lambda () (query forest (site-page-id page)))
+                   (lambda (key . args)
+                     (error (format #f "Forester query failed at ~a: ~s"
+                                    source (cons key args)))))))
+          (content-document-children
+            (query-output:prepare-query-output result source
+              (lambda (target) (find-page forest target)))))
         (list content)))
   (make-content-document
     (append-map resolve (content-document-children
