@@ -70,9 +70,15 @@
 (define (channel-description site)
   (or (site-description site) (site-title site)))
 
+(define (rss-stylesheet-url? url)
+  (and (string? url)
+       (not (string-null? url))
+       (not (string-any char-whitespace? url))))
+
 (define* (render-rss forest #:key site-url
                             (feed-path "feed.xml")
-                            (routes (make-html-routes #:home-page "index")))
+                            (routes (make-html-routes #:home-page "index"))
+                            stylesheet-url)
   (unless (forest? forest)
     (error "Forester RSS renderer requires a forest" forest))
   (unless (web-url? site-url)
@@ -82,6 +88,9 @@
     (error "RSS feed path must be a relative artifact path" feed-path))
   (unless (html-routes? routes)
     (error "Forester RSS renderer requires HTML routes" routes))
+  (when (and stylesheet-url (not (rss-stylesheet-url? stylesheet-url)))
+    (error "RSS stylesheet URL must be a non-empty URL without whitespace"
+           stylesheet-url))
   (let* ((base (web-base-url site-url))
          (site (site forest))
          (home-url (web-absolute-route-url base (html-index-url routes)))
@@ -109,6 +118,12 @@
          (content
            (string-append
              "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+             (if stylesheet-url
+                 (string-append
+                   "<?xml-stylesheet type=\"text/xsl\" href=\""
+                   (web-xml-escape stylesheet-url)
+                   "\"?>\n")
+                 "")
              "<rss version=\"2.0\">\n"
              "  <channel>\n"
              "    <title>" (web-xml-escape (site-title site)) "</title>\n"
@@ -124,16 +139,18 @@
 (define* (make-rss-renderer #:key site-url
                                      (feed-path "feed.xml")
                                      (routes (make-html-routes #:home-page "index"))
+                                     stylesheet-url
                                      (cache? #t))
   (let ((render (lambda (forest)
                   (render-rss forest
                                      #:site-url site-url
                                      #:feed-path feed-path
-                                     #:routes routes))))
+                                     #:routes routes
+                                     #:stylesheet-url stylesheet-url))))
     (make-cached-renderer render #:cache? cache?
           #:configuration
           (lambda (forest)
-            (list 'rss site-url feed-path
+            (list 'rss site-url feed-path stylesheet-url
                   (site-title (site forest)) (site-description (site forest))
                   (html-index-url routes)
                   (html-route-table routes

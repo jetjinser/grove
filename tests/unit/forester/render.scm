@@ -356,6 +356,25 @@
          (not (string-contains
                 sitemap "https://notes.example/published/notes/algebra.html"))))
 
+(let* ((forest (make-forest (make-site (list algebra limits))))
+       (feed (artifact-content
+               (car (render-rss forest #:site-url "https://notes.example"))))
+       (styled-feed
+         (artifact-content
+           (car (render-rss forest
+                  #:site-url "https://notes.example"
+                  #:stylesheet-url "feed.xsl?theme=light&view=full")))))
+  (test-assert "RSS stylesheet is omitted by default"
+    (not (string-contains feed "xml-stylesheet")))
+  (test-assert "RSS can link an escaped XSL stylesheet"
+    (string-contains styled-feed
+      (string-append
+        "<?xml-stylesheet type=\"text/xsl\" "
+        "href=\"feed.xsl?theme=light&amp;view=full\"?>\n<rss")))
+  (test-error "RSS stylesheet URLs cannot contain whitespace" #t
+    (render-rss forest #:site-url "https://notes.example"
+      #:stylesheet-url "feed style.xsl")))
+
 (let* ((pages
          (list
            (make-site-page "older" "Older" (make-content-document '())
