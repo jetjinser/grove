@@ -40,6 +40,10 @@ address with the `#:id` option:
 Ordinary text in a subtree is decoded into paragraphs using the same blank-line
 rules as a root document. Direct `summary`, `published`, and `updated` commands
 are extracted as frontmatter; `tag` and `taxon` remain queryable content nodes.
+Each accepts one value: `@tag["algebra"]` or `@taxon["theorem"]`, without a
+body or separate label. Values are normalized to lowercase. Topic selectors
+and reference classification are case-insensitive; queries enumerate lowercase
+values. Differently cased declarations of the same tag count as duplicates.
 The subtree declaration's source location is retained in its page metadata.
 
 Shared Scheme bindings belong at document top level, before the subtree that
@@ -138,9 +142,9 @@ omitted labels keep their defaults:
   #:reference-taxon-id "Bibliography")
 ```
 
-The default reference taxon ID is `Reference`, following JMS Forester's
+The default reference taxon ID is `reference`, following JMS Forester's
 reference classification. Mark a reference page with a matching taxon, for
-example `@taxon["Reference"]{Reference}`. Projects with another taxonomy can
+example `@taxon["reference"]`. Projects with another taxonomy can
 override the ID through `#:reference-taxon-id`.
 
 ## Scheme API

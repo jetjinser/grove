@@ -323,7 +323,7 @@
 
 (let* ((citation
          (make-site-page "citation" "A citation"
-           (evaluate-document "@taxon[\"Reference\"]{Reference}")
+           (evaluate-document "@taxon[\"ReFeReNcE\"]")
            "plants/citation.plant"))
        (idea
          (make-site-page "idea" "A related idea"
@@ -367,6 +367,9 @@
     (and (member "plants/idea.plant" (page-source-paths forest source) string=?)
          (member "plants/citation.plant" (page-source-paths forest source)
                  string=?)))
+  (test-equal "reference classification is case-insensitive"
+    '("citation")
+    (map site-page-id (reference-pages forest "source" "REFERENCE")))
   (test-equal "Related can use a project-specific reference taxon ID"
     '("idea")
     (map site-page-id
@@ -455,7 +458,7 @@
             (make-site
               (list (make-site-page "frontmatter" "Root"
                       (evaluate-document
-                        "@subtree[#:id \"child\"]{@title{Child}@summary{Child summary}@published{2026-01-01}@tag[\"nested\"]{Nested}@taxon[\"Lemma\"]{Lemma}@paragraph{Child body.}}" "frontmatter.plant"))))))
+                        "@subtree[#:id \"child\"]{@title{Child}@summary{Child summary}@published{2026-01-01}@tag[\"nested\"]@taxon[\"lemma\"]@paragraph{Child body.}}" "frontmatter.plant"))))))
        (child (find-page forest "child")))
   (test-equal "subtree uses root frontmatter extraction"
     "Child summary" (assq-ref (site-page-metadata child) 'summary))

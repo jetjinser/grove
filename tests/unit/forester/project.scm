@@ -68,8 +68,8 @@
         "@summary{A short algebra note.}\n"
         "@published{2026-09-27}\n"
         "@updated{2026-09-28}\n"
-        "@taxon[\"mathematics\"]{Mathematics}\n"
-        "@tag[\"algebra\"]{Algebra}\n"
+        "@taxon[\"MaThEmAtIcS\"]\n"
+        "@tag[\"AlGeBrA\"]\n"
         "@subtree[#:id \"quadratic-equations\"]{@title{Quadratic equations}}\n"
         "@paragraph{See @link[\"limits\"]{limits}. "
         "@tex-math{x^2+y^2=z^2}}\n"
@@ -79,8 +79,8 @@
       (string-append
         "@use-modules[(tests unit forester linked commands)]\n"
         "@title{Limits}\n"
-        "@taxon[\"mathematics\"]{Mathematics}\n"
-        "@tag[\"analysis\"]{Analysis}\n"
+        "@taxon[\"mathematics\"]\n"
+        "@tag[\"analysis\"]\n"
         "@paragraph{See @link[\"algebra\"]{algebra}. "
         "Read @link[\"quadratic-equations\"]{about quadratics}.}"))
     (write-test-file
@@ -233,13 +233,22 @@
                        (read-page
                          (string-append mathematics-directory "/limits.plant")))))))
           (test-equal "miniKanren queries topic membership and labels"
-            '(("algebra" "Mathematics") ("limits" "Mathematics"))
+            '(("algebra" "mathematics") ("limits" "mathematics"))
             (query (page-id label)
               (topic-membero
                 (content-node-relation forest)
                 "mathematics"
                 page-id
                 label)))
+          (test-equal "topic relations normalize selectors bound by earlier goals"
+            '("algebra" "limits")
+            (query (page-id)
+              (exists (topic label)
+                (== topic "MATHEMATICS")
+                (topic-membero (content-node-relation forest) topic page-id label))))
+          (test-equal "topic helper accepts mixed-case selectors"
+            '("algebra")
+            (topic-page-ids (content-node-relation forest) "ALGEBRA" 'tag))
           (test-equal "topic page helper preserves site ordering"
             '("algebra" "limits")
             (map site-page-id (topic-pages forest "mathematics")))

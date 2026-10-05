@@ -6,7 +6,7 @@
 @title{Limits}
 @summary{A short note connected from the algebra page.}
 @published{2026-09-27}
-@taxon["mathematics"]{Mathematics}
-@tag["analysis"]{Analysis}
+@taxon["mathematics"]
+@tag["analysis"]
 @paragraph{See @link["math-0001"]{the algebra note}.}
 @paragraph{For worked examples, see @link["math-0001-a-few-examples"]{a few examples}.}

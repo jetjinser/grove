@@ -14,7 +14,7 @@
             normalize-backmatter-labels
             check-reference-taxon-id))
 
-(define default-reference-taxon-id "Reference")
+(define default-reference-taxon-id "reference")
 (define default-backmatter-labels
   '((context    . "Context")
     (references . "References")

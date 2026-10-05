@@ -105,18 +105,19 @@
        (char-set-contains? char-set:letter+digit (string-ref id (- (string-length id) 1)))
        (string-every char-set:topic-body id)))
 
-(define (topic-element kind id label)
-  (unless (valid-topic-id? id)
-    (error "Forester topic ID must contain only letters, digits, and hyphens, and begin/end with a letter or digit"
-           id))
-  (make-content-element kind label #:properties `((id . ,id))
-                        #:flow-kind 'block))
+(define (topic-element kind value)
+  (unless (valid-topic-id? value)
+    (error "Forester topic must contain only letters, digits, and hyphens, and begin/end with a letter or digit"
+           value))
+  (let ((value (string-downcase value)))
+    (make-content-element kind (list value) #:properties `((id . ,value))
+                          #:flow-kind 'block)))
 
-(define-public (tag id . labels)
-  (topic-element 'tag id (if (null? labels) (list id) labels)))
+(define-public (tag value)
+  (topic-element 'tag value))
 
-(define-public (taxon id . labels)
-  (topic-element 'taxon id (if (null? labels) (list id) labels)))
+(define-public (taxon value)
+  (topic-element 'taxon value))
 
 (define*-public (subtree #:key [id #f] [open? #t] [style #f] . arguments)
   (unless (boolean? open?)

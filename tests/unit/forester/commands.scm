@@ -5,6 +5,7 @@
 (define-module (tests unit forester commands)
   #:use-module (srfi srfi-64)
   #:use-module (forester commands)
+  #:use-module (forester input scribble)
   #:use-module (grove ir)
   #:use-module (grove style)
   #:use-module (grove render html)
@@ -46,10 +47,13 @@
       (test-equal (format #f "~a is block-level" kind)
         'block
         (content-element-flow-kind element)))
-    (let ((element (constructor "topic" "display " "name")))
-      (test-equal (format #f "~a preserves explicitly supplied labels" kind)
-        "display name"
-        (label-text element))))
+    (let ((element (constructor "MiXeD-Topic")))
+      (test-equal (format #f "~a normalizes its single value" kind)
+        "mixed-topic" (content-element-property element 'id))
+      (test-equal (format #f "~a derives its text from the canonical value" kind)
+        "mixed-topic" (label-text element)))
+    (test-error (format #f "~a rejects a separate label" kind) #t
+      (constructor "topic" "label")))
   (list tag taxon)
   '(tag taxon))
 
@@ -58,6 +62,11 @@
     (test-error (format #f "topic IDs reject ~s" invalid-id) #t
       (tag invalid-id)))
   '("" "-leading" "trailing-" "not valid"))
+
+(test-error "differently cased tags are duplicate metadata" #t
+  (document->tree-page "page"
+    (evaluate-document "@title{Page}@tag[\"Logic\"]@tag[\"logic\"]")
+    "page.plant"))
 
 (let ((element (image "diagram.svg" "A " "diagram")))
   (test-equal "images retain their source property"

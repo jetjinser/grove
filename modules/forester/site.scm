@@ -270,7 +270,7 @@
             (pages forest))))
 
 (define* (related-pages forest page-id
-                        #:optional (reference-taxon-id "Reference"))
+                        #:optional (reference-taxon-id "reference"))
   "Return direct link targets except pages in the reference taxon."
   (let ((reference-page-ids
           (map site-page-id
@@ -284,7 +284,7 @@
                    string=?)))))
 
 (define* (reference-pages forest page-id
-                          #:optional (reference-taxon-id "Reference"))
+                          #:optional (reference-taxon-id "reference"))
   "Return reference-taxon pages linked from this tree and its composition."
   (let ((reference-page-ids
           (map site-page-id
@@ -316,13 +316,9 @@
           (unless (and (non-empty-string? id)
                        (non-empty-string? label))
             (error "invalid topic IR element" topic))
-          (let ((same-id
-                  (find (lambda (candidate)
-                          (string=? id (cadr candidate)))
-                        topics)))
-            (unless (string=? label (caddr same-id))
-              (error "inconsistent labels for Forester topic"
-                     id (caddr same-id) label)))))
+          (unless (and (string=? id (string-downcase id))
+                       (string=? id label))
+            (error "topic IR must contain one canonical lowercase value" topic))))
       topics)))
 
 (define (content-node-facts pages)

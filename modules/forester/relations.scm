@@ -144,22 +144,19 @@
           succeed
           fail))))
 
+(define-relation (topic-ido relation node-id topic-id)
+  (exists (stored-id)
+    (node-propertyo relation node-id 'id stored-id)
+    ;; Ground selectors are case-insensitive; enumerated answers are canonical.
+    (project (topic-id)
+      (== stored-id (if (string? topic-id) (string-downcase topic-id) topic-id)))))
+
 (define-relation (topic-membero relation topic-id page-id label)
-  (either
-    ((exists (node-id)
-       (nodeo relation
-              (node-id node-id)
-              (page-id page-id)
-              (kind 'tag)
-              (text label))
-       (node-propertyo relation node-id 'id topic-id)))
-    ((exists (node-id)
-       (nodeo relation
-              (node-id node-id)
-              (page-id page-id)
-              (kind 'taxon)
-              (text label))
-       (node-propertyo relation node-id 'id topic-id)))))
+  (exists (node-id kind)
+    (nodeo relation (node-id node-id) (page-id page-id)
+           (kind kind) (text label))
+    (either ((== kind 'tag)) ((== kind 'taxon)))
+    (topic-ido relation node-id topic-id)))
 
 (define* (topic-page-ids relation topic-id #:optional kind)
   (delete-duplicates
@@ -170,7 +167,7 @@
                    (node-id node-id)
                    (kind kind)
                    (page-id page-id))
-            (node-propertyo relation node-id 'id topic-id)))
+            (topic-ido relation node-id topic-id)))
         (query (page-id)
           (exists (label)
             (topic-membero relation topic-id page-id label))))

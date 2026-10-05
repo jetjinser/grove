@@ -162,11 +162,11 @@
            #:properties '((target . "target"))))
        (tag-node
          (make-content-element
-           'tag (list "Tutorial")
+           'tag (list "tutorial")
            #:properties '((id . "tutorial"))))
        (taxon-node
          (make-content-element
-           'taxon (list "Mathematics")
+           'taxon (list "mathematics")
            #:properties '((id . "mathematics"))))
        (subtree-node
          (make-content-element
@@ -223,10 +223,10 @@
     (content-element-kind
       (content-node forest (car math-paragraph-ids))))
   (test-equal "tag IR is queryable as a page topic"
-    '(("query-article" "Tutorial"))
+    '(("query-article" "tutorial"))
     tutorial-pages)
   (test-equal "taxon IR is queryable through the same topic relation"
-    '(("query-article" "Mathematics"))
+    '(("query-article" "mathematics"))
     math-pages)
   (test-equal "link nodes and their target properties remain in content IR"
     '("target")
