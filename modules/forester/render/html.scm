@@ -74,7 +74,9 @@
           (subtree-content-sxml forest routes target (string-append anchor "--") (1+ depth) highlighters
                                 #:title-decoration title-decoration)
           #:anchor anchor #:depth (1+ depth)
-          #:title-decoration (if title-decoration (title-decoration id) '())
+          #:title-decoration (if title-decoration
+                                 (title-decoration forest id)
+                                 '())
           #:open? (if (assq 'open? (content-element-properties element))
                       (content-element-property element 'open?) #t))))
     (content->sxml
@@ -208,7 +210,9 @@
            (let* ((target-id (tree-occurrence-target element))
                   (target (find-page forest target-id))
                   (anchor (format #f "~atree-~a" prefix position))
-                  (decoration (if title-decoration (title-decoration target-id) '()))
+                  (decoration (if title-decoration
+                                  (title-decoration forest target-id)
+                                  '()))
                   (nested (entries target-id (string-append anchor "--"))))
              `(li (a (@ (href ,(string-append "#" anchor)))
                      ,@decoration
@@ -314,7 +318,7 @@
                  #:anchor (string-append "tree-root-" (site-page-id page))
                  #:depth 1
                  #:title-decoration (if title-decoration
-                                        (title-decoration (site-page-id page))
+                                        (title-decoration forest (site-page-id page))
                                         '())))
          (article (append (list tree)
                           (backmatter-sxml forest page routes backmatter

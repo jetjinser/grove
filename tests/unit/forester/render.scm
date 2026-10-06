@@ -644,17 +644,40 @@
        (html (assoc-ref
                (site->html forest #:routes routes
                  #:title-decoration
-                 (lambda (id)
-                   (if (string=? id "overview")
-                       '((span (@ (class "taxon")) "overview. "))
-                       '())))
+                 (lambda (forest id)
+                   (let ((page (find-page forest id)))
+                     (if (string=? id "overview")
+                         `((span (@ (class "taxon")) "overview. ")
+                           (span (@ (class "source"))
+                             ,(or (site-page-source page) "?")))
+                         '()))))
                "target")))
   (test-assert "title-decoration decorates tree headings"
     (string-contains html
-      "<h2 class=\"forest-tree-title\"><span class=\"taxon\">overview. </span><span>Overview</span>"))
+      "<h2 class=\"forest-tree-title\"><span class=\"taxon\">overview. </span><span class=\"source\">?</span><span>Overview</span>"))
+  (test-assert "title-decoration reads the page through the forest"
+    (string-contains html
+      "<span class=\"source\">?</span>"))
   (test-assert "title-decoration decorates the table of contents"
     (string-contains html
-      "href=\"#tree-1\"><span class=\"taxon\">overview. </span>Overview</a>")))
+      "href=\"#tree-1\"><span class=\"taxon\">overview. </span><span class=\"source\">?</span>Overview</a>")))
+
+(let* ((annotated
+         (make-site-page "annotated" "Annotated"
+           (evaluate-document "@paragraph{Body}")
+           #:metadata '((summary . "A summary"))))
+       (forest (make-forest (make-site (list annotated) #:home "annotated")))
+       (html (assoc-ref
+               (site->html forest #:routes (make-html-routes)
+                 #:title-decoration
+                 (lambda (forest id)
+                   (let ((page (find-page forest id)))
+                     (if (assq-ref (site-page-metadata page) 'summary)
+                         '((span (@ (class "summary")) "S"))
+                         '()))))
+               "annotated")))
+  (test-assert "title-decoration reads page metadata through the forest"
+    (string-contains html "<span class=\"summary\">S</span>")))
 
 (let* ((forest (make-forest (make-site (list algebra limits))))
        (routes (make-html-routes #:home-page "algebra"))
