@@ -24,12 +24,21 @@
 (define (line-text text)
   (string-join (string-tokenize text) " "))
 
+(define (marked-line kind text)
+  (string-append (string #\x1e) (string kind) text))
+
+(define (link-line url label)
+  (string-append "\n" (marked-line #\L
+    (string-append "=> " url
+      (if (string-null? label) "" (string-append " " label)))) "\n"))
+
 (define (page-content-handlers forest routes page)
   (let ((references (outgoing-references forest (site-page-id page))))
     `((tag . ,(lambda (_ body) ""))
       (taxon . ,(lambda (_ body) ""))
       (item . ,(lambda (_ body)
-                 (string-append "\n* " (line-text body) "\n")))
+                 (string-append "\n" (marked-line #\M
+                   (string-append "* " (line-text body))) "\n")))
       (link . ,(lambda (_ body)
                  (when (null? references)
                    (error "Gemtext link rendering exceeded its index"
@@ -43,11 +52,8 @@
                                                (reference-target-page-id reference))))
                         (label (line-text body)))
                    (set! references (cdr references))
-                   (string-append "\n=> " url
-                                  (if (string-null? label)
-                                      (string-append " " (site-page-title target))
-                                      (string-append " " label))
-                                  "\n"))))
+                   (link-line url
+                     (if (string-null? label) (site-page-title target) label)))))
       (query-link . ,(lambda (element body)
                        (let* ((target-id (content-element-property element 'target))
                               (target (find-page forest target-id))
@@ -55,11 +61,9 @@
                                      (text-page-path routes (site-page-id page))
                                      (text-page-path routes target-id)))
                               (label (line-text body)))
-                         (string-append "\n=> " url
+                         (link-line url
                            (if (string-null? label)
-                               (string-append " " (site-page-title target))
-                               (string-append " " label))
-                           "\n"))))
+                               (site-page-title target) label)))))
       (image . ,(lambda (element body)
                   (let* ((source (content-element-property element 'source))
                          (url (if (or (string-prefix? "https://" source)
@@ -70,15 +74,13 @@
                                     (text-page-path routes (site-page-id page))
                                     source)))
                          (label (line-text body)))
-                    (string-append "\n=> " url
-                                   (if (string-null? label) ""
-                                       (string-append " " label))
-                                   "\n"))))
+                    (link-line url label))))
       (code-block . ,(lambda (element body)
                        (when (any (lambda (line) (string-prefix? "```" line))
                                   (string-split body #\newline))
-                         (error "Gemtext code block contains a fence line" page))
-                       (string-append "\n```"
+                         (error "Gemtext code block in page ~a contains a fence line"
+                                (site-page-id page)))
+                       (string-append "\n" (marked-line #\F "```")
                                       (let ((language
                                               (content-element-property
                                                 element 'language)))
@@ -87,7 +89,7 @@
                                             ""))
                                       "\n" body
                                       (if (string-suffix? "\n" body) "" "\n")
-                                      "```\n"))))))
+                                      (marked-line #\F "```") "\n"))))))
 
 (define (page-body forest routes page)
   (content->text (site-page-document page)
@@ -101,28 +103,59 @@
                       (url (text-relative-path
                              (text-page-path routes (site-page-id page))
                              (text-page-path routes id))))
-                 (string-append "\n=> " url " "
-                                (line-text (site-page-title target)) "\n")))))
+                 (link-line url (site-page-title target))))))
          '(subtree transclude query-transclude))))
 
 (define (title-line title)
-  (string-append "# " (line-text title) "\n\n"))
+  (string-append (marked-line #\H
+                 (string-append "# " (line-text title))) "\n\n"))
+
+(define (gemtext-syntax-line? line)
+  (or (string-prefix? "=>" line)
+      (string-prefix? "#" line)
+      (string-prefix? "* " line)
+      (string-prefix? ">" line)
+      (string-prefix? "```" line)))
+
+(define (finish-gemtext text)
+  (let loop ((lines (string-split text #\newline))
+             (preformatted? #f)
+             (result '()))
+    (if (null? lines)
+        (string-join (reverse result) "\n")
+        (let* ((line (car lines))
+               (marked? (and (>= (string-length line) 2)
+                             (char=? (string-ref line 0) #\x1e)))
+               (kind (and marked? (string-ref line 1)))
+               (body (if marked? (substring line 2) line))
+               (fence? (and marked? (char=? kind #\F)))
+               (next-preformatted? (if fence? (not preformatted?)
+                                       preformatted?))
+               (finished
+                 (cond
+                   ((and marked? (memv kind '(#\H #\L #\M #\F))) body)
+                   (preformatted? body)
+                   ((gemtext-syntax-line? body) (string-append " " body))
+                   (else body))))
+          (loop (cdr lines) next-preformatted? (cons finished result))))))
 
 (define (index->gemtext forest routes)
-  (string-append
+  (finish-gemtext
+   (string-append
     (title-line (site-title (site forest)))
     (string-concatenate
       (map (lambda (page)
-             (string-append "=> "
+             (string-append (marked-line #\L "=> ")
                (text-relative-path (text-index-path routes)
                  (text-page-path routes (site-page-id page)))
                " " (line-text (site-page-title page)) "\n"))
-           (pages forest)))))
+           (pages forest))))))
 
 (define (page->gemtext forest routes page)
   (let ((body (page-body forest routes page)))
-    (string-append (title-line (site-page-title page)) body
-                   (if (string-suffix? "\n" body) "" "\n"))))
+    (finish-gemtext
+      (string-append (title-line (site-page-title page)) body
+                     (if (string-suffix? "\n" body) "" "\n")))))
 
 (define (check-routes forest routes)
   (let ((paths (cons (text-index-path routes)

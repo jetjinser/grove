@@ -74,6 +74,30 @@
   (test-assert "Gemtext uses native list and preformatted code syntax"
     (and (string-contains page "* A list item")
          (string-contains page "``` scheme\n(+ 1 2)\n```"))))
+
+(let* ((page
+         (make-site-page "literal" "Literal syntax"
+           (make-content-document
+             (list (make-content-element 'paragraph
+                     (list "# This is prose\n=> not a link\n* not a list\n> not a quote\n```"))))))
+       (forest (make-forest (make-site (list page))))
+       (output (cdr (assoc "literal" (site->gemtext forest)))))
+  (test-assert "Gemtext keeps markup-like source lines as ordinary text"
+    (and (string-contains output "\n # This is prose")
+         (string-contains output "\n => not a link")
+         (string-contains output "\n * not a list")
+         (string-contains output "\n > not a quote")
+         (string-contains output "\n ```"))))
+
+(test-error "Gemtext reports code blocks containing fence lines" #t
+  (render-gemtext
+    (make-forest
+      (make-site
+        (list
+          (make-site-page "bad-code" "Bad code"
+            (make-content-document
+              (list (make-content-element 'code-block
+                      (list (make-content-text "before\n```\nafter")))))))))))
 (let* ((paragraph-node
          (car (content-document-children (site-page-document algebra))))
        (link-node (cadr (content-element-children paragraph-node)))
