@@ -46,6 +46,7 @@
               racket
 
               guile
+              guile-ssh
               guile-gcrypt
               guile-quickcheck
               self'.packages.blue
@@ -63,6 +64,10 @@
               {
                 name = "GUILE_LOAD_COMPILED_PATH";
                 prefix = "$DEVSHELL_DIR/${pkgs.guile.siteCcacheDir}";
+              }
+              {
+                name = "GUILE_EXTENSIONS_PATH";
+                prefix = "$DEVSHELL_DIR/lib/guile/${builtins.baseNameOf pkgs.guile.siteDir}/extensions";
               }
             ];
           };

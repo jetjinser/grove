@@ -25,6 +25,7 @@
   '("unit/scribble/read.scm"
     "unit/grove/highlight.scm"
     "unit/grove/highlight-html.scm"
+    "unit/forester/browse.scm"
     "unit/grove/cli-progress.scm"
     "unit/grove/math.scm"
     "unit/grove/differentiation.scm"

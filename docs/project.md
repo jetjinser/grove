@@ -40,9 +40,29 @@ Validation rejects duplicate, reserved, and conflicting output paths. Writing
 preserves unchanged files and removes obsolete manifest-owned artifacts; other
 files remain untouched. Writing is not transactional across the directory.
 
-Site HTML routes require an explicit `#:home-page`. File-backed tree IDs are
-basenames without `.plant`; directories do not qualify IDs. Named subtrees
-share that namespace. See [composition](forester-composition.md) for tree rules.
+A site declares its start tree once with `make-site-project #:home ID`. HTML
+routes may then omit `#:home-page`; the HTML renderer resolves the index from
+the site. File-backed tree IDs are basenames without `.plant`; directories do
+not qualify IDs. Named subtrees share that namespace. See
+[composition](forester-composition.md) for tree rules.
+
+`analyze-project` runs collection, preparation, reading, and analysis without
+rendering or touching published state. `browse-project` uses it and calls the
+project's optional `#:browse` callback with the analyzed model, input, and
+output ports. Grove's `grove browse` command drives this path; a Forester
+project wires `#:browse (make-forest-browser)` to read the Forest directly in
+the terminal instead of reading rendered HTML or Gemtext.
+
+Add `--ssh PORT` (with `--host-key` and `--authorized-keys`) to serve the same
+browse callback over SSH. The optional `(grove ssh)` module requires guile-ssh
+and is loaded on demand, so the base install does not depend on libssh. It
+accepts only public-key authentication, never executes a client command, and
+hands the session channel to the project callback as its input and output.
+
+```sh
+grove browse --project project.scm \
+  --ssh 2222 --host-key host_rsa --authorized-keys authorized_keys
+```
 
 Add a Gemtext renderer to `#:renderers` to emit static files for a Gemini
 server:

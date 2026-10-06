@@ -20,7 +20,8 @@
             site-pages
             site-sources
             site-title
-            site-description))
+            site-description
+            site-home))
 
 (define-record-type <site-page>
   (%make-site-page id title document source metadata)
@@ -55,15 +56,16 @@
   (%make-site-page id title document source metadata))
 
 (define-record-type <site>
-  (%make-site pages title sources description)
+  (%make-site pages title sources description home)
   site?
   (pages site-pages)
   (title site-title)
   (sources site-sources)
-  (description site-description))
+  (description site-description)
+  (home site-home))
 
 (define* (make-site pages #:key (title "Site") (description #f)
-                    (sources '()))
+                    (sources '()) (home #f))
   (unless (every site-page? pages)
     (error "site requires pages" pages))
   (unless (non-empty-string? title)
@@ -73,6 +75,8 @@
     (error "site description must be a non-empty string or #f" description))
   (unless (and (list? sources) (every string? sources))
     (error "site sources must be a list of paths" sources))
+  (unless (or (not home) (non-empty-string? home))
+    (error "site home must be a page ID or #f" home))
   (let* ((ids (map site-page-id pages))
          (duplicate (find (lambda (id)
                             (> (count (lambda (candidate)
@@ -89,4 +93,6 @@
                      (filter (lambda (page)
                                (equal? duplicate (site-page-id page)))
                              pages)))))
-    (%make-site pages title sources description)))
+    (when (and home (not (member home ids string=?)))
+      (error "site home page was not found" home))
+    (%make-site pages title sources description home)))

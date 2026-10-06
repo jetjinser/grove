@@ -65,6 +65,7 @@ A project's `project.scm` returns its configuration. From that directory:
 | `grove build` | Build outputs, reusing cached results where possible. |
 | `grove check` | Run the complete pipeline without writing outputs. |
 | `grove serve` | Preview at `http://127.0.0.1:8080/` and rebuild after edits. |
+| `grove browse` | Analyze the project and browse its model in the terminal. |
 | `grove new` | Create a tree using the project's default prefix. |
 
 Set `#:default-prefix "jsk"` to create addresses such as `jsk-0001` and

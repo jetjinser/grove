@@ -103,6 +103,7 @@
 
 (define +forester-sources+
   '("forester/backmatter.scm"
+    "forester/browse.scm"
     "forester/commands.scm"
     "forester/composition.scm"
     "forester/private/content-index.scm"

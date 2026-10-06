@@ -4,6 +4,7 @@
 
 (define-module (tests unit grove project)
   #:use-module (ice-9 ftw)
+  #:use-module (ice-9 optargs)
   #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
@@ -440,7 +441,43 @@
               2 partial-count)
             (test-equal "new page appears in the complete renderer output set"
               '("index.txt" "pages/first.txt" "pages/fourth.txt")
-              (map artifact-path (build-report-artifacts added-page)))))))))
+              (map artifact-path (build-report-artifacts added-page))))))))
+    (let* ((view-events '())
+           (view-output-directory (string-append project-root "/view-output"))
+           (view-project
+             (make-project
+               #:collect-sources (lambda () '())
+               #:read-source
+               (lambda (path) (call-with-input-file path get-string-all))
+               #:analyze
+               (lambda (context)
+                 (list 'model (length (project-context-inputs context))))
+               #:renderers
+               (list (lambda (model)
+                       (set! view-events (append view-events '(render)))
+                       '()))
+               #:browse
+               (lambda* (model #:key input output)
+                 (set! view-events (append view-events (list 'browse model)))
+                 (format output "browsed ~a\n" (cadr model)))
+               #:output-directory view-output-directory)))
+      (let ((analysis (analyze-project view-project)))
+        (test-equal "analyze-project runs the analysis without renderers"
+          '(model 0)
+          (project-analysis-model analysis))
+        (test-equal "analyze-project invokes no renderer" '() view-events)
+        (test-assert "analyze-project writes no output directory"
+          (not (file-exists? view-output-directory))))
+      (let ((output (open-output-string)))
+        (browse-project view-project
+          #:input (open-input-string "")
+          #:output output)
+        (test-equal "browse-project runs the browser on the model"
+          '(browse (model 0)) view-events)
+        (test-equal "browse-project writes through the provided port"
+          "browsed 0\n" (get-output-string output))
+        (test-assert "browse-project writes no output directory"
+          (not (file-exists? view-output-directory))))))
   (lambda ()
     (for-each
       (lambda (path)

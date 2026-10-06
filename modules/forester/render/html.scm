@@ -296,6 +296,7 @@
 (define (render-html-changed forest style routes mathjax-src backmatter labels
                              reference-taxon-id
                              changed old-artifacts highlighters)
+  (set! routes (resolve-html-routes forest routes))
   (check-html-input forest style routes mathjax-src)
   (let* ((route-table
            (html-route-table routes (map site-page-id (pages forest))))
@@ -309,6 +310,14 @@
                                    backmatter labels reference-taxon-id #f highlighters)))))
                 (pages forest))))
     (append (html-style-artifacts style) page-artifacts)))
+
+(define (resolve-html-routes forest routes)
+  (if (html-home-page routes)
+      routes
+      (let ((home (site-home (site forest))))
+        (unless home
+          (error "HTML routes need a home page; set it on the site or in the routes"))
+        (html-routes-with-home-page routes home))))
 
 (define (check-html-input forest style routes mathjax-src)
   (unless (forest? forest)
@@ -338,6 +347,7 @@
   (validate-backmatter-sections backmatter)
   (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
   (check-reference-taxon-id reference-taxon-id)
+  (set! routes (resolve-html-routes forest routes))
   (check-html-input forest style routes mathjax-src)
   (map (lambda (page)
          (cons (site-page-id page)
@@ -357,6 +367,7 @@
   (validate-backmatter-sections backmatter)
   (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
   (check-reference-taxon-id reference-taxon-id)
+  (set! routes (resolve-html-routes forest routes))
   (check-html-input forest style routes mathjax-src)
   (append
     (html-style-artifacts style)
@@ -396,7 +407,7 @@
           #:configuration
           (lambda (forest)
             (list 'html (site-title (site forest)) (site-description (site forest))
-                  (html-home-page routes)
+                  (or (html-home-page routes) (site-home (site forest)))
                   (html-index-url routes)
                   mathjax-src backmatter backmatter-labels reference-taxon-id
                   (map (lambda (entry)

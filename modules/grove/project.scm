@@ -25,6 +25,7 @@
             project-extra-sources
             project-output-directory
             project-cache?
+            project-browse
             project-with-options
             project-input?
             project-input-path
@@ -43,7 +44,11 @@
             build-report-rendered?
             build-project/report
             build-project
-            check-project))
+            check-project
+            analyze-project
+            project-analysis?
+            project-analysis-model
+            browse-project))
 
 (define-record-type <project-input>
   (make-project-input path value)
@@ -69,10 +74,22 @@
   (affected build-report-affected-artifacts)
   (rendered? build-report-rendered?))
 
+(define-record-type <project-analysis>
+  (%make-project-analysis source-paths prepared-sources inputs context
+                          model trace input-cache-context)
+  project-analysis?
+  (source-paths project-analysis-source-paths)
+  (prepared-sources project-analysis-prepared-sources)
+  (inputs project-analysis-inputs)
+  (context project-analysis-context)
+  (model project-analysis-model)
+  (trace project-analysis-trace)
+  (input-cache-context project-analysis-input-cache-context))
+
 (define-record-type <project>
   (%make-project source-directory source-filter collect-sources prepare
                  extra-sources read-source analyze renderers
-                 output-directory cache? default-prefix tree-template)
+                 output-directory cache? default-prefix tree-template browse)
   project?
   (source-directory project-source-directory)
   (source-filter project-source-filter)
@@ -85,7 +102,8 @@
   (output-directory project-output-directory)
   (cache? project-cache?)
   (default-prefix project-default-prefix)
-  (tree-template project-tree-template))
+  (tree-template project-tree-template)
+  (browse project-browse))
 
 (define* (make-project #:key
                        (source-directory #f)
@@ -100,7 +118,8 @@
                        output-directory
                        (cache? #t)
                        (default-prefix #f)
-                       (tree-template #f))
+                       (tree-template #f)
+                       (browse #f))
   (unless (and (or (not source-directory) (string? source-directory))
                (procedure? source-filter)
                (or (not collect-sources) (procedure? collect-sources))
@@ -130,12 +149,14 @@
     (error "project default prefix must be a non-empty string" default-prefix))
   (unless (or (not tree-template) (procedure? tree-template))
     (error "project tree template must be a procedure" tree-template))
+  (unless (or (not browse) (procedure? browse))
+    (error "project browse callback must be a procedure" browse))
   (%make-project source-directory source-filter collect-sources prepare
                  extra-sources read-source analyze
                  (map (lambda (renderer)
                         (if (cached-renderer? renderer) renderer
                             (make-cached-renderer renderer))) renderers)
-                 output-directory cache? default-prefix tree-template))
+                 output-directory cache? default-prefix tree-template browse))
 
 (define* (project-with-options project
                                #:key
@@ -158,7 +179,8 @@
     #:output-directory output-directory
     #:cache? cache?
     #:default-prefix (project-default-prefix project)
-    #:tree-template (project-tree-template project)))
+    #:tree-template (project-tree-template project)
+    #:browse (project-browse project)))
 
 (define (read-source-with-context path read-source)
   (call-with-project-stage 'read path (lambda () (read-source path))))
@@ -386,19 +408,74 @@
                 (append artifacts current)
                 (append owners current-owners))))))
 
+(define* (analyze-project project #:key (write? #f)
+                          (progress (lambda (stage path) #t)))
+  "Collect, read, and analyze PROJECT without rendering or writing outputs.
+Return a project-analysis holding the analyzed model."
+  (unless (project? project)
+    (error "project analysis requires a Grove project" project))
+  (parameterize ((current-input-fingerprints (make-hash-table)))
+    (let* ((source-paths (call-with-project-stage 'collect #f
+                           (lambda ()
+                             (progress 'collect #f)
+                             (let ((paths (collect-project-sources project)))
+                               (progress 'sources (length paths))
+                               paths))))
+           (prepared-sources (begin
+                               (progress 'prepare #f)
+                               (prepare-project-sources (project-prepare project))))
+           (input-cache-context
+             (and write?
+               (make-input-cache-context
+                 (project-output-directory project) (project-cache? project)
+                 (append prepared-sources (project-extra-sources project)
+                         (runtime-inputs)))))
+           (inputs
+             (parameterize ((current-input-cache input-cache-context))
+               (map (lambda (path)
+                      (progress 'read path)
+                      (let ((value (read-source-with-context path
+                                     (project-read-source project))))
+                        (progress 'read-done path)
+                        (make-project-input path value)))
+                    source-paths)))
+           (_ (let ((summary (input-cache-summary input-cache-context)))
+                (when (> (cdr summary) 0) (progress 'input-cache summary))))
+           (context
+             (make-project-context inputs prepared-sources
+                                   (project-extra-sources project)))
+           (trace (make-hash-table))
+           (model (call-with-project-stage 'analyze #f
+                    (lambda ()
+                      (progress 'analyze #f)
+                      (call-with-input-trace trace
+                        (lambda () ((project-analyze project) context))))))
+           (_ (register-input-dependencies! input-cache-context
+                                            (trace-inputs trace))))
+      (%make-project-analysis source-paths prepared-sources inputs context
+                              model trace input-cache-context))))
+
+(define* (browse-project project #:key (progress (lambda (stage path) #t))
+                         (input (current-input-port))
+                         (output (current-output-port)))
+  "Analyze PROJECT without rendering and run its browse callback on the model."
+  (let ((browse (project-browse project)))
+    (unless (procedure? browse)
+      (error "project does not define a #:browse callback"))
+    (let ((analysis (analyze-project project #:write? #f #:progress progress)))
+      (browse (project-analysis-model analysis) #:input input #:output output))))
+
 (define (execute-project project write? progress)
   (unless (project? project)
     (error "project execution requires a Grove project" project))
-  (parameterize ((current-input-fingerprints (make-hash-table)))
-  (let* ((source-paths (call-with-project-stage 'collect #f
-                         (lambda ()
-                           (progress 'collect #f)
-                           (let ((paths (collect-project-sources project)))
-                             (progress 'sources (length paths))
-                             paths))))
-         (prepared-sources (begin
-                            (progress 'prepare #f)
-                            (prepare-project-sources (project-prepare project))))
+  (let* ((analysis (analyze-project project #:write? write? #:progress progress))
+         (source-paths (project-analysis-source-paths analysis))
+         (prepared-sources (project-analysis-prepared-sources analysis))
+         (inputs (project-analysis-inputs analysis))
+         (context (project-analysis-context analysis))
+         (analysis-trace (project-analysis-trace analysis))
+         (model (project-analysis-model analysis))
+         (input-cache-context (project-analysis-input-cache-context analysis))
          (state-path
            (string-append (project-output-directory project) "/"
                           build-state-name))
@@ -412,34 +489,6 @@
                                  (build-state-artifacts previous-state) '()))
          (previous-identity (and previous-state
                                   (build-state-identity previous-state)))
-         (input-cache-context
-           (and write?
-             (make-input-cache-context
-               (project-output-directory project) (project-cache? project)
-               (append prepared-sources (project-extra-sources project)
-                       (runtime-inputs)))))
-         (inputs
-           (parameterize ((current-input-cache input-cache-context))
-             (map (lambda (path)
-                  (progress 'read path)
-                  (let ((value (read-source-with-context path
-                                 (project-read-source project))))
-                    (progress 'read-done path)
-                    (make-project-input path value)))
-                source-paths)))
-         (_ (let ((summary (input-cache-summary input-cache-context)))
-              (when (> (cdr summary) 0) (progress 'input-cache summary))))
-         (context
-           (make-project-context inputs prepared-sources
-                                 (project-extra-sources project)))
-         (analysis-trace (make-hash-table))
-         (model (call-with-project-stage 'analyze #f
-                  (lambda ()
-                    (progress 'analyze #f)
-                    (call-with-input-trace analysis-trace
-                      (lambda () ((project-analyze project) context))))))
-         (_ (register-input-dependencies! input-cache-context
-                                         (trace-inputs analysis-trace)))
          (current-sources
            (map (lambda (path) (list path (input-fingerprint path)))
              (delete-duplicates
@@ -531,7 +580,7 @@
                              owners identity)
           (prune-input-cache! input-cache-context))))
     (%make-build-report (map build-state-source-path current-sources) artifacts added modified removed affected
-                        (not cache-hit?)))))
+                        (not cache-hit?))))
 
 (define* (build-project/report project #:key (progress (lambda (stage path) #t)))
   "Build PROJECT, notifying PROGRESS with a stage symbol and detail."

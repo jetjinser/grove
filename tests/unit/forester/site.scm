@@ -52,8 +52,17 @@
                       (eq? (content-element-kind element) 'paragraph)))
                (content-document-children document))))
 
-(test-error "HTML routes require an explicit home page ID" #t
-  (make-html-routes))
+(test-error "HTML routes reject an empty home page ID" #t
+  (make-html-routes #:home-page ""))
+
+(let* ((document (evaluate-document "@lipsum{}"))
+       (page (make-site-page "lipsum" "Lipsum" document))
+       (forest (make-forest (make-site (list page) #:home "lipsum")))
+       (artifacts (render-html forest #:routes (make-html-routes))))
+  (test-assert "HTML routes derive the home page from the site"
+    (find (lambda (artifact)
+            (string=? "index.html" (artifact-path artifact)))
+          artifacts)))
 
 (let* ((document (evaluate-document "@lipsum{}"))
        (page (make-site-page "lipsum" "Lipsum" document))

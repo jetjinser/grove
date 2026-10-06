@@ -252,7 +252,8 @@
                  (make-site resolved-pages
                    #:title (site-title (site forest))
                    #:description (site-description (site forest))
-                   #:sources (site-sources (site forest)))))
+                   #:sources (site-sources (site forest))
+                   #:home (site-home (site forest)))))
           (validate-query-composition! forest resolved-pages)
           (%make-forest
             resolved-site resolved-pages
@@ -290,7 +291,8 @@
          (_ (make-site pages
                        #:title (site-title site)
                        #:description (site-description site)
-                       #:sources (site-sources site)))
+                       #:sources (site-sources site)
+                       #:home (site-home site)))
          (page-index (make-hash-table))
          (_ (for-each (lambda (page)
                         (hash-set! page-index (site-page-id page) page))

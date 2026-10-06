@@ -14,6 +14,7 @@
             html-route-table
             html-index-path
             html-home-page
+            html-routes-with-home-page
             html-page-url
             html-index-url
             html-asset-url))
@@ -36,13 +37,24 @@
     (error "HTML page path requires a procedure" page-path))
   (unless (artifact-path? index-path)
     (error "HTML index requires a relative artifact path" index-path))
-  (unless (non-empty-string? home-page)
-    (error "HTML home page ID must be a non-empty string" home-page))
+  (unless (or (not home-page) (non-empty-string? home-page))
+    (error "HTML home page ID must be a non-empty string or #f" home-page))
   (unless (and (string? url-prefix)
                (string-prefix? "/" url-prefix)
                (string-suffix? "/" url-prefix))
     (error "HTML URL prefix must begin and end with /" url-prefix))
   (%make-html-routes page-path index-path url-prefix home-page))
+
+(define (html-routes-with-home-page routes home-page)
+  "Return ROUTES with an explicit home page, e.g. from the site."
+  (unless (html-routes? routes)
+    (error "HTML routes with home requires HTML routes" routes))
+  (unless (non-empty-string? home-page)
+    (error "HTML home page ID must be a non-empty string" home-page))
+  (%make-html-routes (html-page-path-procedure routes)
+                     (html-index-path routes)
+                     (html-url-prefix routes)
+                     home-page))
 
 (define (html-page-path routes id)
   (let ((path (if (string=? id (html-home-page routes))

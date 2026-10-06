@@ -22,9 +22,11 @@
                             (analyze (lambda (site) site))
                             (renderers '())
                             output-directory
-                            (cache? #t)
-                            (default-prefix #f)
-                            (tree-template #f))
+                             (cache? #t)
+                             (default-prefix #f)
+                             (tree-template #f)
+                             (home #f)
+                             (browse #f))
   (unless (procedure? read-page)
     (error "site project requires a page reader" read-page))
   (unless (procedure? analyze)
@@ -47,10 +49,11 @@
                          (filter-map site-page-source pages))
                  string=?))
              (site (make-site pages #:title title #:description description
-                              #:sources sources)))
+                              #:sources sources #:home home)))
         (analyze site)))
     #:renderers renderers
     #:output-directory output-directory
     #:cache? cache?
     #:default-prefix default-prefix
-    #:tree-template tree-template))
+    #:tree-template tree-template
+    #:browse browse))

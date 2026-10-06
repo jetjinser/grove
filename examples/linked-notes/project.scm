@@ -4,6 +4,7 @@
 
 (use-modules (ice-9 ftw)
              (ice-9 textual-ports)
+             (forester browse)
              (forester input scribble)
              (forester render graph)
              (forester render gemtext)
@@ -40,7 +41,6 @@
 
 (define notes-routes
   (make-html-routes
-    #:home-page "math-0001"
     #:page-path
     (lambda (id)
       (string-append id ".html"))))
@@ -56,6 +56,7 @@
     #:default-prefix "note"
     #:title "Linked Notes"
     #:description "Connected notes on mathematics and its ideas."
+    #:home "math-0001"
     #:source-directory source-directory
     #:extra-sources (list notes-css-path)
     #:prepare
@@ -80,6 +81,7 @@
             #:path "forest-graph.scm")
           (make-static-assets-renderer
             #:source-directory (string-append examples-directory "/static")))
+    #:browse (make-forest-browser)
     #:output-directory output-directory))
 
 notes-project
