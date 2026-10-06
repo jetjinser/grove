@@ -35,7 +35,12 @@
                           (find (lambda (artifact)
                                   (string=? (artifact-path artifact)
                                             "algebra.gmi"))
-                                artifacts))))
+                                artifacts)))
+       (limits-gemtext (artifact-content
+                         (find (lambda (artifact)
+                                 (string=? (artifact-path artifact)
+                                           "limits.gmi"))
+                               artifacts))))
   (test-assert "Gemtext renderer creates a capsule index and page artifacts"
     (equal? '("index.gmi" "algebra.gmi" "limits.gmi")
             (map artifact-path artifacts)))
@@ -45,8 +50,19 @@
          (string-contains index "=> limits.gmi Limits")))
   (test-assert "Gemtext page titles use headings and keep prose around links"
     (and (string-prefix? "# Algebra & limits\n" algebra-gemtext)
+         (string-contains algebra-gemtext "=> index.gmi Home")
          (string-contains algebra-gemtext "=> limits.gmi limits")
          (string-contains algebra-gemtext "The limits are useful.")))
+  (test-assert "Gemtext pages include configured backlink sections"
+    (and (string-contains limits-gemtext "## Backlinks")
+         (string-contains limits-gemtext "=> algebra.gmi Algebra & limits")))
+  (test-assert "Gemtext backmatter options control sections and labels"
+    (let ((page (cdr (assoc "limits"
+                       (site->gemtext forest
+                         #:backmatter '(backlinks)
+                         #:backmatter-labels '((backlinks . "Linked from")))))))
+      (and (string-contains page "## Linked from")
+           (not (string-contains page "## Related")))))
   (test-assert "Gemtext artifacts retain Forest source dependencies"
     (equal? (source-paths forest) (artifact-sources (car artifacts)))))
 

@@ -8,6 +8,7 @@
   #:use-module (grove output)
   #:use-module (grove render text)
   #:use-module (forester render text routes)
+  #:use-module (forester backmatter)
   #:use-module (forester site)
   #:use-module (grove site)
   #:use-module (web uri)
@@ -163,6 +164,39 @@
                  (string-append "\n" (link-line url (site-page-title target)))))))
          '(subtree transclude query-transclude))))
 
+(define (page-backmatter forest page routes sections labels reference-taxon-id)
+  (define (section heading targets)
+    (if (null? targets)
+        ""
+        (string-append
+          (marked-line #\H (string-append "## " heading)) "\n"
+          (string-concatenate
+            (map (lambda (target)
+                   (link-line
+                     (page-url routes (site-page-id page) (site-page-id target))
+                     (site-page-title target)))
+                 targets))
+          "\n")))
+  (string-concatenate
+    (map (lambda (name)
+           (let ((heading (assq-ref labels name)))
+             (case name
+               ((context)
+                (section heading
+                         (transcluding-pages forest (site-page-id page))))
+               ((references)
+                (section heading
+                         (reference-pages forest (site-page-id page)
+                                          reference-taxon-id)))
+               ((backlinks)
+                (section heading
+                         (backlinks forest (site-page-id page))))
+               ((related)
+                (section heading
+                         (related-pages forest (site-page-id page)
+                                        reference-taxon-id))))))
+         sections)))
+
 (define (title-line title)
   (string-append (marked-line #\H
                  (string-append "# " (line-text title))) "\n\n"))
@@ -208,11 +242,21 @@
                " " (line-text (site-page-title page)) "\n"))
            (pages forest))))))
 
-(define (page->gemtext forest routes page)
+(define (page->gemtext forest routes page backmatter backmatter-labels
+                       reference-taxon-id)
   (let ((body (page-body forest routes page)))
     (finish-gemtext
-      (string-append (title-line (site-page-title page)) body
-                     (if (string-suffix? "\n" body) "" "\n")))))
+      (string-append
+        (title-line (site-page-title page))
+        (link-line (route-uri
+                     (text-relative-path
+                       (text-page-path routes (site-page-id page))
+                       (text-index-path routes)))
+                   "Home")
+        "\n" body
+        (page-backmatter forest page routes backmatter backmatter-labels
+                         reference-taxon-id)
+        (if (string-suffix? "\n" body) "" "\n")))))
 
 (define (check-routes forest routes)
   (let ((paths (cons (text-index-path routes)
@@ -222,16 +266,32 @@
     (unless (= (length paths) (length (delete-duplicates paths string=?)))
       (error "Gemtext routes produce duplicate output paths" paths))))
 
-(define* (site->gemtext forest #:key (routes (default-gemtext-routes)))
+(define* (site->gemtext forest #:key
+                        (routes (default-gemtext-routes))
+                        (backmatter default-backmatter-sections)
+                        (backmatter-labels '())
+                        (reference-taxon-id default-reference-taxon-id))
+  (validate-backmatter-sections backmatter)
+  (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
+  (check-reference-taxon-id reference-taxon-id)
   (unless (forest? forest)
     (error "Forester Gemtext renderer requires a forest" forest))
   (check-routes forest routes)
   (cons (cons "index" (index->gemtext forest routes))
         (map (lambda (page)
-               (cons (site-page-id page) (page->gemtext forest routes page)))
+               (cons (site-page-id page)
+                     (page->gemtext forest routes page backmatter
+                                    backmatter-labels reference-taxon-id)))
              (pages forest))))
 
-(define* (render-gemtext forest #:key (routes (default-gemtext-routes)))
+(define* (render-gemtext forest #:key
+                         (routes (default-gemtext-routes))
+                         (backmatter default-backmatter-sections)
+                         (backmatter-labels '())
+                         (reference-taxon-id default-reference-taxon-id))
+  (validate-backmatter-sections backmatter)
+  (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
+  (check-reference-taxon-id reference-taxon-id)
   (unless (forest? forest)
     (error "Forester Gemtext renderer requires a forest" forest))
   (check-routes forest routes)
@@ -241,19 +301,30 @@
         (map (lambda (page)
                (make-artifact
                  (text-page-path routes (site-page-id page))
-                 (page->gemtext forest routes page)
+                 (page->gemtext forest routes page backmatter
+                                backmatter-labels reference-taxon-id)
                  (page-source-paths forest page)))
              (pages forest))))
 
 (define* (make-gemtext-renderer #:key (prefix #f)
                                 (routes (default-gemtext-routes))
+                                (backmatter default-backmatter-sections)
+                                (backmatter-labels '())
+                                (reference-taxon-id default-reference-taxon-id)
                                 (cache? #t))
+  (validate-backmatter-sections backmatter)
+  (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
+  (check-reference-taxon-id reference-taxon-id)
   (unless (text-routes? routes)
     (error "Gemtext renderer requires text routes" routes))
   (unless (or (not prefix) (artifact-path? prefix))
     (error "Gemtext output prefix must be a relative path or #f" prefix))
   (let ((render (lambda (forest)
-                  (let ((artifacts (render-gemtext forest #:routes routes)))
+                  (let ((artifacts (render-gemtext forest
+                                    #:routes routes
+                                    #:backmatter backmatter
+                                    #:backmatter-labels backmatter-labels
+                                    #:reference-taxon-id reference-taxon-id)))
                     (if prefix (prefix-artifacts prefix artifacts) artifacts)))))
     (make-cached-renderer render #:cache? cache?
       #:configuration
@@ -264,4 +335,5 @@
                            (text-page-path routes (site-page-id page))))
                    (pages forest))
               (text-index-path routes)
+              backmatter backmatter-labels reference-taxon-id
               (site-title (site forest)) (site-description (site forest)))))))
