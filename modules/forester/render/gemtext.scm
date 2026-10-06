@@ -104,6 +104,15 @@
                      (string-append "* " (line-text body))) "\n"))))
       (paragraph . ,(lambda (_ body)
                       (string-append (flush-links body) "\n")))
+      (blockquote . ,(lambda (_ body)
+                       (string-append
+                         (string-join
+                           (map (lambda (line)
+                                  (marked-line #\Q (string-append "> " line)))
+                                (string-split (string-trim-right body #\newline)
+                                              #\newline))
+                           "\n")
+                         "\n")))
       (link . ,(lambda (_ body)
                  (when (null? references)
                    (error "Gemtext link rendering exceeded its index"
@@ -224,7 +233,7 @@
                                        preformatted?))
                (finished
                  (cond
-                   ((and marked? (memv kind '(#\H #\L #\M #\F))) body)
+                   ((and marked? (memv kind '(#\H #\L #\M #\Q #\F))) body)
                    (preformatted? body)
                    ((gemtext-syntax-line? body) (string-append " " body))
                    (else body))))

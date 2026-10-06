@@ -78,6 +78,8 @@
                          #:properties '((target . "limits")))
                        " after."))
                (make-content-element 'item '("A list item") #:flow-kind 'block)
+               (make-content-element 'blockquote '("A quoted line.")
+                 #:flow-kind 'block)
                (make-content-element
                  'paragraph
                  (list "See "
@@ -95,6 +97,7 @@
          (string-contains page " after.")))
   (test-assert "Gemtext uses native list and preformatted code syntax"
     (and (string-contains page "* A list item")
+         (string-contains page "> A quoted line.")
          (string-contains page "``` scheme\n(+ 1 2)\n```")))
   (test-assert "Gemtext preserves image alt text and links to encoded local assets"
     (and (string-contains page "See A diagram soon.")
