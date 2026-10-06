@@ -19,7 +19,8 @@
             transclusion-elements
             owned-content
             subtree-pages
-            assign-subtree-identifiers))
+            assign-subtree-identifiers
+            assign-unique-occurrence-anchors))
 
 (define* (walk-content content select? #:key (postorder? #f) (stop? (const #f)))
   (define (walk node)
@@ -151,3 +152,65 @@
              (site-page-source page)
              #:metadata (site-page-metadata page)))
          pages)))
+
+(define (assign-unique-occurrence-anchors pages)
+  "Anchor every tree occurrence that is unique within its page with the
+tree's own ID. Elements carrying an explicit anchor keep it; repeated
+occurrences stay unanchored, so links aimed at an anchor retired this way
+surface as fragment warnings. Unnamed subtrees anchor under their unstable-N
+IDs and inherit those IDs' instability. Transcluded content is out of scope:
+a tree brought in by another tree's transclusion repeats anchors in the host
+DOM without being counted, the same global-anchor limitation the uniqueness
+check documents."
+  (define (occurrence-id element)
+    (content-element-property element
+      (if (eq? (content-element-kind element) 'subtree)
+          'tree-id
+          'target)))
+  (define (rewrite-document document counts)
+    (let next ((content document))
+      (cond
+        ((content-element? content)
+         (let* ((children (map next (content-element-children content)))
+                (kind (content-element-kind content))
+                (id (and (memq kind '(subtree transclude))
+                         (occurrence-id content)))
+                (anchor
+                  (and id
+                       (= 1 (hash-ref counts id 0))
+                       (not (content-element-property content 'anchor))
+                       id))
+                (properties
+                  (if anchor
+                      (cons (cons 'anchor anchor)
+                            (content-element-properties content))
+                      (content-element-properties content))))
+           (make-content-element
+             kind children
+             (content-element-source content)
+             #:properties properties
+             #:style (content-element-style content)
+             #:flow-kind (content-element-flow-kind content))))
+        ((content-document? content)
+         (make-content-document
+           (map next (content-document-children content))
+           (content-document-source content)))
+        (else content))))
+  (map
+    (lambda (page)
+      (let* ((document (site-page-document page))
+             (counts (make-hash-table)))
+        (for-each
+          (lambda (element)
+            (let ((id (occurrence-id element)))
+              (when id
+                (hash-set! counts id (1+ (hash-ref counts id 0))))))
+          (append (subtree-elements document)
+                  (transclusion-elements document)))
+        (make-site-page
+          (site-page-id page)
+          (site-page-title page)
+          (rewrite-document document counts)
+          (site-page-source page)
+          #:metadata (site-page-metadata page))))
+    pages))

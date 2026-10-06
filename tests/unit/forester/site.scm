@@ -37,8 +37,8 @@
   (test-equal "timing observation preserves the page"
     "Measured" (site-page-title (find-page forest "measured")))
   (test-equal "forest timings follow analysis order"
-    '(identify-trees extract-trees anchors references transclusions
-      reference-index page-index content composition queries)
+    '(identify-trees extract-trees occurrence-anchors anchors references
+      transclusions reference-index page-index content composition queries)
     (map car (reverse phases)))
   (test-assert "forest timings report nonnegative seconds"
     (every (lambda (entry) (>= (cdr entry) 0)) phases)))
@@ -157,6 +157,19 @@
 
 (test-error "occurrence anchors reject invalid anchor IDs" #t
   (evaluate-document "@transclude[\"theorem-3\" #:anchor \"bad anchor\"]"))
+
+(test-error "auto anchors join the duplicate-anchor namespace" #t
+  (make-forest
+    (make-site
+      (list
+        (make-site-page "defs" "Defs"
+          (evaluate-document
+            "@subtree[#:id \"y\"]{@title{Y}@paragraph{b}}"))
+        (make-site-page "host" "Host"
+          (evaluate-document
+            (string-append
+              "@tex-math[#:id \"y\"]{a}\n"
+              "@transclude[\"y\"]")))))))
 
 (let* ((known-document
          (evaluate-document

@@ -338,6 +338,8 @@ anchors."
              (tree-pass:assign-subtree-identifiers (site-pages site))))
          (subtrees (measure 'extract-trees (tree-pass:subtree-pages root-pages)))
          (pages (append root-pages subtrees))
+         (pages (measure 'occurrence-anchors
+                  (tree-pass:assign-unique-occurrence-anchors pages)))
          (_ (make-site pages
                        #:title (site-title site)
                        #:description (site-description site)

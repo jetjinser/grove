@@ -29,11 +29,15 @@ controls initial disclosure state.
 
 Occurrences carry author anchors for fragment links. An explicit `#:id` also
 anchors that occurrence in its host page; `#:anchor` overrides the value or
-anchors an unnamed subtree, and `transclude` stays unanchored unless the
-author passes `#:anchor`. Author anchors are emitted as-is (never scoped by
-embedding, unlike style IDs) and must be unique per page together with math
-IDs; duplicates fail during analysis. The generated `tree-N` position anchors
-are unchanged.
+anchors an unnamed subtree. Beyond explicit declarations, every tree that
+occurs exactly once in a page is anchored there with its tree ID, so a
+transcluded tree can be linked through its host without extra syntax;
+repeated occurrences stay unanchored, and links aimed at an anchor retired
+this way warn through the fragment registry. Unnamed subtrees anchor under
+their unstable-N IDs, which inherit those IDs' instability. Author anchors
+are emitted as-is (never scoped by embedding, unlike style IDs) and must be
+unique per page together with math IDs; duplicates fail during analysis. The
+generated `tree-N` position anchors are unchanged.
 
 Root and subtree prose use the same paragraph decoder. Direct title, summary,
 and dates become frontmatter. `tag` and `taxon` accept one value without a

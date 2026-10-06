@@ -286,14 +286,53 @@
                           "<details id=\"theorem-3\" open=\"open\">")
          (string-contains (assoc-ref html "theorems") "id=\"tree-1\"")))
   (test-assert "subtree anchors override the tree id default"
-    (string-contains (assoc-ref html "theorems") "<details id=\"lemma-nine\""))
-  (test-assert "transclusions anchor only when explicitly asked"
+    (and (string-contains (assoc-ref html "theorems")
+                          "<details id=\"lemma-nine\"")
+         (not (string-contains (assoc-ref html "theorems")
+                               "<details id=\"lemma-9\""))))
+  (test-assert "unique transclusions anchor with the tree id"
     (and (string-contains (assoc-ref html "notes")
                           "<details id=\"theorem-3-note\" open=\"open\">")
-         (not (string-contains (assoc-ref html "notes") "id=\"lemma-nine\""))))
+         (string-contains (assoc-ref html "notes")
+                          "<details id=\"lemma-9\" open=\"open\">")))
   (test-assert "anchor links route through the host page with their fragment"
     (string-contains (assoc-ref html "notes")
                      "href=\"/theorems.html#theorem-3\"")))
+
+(let* ((definitions
+         (make-site-page "definitions" "Definitions"
+           (evaluate-document
+             "@subtree[#:id \"theorem-3\"]{@title{Theorem 3}@paragraph{Statement.}}")))
+       (scratch
+         (make-site-page "scratch" "Scratch"
+           (evaluate-document "@subtree{@title{Loose}@paragraph{Body.}}")))
+       (forest (make-forest (make-site (list scratch definitions))))
+       (html (render-test-html forest)))
+  (test-assert "unnamed subtrees anchor with their unstable id"
+    (string-contains (assoc-ref html "scratch")
+                     "<details id=\"unstable-0\" open=\"open\">")))
+
+(let* ((definitions
+         (make-site-page "definitions" "Definitions"
+           (evaluate-document
+             "@subtree[#:id \"theorem-3\"]{@title{Theorem 3}@paragraph{Statement.}}")))
+       (host
+         (make-site-page "host" "Host"
+           (evaluate-document
+             (string-append
+               "@transclude[\"theorem-3\"]\n"
+               "@transclude[\"theorem-3\"]\n"
+               "@paragraph{See @link[\"host#theorem-3\"]{here}.}"))))
+       (port (open-output-string))
+       (forest
+         (parameterize ((current-warning-port port))
+           (make-forest (make-site (list host definitions)))))
+       (html (render-test-html forest))
+       (message (get-output-string port)))
+  (test-assert "repeated occurrences stay unanchored and their links warn"
+    (and (not (string-contains (assoc-ref html "host")
+                               "<details id=\"theorem-3\""))
+         (string-contains message "does not resolve in page host"))))
 
 (test-error "a raw # in a link target is rejected (fragments are separate)" #t
   (make-forest
