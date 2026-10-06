@@ -4,7 +4,6 @@
 (define-module (grove cli)
   #:use-module (grove project)
   #:use-module (grove project new)
-  #:use-module (grove ssh)
   #:use-module (grove serve)
   #:use-module (grove private cli progress)
   #:use-module (grove project load)
@@ -16,6 +15,16 @@
 
 (define (usage-error message . arguments)
   (throw 'grove-usage-error (apply format #f message arguments)))
+
+(define (ssh-support)
+  "Return the (grove ssh) module, or raise a clear error when it is unavailable."
+  (or (catch #t
+        (lambda () (resolve-module '(grove ssh) #:ensure #f))
+        (lambda _ #f))
+      (error "SSH support requires guile-ssh; this Grove was built without it")))
+
+(define (ssh-ref name)
+  (module-ref (ssh-support) name))
 
 (define (parse-options arguments)
   (let loop ((arguments arguments) (command #f) (options '()))
@@ -130,7 +139,7 @@
                                  (string-append invocation "/" path)))))
          (unless path
            (error "--host-key is required"))
-         (generate-host-key absolute #:force (assq-ref options 'force))
+         ((ssh-ref 'generate-host-key) absolute #:force (assq-ref options 'force))
          0))
       ((string=? command "new")
        (let* ((destination (assq-ref options 'dest))
@@ -175,11 +184,11 @@
                                "grove: serving SSH browsing on port ~a~%" ssh-port)
                        ;; Analyze once; worker processes inherit the model.
                        (let ((analysis (analyze-project project)))
-                         (serve-ssh
+                         ((ssh-ref 'serve-ssh)
                            #:port ssh-port
                            #:host-key (absolute host-key)
                            #:authorized-keys
-                           (read-authorized-keys (absolute authorized))
+                           ((ssh-ref 'read-authorized-keys) (absolute authorized))
                            #:handler
                            (lambda (input output)
                              ((project-browse project)

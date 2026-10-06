@@ -88,7 +88,6 @@
     "grove/private/minikanren.scm"
     "grove/relation/dsl.scm"
     "grove/site.scm"
-    "grove/ssh.scm"
     "grove/input/scribble.scm"
     "grove/render/html.scm"
     "grove/render/html/routes.scm"
@@ -128,6 +127,14 @@
     "forester/render/text/routes.scm"
     "forester/relations.scm"))
 
+;; SSH support needs guile-ssh. It is a conditional component: build it when the
+;; dependency is available, otherwise leave it out and let the CLI report that
+;; SSH is unavailable.
+(define guile-ssh?
+  (and=> (search-path %load-path "ssh/session.scm") (lambda (_path) #t)))
+
+(define +grove-ssh-sources+ '("grove/ssh.scm"))
+
 (define grove-modules
   (append (map
     (λ (source)
@@ -137,7 +144,9 @@
         (load-path #%~(list #%?srcdir))
         (optimizations
           '(#:seal-private-binddings? #t))))
-    +grove-sources+)
+    (if guile-ssh?
+        (append +grove-sources+ +grove-ssh-sources+)
+        +grove-sources+))
     (list (template-file
             (inputs "grove/style/highlight.css")
             (outputs "grove/style/highlight.css")
@@ -181,8 +190,9 @@
                                 (+ 1 (string-length filename))))
             (required? (error "missing Grove runtime dependency" module))
             (else #f))))
-      '("gcrypt/hash" "faster-minikanren/mk-guile" "ts"
-        "grove/highlight/languages" "ssh/session"))
+      (append '("gcrypt/hash" "faster-minikanren/mk-guile" "ts"
+                "grove/highlight/languages")
+              (if guile-ssh? '("ssh/session") '())))
     string=?))
 
 (define (runtime-extension-paths modules)
@@ -221,5 +231,7 @@
                  (cons 'GUILE_RUNTIME_COMPILED_PATH
                        (format #f "~s" (runtime-library-paths %load-compiled-path ".go" #f)))
                  (cons 'GUILE_RUNTIME_EXTENSION_PATH
-                       (format #f "~s" (runtime-extension-paths '("ssh/session"))))))
+                       (format #f "~s"
+                         (runtime-extension-paths
+                           (if guile-ssh? '("ssh/session") '()))))))
       (install-location #%~#%?bindir))))
