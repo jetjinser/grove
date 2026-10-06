@@ -144,10 +144,20 @@
 (define (pair-children block)
   (content-element-children (car (content-element-children block))))
 
+(define (find-content-kind node kind)
+  (cond
+    ((content-element? node)
+     (if (eq? (content-element-kind node) kind)
+         node
+         (any (lambda (child) (find-content-kind child kind))
+              (content-element-children node))))
+    ((content-document? node)
+     (any (lambda (child) (find-content-kind child kind))
+          (content-document-children node)))
+    (else #f)))
+
 (define (chip-text summary)
-  (let ((chip (find (lambda (child)
-                      (eq? (content-element-kind child) 'bilingual-more))
-                    (content-element-children summary))))
+  (let ((chip (find-content-kind summary 'bilingual-more)))
     (and chip (content-text-value (car (content-element-children chip))))))
 
 (let* ((pair (car (content-element-children (bilingual english chinese))))
@@ -164,7 +174,11 @@
     (map (lambda (lane) (content-element-property lane 'lang))
          (filter bilingual-lane? folded)))
   (test-equal "the summary hints at the folded language"
-    "en" (chip-text summary)))
+    "en" (chip-text summary))
+  (test-assert "the hint trails the reader text on the same line"
+    (let ((paragraph (car (content-element-children summary))))
+      (eq? 'bilingual-more
+           (content-element-kind (last (content-element-children paragraph)))))))
 
 (let* ((pair (car (content-element-children
                     (bilingual #:reader "en" english chinese))))

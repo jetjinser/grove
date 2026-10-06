@@ -59,12 +59,13 @@
 }
 
 .bilingual-more::after {
-  content: " \25B8"; /* ▸ */
+  content: "\25B8"; /* ▸ */
   display: inline-block;
+  margin-inline-start: 0.4em;
 }
 
 .bilingual-pair[open] > summary .bilingual-more::after {
-  content: " \25BE"; /* ▾ */
+  content: "\25BE"; /* ▾ */
 }
 
 .bilingual-pair > summary ~ .bilingual-lane {

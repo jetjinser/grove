@@ -98,15 +98,35 @@ so `en zh en zh' becomes two pairs while `en zh fr' stays one three-lane group."
         (map (lambda (lane) (content-element-property lane 'lang)) folded)
         " ")))
 
+(define (attach-affordance children hint)
+  "Place HINT at the end of the reader lane.
+
+When the lane ends in a paragraph the hint goes inside it, so it trails the text
+on the same line instead of starting a new line under the paragraph margin."
+  (cond
+    ((null? children) (list hint))
+    ((and (content-element? (last children))
+          (eq? (content-element-kind (last children)) 'paragraph))
+     (let ((last-child (last children)))
+       (append (drop-right children 1)
+               (list (make-content-element 'paragraph
+                       (append (content-element-children last-child)
+                               (list hint))
+                       (content-element-source last-child)
+                       #:properties (content-element-properties last-child)
+                       #:style (content-element-style last-child)
+                       #:flow-kind (content-element-flow-kind last-child))))))
+    (else (append children (list hint)))))
+
 (define (reader-summary lane folded source-label)
   "Present LANE as the disclosure summary, with a hint about the folded lanes."
   (let ((tag (content-element-property lane 'lang))
-        (dir (content-element-property lane 'dir)))
+        (dir (content-element-property lane 'dir))
+        (hint (make-content-element 'bilingual-more
+                (list (make-content-text
+                        (fold-affordance folded source-label))))))
     (make-content-element 'summary
-      (append (content-element-children lane)
-              (list (make-content-element 'bilingual-more
-                      (list (make-content-text
-                              (fold-affordance folded source-label))))))
+      (attach-affordance (content-element-children lane) hint)
       #:properties `((lang . ,tag) (dir . ,dir))
       #:style (bilingual-summary-style tag dir)
       #:flow-kind 'block)))
