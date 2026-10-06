@@ -144,6 +144,7 @@
                          (label (if (string-null? label) "[image]" label)))
                     (queue-link url label)
                     label)))
+      (code . ,(lambda (_ body) body))
       (code-block . ,(lambda (element body)
                        (when (any (lambda (line) (string-prefix? "```" line))
                                   (string-split body #\newline))

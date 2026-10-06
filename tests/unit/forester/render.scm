@@ -75,8 +75,10 @@
                  'paragraph
                  (list "Before "
                        (make-content-element 'link '("the limit")
-                         #:properties '((target . "limits")))
-                       " after."))
+                             #:properties '((target . "limits")))
+                       " after. Run "
+                       (make-content-element 'code '("grove"))
+                       " now."))
                (make-content-element 'item '("A list item") #:flow-kind 'block)
                (make-content-element 'blockquote '("A quoted line.")
                  #:flow-kind 'block)
@@ -94,7 +96,8 @@
   (test-assert "Gemtext converts inline references to standalone link lines"
     (and (string-contains page "Before ")
          (string-contains page "=> limits.gmi the limit")
-         (string-contains page " after.")))
+         (string-contains page " after. Run grove now.")
+         (not (string-contains page "`grove`"))))
   (test-assert "Gemtext uses native list and preformatted code syntax"
     (and (string-contains page "* A list item")
          (string-contains page "> A quoted line.")
