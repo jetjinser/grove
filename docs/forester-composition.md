@@ -131,6 +131,24 @@ in styles are scoped when a tree is embedded, so repeated transclusions keep
 separate anchors. A style cannot replace a renderer-owned navigation ID.
 A subtree's `#:id` is its tree identity, not an HTML attribute.
 
+### Reference fragments and equation IDs
+
+A link target may carry a fragment after `#`. The page before the `#` is
+validated like any other link; the fragment is the id of a node on that page and
+is passed through to the output URL:
+
+```scheme
+@tex-display-math[#:id "eq-2-12"]{a^2 + b^2 = c^2 \tag{2.12}}
+@paragraph{See @link["cfd-0003#eq-2-12"]{(2.12)}.}
+```
+
+`@tex-math` and `@tex-display-math` put `#:id` on their container
+(`span.math-inline` / `div.math-display`), which is what the fragment scrolls
+to. Links without a fragment are unchanged. The reader splits the target into
+the page (`target`) and the `fragment`, so the reference graph and backlinks
+stay page-level. The fragment is not validated; a raw `#` in a link's `target`
+property is rejected.
+
 `content-with-style` applies the same interface to an element returned by
 Scheme code, preserving its content, properties, source, and flow kind.
 Styling does not change query or mathematical semantics. Text output ignores

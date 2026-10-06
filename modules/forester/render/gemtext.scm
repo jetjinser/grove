@@ -116,7 +116,7 @@
                                               #\newline))
                            "\n")
                          "\n")))
-      (link . ,(lambda (_ body)
+      (link . ,(lambda (element body)
                  (when (null? references)
                    (error "Gemtext link rendering exceeded its index"
                           (site-page-id page)))
@@ -125,6 +125,8 @@
                                            (reference-target-page-id reference)))
                         (url (page-url routes (site-page-id page)
                                        (reference-target-page-id reference)))
+                        (fragment (content-element-property element 'fragment))
+                        (url (if fragment (string-append url "#" fragment) url))
                         (label (line-text body))
                         (label (if (string-null? label)
                                    (site-page-title target) label)))

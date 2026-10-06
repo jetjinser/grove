@@ -155,20 +155,23 @@
           #:max-depth max-depth #:max-states max-states #:max-term-size max-term-size))
       #:view view)))
 
-(define*-public (tex-math #:key (style #f) . source)
-  (set! source (command-body source))
-  (make-content-element 'math
-                        (map make-content-text
-                             (map (lambda (value)
-                                    (if (string? value)
-                                        value
-                                        (error "TeX math accepts plain source text"
-                                               value)))
-                                  source))
-                        #:style style
-                        #:properties '((tex? . #t))))
+(define (checked-math-id id)
+  "Validate an optional math element id; it becomes the HTML anchor."
+  (if (not id)
+      #f
+      (begin
+        (unless (and (string? id)
+                     (not (string-null? id))
+                     (not (string-any char-whitespace? id)))
+          (error "TeX math id must be a non-empty string without whitespace" id))
+        id)))
 
-(define*-public (tex-display-math #:key (style #f) . source)
+(define (math-properties tex? display? id)
+  (append (if tex? '((tex? . #t)) '())
+          (if display? '((display? . #t)) '())
+          (if id `((id . ,id)) '())))
+
+(define*-public (tex-math #:key (style #f) (id #f) . source)
   (set! source (command-body source))
   (make-content-element 'math
                         (map make-content-text
@@ -179,7 +182,20 @@
                                                value)))
                                   source))
                         #:style style
-                        #:properties '((tex? . #t) (display? . #t))
+                        #:properties (math-properties #t #f (checked-math-id id))))
+
+(define*-public (tex-display-math #:key (style #f) (id #f) . source)
+  (set! source (command-body source))
+  (make-content-element 'math
+                        (map make-content-text
+                             (map (lambda (value)
+                                    (if (string? value)
+                                        value
+                                        (error "TeX math accepts plain source text"
+                                               value)))
+                                  source))
+                        #:style style
+                        #:properties (math-properties #t #t (checked-math-id id))
                         #:flow-kind 'block))
 
 (define-public compute

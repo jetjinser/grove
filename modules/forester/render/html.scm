@@ -23,8 +23,10 @@
             render-html
             make-html-renderer))
 
-(define (link-url routes reference)
-  (html-page-url routes (reference-target-page-id reference)))
+(define (link-url routes reference element)
+  (let ((fragment (and element (content-element-property element 'fragment))))
+    (string-append (html-page-url routes (reference-target-page-id reference))
+                   (if fragment (string-append "#" fragment) ""))))
 
 (define (reference-source-url routes reference)
   (string-append
@@ -51,7 +53,7 @@
                    (set! references (cdr references))
                    `(a (@ (id ,(string-append anchor-prefix
                                              (reference-source-id reference)))
-                     (href ,(link-url routes reference)))
+                     (href ,(link-url routes reference element)))
                      ,@children))))
       (query-link . ,(lambda (element children)
                        `(a (@ (href ,(html-page-url routes

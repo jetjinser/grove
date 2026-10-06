@@ -253,11 +253,18 @@
                           ,@(render-math-children children)))))
             (else (error "unsupported MathML IR element" kind))))))
 
+  (define (math-attributes element class)
+    `(@ (class ,class)
+        ,@(let ((id (content-element-property element 'id)))
+            (if id `((id ,id)) '()))))
+
   (define (render-math element)
-    (let ((display? (content-element-property element 'display?)))
+    (let* ((display? (content-element-property element 'display?))
+           (class (if display? "math-display" "math-inline"))
+           (attributes (math-attributes element class)))
       (if (content-element-property element 'tex?)
           `(,(if display? 'div 'span)
-             (@ (class ,(if display? "math-display" "math-inline")))
+             ,attributes
              ,(string-append (if display? "\\[" "\\(")
                              (content-verbatim-string
                                (content-element-children element))
@@ -267,9 +274,7 @@
                             ,@(if display? '((display "block")) '()))
                        ,(render-math-row
                           (content-element-children element)))))
-            (if display?
-                `(div (@ (class "math-display")) ,mathml)
-                `(span (@ (class "math-inline")) ,mathml))))))
+            `(,(if display? 'div 'span) ,attributes ,mathml)))))
 
   (render content))
 

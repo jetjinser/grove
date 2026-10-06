@@ -81,14 +81,35 @@
                         #:properties `((query . ,query))
                         #:flow-kind 'block))
 
+(define (split-link-target target)
+  "Split TARGET into (values page-id fragment-or-#f) at the first #.
+
+The page is validated to exist later; the fragment is the id of a node on that
+page and is passed through unchanged."
+  (let ((hash (string-index target #\#)))
+    (if (not hash)
+        (values target #f)
+        (let ((page (substring target 0 hash))
+              (fragment (substring target (1+ hash))))
+          (unless (non-empty-string? page)
+            (error "Forester link requires a tree ID before #" target))
+          (unless (non-empty-string? fragment)
+            (error "Forester link requires a fragment after #" target))
+          (values page fragment)))))
+
 (define*-public (link target #:key (style #f) . labels)
   (set! labels (command-body labels))
-  (unless (and (non-empty-string? target) (not (string-index target #\#)))
-    (error "Forester link requires a tree ID without #" target))
-  (make-content-element 'link
-                        (if (null? labels) (list target) labels)
-                        #:style style
-                        #:properties `((target . ,target))))
+  (unless (non-empty-string? target)
+    (error "Forester link requires a tree ID" target))
+  (call-with-values (lambda () (split-link-target target))
+    (lambda (page fragment)
+      (make-content-element 'link
+                            (if (null? labels) (list page) labels)
+                            #:style style
+                            #:properties (if fragment
+                                             `((target . ,page)
+                                               (fragment . ,fragment))
+                                             `((target . ,page)))))))
 
 (define*-public (image source #:key (style #f) . alternative-text)
   (set! alternative-text (command-body alternative-text))

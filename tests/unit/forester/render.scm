@@ -266,7 +266,7 @@
   (test-equal "tree link queries use the same identities"
     '("overview") (links forest "source")))
 
-(test-error "fragment targets are not tree identities" #t
+(test-error "a raw # in a link target is rejected (fragments are separate)" #t
   (make-forest
     (make-site (list (make-site-page "target" "Target" (make-content-document '()))
                     (make-site-page "source" "Source"
@@ -713,5 +713,24 @@
                     "algebra")))
       (and (string-contains custom "<a class=\"brand\" href=\"/index.html\">Home</a></nav>")
            (not (string-contains custom "Linked Notes</a></nav>"))))))
+
+(let* ((text (lambda (value) (make-content-text value)))
+       (target (make-site-page "target" "Target"
+                 (make-content-document
+                   (list (make-content-element 'paragraph (list (text "Body")))))))
+       (source (make-site-page "source" "Source"
+                 (make-content-document
+                   (list (make-content-element 'paragraph
+                           (list (make-content-element 'link (list (text "there"))
+                                   #:properties '((target . "target")
+                                                  (fragment . "section")))))))))
+       (forest (make-forest (make-site (list source target)
+                                       #:title "T" #:home "source")))
+       (source-html (assoc-ref (render-test-html forest) "source"))
+       (source-gemtext (assoc-ref (site->gemtext forest) "source")))
+  (test-assert "HTML links carry the fragment"
+    (string-contains source-html "href=\"/target.html#section\">there</a>"))
+  (test-assert "Gemtext links carry the fragment"
+    (string-contains source-gemtext "target.gmi#section")))
 
 (test-end "forester renderers")

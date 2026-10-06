@@ -35,6 +35,20 @@
     "destination"
     (content-element-property element 'target)))
 
+(let ((element (link "destination#section")))
+  (test-equal "a fragment link keeps only the page in its target"
+    "destination"
+    (content-element-property element 'target))
+  (test-equal "a fragment link carries the fragment"
+    "section"
+    (content-element-property element 'fragment)))
+
+(test-equal "links without a fragment have none"
+  #f (content-element-property (link "destination") 'fragment))
+
+(test-error "links reject an empty tree before #" #t (link "#section"))
+(test-error "links reject an empty fragment after #" #t (link "destination#"))
+
 (for-each
   (lambda (constructor kind)
     (let ((element (constructor "topic")))
@@ -120,5 +134,21 @@
     (and (string-contains html "class=\"math-display formula\"")
          (string-contains html "<mfrac class=\"ratio\">")
          (string-contains html "<msup class=\"power\">"))))
+
+(let* ((document (evaluate-document "@tex-display-math[#:id \"eq-2-12\"]{a^2+b^2=c^2}"))
+       (math (car (content-document-children document)))
+       (html (sxml->html (content->sxml document))))
+  (test-equal "tex display math carries its id"
+    "eq-2-12" (content-element-property math 'id))
+  (test-assert "tex display math renders the id on its container"
+    (string-contains html "class=\"math-display\" id=\"eq-2-12\"")))
+
+(let* ((document (evaluate-document "@tex-math[#:id \"eq-inline\"]{x}"))
+       (html (sxml->html (content->sxml document))))
+  (test-assert "tex inline math renders the id on its container"
+    (string-contains html "class=\"math-inline\" id=\"eq-inline\"")))
+
+(test-error "tex math rejects an id with whitespace" #t
+  (evaluate-document "@tex-math[#:id \"a b\"]{x}"))
 
 (test-end "forester commands")
