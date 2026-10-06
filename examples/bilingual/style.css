@@ -1,0 +1,19 @@
+/* SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu> */
+/* SPDX-License-Identifier: CC0-1.0 */
+
+:root {
+  --bilingual-rule: #cfcfcf;
+}
+
+.bilingual {
+  margin: 2rem 0;
+}
+
+/* Pairs are separated so each aligned group reads as one passage. */
+.bilingual-pair + .bilingual-pair {
+  margin-top: 0.5rem;
+}
+
+article > p {
+  text-wrap: pretty;
+}

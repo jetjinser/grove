@@ -1,0 +1,33 @@
+@; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+@; SPDX-License-Identifier: CC0-1.0
+
+@use-modules[(bilingual commands)]
+
+@title{A bilingual note}
+@summary{One idea in English and Chinese.}
+@published{2026-10-06}
+@tag["i18n"]
+
+@paragraph{This page shows Grove's bilingual facility: each pair holds the same
+idea in two languages. Wide screens place the lanes side by side, narrow screens
+stack them, and every lane carries its own language and direction.}
+
+@bilingual{
+  @lang["en"]{
+    The grove is a small forest.
+  }
+  @lang["zh-CN"]{
+    树林是一片小小的森林。
+  }
+
+  @lang["en"]{
+    Every tree keeps a stable address, so links and translations point at the
+    same idea.
+  }
+  @lang["zh-CN"]{
+    每一棵树都有稳定的地址，因此链接和译文都指向同一个想法。
+  }
+}
+
+@paragraph{Inline foreign terms keep their own language: @term["fr"]{une forêt}
+is French for a forest, and @term["ar"]{غابة} is Arabic.}
