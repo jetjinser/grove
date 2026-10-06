@@ -635,4 +635,60 @@
     (not (any (lambda (artifact) (string-suffix? ".css" (artifact-path artifact)))
               (render-html forest #:routes routes #:style (make-html-style)))))))
 
+(let* ((target
+         (make-site-page "target" "Target"
+           (evaluate-document
+             "@subtree[#:id \"overview\"]{@title{Overview}@paragraph{Body}}")))
+       (forest (make-forest (make-site (list target))))
+       (routes (make-html-routes #:home-page "target"))
+       (html (assoc-ref
+               (site->html forest #:routes routes
+                 #:title-decoration
+                 (lambda (id)
+                   (if (string=? id "overview")
+                       '((span (@ (class "taxon")) "overview. "))
+                       '())))
+               "target")))
+  (test-assert "title-decoration decorates tree headings"
+    (string-contains html
+      "<h2 class=\"forest-tree-title\"><span class=\"taxon\">overview. </span><span>Overview</span>"))
+  (test-assert "title-decoration decorates the table of contents"
+    (string-contains html
+      "href=\"#tree-1\"><span class=\"taxon\">overview. </span>Overview</a>")))
+
+(let* ((forest (make-forest (make-site (list algebra limits))))
+       (routes (make-html-routes #:home-page "algebra"))
+       (html (site->html forest
+               #:routes routes
+               #:html-attributes '((lang . "zh-CN"))
+               #:head '((link (@ (rel "alternate") (href "/feed.xml"))))
+               #:site-nav '((div (@ (class "controls")) "Controls"))
+               #:article? #t
+               #:backmatter-details? #t))
+       (algebra-html (assoc-ref html "algebra"))
+       (limits-html (assoc-ref html "limits")))
+  (test-assert "html-attributes hook sets document language"
+    (string-contains algebra-html "<html lang=\"zh-CN\">"))
+  (test-assert "head hook appends nodes to the document head"
+    (and (string-contains algebra-html "rel=\"alternate\"")
+         (string-contains algebra-html "href=\"/feed.xml\"")))
+  (test-assert "site-nav hook appends controls to the site navigation"
+    (string-contains algebra-html
+      "<div class=\"controls\">Controls</div></nav>"))
+  (test-assert "article hook wraps the page tree and backmatter"
+    (and (string-contains algebra-html
+           "<article><section class=\"forest-tree-block page-tree\"")
+         (string-contains algebra-html "</article>")))
+  (test-assert "backmatter-details hook makes backmatter collapsible"
+    (string-contains limits-html
+      "<aside class=\"backmatter forest-tree-block backlinks\"><details open=\"open\"><summary><h2 class=\"forest-tree-title\">Backlinks</h2>"))
+  (test-assert "home-link hook replaces the default navigation link"
+    (let ((custom (assoc-ref
+                    (site->html forest #:routes routes
+                      #:home-link (lambda (href)
+                                    `(a (@ (class "brand") (href ,href)) "Home")))
+                    "algebra")))
+      (and (string-contains custom "<a class=\"brand\" href=\"/index.html\">Home</a></nav>")
+           (not (string-contains custom "Linked Notes</a></nav>"))))))
+
 (test-end "forester renderers")

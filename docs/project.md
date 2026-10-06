@@ -245,6 +245,34 @@ source without highlight markup. The `grove-highlights` Nix package includes
 the grammar, its matching upstream query, and the grammar's license; their
 version is fixed by `nix/flake.lock`.
 
+## HTML presentation hooks
+
+The HTML renderer accepts presentation options instead of requiring projects to
+rewrite rendered markup. They are available on `render-html`, `site->html`, and
+`make-html-renderer`:
+
+- `#:html-attributes` — an association list merged onto the root `<html>`
+  element, for example `'((lang . "zh-CN"))`.
+- `#:head` — SXML nodes placed in `<head>` after the description and before the
+  stylesheets. Use it for viewport metadata, feed autodiscovery, or scripts that
+  must run before the first paint.
+- `#:site-nav` — SXML nodes appended inside the site `<nav>`.
+- `#:home-link` — replaces the default home link: a procedure receiving the
+  index URL and returning the anchor SXML. Provide it when the navigation link
+  needs attributes, icons, or markup beyond the site title.
+- `#:title-decoration` — a procedure receiving a tree ID and returning SXML
+  inserted before the title in tree headings and the table of contents. This is
+  the supported way to show per-tree frontmatter such as a taxon.
+- `#:article?` — wraps the page tree and its backmatter in one `<article>`
+  element, leaving the table of contents outside it.
+- `#:backmatter-details?` — renders each backmatter section as a collapsible
+  `details`/`summary` block.
+
+The boolean and SXML-valued options participate in the renderer's cache
+configuration, so changing one invalidates cached pages. The procedure options
+(`#:home-link`, `#:title-decoration`) depend on project code, which Grove
+already tracks as an input.
+
 ## Packaging and measurement
 
 The installed launcher records canonical Guile source/compiled dependency

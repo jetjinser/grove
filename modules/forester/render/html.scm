@@ -59,7 +59,8 @@
                            ,@children))))))
 
 (define* (subtree-content-sxml forest routes page
-                              #:optional (anchor-prefix "") (depth 1) (highlighters '()))
+                              #:optional (anchor-prefix "") (depth 1) (highlighters '())
+                              #:key (title-decoration #f))
   (let ((position 0))
     (define (render-tree element _render)
       (set! position (1+ position))
@@ -70,8 +71,10 @@
           (if (eq? (content-element-kind element) 'subtree)
               "inline-subtree" "transclusion")
           id (site-page-title target) (html-page-url routes id)
-          (subtree-content-sxml forest routes target (string-append anchor "--") (1+ depth) highlighters)
+          (subtree-content-sxml forest routes target (string-append anchor "--") (1+ depth) highlighters
+                                #:title-decoration title-decoration)
           #:anchor anchor #:depth (1+ depth)
+          #:title-decoration (if title-decoration (title-decoration id) '())
           #:open? (if (assq 'open? (content-element-properties element))
                       (content-element-property element 'open?) #t))))
     (content->sxml
@@ -86,14 +89,16 @@
   (if (string-prefix? "unstable-" id)
       (string-append "#" (substring id (string-length "unstable-")))
       id))
-
-(define* (tree-block-sxml kind id title page-url content #:key (open? #t) anchor (depth 2))
+(define* (tree-block-sxml kind id title page-url content
+                          #:key (open? #t) anchor (depth 2) (title-decoration '()))
   `(section (@ (class ,(string-append "forest-tree-block " kind))
                (data-tree-id ,id) (id ,anchor))
      (details ,@(if open? '((@ (open "open"))) '())
        (summary
          (,(string->symbol (format #f "h~a" (min depth 6)))
-           (@ (class "forest-tree-title")) (span ,title)
+           (@ (class "forest-tree-title"))
+           ,@title-decoration
+           (span ,title)
            (a (@ (class "forest-tree-id")
                (href ,page-url)
                (aria-label ,(string-append
@@ -117,17 +122,28 @@
        " — "
        ,(reference-label reference))))
 
-(define (backlinks-sxml forest page routes label)
+(define (backmatter-section-sxml class label content details?)
+  (if details?
+      `(aside (@ (class ,(string-append "backmatter forest-tree-block " class)))
+         (details (@ (open "open"))
+           (summary (h2 (@ (class "forest-tree-title")) ,label))
+           (div (@ (class "forest-tree-content")) ,@content)))
+      `(aside (@ (class ,(string-append "backmatter " class)))
+         (h2 ,label)
+         ,@content)))
+
+(define (backlinks-sxml forest page routes label details?)
   (let ((references (incoming-references forest (site-page-id page))))
     (if (null? references)
         '()
-        (list `(aside (@ (class "backmatter backlinks"))
-                      (h2 ,label)
-                      (ul ,@(map (lambda (reference)
-                                   (backlink-reference-sxml forest routes reference))
-                                 references)))))))
+        (list (backmatter-section-sxml
+                "backlinks" label
+                (list `(ul ,@(map (lambda (reference)
+                                    (backlink-reference-sxml forest routes reference))
+                                  references)))
+                details?)))))
 
-(define (context-sxml forest page routes label)
+(define (context-sxml forest page routes label details?)
   (let* ((sources (transcluding-pages forest (site-page-id page)))
          (items
            (map (lambda (source)
@@ -140,16 +156,14 @@
                 sources)))
     (if (null? sources)
         '()
-        (list `(aside (@ (class "backmatter context"))
-                      (h2 ,label)
-                      (ul ,@items))))))
+        (list (backmatter-section-sxml "context" label (list `(ul ,@items)) details?)))))
 
-(define (page-list-backmatter-sxml routes class label targets)
+(define (page-list-backmatter-sxml routes class label targets details?)
     (if (null? targets)
         '()
-        (list `(aside (@ (class ,(string-append "backmatter " class)))
-                      (h2 ,label)
-                      (ul
+        (list (backmatter-section-sxml
+                class label
+                (list `(ul
                         ,@(map (lambda (target)
                                  (list 'li
                                    (list 'a
@@ -158,41 +172,47 @@
                                          (html-page-url
                                            routes (site-page-id target))))
                                      (site-page-title target))))
-                               targets))))))
+                               targets)))
+                details?))))
 
-(define (related-sxml forest page routes reference-taxon-id label)
+(define (related-sxml forest page routes reference-taxon-id label details?)
   (page-list-backmatter-sxml
     routes "related" label
-    (related-pages forest (site-page-id page) reference-taxon-id)))
+    (related-pages forest (site-page-id page) reference-taxon-id)
+    details?))
 
-(define (references-sxml forest page routes reference-taxon-id label)
+(define (references-sxml forest page routes reference-taxon-id label details?)
   (page-list-backmatter-sxml
     routes "references" label
-    (reference-pages forest (site-page-id page) reference-taxon-id)))
+    (reference-pages forest (site-page-id page) reference-taxon-id)
+    details?))
 
 (define (backmatter-sxml forest page routes sections labels
-                         reference-taxon-id)
+                         reference-taxon-id details?)
   (append-map
     (lambda (section)
       (case section
         ((context) (context-sxml forest page routes
-                                 (assq-ref labels 'context)))
+                                 (assq-ref labels 'context) details?))
         ((references) (references-sxml forest page routes reference-taxon-id
-                                       (assq-ref labels 'references)))
+                                       (assq-ref labels 'references) details?))
         ((backlinks) (backlinks-sxml forest page routes
-                                     (assq-ref labels 'backlinks)))
+                                     (assq-ref labels 'backlinks) details?))
         ((related) (related-sxml forest page routes reference-taxon-id
-                                 (assq-ref labels 'related)))))
+                                 (assq-ref labels 'related) details?))))
     sections))
 
-(define (table-of-contents-sxml forest page)
+(define* (table-of-contents-sxml forest page #:key (title-decoration #f))
   (define (entries id prefix)
     (map (lambda (element position)
            (let* ((target-id (tree-occurrence-target element))
                   (target (find-page forest target-id))
                   (anchor (format #f "~atree-~a" prefix position))
+                  (decoration (if title-decoration (title-decoration target-id) '()))
                   (nested (entries target-id (string-append anchor "--"))))
-             `(li (a (@ (href ,(string-append "#" anchor))) ,(site-page-title target))
+             `(li (a (@ (href ,(string-append "#" anchor)))
+                     ,@decoration
+                     ,(site-page-title target))
                   ,@(if (null? nested) '() (list `(ol ,@nested))))))
          (tree-occurrences forest id)
          (iota (length (tree-occurrences forest id)) 1)))
@@ -232,15 +252,23 @@
 (define fragment-reveal-script
   "(function () {\n  function revealFragment() {\n    if (!location.hash) return;\n    var id = location.hash.slice(1);\n    try { id = decodeURIComponent(id); } catch (error) {}\n    var target = document.getElementById(id);\n    if (!target) return;\n    var node = target;\n    while (node) {\n      if (node.tagName === 'DETAILS') node.open = true;\n      node = node.parentElement;\n    }\n    window.requestAnimationFrame(function () { target.scrollIntoView(); });\n  }\n  window.addEventListener('hashchange', revealFragment);\n  revealFragment();\n}());")
 
-(define (html-document title description body math? home-title style
-                       routes mathjax-src inline-stylesheets?)
+(define* (html-document title description body math? home-title style
+                       routes mathjax-src inline-stylesheets?
+                       #:key (html-attributes '()) (head '()) (site-nav '())
+                       (home-link #f))
   `(html
+     ,@(if (null? html-attributes)
+           '()
+           (list (cons '@ (map (lambda (attribute)
+                                 (list (car attribute) (cdr attribute)))
+                               html-attributes))))
      (head
        (meta (@ (charset "utf-8")))
        (title ,title)
        ,@(if description
              (list `(meta (@ (name "description") (content ,description))))
              '())
+       ,@head
        ,@(if inline-stylesheets?
              (map (lambda (stylesheet)
                     `(style ,(artifact-content stylesheet)))
@@ -257,10 +285,14 @@
              '()))
      (body
        (header
-         ,@(if home-title
+         ,@(if (or home-title home-link (pair? site-nav))
                (list `(nav (@ (aria-label "Site"))
-                           (a (@ (href ,(html-index-url routes)))
-                              ,home-title)))
+                           ,@(cond
+                               (home-link (list (home-link (html-index-url routes))))
+                               (home-title (list `(a (@ (href ,(html-index-url routes)))
+                                                    ,home-title)))
+                               (else '()))
+                           ,@site-nav))
                '()))
        ,@body
        (script ,fragment-reveal-script))))
@@ -270,32 +302,47 @@
 
 (define* (page-html forest page style routes mathjax-src backmatter labels
                     reference-taxon-id
-                    #:optional (inline-stylesheets? #f) (highlighters '()))
+                    #:optional (inline-stylesheets? #f) (highlighters '())
+                    #:key (title-decoration #f) (article? #f) (backmatter-details? #f)
+                    (html-attributes '()) (head '()) (site-nav '()) (home-link #f))
   (let* ((site (site forest))
-         (body (subtree-content-sxml forest routes page "" 1 highlighters))
+         (body (subtree-content-sxml forest routes page "" 1 highlighters
+                                     #:title-decoration title-decoration))
          (tree (tree-block-sxml
                  "page-tree" (site-page-id page) (site-page-title page)
                  (html-page-url routes (site-page-id page)) body
                  #:anchor (string-append "tree-root-" (site-page-id page))
-                 #:depth 1))
+                 #:depth 1
+                 #:title-decoration (if title-decoration
+                                        (title-decoration (site-page-id page))
+                                        '())))
          (article (append (list tree)
                           (backmatter-sxml forest page routes backmatter
-                                           labels reference-taxon-id))))
+                                           labels reference-taxon-id
+                                           backmatter-details?))))
     (serialize-html-document
       (html-document
         (site-page-title page)
         (page-description site page)
-        (append (table-of-contents-sxml forest page) (list article))
+        (append (table-of-contents-sxml forest page #:title-decoration title-decoration)
+                (list (if article? (cons 'article article) article)))
         (content-has-tex-math? (site-page-document page))
         (site-title site)
         style
         routes
         mathjax-src
-        inline-stylesheets?))))
+        inline-stylesheets?
+        #:html-attributes html-attributes
+        #:head head
+        #:site-nav site-nav
+        #:home-link home-link))))
 
-(define (render-html-changed forest style routes mathjax-src backmatter labels
+(define* (render-html-changed forest style routes mathjax-src backmatter labels
                              reference-taxon-id
-                             changed old-artifacts highlighters)
+                             changed old-artifacts highlighters
+                             #:key (title-decoration #f) (article? #f)
+                             (backmatter-details? #f) (html-attributes '())
+                             (head '()) (site-nav '()) (home-link #f))
   (set! routes (resolve-html-routes forest routes))
   (check-html-input forest style routes mathjax-src)
   (let* ((route-table
@@ -307,7 +354,14 @@
                     (reuse-artifact path sources old-artifacts changed
                       (lambda ()
                         (page-html forest page style routes mathjax-src
-                                   backmatter labels reference-taxon-id #f highlighters)))))
+                                   backmatter labels reference-taxon-id #f highlighters
+                                   #:title-decoration title-decoration
+                                   #:article? article?
+                                   #:backmatter-details? backmatter-details?
+                                   #:html-attributes html-attributes
+                                   #:head head
+                                   #:site-nav site-nav
+                                   #:home-link home-link)))))
                 (pages forest))))
     (append (html-style-artifacts style) page-artifacts)))
 
@@ -343,7 +397,14 @@
                        (mathjax-src default-mathjax-src)
                        (backmatter default-backmatter-sections)
                        (backmatter-labels '())
-                       (reference-taxon-id default-reference-taxon-id))
+                       (reference-taxon-id default-reference-taxon-id)
+                       (title-decoration #f)
+                       (article? #f)
+                       (backmatter-details? #f)
+                       (html-attributes '())
+                       (head '())
+                       (site-nav '())
+                       (home-link #f))
   (validate-backmatter-sections backmatter)
   (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
   (check-reference-taxon-id reference-taxon-id)
@@ -353,7 +414,14 @@
          (cons (site-page-id page)
                (page-html forest page style routes mathjax-src
                           backmatter backmatter-labels
-                          reference-taxon-id #t highlighters)))
+                          reference-taxon-id #t highlighters
+                          #:title-decoration title-decoration
+                          #:article? article?
+                          #:backmatter-details? backmatter-details?
+                          #:html-attributes html-attributes
+                          #:head head
+                          #:site-nav site-nav
+                          #:home-link home-link)))
        (pages forest)))
 
 (define* (render-html forest #:key
@@ -363,7 +431,14 @@
                              (mathjax-src default-mathjax-src)
                              (backmatter default-backmatter-sections)
                              (backmatter-labels '())
-                             (reference-taxon-id default-reference-taxon-id))
+                             (reference-taxon-id default-reference-taxon-id)
+                             (title-decoration #f)
+                             (article? #f)
+                             (backmatter-details? #f)
+                             (html-attributes '())
+                             (head '())
+                             (site-nav '())
+                             (home-link #f))
   (validate-backmatter-sections backmatter)
   (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
   (check-reference-taxon-id reference-taxon-id)
@@ -377,7 +452,14 @@
              (make-artifact
                (cdr (assoc (site-page-id page) route-table))
                (page-html forest page style routes mathjax-src backmatter
-                          backmatter-labels reference-taxon-id #f highlighters)
+                          backmatter-labels reference-taxon-id #f highlighters
+                          #:title-decoration title-decoration
+                          #:article? article?
+                          #:backmatter-details? backmatter-details?
+                          #:html-attributes html-attributes
+                          #:head head
+                          #:site-nav site-nav
+                          #:home-link home-link)
                (page-source-paths forest page)))
            (pages forest)))))
 
@@ -389,6 +471,13 @@
                                       (backmatter default-backmatter-sections)
                                       (backmatter-labels '())
                                       (reference-taxon-id default-reference-taxon-id)
+                                      (title-decoration #f)
+                                      (article? #f)
+                                      (backmatter-details? #f)
+                                      (html-attributes '())
+                                      (head '())
+                                      (site-nav '())
+                                      (home-link #f)
                                       (cache? #t))
   (validate-backmatter-sections backmatter)
   (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
@@ -402,7 +491,14 @@
                                       #:backmatter backmatter
                                       #:backmatter-labels backmatter-labels
                                       #:reference-taxon-id
-                                      reference-taxon-id))))
+                                      reference-taxon-id
+                                      #:title-decoration title-decoration
+                                      #:article? article?
+                                      #:backmatter-details? backmatter-details?
+                                      #:html-attributes html-attributes
+                                      #:head head
+                                      #:site-nav site-nav
+                                      #:home-link home-link))))
     (make-cached-renderer render #:cache? cache?
           #:configuration
           (lambda (forest)
@@ -410,6 +506,7 @@
                   (or (html-home-page routes) (site-home (site forest)))
                   (html-index-url routes)
                   mathjax-src backmatter backmatter-labels reference-taxon-id
+                  article? backmatter-details? html-attributes head site-nav
                   (map (lambda (entry)
                          (list (car entry) (highlighter-configuration (cdr entry))))
                        highlighters)
@@ -430,4 +527,11 @@
                 (render forest)
                 (render-html-changed forest style routes mathjax-src backmatter
                                      backmatter-labels reference-taxon-id
-                                     changed old-artifacts highlighters))))))
+                                     changed old-artifacts highlighters
+                                     #:title-decoration title-decoration
+                                     #:article? article?
+                                     #:backmatter-details? backmatter-details?
+                                     #:html-attributes html-attributes
+                                     #:head head
+                                     #:site-nav site-nav
+                                     #:home-link home-link))))))
