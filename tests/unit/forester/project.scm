@@ -10,6 +10,7 @@
   #:use-module (srfi srfi-64)
   #:use-module (forester input scribble)
   #:use-module (forester relations)
+  #:use-module (forester render gemtext)
   #:use-module (forester render html)
   #:use-module (forester render rss)
   #:use-module (forester render sitemap)
@@ -123,7 +124,8 @@
                          #:page-path
                          (lambda (id)
                            (string-append "notes/" id ".html"))))
-                     (make-text-renderer #:prefix "text"))
+                     (make-text-renderer #:prefix "text")
+                     (make-gemtext-renderer #:prefix "gemini"))
                #:output-directory output-directory))
            (artifacts (build-project project))
            (paths (map artifact-path artifacts))
@@ -389,7 +391,16 @@
              (not (member "notes/algebra.html" paths))
              (member "notes/limits.html" paths)
              (member "text/index.txt" paths)
-             (member "text/algebra.txt" paths)))
+             (member "text/algebra.txt" paths)
+             (member "gemini/index.gmi" paths)
+             (member "gemini/algebra.gmi" paths)))
+      (test-assert "project writes Gemtext artifacts with routed page links"
+        (let ((algebra-gemtext
+                (read-test-file
+                  (string-append output-directory "/gemini/algebra.gmi"))))
+          (and (file-exists? (string-append output-directory "/gemini/index.gmi"))
+               (string-contains algebra-gemtext "=> index.gmi Home")
+               (string-contains algebra-gemtext "=> limits.gmi Limits"))))
       (test-assert "sitemap output uses the same routed page URLs"
         (and (string-contains sitemap "https://notes.example/index.html")
              (not (string-contains sitemap
