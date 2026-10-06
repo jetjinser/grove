@@ -65,12 +65,17 @@ concurrently and each is capped by an optional per-session timeout; clients
 that do not authenticate within the login timeout (default 60 seconds) are
 dropped.
 
-Generate the RSA host key with `grove ssh-keygen` (add `--force` to overwrite):
+Generate the RSA host key with `grove ssh-keygen` (add `--force` to overwrite),
+or let the server create it on demand with `--ssh-generate-host-key` when the
+`--host-key` file does not exist yet:
 
 ```sh
 grove ssh-keygen --host-key host_rsa
 grove browse --project project.scm \
   --ssh 2222 --host-key host_rsa --authorized-keys authorized_keys
+grove browse --project project.scm \
+  --ssh 2222 --ssh-generate-host-key \
+  --host-key host_rsa --authorized-keys authorized_keys
 ```
 
 Tune the server with `--ssh-workers N` (concurrency, default 4),

@@ -68,7 +68,11 @@
         ("serve" "--port" "0") ("serve" "--port" "65536")
         ("serve" "--port" "abc") ("serve" "--port" "1.5")
         ("serve" "--port") ("new" "--output" "x")
-        ("build" "--dest" "x") ("new" "a" "b")))
+        ("build" "--dest" "x") ("new" "a" "b")
+        ("browse" "--ssh-generate-host-key")
+        ("browse" "--ssh-workers" "0")
+        ("browse" "--ssh-memory-limit" "0")
+        ("build" "--ssh-workers" "2")))
     (test-equal "check help describes validation without build-only options" #t
       (let ((result (run "check" "--help")))
         (and (= (car result) 0)

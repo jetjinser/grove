@@ -49,8 +49,11 @@
        (when (and (not (equal? command "browse"))
                   (or (assq 'ssh-workers options) (assq 'ssh-login-timeout options)
                       (assq 'ssh-session-timeout options)
-                      (assq 'ssh-memory-limit options)))
-         (usage-error "--ssh-workers, --ssh-login-timeout, --ssh-session-timeout and --ssh-memory-limit are browse options"))
+                      (assq 'ssh-memory-limit options)
+                      (assq 'ssh-generate-host-key options)))
+         (usage-error "--ssh-* options are browse options"))
+       (when (and (assq 'ssh-generate-host-key options) (not (assq 'ssh options)))
+         (usage-error "--ssh-generate-host-key requires --ssh"))
        (when (and (not (equal? command "serve"))
                   (or (assq 'port options) (assq 'no-watch options)))
          (usage-error "--port and --no-watch are serve options"))
@@ -65,11 +68,14 @@
                (member argument
                        '("build" "check" "serve" "new" "browse" "ssh-keygen")))
           (loop rest argument options))
-         ((member argument '("--help" "-h" "--debug" "--no-watch" "--force"))
+         ((member argument '("--help" "-h" "--debug" "--no-watch" "--force"
+                             "--ssh-generate-host-key"))
           (loop rest command
                 (acons (cond ((string=? argument "--debug") 'debug)
                              ((string=? argument "--no-watch") 'no-watch)
                              ((string=? argument "--force") 'force)
+                             ((string=? argument "--ssh-generate-host-key")
+                              'ssh-generate-host-key)
                              (else 'help)) #t options)))
          ((member argument
                   '("--project" "--output" "--port" "--dest"
@@ -152,7 +158,7 @@
   (when (or (not command) (equal? command "new"))
     (display "  --dest PATH     Existing destination directory (new only).\n"))
   (when (or (not command) (equal? command "browse"))
-    (display "  --ssh PORT      Serve browsing over SSH (browse only).\n  --host-key PATH RSA host key for --ssh (browse only).\n  --authorized-keys PATH  Authorized client keys for --ssh (browse only).\n  --ssh-workers N         Concurrent sessions/processes (browse --ssh; default 4).\n  --ssh-login-timeout S   Drop clients that do not authenticate in S seconds (default 60).\n  --ssh-session-timeout S Drop a session after S seconds (0 disables; default 0).\n  --ssh-memory-limit BYTES Cap each worker's address space (browse --ssh).\n"))
+    (display "  --ssh PORT      Serve browsing over SSH (browse only).\n  --host-key PATH RSA host key for --ssh (browse only).\n  --authorized-keys PATH  Authorized client keys for --ssh (browse only).\n  --ssh-generate-host-key Create the host key if it is missing (browse --ssh).\n  --ssh-workers N         Concurrent sessions/processes (browse --ssh; default 4).\n  --ssh-login-timeout S   Drop clients that do not authenticate in S seconds (default 60).\n  --ssh-session-timeout S Drop a session after S seconds (0 disables; default 0).\n  --ssh-memory-limit BYTES Cap each worker's address space (browse --ssh).\n"))
   (when (or (not command) (equal? command "ssh-keygen"))
     (display "  --host-key PATH RSA host key to create (ssh-keygen).\n  --force         Overwrite an existing host key (ssh-keygen).\n"))
   (display "  --debug         Show the original exception and backtrace.\n  -h, --help      Show help.\n\nOption paths are relative to the invocation directory.\nProject paths are relative to the project file's directory.\n"))
@@ -203,19 +209,27 @@
                  (unless (project-browse project)
                    (error "project does not define a #:browse callback"))
                  (if ssh-port
-                     (let ((host-key (assq-ref options 'host-key))
-                           (authorized (assq-ref options 'authorized-keys)))
-                       (unless host-key
-                         (error "--ssh requires --host-key"))
-                       (unless authorized
-                         (error "--ssh requires --authorized-keys"))
-                       (format (current-error-port)
-                               "grove: serving SSH browsing on port ~a~%" ssh-port)
-                       ;; Analyze once; worker processes inherit the model.
-                       (let ((analysis (analyze-project project)))
-                         ((ssh-ref 'serve-ssh)
-                           #:port ssh-port
-                           #:host-key (absolute host-key)
+                      (let ((host-key (assq-ref options 'host-key))
+                            (authorized (assq-ref options 'authorized-keys)))
+                        (unless host-key
+                          (error "--ssh requires --host-key"))
+                        (unless authorized
+                          (error "--ssh requires --authorized-keys"))
+                        (let ((host-key-path (absolute host-key)))
+                          (when (and (assq-ref options 'ssh-generate-host-key)
+                                     (not (file-exists? host-key-path)))
+                            (format (current-error-port)
+                                    "grove: generating SSH host key ~a~%"
+                                    host-key-path)
+                            ((ssh-ref 'generate-host-key) host-key-path))
+                          (format (current-error-port)
+                                  "grove: serving SSH browsing on port ~a~%"
+                                  ssh-port)
+                          ;; Analyze once; worker processes inherit the model.
+                          (let ((analysis (analyze-project project)))
+                            ((ssh-ref 'serve-ssh)
+                            #:port ssh-port
+                            #:host-key host-key-path
                            #:authorized-keys
                            ((ssh-ref 'read-authorized-keys) (absolute authorized))
                            #:workers (or (assq-ref options 'ssh-workers) 4)
@@ -226,8 +240,8 @@
                            (lambda (input output)
                              ((project-browse project)
                               (project-analysis-model analysis)
-                              #:input input #:output output)))
-                         0))
+                               #:input input #:output output)))
+                          0)))
                      (begin (browse-project project) 0))))))))
       (else
         (let* ((started (cli-seconds))
