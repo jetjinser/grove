@@ -5,6 +5,7 @@
 (define-module (tests unit forester queries)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-64)
+  #:use-module (forester private query-output)
   #:use-module (forester relations)
   #:use-module (forester site)
   #:use-module (grove ir)
@@ -99,5 +100,53 @@
                  (map site-page-id
                       (reachable-pages forest (site-page-id page)))))
          (site-pages (site forest)))))
+
+(test-assert "query links warn on unknown fragments"
+  (let* ((port (open-output-string))
+         (document
+           (make-content-document
+             (list (make-content-element
+                     'link '("target")
+                     #:properties '((target . "target") (fragment . "missing")))))))
+    (parameterize ((current-warning-port port))
+      (prepare-query-output
+        document "queries/test" (lambda (target) 'page)
+        (lambda (target fragment) #f)))
+    (string-contains (get-output-string port) "missing")))
+
+(test-assert "query links with declared fragments stay silent"
+  (let* ((port (open-output-string))
+         (document
+           (make-content-document
+             (list (make-content-element
+                     'link '("target")
+                     #:properties '((target . "target") (fragment . "eq-1")))))))
+    (parameterize ((current-warning-port port))
+      (prepare-query-output
+        document "queries/test" (lambda (target) 'page)
+        (lambda (target fragment) #t)))
+    (string-null? (get-output-string port))))
+
+(test-assert "query-returned links warn through forest resolution"
+  (let* ((port (open-output-string))
+         (host
+           (make-site-page "host" "Host"
+             (make-content-document
+               (list (make-content-element
+                       'forest-query '()
+                       #:properties
+                       `((query . ,(lambda (forest page-id)
+                                     (make-content-document
+                                       (list (make-content-element
+                                               'link '("x")
+                                               #:properties '((target . "host")
+                                                              (fragment . "missing"))))))))
+                       #:flow-kind 'block)))))
+         (forest
+           (parameterize ((current-warning-port port))
+             (make-forest (make-site (list host)))))
+         (message (get-output-string port)))
+    (and (string-contains message "missing")
+         (string-contains message "host"))))
 
 (test-end "forester site queries")

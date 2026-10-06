@@ -27,6 +27,14 @@ Unnamed subtrees receive `unstable-N` IDs in source-page/document preorder;
 edits can change them. Use explicit IDs for durable references. `#:open?`
 controls initial disclosure state.
 
+Occurrences carry author anchors for fragment links. An explicit `#:id` also
+anchors that occurrence in its host page; `#:anchor` overrides the value or
+anchors an unnamed subtree, and `transclude` stays unanchored unless the
+author passes `#:anchor`. Author anchors are emitted as-is (never scoped by
+embedding, unlike style IDs) and must be unique per page together with math
+IDs; duplicates fail during analysis. The generated `tree-N` position anchors
+are unchanged.
+
 Root and subtree prose use the same paragraph decoder. Direct title, summary,
 and dates become frontmatter. `tag` and `taxon` accept one value without a
 separate label, normalize it to lowercase, and remain queryable content nodes.
@@ -129,7 +137,8 @@ For HTML-specific attributes, use the existing style property API:
 `class` is appended to structural classes. HTML IDs and local `href` attributes
 in styles are scoped when a tree is embedded, so repeated transclusions keep
 separate anchors. A style cannot replace a renderer-owned navigation ID.
-A subtree's `#:id` is its tree identity, not an HTML attribute.
+A subtree's `#:id` is its tree identity; explicit IDs and `#:anchor` values
+double as unscoped occurrence anchors, while style IDs remain scoped.
 
 ### Reference fragments and equation IDs
 
@@ -138,16 +147,31 @@ validated like any other link; the fragment is the id of a node on that page and
 is passed through to the output URL:
 
 ```scheme
+@subtree[#:id "theorem-3"]{
+  @title{Theorem 3}
+  The bound holds while the flow stays smooth.
+}
 @tex-display-math[#:id "eq-2-12"]{a^2 + b^2 = c^2 \tag{2.12}}
-@paragraph{See @link["cfd-0003#eq-2-12"]{(2.12)}.}
+@paragraph{See @link["cfd-0003#theorem-3"]{Theorem 3} and
+@link["cfd-0003#eq-2-12"]{(2.12)}.}
 ```
 
 `@tex-math` and `@tex-display-math` put `#:id` on their container
 (`span.math-inline` / `div.math-display`), which is what the fragment scrolls
-to. Links without a fragment are unchanged. The reader splits the target into
-the page (`target`) and the `fragment`, so the reference graph and backlinks
-stay page-level. The fragment is not validated; a raw `#` in a link's `target`
+to. Explicit subtree IDs and occurrence `#:anchor` values are other anchor
+sources. A fragment resolves inside the target page's own DOM, not inside
+pages that transclude it. Links without a fragment are unchanged. The reader
+splits the target into the page (`target`) and the `fragment`, so the
+reference graph and backlinks stay page-level. A raw `#` in a link's `target`
 property is rejected.
+
+Fragments are existence-checked against the anchors the target page declares
+in its own document: equation IDs, explicit subtree IDs, occurrence anchors,
+and the page's `tree-root-<page-id>` root. Unknown fragments are reported as
+build warnings naming the fragment, the target page, and the source file.
+Generated position anchors (`tree-N`, `ref-N`) are implementation details,
+not author contracts, and warn like any other unknown fragment. Links
+returned by queries receive the same check.
 
 `content-with-style` applies the same interface to an element returned by
 Scheme code, preserving its content, properties, source, and flow kind.

@@ -167,7 +167,7 @@
             (or (assq-ref location 'column) 1))
           ""))))
 
-(define (resolve-page-queries forest page)
+(define (resolve-page-queries forest anchor-index page)
   (define (resolve content)
     (if (and (content-element? content)
              (eq? (content-element-kind content) 'forest-query))
@@ -178,10 +178,17 @@
                    (lambda () (query forest (site-page-id page)))
                    (lambda (key . args)
                      (error (format #f "Forester query failed at ~a: ~s"
-                                    source (cons key args)))))))
+                                    source (cons key args))))))
+               (known-anchor?
+                 (lambda (target fragment)
+                   (and anchor-index
+                        (member fragment
+                                (hash-ref anchor-index target '())
+                                string=?)))))
           (content-document-children
             (query-output:prepare-query-output result source
-              (lambda (target) (find-page forest target)))))
+              (lambda (target) (find-page forest target))
+              known-anchor?)))
         (list content)))
   (make-content-document
     (append-map resolve (content-document-children
@@ -212,7 +219,7 @@
   (content-element-property element
     (if (eq? (content-element-kind element) 'subtree) 'tree-id 'target)))
 
-(define (resolve-forest-queries forest)
+(define (resolve-forest-queries forest anchor-index)
   (for-each
     (lambda (page)
       (when (any nested-query-in-content?
@@ -238,7 +245,7 @@
                             (make-site-page
                               (site-page-id page)
                               (site-page-title page)
-                              (resolve-page-queries forest page)
+                              (resolve-page-queries forest anchor-index page)
                               (site-page-source page)
                               #:metadata (site-page-metadata page))
                             page))
@@ -271,28 +278,47 @@
         (vector-ref index id)
         (error "unknown content node" id))))
 
-(define (ensure-unique-math-ids pages)
-  "Reject duplicate explicit math IDs within a page's own content.
+(define (page-anchor-facts page)
+  "Return (kind . id) pairs for the anchor IDs a page declares in its own
+document: the page's root anchor, explicit math IDs from owned content, and
+the anchors of its subtree and transclusion elements. Anchors brought in
+through transclusions belong to their own pages and stay out of this set."
+  (let ((document (site-page-document page)))
+    (append
+      (list (cons "anchor" (string-append "tree-root-" (site-page-id page))))
+      (map (lambda (id) (cons "math" id))
+           (filter-map
+             (lambda (element) (content-element-property element 'id))
+             (tree-pass:math-elements
+               (tree-pass:owned-content document))))
+      (map (lambda (id) (cons "anchor" id))
+           (filter-map
+             (lambda (element) (content-element-property element 'anchor))
+             (append (tree-pass:subtree-elements document)
+                     (tree-pass:transclusion-elements document)))))))
 
-Transcluded subtrees are not scanned here; a subtree rendered twice can still
-repeat an equation ID, which is a known limitation of global math anchors."
+(define (ensure-unique-anchor-ids pages)
+  "Reject duplicate author-facing anchor IDs in a page's own rendering.
+
+A page's scope is the set page-anchor-facts returns. Content pulled in
+through transclusions is not scanned, and author anchors may collide with the
+generated tree-N position anchors; both are known limitations of global
+anchors."
   (for-each
     (lambda (page)
       (let ((seen (make-hash-table)))
         (for-each
-          (lambda (id)
-            (when (hash-ref seen id)
-              (error
-                (format #f "duplicate math ID in page ~a (~a): ~a"
-                        (site-page-id page)
-                        (or (site-page-source page) "<unknown source>")
-                        id)))
-            (hash-set! seen id #t))
-          (filter-map
-            (lambda (element) (content-element-property element 'id))
-            (tree-pass:math-elements
-              (tree-pass:owned-content
-                (site-page-document page)))))))
+          (lambda (fact)
+            (let ((id (cdr fact)))
+              (when (hash-ref seen id)
+                (error
+                  (format #f "duplicate ~a ID in page ~a (~a): ~a"
+                          (car fact)
+                          (site-page-id page)
+                          (or (site-page-source page) "<unknown source>")
+                          id)))
+              (hash-set! seen id #t)))
+          (page-anchor-facts page))))
     pages))
 
 (define* (make-forest site #:key (timings #f))
@@ -321,7 +347,16 @@ repeat an equation ID, which is a known limitation of global math anchors."
          (_ (for-each (lambda (page)
                         (hash-set! page-index (site-page-id page) page))
                       pages))
-         (_ (ensure-unique-math-ids pages))
+         (_ (ensure-unique-anchor-ids pages))
+         (anchor-index
+           (measure 'anchors
+             (let ((index (make-hash-table)))
+               (for-each
+                 (lambda (page)
+                   (hash-set! index (site-page-id page)
+                              (map cdr (page-anchor-facts page))))
+                 pages)
+               index)))
          (reference-facts
            (measure 'references (append-map
              (lambda (source-page)
@@ -346,6 +381,18 @@ repeat an equation ID, which is a known limitation of global math anchors."
                              (or (site-page-source source-page)
                                  "<unknown source>")
                              target)))
+                       (let ((fragment
+                               (content-element-property element 'fragment)))
+                         (when (and fragment
+                                    (not (member fragment
+                                                 (hash-ref anchor-index
+                                                           target-page-id '())
+                                                 string=?)))
+                           (format (current-warning-port)
+                             "warning: fragment ~s does not resolve in page ~a (link authored in ~a at ~a)\n"
+                             fragment target-page-id source-id
+                             (or (site-page-source source-page)
+                                 "<unknown source>"))))
                        (list source-id (format #f "ref-~a" index)
                              target-page-id
                              (content-index:content->plain-text element))))
@@ -418,7 +465,8 @@ repeat an equation ID, which is a known limitation of global math anchors."
                     reference-relation composition page-index page-relation
                     (car content-node-state)
                     (cadr content-node-state)
-                    '())))))
+                    '())
+      anchor-index))))
 
 (define (find-page forest id)
   (or (hash-ref (page-index forest) id)

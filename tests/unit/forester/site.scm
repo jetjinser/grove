@@ -37,8 +37,8 @@
   (test-equal "timing observation preserves the page"
     "Measured" (site-page-title (find-page forest "measured")))
   (test-equal "forest timings follow analysis order"
-    '(identify-trees extract-trees references transclusions reference-index
-      page-index content composition queries)
+    '(identify-trees extract-trees anchors references transclusions
+      reference-index page-index content composition queries)
     (map car (reverse phases)))
   (test-assert "forest timings report nonnegative seconds"
     (every (lambda (entry) (>= (cdr entry) 0)) phases)))
@@ -132,6 +132,63 @@
     (and (string-contains message "notes/broken.plant")
          (string-contains message "broken")
          (string-contains message "missing"))))
+
+(test-error "duplicate occurrence anchors fail site analysis" #t
+  (make-forest
+    (make-site
+      (list
+        (make-site-page "defs" "Defs"
+          (evaluate-document
+            "@subtree[#:id \"theorem-3\"]{@title{Theorem 3}@paragraph{Statement.}}"))
+        (make-site-page "notes" "Notes"
+          (evaluate-document
+            (string-append
+              "@transclude[\"theorem-3\" #:anchor \"same\"]\n"
+              "@transclude[\"theorem-3\" #:anchor \"same\"]")))))))
+
+(test-error "subtree anchors and math IDs share one namespace" #t
+  (make-forest
+    (make-site
+      (list (make-site-page "collide" "Collide"
+              (evaluate-document
+                (string-append
+                  "@tex-math[#:id \"theorem-3\"]{x}\n"
+                  "@subtree[#:id \"theorem-3\"]{@title{Theorem 3}@paragraph{Statement.}}")))))))
+
+(test-error "occurrence anchors reject invalid anchor IDs" #t
+  (evaluate-document "@transclude[\"theorem-3\" #:anchor \"bad anchor\"]"))
+
+(let* ((known-document
+         (evaluate-document
+           (string-append
+             "@tex-display-math[#:id \"eq-1\"]{a}\n"
+             "@subtree[#:id \"theorem-1\"]{@title{T}@paragraph{b}}\n"
+             "@paragraph{See @link[\"notes#eq-1\"]{eq}, @link[\"notes#theorem-1\"]{t},"
+             " and @link[\"notes#tree-root-notes\"]{root}.}")))
+       (port (open-output-string))
+       (forest
+         (parameterize ((current-warning-port port))
+           (make-forest
+             (make-site (list (make-site-page "notes" "Notes" known-document))))))
+       (message (get-output-string port)))
+  (test-assert "declared anchors accept link fragments silently"
+    (string-null? message)))
+
+(let* ((stale-document
+         (evaluate-document
+           (string-append
+             "@tex-display-math[#:id \"eq-1\"]{a}\n"
+             "@paragraph{See @link[\"notes#eq-2\"]{eq} and @link[\"notes#tree-1\"]{first}.}")))
+       (port (open-output-string))
+       (forest
+         (parameterize ((current-warning-port port))
+           (make-forest
+             (make-site (list (make-site-page "notes" "Notes" stale-document))))))
+       (message (get-output-string port)))
+  (test-assert "unknown fragments warn with fragment and target"
+    (and (string-contains message "eq-2")
+         (string-contains message "notes")
+         (string-contains message "tree-1"))))
 
 (test-error "duplicate page ids fail site analysis" #t
   (make-site
