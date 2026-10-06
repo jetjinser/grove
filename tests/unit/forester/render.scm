@@ -43,10 +43,10 @@
     (and (string-prefix? "# Site\n" index)
          (string-contains index "=> algebra.gmi Algebra & limits")
          (string-contains index "=> limits.gmi Limits")))
-  (test-assert "Gemtext page titles use headings and links occupy their own lines"
+  (test-assert "Gemtext page titles use headings and keep prose around links"
     (and (string-prefix? "# Algebra & limits\n" algebra-gemtext)
          (string-contains algebra-gemtext "=> limits.gmi limits")
-         (not (string-contains algebra-gemtext "The limits are useful."))))
+         (string-contains algebra-gemtext "The limits are useful.")))
   (test-assert "Gemtext artifacts retain Forest source dependencies"
     (equal? (source-paths forest) (artifact-sources (car artifacts)))))
 
@@ -62,6 +62,12 @@
                          #:properties '((target . "limits")))
                        " after."))
                (make-content-element 'item '("A list item") #:flow-kind 'block)
+               (make-content-element
+                 'paragraph
+                 (list "See "
+                       (make-content-element 'image '("A diagram")
+                         #:properties '((source . "assets/diagram one.svg?view=full")))
+                       " soon."))
                (make-content-element 'code-block
                  (list (make-content-text "(+ 1 2)"))
                  #:properties '((language . scheme)) #:flow-kind 'block)))))
@@ -73,7 +79,22 @@
          (string-contains page " after.")))
   (test-assert "Gemtext uses native list and preformatted code syntax"
     (and (string-contains page "* A list item")
-         (string-contains page "``` scheme\n(+ 1 2)\n```"))))
+         (string-contains page "``` scheme\n(+ 1 2)\n```")))
+  (test-assert "Gemtext preserves image alt text and links to encoded local assets"
+    (and (string-contains page "See A diagram soon.")
+         (string-contains page
+           "=> assets/diagram%20one.svg?view=full A diagram"))))
+
+(let* ((source
+         (make-site-page "source" "Source"
+           (make-content-document
+             (list (make-content-element 'paragraph
+                     (list (make-content-element 'image '("Remote image")
+                             #:properties '((source . "http://images.example/pic.png")))))))))
+       (forest (make-forest (make-site (list source))))
+       (page (cdr (assoc "source" (site->gemtext forest)))))
+  (test-assert "Gemtext preserves arbitrary absolute URI schemes for assets"
+    (string-contains page "=> http://images.example/pic.png Remote image")))
 
 (let* ((page
          (make-site-page "literal" "Literal syntax"

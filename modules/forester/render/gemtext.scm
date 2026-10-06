@@ -10,8 +10,10 @@
   #:use-module (forester render text routes)
   #:use-module (forester site)
   #:use-module (grove site)
+  #:use-module (web uri)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
+  #:use-module (srfi srfi-14)
   #:export (site->gemtext
             render-gemtext
             make-gemtext-renderer))
@@ -28,17 +30,79 @@
   (string-append (string #\x1e) (string kind) text))
 
 (define (link-line url label)
-  (string-append "\n" (marked-line #\L
-    (string-append "=> " url
-      (if (string-null? label) "" (string-append " " label)))) "\n"))
+  (string-append
+    (marked-line #\L
+      (string-append "=> " url
+        (if (string-null? label) "" (string-append " " label))))
+    "\n"))
+
+(define gemtext-uri-path-characters
+  (string->char-set
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~!$&'()*+,;=:@/"))
+
+(define (uri-scheme? value)
+  (let ((colon (string-index value #\:)))
+    (and colon (> colon 0)
+         (ascii-alpha? (string-ref value 0))
+         (every (lambda (character)
+                  (or (ascii-alpha? character)
+                      (and (char>=? character #\0) (char<=? character #\9))
+                      (memv character '(#\+ #\. #\-))))
+                (string->list (substring value 1 colon))))))
+
+(define (ascii-alpha? character)
+  (or (and (char>=? character #\a) (char<=? character #\z))
+      (and (char>=? character #\A) (char<=? character #\Z))))
+
+(define (split-uri-suffix value)
+  (let ((query (string-index value #\?))
+        (fragment (string-index value #\#)))
+    (let ((end (cond ((and query fragment) (min query fragment))
+                     (query query)
+                     (fragment fragment)
+                     (else (string-length value)))))
+      (values (substring value 0 end) (substring value end)))))
+
+(define (route-uri path)
+  (uri-encode path #:unescaped-chars gemtext-uri-path-characters))
+
+(define (page-url routes from-id to-id)
+  (route-uri
+    (text-relative-path
+      (text-page-path routes from-id)
+      (text-page-path routes to-id))))
+
+(define (asset-url routes page source)
+  (if (uri-scheme? source)
+      source
+      (call-with-values
+        (lambda () (split-uri-suffix source))
+        (lambda (path suffix)
+          (let ((relative
+                  (if (string-prefix? "/" path)
+                      path
+                      (text-relative-path
+                        (text-page-path routes (site-page-id page)) path))))
+            (string-append (route-uri relative) suffix))))))
 
 (define (page-content-handlers forest routes page)
-  (let ((references (outgoing-references forest (site-page-id page))))
+  (let ((references (outgoing-references forest (site-page-id page)))
+        (pending-links '()))
+    (define (queue-link url label)
+      (set! pending-links (cons (link-line url label) pending-links)))
+    (define (flush-links body)
+      (let ((links (reverse pending-links)))
+        (set! pending-links '())
+        (string-append body
+          (if (null? links) "" (string-append "\n" (string-concatenate links))))))
     `((tag . ,(lambda (_ body) ""))
       (taxon . ,(lambda (_ body) ""))
       (item . ,(lambda (_ body)
-                 (string-append "\n" (marked-line #\M
-                   (string-append "* " (line-text body))) "\n")))
+                 (flush-links
+                   (string-append "\n" (marked-line #\M
+                     (string-append "* " (line-text body))) "\n"))))
+      (paragraph . ,(lambda (_ body)
+                      (string-append (flush-links body) "\n")))
       (link . ,(lambda (_ body)
                  (when (null? references)
                    (error "Gemtext link rendering exceeded its index"
@@ -46,35 +110,30 @@
                  (let* ((reference (car references))
                         (target (find-page forest
                                            (reference-target-page-id reference)))
-                        (url (text-relative-path
-                               (text-page-path routes (site-page-id page))
-                               (text-page-path routes
-                                               (reference-target-page-id reference))))
-                        (label (line-text body)))
+                        (url (page-url routes (site-page-id page)
+                                       (reference-target-page-id reference)))
+                        (label (line-text body))
+                        (label (if (string-null? label)
+                                   (site-page-title target) label)))
                    (set! references (cdr references))
-                   (link-line url
-                     (if (string-null? label) (site-page-title target) label)))))
+                   (queue-link url label)
+                   label)))
       (query-link . ,(lambda (element body)
                        (let* ((target-id (content-element-property element 'target))
                               (target (find-page forest target-id))
-                              (url (text-relative-path
-                                     (text-page-path routes (site-page-id page))
-                                     (text-page-path routes target-id)))
+                              (url (page-url routes (site-page-id page) target-id))
                               (label (line-text body)))
-                         (link-line url
-                           (if (string-null? label)
-                               (site-page-title target) label)))))
+                         (set! label (if (string-null? label)
+                                         (site-page-title target) label))
+                         (queue-link url label)
+                         label)))
       (image . ,(lambda (element body)
                   (let* ((source (content-element-property element 'source))
-                         (url (if (or (string-prefix? "https://" source)
-                                      (string-prefix? "gemini://" source)
-                                      (string-prefix? "/" source))
-                                  source
-                                  (text-relative-path
-                                    (text-page-path routes (site-page-id page))
-                                    source)))
-                         (label (line-text body)))
-                    (link-line url label))))
+                         (url (asset-url routes page source))
+                         (label (line-text body))
+                         (label (if (string-null? label) "[image]" label)))
+                    (queue-link url label)
+                    label)))
       (code-block . ,(lambda (element body)
                        (when (any (lambda (line) (string-prefix? "```" line))
                                   (string-split body #\newline))
@@ -98,12 +157,10 @@
     (map (lambda (kind)
            (cons kind
              (lambda (element _render)
-               (let* ((id (tree-occurrence-target element))
+                 (let* ((id (tree-occurrence-target element))
                       (target (find-page forest id))
-                      (url (text-relative-path
-                             (text-page-path routes (site-page-id page))
-                             (text-page-path routes id))))
-                 (link-line url (site-page-title target))))))
+                      (url (page-url routes (site-page-id page) id)))
+                 (string-append "\n" (link-line url (site-page-title target)))))))
          '(subtree transclude query-transclude))))
 
 (define (title-line title)
@@ -146,8 +203,8 @@
     (string-concatenate
       (map (lambda (page)
              (string-append (marked-line #\L "=> ")
-               (text-relative-path (text-index-path routes)
-                 (text-page-path routes (site-page-id page)))
+               (route-uri (text-relative-path (text-index-path routes)
+                 (text-page-path routes (site-page-id page))))
                " " (line-text (site-page-title page)) "\n"))
            (pages forest))))))
 
