@@ -58,8 +58,11 @@ browse callback over SSH. The bundled `(grove ssh)` module uses guile-ssh; the
 launcher exposes the Guile extension path so an installed Grove finds it
 without the development shell. It accepts only public-key authentication,
 never executes a client command, and hands the session channel to the project
-callback as its input and output. Clients that do not authenticate within the
-login timeout (default 60 seconds) are dropped.
+callback as its input and output. The server analyzes the project once and
+forks a pool of worker processes (four by default), so sessions are served
+concurrently and each is capped by an optional per-session timeout; clients
+that do not authenticate within the login timeout (default 60 seconds) are
+dropped.
 
 Generate the RSA host key with `grove ssh-keygen` (add `--force` to overwrite):
 

@@ -183,6 +183,107 @@ Uses ssh-keygen; refuses to overwrite an existing key unless FORCE is #t."
       (format output "grove ssh: wrote host key ~a (~a-bit RSA)~%" path bits)
       path)))
 
+(define (accept-session server)
+  (catch 'guile-ssh-error
+    (lambda () (server-accept server))
+    (lambda _ #f)))
+
+(define (serve-one-session session handler authorized-keys output login-timeout)
+  "Authenticate and serve a single SESSION, then disconnect it."
+  (server-handle-key-exchange session)
+  (catch #t
+    (lambda ()
+      (handle-session session handler authorized-keys output
+                      #:login-timeout login-timeout))
+    (lambda (key . arguments)
+      (format output "grove ssh: session error: ~s ~s~%" key arguments)))
+  (catch 'guile-ssh-error
+    (lambda () (disconnect! session))
+    (lambda _ #t)))
+
+(define (call-with-session-timeout seconds thunk)
+  "Run THUNK, killing the worker if it outlasts SECONDS.
+
+A blocking read cannot be interrupted in place, and the blocking C call holds
+the Guile lock, so signals-as-exceptions and watchdog threads cannot run. A
+separate watchdog process can: it sends SIGKILL, which cannot be blocked. The
+supervisor then restarts the worker."
+  (if (not (and seconds (> seconds 0)))
+      (thunk)
+      (let ((watchdog (primitive-fork)))
+        (if (zero? watchdog)
+            (let ((worker (getppid)))
+              (sleep seconds)
+              ;; Only fire while the worker is still our parent, so an orphaned
+              ;; watchdog cannot signal a reused PID.
+              (when (= (getppid) worker)
+                (catch #t (lambda () (kill worker SIGKILL)) (lambda _ #t)))
+              (primitive-exit 0))
+            (dynamic-wind
+              (lambda () #t)
+              thunk
+              (lambda ()
+                (catch #t (lambda () (kill watchdog SIGTERM)) (lambda _ #t))
+                (catch #t (lambda () (waitpid watchdog 0)) (lambda _ #t))))))))
+
+(define (worker-main server handler authorized-keys output login-timeout
+                     session-timeout memory-limit)
+  "Accept and serve sessions until the process is terminated.
+
+MEMORY-LIMIT caps the worker's address space so one session cannot exhaust the
+host; SESSION-TIMEOUT bounds a session and is enforced by a watchdog process."
+  (when memory-limit
+    (catch #t
+      (lambda () (setrlimit 'as memory-limit memory-limit))
+      (lambda _ #t)))
+  (let loop ()
+    (let ((session (accept-session server)))
+      (if (not session)
+          (begin (usleep 50000) (loop))
+          (begin
+            (catch #t
+              (lambda ()
+                (call-with-session-timeout
+                  session-timeout
+                  (lambda ()
+                    (serve-one-session session handler authorized-keys output
+                                       login-timeout))))
+              (lambda (key . arguments)
+                (format output "grove ssh: worker session error: ~s ~s~%"
+                        key arguments)))
+            (loop))))))
+
+(define (spawn-worker server handler authorized-keys output login-timeout
+                      session-timeout memory-limit)
+  (let ((pid (primitive-fork)))
+    (if (zero? pid)
+        (begin
+          (worker-main server handler authorized-keys output login-timeout
+                       session-timeout memory-limit)
+          (primitive-exit 0))
+        pid)))
+
+(define (reap-dead-children)
+  "Reap every exited child without blocking; return the reaped PIDs."
+  (let loop ((reaped '()))
+    (let ((result (catch #t (lambda () (waitpid -1 WNOHANG))
+                         (lambda _ #f))))
+      (if (or (not (pair? result)) (zero? (car result)))
+          (reverse reaped)
+          (loop (cons (car result) reaped))))))
+
+(define (kill-children pids signal)
+  (for-each (lambda (pid)
+              (catch #t (lambda () (kill pid signal)) (lambda _ #t)))
+            pids))
+
+(define (reap-all-children)
+  "Block until every child has exited, collecting them to avoid zombies."
+  (let loop ()
+    (let ((result (catch #t (lambda () (waitpid -1 0)) (lambda _ #f))))
+      (when (and (pair? result) (not (zero? (car result))))
+        (loop)))))
+
 (define* (serve-ssh #:key
                     (address "127.0.0.1")
                     (port 0)
@@ -191,42 +292,62 @@ Uses ssh-keygen; refuses to overwrite an existing key unless FORCE is #t."
                     (banner "Grove")
                     (log-verbosity 'nolog)
                     (login-timeout 60)
+                    (session-timeout 0)
+                    (workers 4)
+                    memory-limit
                     handler
                     (output (current-error-port)))
   "Serve HANDLER over SSH until interrupted.
 
 HANDLER receives the session channel as both input and output. HOST-KEY is an
 RSA host key file; AUTHORIZED-KEYS is a list from read-authorized-keys.
-LOGIN-TIMEOUT, in seconds, drops clients that have not authenticated; 0 disables
-it."
+
+WORKERS is the number of session-handling processes, and thus the concurrency
+limit. LOGIN-TIMEOUT drops clients that do not authenticate in time;
+SESSION-TIMEOUT caps a browsing session (0 disables it); MEMORY-LIMIT, in bytes,
+caps each worker's address space."
   (unless (procedure? handler)
     (error "SSH server requires a session handler" handler))
   (unless (and (string? host-key) (file-exists? host-key))
     (error "SSH server requires an existing host key" host-key))
   (unless (and (exact-integer? login-timeout) (>= login-timeout 0))
     (error "SSH login timeout must be a non-negative integer" login-timeout))
+  (unless (and (exact-integer? session-timeout) (>= session-timeout 0))
+    (error "SSH session timeout must be a non-negative integer" session-timeout))
+  (unless (and (exact-integer? workers) (>= workers 1))
+    (error "SSH worker count must be a positive integer" workers))
   (let ((server (make-server #:bindaddr address
                              #:bindport port
                              #:rsakey host-key
                              #:banner banner
                              #:log-verbosity log-verbosity)))
+    (define (spawn)
+      (spawn-worker server handler authorized-keys output
+                    login-timeout session-timeout memory-limit))
     (server-listen server)
-    (let serve ()
-      (let ((session (catch 'guile-ssh-error
-                       (lambda () (server-accept server))
-                       (lambda _ #f))))
-        (if (not session)
-            (sleep 1)
-            (begin
-              (server-handle-key-exchange session)
-              (catch #t
-                (lambda ()
-                  (handle-session session handler authorized-keys output
-                                  #:login-timeout login-timeout))
-                (lambda (key . arguments)
-                  (format output "grove ssh: session error: ~s ~s~%"
-                          key arguments)))
-              (catch 'guile-ssh-error
-                (lambda () (disconnect! session))
-                (lambda _ #t)))))
-      (serve))))
+    (let ((children (map (lambda (_) (spawn)) (iota workers))))
+      (define (terminate status)
+        (kill-children children SIGTERM)
+        (reap-all-children)
+        (primitive-exit status))
+      (sigaction SIGINT (lambda (_signal) (terminate 130)))
+      (sigaction SIGTERM (lambda (_signal) (terminate 143)))
+      (format output "grove ssh: serving with ~a worker(s)~%" workers)
+      (dynamic-wind
+        (lambda () #t)
+        (lambda ()
+          ;; Supervise: restart any worker that exits so the pool stays full.
+          (let supervise ((pids children))
+            (set! children pids)
+            (let* ((dead (reap-dead-children))
+                   (alive (remove (lambda (pid) (memq pid dead)) pids))
+                   (fresh (map (lambda (_) (spawn)) dead))
+                   (next (append fresh alive)))
+              (set! children next)
+              (usleep 200000)
+              (supervise next))))
+        (lambda ()
+          ;; Kill workers on any exit, including an uncaught error, so they do
+          ;; not keep the listening socket.
+          (kill-children children SIGTERM)
+          (reap-all-children))))))

@@ -173,16 +173,19 @@
                          (error "--ssh requires --authorized-keys"))
                        (format (current-error-port)
                                "grove: serving SSH browsing on port ~a~%" ssh-port)
-                       (serve-ssh
-                         #:port ssh-port
-                         #:host-key (absolute host-key)
-                         #:authorized-keys
-                         (read-authorized-keys (absolute authorized))
-                         #:handler
-                         (lambda (input output)
-                           (browse-project project #:input input
-                                                   #:output output)))
-                       0)
+                       ;; Analyze once; worker processes inherit the model.
+                       (let ((analysis (analyze-project project)))
+                         (serve-ssh
+                           #:port ssh-port
+                           #:host-key (absolute host-key)
+                           #:authorized-keys
+                           (read-authorized-keys (absolute authorized))
+                           #:handler
+                           (lambda (input output)
+                             ((project-browse project)
+                              (project-analysis-model analysis)
+                              #:input input #:output output)))
+                         0))
                      (begin (browse-project project) 0))))))))
       (else
         (let* ((started (cli-seconds))
