@@ -118,6 +118,12 @@ exports provide incoming and outgoing reference queries, backlinks, common
 backlinks, and transitive reachability. The site layer maps those query
 results back to page and reference records and preserves site ordering.
 
+A link fragment (`@link["page#node"]`) is not part of the reference row: the
+reader splits it off, so `target-page-id` is the page and the relation stays
+page-level. Two fragment links to the same page therefore produce two
+occurrences but a single backlinked page, and fragments never affect
+reachability.
+
 ## Forester content and page queries
 
 `(forester site)` exposes two immutable relation snapshots on a Forest.

@@ -427,4 +427,21 @@
             (make-site-page "query-target" "Target"
               (evaluate-document "@transclude[\"query-host\"]"))))))
 
+(test-error "duplicate explicit math IDs in a page are rejected" #t
+  (make-forest
+    (make-site
+      (list (make-site-page "dup" "Duplicate"
+              (evaluate-document
+                "@tex-display-math[#:id \"same\"]{x}
+                 @tex-display-math[#:id \"same\"]{y}"))))))
+
+(test-assert "distinct math IDs are accepted"
+  (forest?
+    (make-forest
+      (make-site
+        (list (make-site-page "ids" "IDs"
+                (evaluate-document
+                  "@tex-display-math[#:id \"one\"]{x}
+                   @tex-display-math[#:id \"two\"]{y}")))))))
+
 (test-end "forester site")

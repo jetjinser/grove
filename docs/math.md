@@ -145,6 +145,13 @@ Notation lowers to MathML and is not parsed back into a Semantic expression.
 Compute with Semantic values, then lower the result for display. Display-only
 fractions, matrices, and alignments carry no implied calculation semantics.
 
+`@tex-math`, `@tex-display-math`, `@◇:math`, and `@◇:display-math` accept
+`#:id`, which becomes the container's HTML anchor (`eq-2-12` in
+`@tex-display-math[#:id "eq-2-12"]{…}`) so a `@link["page#eq-2-12"]` can scroll
+to the equation. The ID must be non-empty and contain neither whitespace nor
+`#`; a style cannot replace it. Injecting that anchor is a separate concern and
+does not change the math semantics above.
+
 ## Current boundaries
 
 Unsupported expressions, missing declarations, invalid types, and unmet domain

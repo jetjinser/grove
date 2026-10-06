@@ -85,7 +85,7 @@
   "Split TARGET into (values page-id fragment-or-#f) at the first #.
 
 The page is validated to exist later; the fragment is the id of a node on that
-page and is passed through unchanged."
+page and must be a valid anchor ID."
   (let ((hash (string-index target #\#)))
     (if (not hash)
         (values target #f)
@@ -93,9 +93,7 @@ page and is passed through unchanged."
               (fragment (substring target (1+ hash))))
           (unless (non-empty-string? page)
             (error "Forester link requires a tree ID before #" target))
-          (unless (non-empty-string? fragment)
-            (error "Forester link requires a fragment after #" target))
-          (values page fragment)))))
+          (values page (checked-anchor-id fragment))))))
 
 (define*-public (link target #:key (style #f) . labels)
   (set! labels (command-body labels))

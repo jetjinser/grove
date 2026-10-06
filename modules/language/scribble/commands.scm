@@ -155,17 +155,6 @@
           #:max-depth max-depth #:max-states max-states #:max-term-size max-term-size))
       #:view view)))
 
-(define (checked-math-id id)
-  "Validate an optional math element id; it becomes the HTML anchor."
-  (if (not id)
-      #f
-      (begin
-        (unless (and (string? id)
-                     (not (string-null? id))
-                     (not (string-any char-whitespace? id)))
-          (error "TeX math id must be a non-empty string without whitespace" id))
-        id)))
-
 (define (math-properties tex? display? id)
   (append (if tex? '((tex? . #t)) '())
           (if display? '((display? . #t)) '())
@@ -182,7 +171,7 @@
                                                value)))
                                   source))
                         #:style style
-                        #:properties (math-properties #t #f (checked-math-id id))))
+                        #:properties (math-properties #t #f (checked-anchor-id id))))
 
 (define*-public (tex-display-math #:key (style #f) (id #f) . source)
   (set! source (command-body source))
@@ -195,7 +184,7 @@
                                                value)))
                                   source))
                         #:style style
-                        #:properties (math-properties #t #t (checked-math-id id))
+                        #:properties (math-properties #t #t (checked-anchor-id id))
                         #:flow-kind 'block))
 
 (define-public compute

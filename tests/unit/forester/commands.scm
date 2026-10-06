@@ -48,6 +48,8 @@
 
 (test-error "links reject an empty tree before #" #t (link "#section"))
 (test-error "links reject an empty fragment after #" #t (link "destination#"))
+(test-error "links reject a fragment with whitespace" #t (link "destination#sec tion"))
+(test-error "links reject a fragment with a second #" #t (link "destination#a#b"))
 
 (for-each
   (lambda (constructor kind)
@@ -150,5 +152,29 @@
 
 (test-error "tex math rejects an id with whitespace" #t
   (evaluate-document "@tex-math[#:id \"a b\"]{x}"))
+(test-error "tex math rejects an id with #" #t
+  (evaluate-document "@tex-math[#:id \"a#b\"]{x}"))
+
+(test-equal "tex math without an id has no id property"
+  #f (content-element-property
+       (car (content-document-children
+              (evaluate-document "@tex-display-math{x}")))
+       'id))
+
+(let* ((document (evaluate-document "@notation:math[#:id \"m-1\"]{x}"))
+       (math (car (content-element-children
+                    (car (content-document-children document)))))
+       (html (sxml->html (content->sxml document))))
+  (test-equal "notation math carries its id" "m-1" (content-element-property math 'id))
+  (test-assert "notation math renders the id on its container"
+    (string-contains html "class=\"math-inline\" id=\"m-1\"")))
+
+(test-error "a style cannot replace a renderer-owned math id" #t
+  (let* ((document (evaluate-document "@tex-display-math[#:id \"eq-1\"]{x}"))
+         (math (car (content-document-children document)))
+         (style (make-content-style 'tagged
+                  (list (make-html-attributes '((id . "from-style"))))))
+         (styled (content-with-style math style)))
+    (sxml->html (content->sxml (make-content-document (list styled))))))
 
 (test-end "forester commands")

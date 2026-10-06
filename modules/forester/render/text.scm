@@ -44,10 +44,12 @@
                    (set! references (cdr references))
                    (string-append body " [" path "] [#" (reference-source-id reference) "]"))))
       (query-link . ,(lambda (element body)
-                      (string-append body " ["
-                        (text-relative-path (text-page-path routes (site-page-id page))
-                          (text-page-path routes (content-element-property element 'target)))
-                        "]")))))))
+                      (let ((fragment (content-element-property element 'fragment)))
+                        (string-append body " ["
+                          (text-relative-path (text-page-path routes (site-page-id page))
+                            (text-page-path routes (content-element-property element 'target)))
+                          (if fragment (string-append "#" fragment) "")
+                          "]"))))))))
 
 (define* (subtree-content-text forest routes page #:optional (prefix ""))
   (let ((position 0))

@@ -727,10 +727,49 @@
        (forest (make-forest (make-site (list source target)
                                        #:title "T" #:home "source")))
        (source-html (assoc-ref (render-test-html forest) "source"))
-       (source-gemtext (assoc-ref (site->gemtext forest) "source")))
+       (source-gemtext (assoc-ref (site->gemtext forest) "source"))
+       (source-text (assoc-ref (site->text forest) "source")))
   (test-assert "HTML links carry the fragment"
     (string-contains source-html "href=\"/target.html#section\">there</a>"))
   (test-assert "Gemtext links carry the fragment"
+    (string-contains source-gemtext "target.gmi#section"))
+  (test-assert "text links carry the fragment"
+    (string-contains source-text "target.txt#section")))
+
+(let* ((text (lambda (value) (make-content-text value)))
+       (target (make-site-page "target" "Target"
+                 (make-content-document
+                   (list (make-content-element 'paragraph (list (text "Body")))))))
+       (query-link (make-content-element 'query-link (list (text "there"))
+                     #:properties '((target . "target") (fragment . "section"))))
+       (source (make-site-page "source" "Source"
+                 (make-content-document
+                   (list (make-content-element 'paragraph (list query-link))))))
+       (forest (make-forest (make-site (list source target)
+                                       #:title "T" #:home "source")))
+       (source-html (assoc-ref (render-test-html forest) "source"))
+       (source-gemtext (assoc-ref (site->gemtext forest) "source")))
+  (test-assert "HTML query links carry the fragment"
+    (string-contains source-html "href=\"/target.html#section\">there</a>"))
+  (test-assert "Gemtext query links carry the fragment"
     (string-contains source-gemtext "target.gmi#section")))
+
+(let* ((text (lambda (value) (make-content-text value)))
+       (target (make-site-page "target" "Target"
+                 (make-content-document
+                   (list (make-content-element 'paragraph (list (text "Body")))))))
+       (source (make-site-page "source" "Source"
+                 (make-content-document
+                   (list (make-content-element 'paragraph
+                           (list (text "See ")
+                                 (make-content-element 'link (list (text "a"))
+                                   #:properties '((target . "target") (fragment . "one")))
+                                 (text " and ")
+                                 (make-content-element 'link (list (text "b"))
+                                   #:properties '((target . "target") (fragment . "two")))))))))
+       (forest (make-forest (make-site (list source target)
+                                       #:title "T" #:home "source"))))
+  (test-equal "fragment links to one page keep a single backlink"
+    '("source") (map site-page-id (backlinks forest "target"))))
 
 (test-end "forester renderers")

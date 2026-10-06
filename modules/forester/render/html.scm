@@ -56,9 +56,15 @@
                      (href ,(link-url routes reference element)))
                      ,@children))))
       (query-link . ,(lambda (element children)
-                       `(a (@ (href ,(html-page-url routes
-                                        (content-element-property element 'target))))
-                           ,@children))))))
+                       (let ((fragment
+                               (content-element-property element 'fragment)))
+                         `(a (@ (href ,(string-append
+                                         (html-page-url routes
+                                           (content-element-property element 'target))
+                                         (if fragment
+                                             (string-append "#" fragment)
+                                             ""))))
+                             ,@children)))))))
 
 (define* (subtree-content-sxml forest routes page
                               #:optional (anchor-prefix "") (depth 1) (highlighters '())

@@ -271,6 +271,30 @@
         (vector-ref index id)
         (error "unknown content node" id))))
 
+(define (ensure-unique-math-ids pages)
+  "Reject duplicate explicit math IDs within a page's own content.
+
+Transcluded subtrees are not scanned here; a subtree rendered twice can still
+repeat an equation ID, which is a known limitation of global math anchors."
+  (for-each
+    (lambda (page)
+      (let ((seen (make-hash-table)))
+        (for-each
+          (lambda (id)
+            (when (hash-ref seen id)
+              (error
+                (format #f "duplicate math ID in page ~a (~a): ~a"
+                        (site-page-id page)
+                        (or (site-page-source page) "<unknown source>")
+                        id)))
+            (hash-set! seen id #t))
+          (filter-map
+            (lambda (element) (content-element-property element 'id))
+            (tree-pass:math-elements
+              (tree-pass:owned-content
+                (site-page-document page)))))))
+    pages))
+
 (define* (make-forest site #:key (timings #f))
   (define-syntax-rule (measure phase expression)
     (if (not timings) expression
@@ -297,6 +321,7 @@
          (_ (for-each (lambda (page)
                         (hash-set! page-index (site-page-id page) page))
                       pages))
+         (_ (ensure-unique-math-ids pages))
          (reference-facts
            (measure 'references (append-map
              (lambda (source-page)

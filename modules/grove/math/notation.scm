@@ -14,13 +14,23 @@
   #:use-module (srfi srfi-13))
 
 ;; Notation nodes carry layout, never mathematical assertions.
-(define*-public (math #:key (style #f) . source)
-  (set! source (command-body source))
-  (content-with-style (notation:math (decode-math-fragments source)) style))
+(define (with-math-id element id)
+  "Attach ID as the container anchor when given, leaving ELEMENT otherwise."
+  (if id
+      (content-with-property element 'id (checked-anchor-id id))
+      element))
 
-(define*-public (display-math #:key (style #f) . source)
+(define*-public (math #:key (style #f) (id #f) . source)
   (set! source (command-body source))
-  (content-with-style (notation:display-math (decode-math-fragments source)) style))
+  (with-math-id
+    (content-with-style (notation:math (decode-math-fragments source)) style)
+    id))
+
+(define*-public (display-math #:key (style #f) (id #f) . source)
+  (set! source (command-body source))
+  (with-math-id
+    (content-with-style (notation:display-math (decode-math-fragments source)) style)
+    id))
 
 (define math-token notation:token)
 
