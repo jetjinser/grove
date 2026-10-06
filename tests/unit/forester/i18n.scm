@@ -36,6 +36,13 @@
   '((lang . "he") (dir . "rtl"))
   (locale-html-attributes (make-locale "he")))
 
+(test-assert "locale matching accepts a more specific tag"
+  (locale-matches? "zh" "zh-CN"))
+(test-assert "locale matching is case-insensitive"
+  (locale-matches? "ZH" "zh-CN"))
+(test-assert "locale matching rejects a different region"
+  (not (locale-matches? "zh-CN" "zh-TW")))
+
 (test-equal "a right-to-left script overrides a left-to-right language"
   "rtl" (locale-dir (make-locale "az-Arab")))
 (test-equal "a right-to-left script applies to a language without a default"
@@ -104,7 +111,7 @@
 
 ;;; Pairing
 
-(define bilingual-block (bilingual english chinese))
+(define bilingual-block (bilingual #:mode 'parallel english chinese))
 
 (test-equal "bilingual groups lanes into one pair"
   1 (length (content-element-children bilingual-block)))
@@ -131,6 +138,59 @@
   (bilingual (lang "en" "One.")
              (make-content-element 'paragraph '("Loose"))))
 (test-error "bilingual requires at least one lane" #t (bilingual))
+
+;;; Folded (reader-first) mode
+
+(define (pair-children block)
+  (content-element-children (car (content-element-children block))))
+
+(let ((pair (pair-children (bilingual english chinese))))
+  (test-equal "fold is the default bilingual mode"
+    "zh-CN" (content-element-property (car pair) 'lang))
+  (test-equal "folded bilingual folds the remaining lanes"
+    'details (content-element-kind (cadr pair)))
+  (test-equal "the folded disclosure carries the source lane"
+    '("en")
+    (map (lambda (child) (content-element-property child 'lang))
+         (filter bilingual-lane? (content-element-children (cadr pair))))))
+
+(let ((pair (pair-children (bilingual #:reader "en" english chinese))))
+  (test-equal "an explicit reader selects the visible lane"
+    "en" (content-element-property (car pair) 'lang))
+  (test-equal "the explicit reader folds the other language"
+    'details (content-element-kind (cadr pair))))
+
+(test-equal "the reader matches a more specific lane tag"
+  "zh-CN"
+  (content-element-property
+    (car (pair-children (bilingual #:reader "zh" english chinese))) 'lang))
+
+(test-equal "an unmatched reader keeps the group parallel"
+  2 (length (pair-children (bilingual #:reader "fr" english chinese))))
+
+(test-equal "parallel mode keeps every lane visible"
+  2 (length (pair-children
+              (bilingual #:mode 'parallel english chinese))))
+
+(test-error "bilingual rejects unknown modes" #t
+  (bilingual #:mode 'side english))
+
+(test-assert "folded bilingual serializes a source disclosure"
+  (let ((html (sxml->html
+                (content->sxml
+                  (make-content-document
+                    (list (bilingual #:reader "en" #:source-label "原文"
+                                     english chinese)))))))
+    (and (string-contains html "data-mode=\"fold\"")
+         (string-contains html "<details class=\"bilingual-source\">")
+         (string-contains html "原文 · zh-CN")
+         (string-contains html "lang=\"en\" dir=\"ltr\""))))
+
+(test-equal "text output hides the fold label"
+  "[en] The grove is a small forest.\n[zh-CN] 树林是一片小小的森林。\n\n"
+  (content->text
+    (make-content-document (list (bilingual #:reader "en" english chinese)))
+    #:handlers bilingual-text-handlers))
 
 ;;; HTML presentation
 
@@ -194,7 +254,7 @@
   (scribble-evaluate-document (open-input-string source) i18n-environment))
 
 (let* ((document (evaluate-i18n
-                   "@bilingual{ @lang[\"en\"]{Hello.} @lang[\"zh-CN\"]{你好。} }"))
+                   "@bilingual[#:mode 'parallel]{ @lang[\"en\"]{Hello.} @lang[\"zh-CN\"]{你好。} }"))
        (block (car (content-document-children document)))
        (pair (car (content-element-children block))))
   (test-equal "@bilingual lowers through the Scribble reader"

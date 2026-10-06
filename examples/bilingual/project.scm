@@ -72,7 +72,7 @@
             #:style bilingual-style
             #:routes bilingual-routes
             #:html-attributes (locale-html-attributes default-locale)
-            #:backmatter-labels (backmatter-labels "zh-CN"))
+            #:backmatter-labels (backmatter-labels (locale-tag default-locale)))
           (make-text-renderer #:prefix "text"))
     #:output-directory output-directory))
 

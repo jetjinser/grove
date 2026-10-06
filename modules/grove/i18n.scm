@@ -14,6 +14,7 @@
             locale-lang
             locale-dir
             locale-html-attributes
+            locale-matches?
             message-catalog?
             make-message-catalog
             message-catalog-default
@@ -92,6 +93,14 @@
     (error "locale-html-attributes requires a locale" locale))
   `((lang . ,(locale-tag locale))
     (dir . ,(locale-dir locale))))
+
+(define (locale-matches? reader tag)
+  "True when TAG is READER or a more specific tag beneath it.
+So a `zh' reader matches `zh-CN', but `zh-CN' does not match `zh-TW'."
+  (unless (and (string? reader) (string? tag))
+    (error "locale-matches? requires two language tags" reader tag))
+  (or (string-ci=? reader tag)
+      (string-prefix-ci? (string-append reader "-") tag)))
 
 (define-record-type <message-catalog>
   (%make-message-catalog default entries)

@@ -9,8 +9,11 @@
   #:use-module (grove style html)
   #:use-module (ice-9 optargs)
   #:export (bilingual-container-style
+            bilingual-fold-container-style
             bilingual-pair-style
             bilingual-lane-style
+            bilingual-source-style
+            bilingual-source-label-style
             foreign-term-style
             bilingual-stylesheet
             default-bilingual-style))
@@ -38,8 +41,20 @@
 (define* (bilingual-container-style #:optional (style #f))
   (with-html-presentation style (list (make-html-tag 'div))))
 
+(define* (bilingual-fold-container-style #:optional (style #f))
+  "A bilingual container whose reader language is shown and whose sources fold."
+  (with-html-presentation style
+    (list (make-html-tag 'div)
+          (make-html-attributes '((data-mode . "fold"))))))
+
 (define bilingual-pair-style
   (make-content-style #f (list (make-html-tag 'div))))
+
+(define bilingual-source-style
+  (make-content-style 'bilingual-source))
+
+(define bilingual-source-label-style
+  (make-content-style 'bilingual-source-label))
 
 (define* (bilingual-lane-style tag dir #:optional (style #f))
   "Present one language lane as a block with an explicit language and direction."

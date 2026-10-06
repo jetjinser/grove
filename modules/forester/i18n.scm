@@ -8,6 +8,7 @@
   #:use-module (forester style i18n)
   #:use-module (language scribble command)
   #:use-module (language scribble flow)
+  #:use-module (ice-9 format)
   #:use-module (ice-9 optargs)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
@@ -77,7 +78,7 @@ so `en zh en zh' becomes two pairs while `en zh fr' stays one three-lane group."
              (loop (cdr remaining) (cons lane group) groups)))))))
 
 (define* (make-content-bilingual lanes #:key (style #f))
-  "Build a bilingual block from a flat list of language lanes."
+  "Build a parallel bilingual block from a flat list of language lanes."
   (unless (and (list? lanes) (every bilingual-lane? lanes))
     (error "bilingual requires language lanes" lanes))
   (make-content-element 'bilingual
@@ -88,6 +89,60 @@ so `en zh en zh' becomes two pairs while `en zh fr' stays one three-lane group."
          (pair-translations lanes))
     #:style (bilingual-container-style style)
     #:flow-kind 'block))
+
+(define (source-disclosure lane reader-tag source-label)
+  "Fold one source LANE into a disclosure labelled with its language."
+  (let* ((tag (content-element-property lane 'lang))
+         (label (if (or (not source-label) (string-null? source-label))
+                    tag
+                    (format #f "~a · ~a" source-label tag))))
+    (make-content-element 'details
+      (list (make-content-element 'summary
+              (list (make-content-text label))
+              #:style bilingual-source-label-style)
+            lane)
+      #:style bilingual-source-style
+      #:flow-kind 'block)))
+
+(define* (make-content-folded-bilingual lanes #:key (reader #f) (style #f)
+                                        (source-label "source"))
+  "Build a reader-first bilingual block.
+
+Each group shows one language and folds the rest. READER, a locale, selects the
+visible language; without it the last lane of each group is the visible one."
+  (unless (and (list? lanes) (every bilingual-lane? lanes))
+    (error "bilingual requires language lanes" lanes))
+  (when (and reader (not (locale? reader)))
+    (error "folded bilingual reader must be a locale" reader))
+  (let ((reader-tag (and reader (locale-tag reader))))
+    (make-content-element 'bilingual
+      (map (lambda (group)
+             (let* ((matched
+                      (and reader-tag
+                           (filter (lambda (lane)
+                                     (locale-matches?
+                                       reader-tag
+                                       (content-element-property lane 'lang)))
+                                   group)))
+                    (visible (if reader-tag
+                                 (if (null? matched) group matched)
+                                 (list (last group))))
+                    (folded (if reader-tag
+                                (remove (lambda (lane) (memq lane visible)) group)
+                                (drop-right group 1))))
+               (make-content-element 'bilingual-pair
+                 (if (or (null? visible) (null? folded))
+                     group
+                     (append visible
+                             (map (lambda (lane)
+                                    (source-disclosure lane reader-tag
+                                                       source-label))
+                                  folded)))
+                 #:style bilingual-pair-style
+                 #:flow-kind 'block)))
+           (pair-translations lanes))
+      #:style (bilingual-fold-container-style style)
+      #:flow-kind 'block)))
 
 (define (whitespace-content? item)
   (cond
@@ -106,13 +161,27 @@ so `en zh en zh' becomes two pairs while `en zh fr' stays one three-lane group."
                   (else (error "bilingual accepts only @lang blocks" item))))
               body))
 
-(define*-public (bilingual #:key (style #f) . body)
-  "Present several @lang blocks as aligned, side-by-side language lanes."
+(define*-public (bilingual #:key (style #f) (mode 'fold) (reader #f)
+                           (source-label "source") . body)
+  "Present several @lang blocks as language lanes.
+
+MODE is `fold' (default) or `parallel'. In fold mode one language is shown and
+the others fold into a disclosure; READER, a locale, chooses the visible
+language, or the last lane of each group is shown when READER is omitted.
+Parallel mode shows every lane as before."
   (set! body (command-body body))
   (let ((lanes (bilingual-lanes body)))
     (unless (pair? lanes)
       (error "bilingual requires at least one @lang block"))
-    (make-content-bilingual lanes #:style style)))
+    (case mode
+      ((fold)
+       (make-content-folded-bilingual lanes
+         #:reader (and reader (make-locale reader))
+         #:style style #:source-label source-label))
+      ((parallel)
+       (make-content-bilingual lanes #:style style))
+      (else
+       (error "bilingual mode must be fold or parallel" mode)))))
 
 (define*-public (lang code #:key (dir #f) (role #f) (style #f) . body)
   "Author one language lane from a BCP 47 language tag."
@@ -130,7 +199,9 @@ so `en zh en zh' becomes two pairs while `en zh fr' stays one three-lane group."
       #:properties `((lang . ,tag) (dir . ,dir))
       #:style (foreign-term-style tag dir style))))
 
-;; Handlers that mark each language lane when rendering to text.
+;; Handlers that mark each language lane when rendering to text. Folded source
+;; disclosures keep their lane but drop the summary label, which is only
+;; meaningful in HTML.
 (define bilingual-text-handlers
   `((bilingual . ,(lambda (element body) body))
     (bilingual-pair . ,(lambda (element body) (string-append body "\n")))
@@ -138,4 +209,6 @@ so `en zh en zh' becomes two pairs while `en zh fr' stays one three-lane group."
      . ,(lambda (element body)
           (string-append "[" (content-element-property element 'lang) "] "
                          body)))
-    (foreign-term . ,(lambda (element body) body))))
+    (foreign-term . ,(lambda (element body) body))
+    (details . ,(lambda (element body) body))
+    (summary . ,(lambda (element body) ""))))

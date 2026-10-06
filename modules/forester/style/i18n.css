@@ -1,21 +1,19 @@
 /* SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu> */
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 
-/* Default presentation for bilingual content. The markup is produced by
-   @lang/@bilingual: .bilingual > .bilingual-pair > .bilingual-lane. Wide
-   viewports show lanes side by side; narrow viewports stack them. Logical
-   properties keep the rule on the correct edge for right-to-left text. */
+/* Minimal, reset-style baseline for bilingual content. Projects own the visual
+   design; these rules only keep the generated markup readable on their own.
+   The markup is .bilingual > .bilingual-pair > .bilingual-lane, with folded
+   sources in .bilingual-source > .bilingual-source-label + a lane. */
 
 .bilingual {
-  display: grid;
-  gap: 1.5rem;
-  margin: 1.5rem 0;
+  margin-block: 1em;
 }
 
 .bilingual-pair {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
   gap: 0.75rem 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
   align-items: start;
 }
 
@@ -24,57 +22,24 @@
 }
 
 .bilingual-lane > :first-child {
-  margin-top: 0;
+  margin-block-start: 0;
 }
 
 .bilingual-lane > :last-child {
-  margin-bottom: 0;
+  margin-block-end: 0;
 }
 
-.bilingual-pair > .bilingual-lane + .bilingual-lane {
-  border-inline-start: 1px solid var(--bilingual-rule, #d9d9d9);
-  padding-inline-start: 2rem;
+/* Folded, reader-first layout: one language is shown and the sources fold into
+   a disclosure. The pair becomes a single column. */
+
+.bilingual[data-mode="fold"] .bilingual-pair {
+  grid-template-columns: 1fr;
 }
 
-@media (max-width: 48rem) {
-  .bilingual-pair {
-    grid-template-columns: 1fr;
-  }
-
-  .bilingual-pair > .bilingual-lane + .bilingual-lane {
-    border-inline-start: 0;
-    padding-inline-start: 0;
-    border-block-start: 1px solid var(--bilingual-rule, #d9d9d9);
-    padding-block-start: 1rem;
-  }
+.bilingual-source > .bilingual-source-label {
+  cursor: pointer;
 }
 
-/* Script-aware rhythm. The lang attribute on each lane lets the browser pick
-   appropriate fonts and line breaking; these rules only tune the leading. */
-:lang(zh),
-:lang(ja),
-:lang(ko) {
-  line-height: 1.9;
-}
-
-:lang(en),
-:lang(fr),
-:lang(de),
-:lang(es) {
-  line-height: 1.6;
-}
-
-:lang(ar),
-:lang(he),
-:lang(fa),
-:lang(ur) {
-  line-height: 1.9;
-}
-
-.foreign-term {
-  font-style: italic;
-}
-
-[dir="rtl"] .foreign-term {
-  font-style: normal;
+.bilingual-source .bilingual-lane {
+  padding-inline-start: 1rem;
 }

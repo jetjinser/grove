@@ -12,7 +12,7 @@
 idea in two languages. Wide screens place the lanes side by side, narrow screens
 stack them, and every lane carries its own language and direction.}
 
-@bilingual{
+@bi{
   @lang["en"]{
     The grove is a small forest.
   }

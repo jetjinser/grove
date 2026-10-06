@@ -4,5 +4,10 @@
 @(define-module (bilingual commands)
   #:use-module (forester commands)
   #:use-module (forester i18n)
+  #:export (bi)
   #:re-export (title summary published updated link image tag taxon subtree
                transclude lang bilingual term))
+
+@(define (bi . body)
+   "Folded bilingual block: show English, fold the other languages."
+   (apply bilingual #:reader "en" body))
