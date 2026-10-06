@@ -9,6 +9,7 @@
   #:use-module (grove render text)
   #:use-module (forester render text routes)
   #:use-module (forester backmatter)
+  #:use-module (forester i18n)
   #:use-module (forester site)
   #:use-module (grove site)
   #:use-module (web uri)
@@ -96,7 +97,9 @@
         (set! pending-links '())
         (string-append body
           (if (null? links) "" (string-append "\n" (string-concatenate links))))))
-    `((tag . ,(lambda (_ body) ""))
+    (append
+     bilingual-text-handlers
+     `((tag . ,(lambda (_ body) ""))
       (taxon . ,(lambda (_ body) ""))
       (item . ,(lambda (_ body)
                  (flush-links
@@ -159,7 +162,7 @@
                                             ""))
                                       "\n" body
                                       (if (string-suffix? "\n" body) "" "\n")
-                                      (marked-line #\F "```") "\n"))))))
+                                      (marked-line #\F "```") "\n")))))))
 
 (define (page-body forest routes page)
   (content->text (site-page-document page)

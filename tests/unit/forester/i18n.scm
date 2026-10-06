@@ -12,8 +12,12 @@
   #:use-module (grove output)
   #:use-module (grove render html)
   #:use-module (grove render text)
+  #:use-module (grove site)
   #:use-module (grove style html)
   #:use-module (forester i18n)
+  #:use-module (forester render gemtext)
+  #:use-module (forester render text)
+  #:use-module (forester site)
   #:use-module (forester style i18n))
 
 (test-begin "forester i18n")
@@ -31,6 +35,15 @@
 (test-equal "locale HTML attributes carry language and direction"
   '((lang . "he") (dir . "rtl"))
   (locale-html-attributes (make-locale "he")))
+
+(test-equal "a right-to-left script overrides a left-to-right language"
+  "rtl" (locale-dir (make-locale "az-Arab")))
+(test-equal "a right-to-left script applies to a language without a default"
+  "rtl" (locale-dir (make-locale "ks-Arab")))
+(test-equal "a left-to-right script overrides a right-to-left language"
+  "ltr" (locale-dir (make-locale "ku-Latn")))
+(test-equal "common scripts resolve left-to-right"
+  "ltr" (locale-dir (make-locale "sr-Latn")))
 
 (test-error "locale tags reject spaces" #t (make-locale "not a tag"))
 (test-error "locale tags reject empty strings" #t (make-locale ""))
@@ -60,6 +73,16 @@
   (make-message-catalog '((en . ((home . "Home"))))))
 (test-error "message keys must be symbols" #t (message catalog "home"))
 (test-error "message rejects non-catalogs" #t (message '() 'home))
+
+(define script-catalog
+  (make-message-catalog
+    '(("zh-Hant" . ((home . "首頁")))
+      ("en" . ((home . "Home"))))
+    #:default "en"))
+(test-equal "messages fall back through shorter locale prefixes"
+  "首頁" (message script-catalog 'home "zh-Hant-CN"))
+(test-equal "a more specific catalog entry does not answer a shorter request"
+  "Home" (message script-catalog 'home "zh-CN"))
 
 ;;; Language lanes
 
@@ -141,6 +164,24 @@
   "[en] The grove is a small forest.\n[zh-CN] 树林是一片小小的森林。\n\n"
   (content->text (make-content-document (list bilingual-block))
                  #:handlers bilingual-text-handlers))
+
+;;; Built-in renderers
+
+(define bilingual-page
+  (make-site-page "hello" "Hello"
+    (make-content-document (list bilingual-block))))
+(define bilingual-forest
+  (make-forest (make-site (list bilingual-page) #:home "hello")))
+
+(test-assert "the built-in text renderer marks each lane"
+  (let ((text (assoc-ref (site->text bilingual-forest) "hello")))
+    (and (string-contains text "[en] The grove is a small forest.")
+         (string-contains text "[zh-CN] 树林是一片小小的森林。"))))
+
+(test-assert "the built-in Gemtext renderer marks each lane"
+  (let ((gemtext (assoc-ref (site->gemtext bilingual-forest) "hello")))
+    (and (string-contains gemtext "[en] The grove is a small forest.")
+         (string-contains gemtext "[zh-CN] 树林是一片小小的森林。"))))
 
 ;;; Scribble integration
 

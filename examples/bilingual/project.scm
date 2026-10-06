@@ -51,14 +51,17 @@
       #:stylesheets
       (list (make-artifact "style.css" style-css (list style-css-path))))))
 
+(define default-locale (make-locale "en"))
+
 (define bilingual-routes
-  (make-html-routes #:home-page "hello"))
+  (make-html-routes))
 
 (define bilingual-project
   (make-site-project
     #:default-prefix "bi"
     #:title "Bilingual Notes"
     #:description "One idea in two languages, shown side by side."
+    #:home "hello"
     #:source-directory source-directory
     #:extra-sources (list style-css-path)
     #:prepare (make-scribble-module-setup module-directory)
@@ -68,6 +71,7 @@
     (list (make-html-renderer
             #:style bilingual-style
             #:routes bilingual-routes
+            #:html-attributes (locale-html-attributes default-locale)
             #:backmatter-labels (backmatter-labels "zh-CN"))
           (make-text-renderer #:prefix "text"))
     #:output-directory output-directory))

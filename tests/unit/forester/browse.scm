@@ -10,6 +10,7 @@
   #:use-module (grove site)
   #:use-module (forester site)
   #:use-module (forester browse)
+  #:use-module (forester i18n)
   #:use-module (tests unit forester fixtures))
 
 (define (browse-output forest text)
@@ -78,5 +79,15 @@
   (browser forest #:input (open-input-string "q\n") #:output output)
   (test-assert "make-forest-browser honors an explicit start page"
     (string-contains (get-output-string output) "Limits")))
+
+(let* ((page
+         (make-site-page "bilingual" "Bilingual"
+           (make-content-document
+             (list (bilingual (lang "en" "One.") (lang "zh-CN" "一。"))))))
+       (forest (make-forest (make-site (list page) #:home "bilingual"))))
+  (test-assert "the browser marks bilingual lanes"
+    (let ((text (browse-output forest "q\n")))
+      (and (string-contains text "[en] One.")
+           (string-contains text "[zh-CN] 一。")))))
 
 (test-end "forester terminal browser")

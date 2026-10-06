@@ -11,6 +11,7 @@
   #:use-module (grove render text)
   #:use-module (forester render text routes)
   #:use-module (forester backmatter)
+  #:use-module (forester i18n)
   #:use-module (grove site)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
@@ -21,7 +22,9 @@
 
 (define (page-content-handlers forest routes page)
   (let ((references (outgoing-references forest (site-page-id page))))
-    `((tag . ,(lambda (_element _body) ""))
+    (append
+     bilingual-text-handlers
+     `((tag . ,(lambda (_element _body) ""))
       (taxon . ,(lambda (_element _body) ""))
       (image . ,(lambda (element body)
                  (if (string-null? (string-trim-both body))
@@ -42,7 +45,7 @@
                       (string-append body " ["
                         (text-relative-path (text-page-path routes (site-page-id page))
                           (text-page-path routes (content-element-property element 'target)))
-                        "]"))))))
+                        "]")))))))
 
 (define* (subtree-content-text forest routes page #:optional (prefix ""))
   (let ((position 0))

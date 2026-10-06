@@ -8,6 +8,7 @@
   #:use-module (grove site)
   #:use-module (forester site)
   #:use-module (forester backmatter)
+  #:use-module (forester i18n)
   #:use-module (ice-9 format)
   #:use-module (ice-9 rdelim)
   #:use-module (srfi srfi-1)
@@ -24,6 +25,7 @@
     math math-token math-frac math-sup math-sub math-vector math-parens
     math-column math-align math-row math-cell
     math-diagnostic math-diagnostics math-semantic-check math-style
+    bilingual bilingual-pair bilingual-lane foreign-term
     link query-link tag taxon image forest-query title))
 
 (define (unknown-content-kinds content)
@@ -55,7 +57,9 @@
     (site-page-metadata page)))
 
 (define (terminal-content-handlers add-entry! references)
-  `((tag . ,(lambda (_element _body) ""))
+  (append
+   bilingual-text-handlers
+   `((tag . ,(lambda (_element _body) ""))
     (taxon . ,(lambda (_element _body) ""))
     (bold . ,(lambda (_element body) (string-append "*" body "*")))
     (verbatim . ,(lambda (_element body) (string-append "`" body "`")))
@@ -82,7 +86,7 @@
                      (format #f "[~a] ~a"
                              (add-entry! 'link body
                                          (content-element-property element 'target))
-                             body)))))
+                             body))))))
 
 (define (render-content forest page add-entry! expanded)
   "Render PAGE's body to a string, recording navigable entries."

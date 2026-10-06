@@ -27,6 +27,25 @@
   '("ar" "arc" "ckb" "dv" "fa" "he" "khw" "ku" "nqo" "prs" "ps" "sd" "syr"
     "ug" "ur" "yi"))
 
+;; Direction is a property of the script, not just the language. A script
+;; subtag (four letters, title case) overrides the language defaults, so that
+;; `ku-Latn' is left-to-right even though Kurdish has right-to-left varieties,
+;; and `az-Arab' is right-to-left even though Azerbaijani is usually Latin.
+(define rtl-scripts
+  '("Adlm" "Arab" "Avst" "Hebr" "Mand" "Mani" "Mend" "Narb" "Nkoo" "Ougr"
+    "Phli" "Phlp" "Prti" "Rohg" "Samr" "Sarb" "Syrc" "Thaa" "Yezi"))
+
+(define ltr-scripts
+  '("Armn" "Beng" "Cyrl" "Deva" "Ethi" "Geor" "Grek" "Gujr" "Guru" "Hang"
+    "Hani" "Hans" "Hant" "Hira" "Jpan" "Kana" "Khmr" "Knda" "Kore" "Laoo"
+    "Latn" "Mlym" "Mong" "Mymr" "Sinh" "Taml" "Telu" "Thai" "Tibt"))
+
+(define (script-subtag subtags)
+  (find (lambda (subtag)
+          (and (= (string-length subtag) 4)
+               (string-every char-set:letter subtag)))
+        subtags))
+
 (define (valid-locale-tag? tag)
   (and (non-empty-string? tag)
        (let ((subtags (string-split tag #\-)))
@@ -46,6 +65,15 @@
   (lang locale-lang)
   (dir locale-dir))
 
+(define (resolve-direction subtags lang)
+  "Derive a text direction from a script subtag, then from the language."
+  (let ((script (script-subtag subtags)))
+    (cond
+      ((and script (member (string-titlecase script) rtl-scripts)) "rtl")
+      ((and script (member (string-titlecase script) ltr-scripts)) "ltr")
+      ((member lang rtl-languages) "rtl")
+      (else "ltr"))))
+
 (define (make-locale tag)
   "Normalize a BCP 47-style language tag into a locale with a text direction."
   (unless (string? tag)
@@ -53,8 +81,9 @@
   (let ((tag (string-trim-both tag)))
     (unless (valid-locale-tag? tag)
       (error "locale tag must be a BCP 47-style language tag" tag))
-    (let* ((lang (string-downcase (car (string-split tag #\-))))
-           (dir (if (member lang rtl-languages) "rtl" "ltr")))
+    (let* ((subtags (string-split tag #\-))
+           (lang (string-downcase (car subtags)))
+           (dir (resolve-direction subtags lang)))
       (%make-locale tag lang dir))))
 
 (define (locale-html-attributes locale)
@@ -97,15 +126,30 @@
     (error "message catalog default locale must be a non-empty string" default))
   (%make-message-catalog default entries))
 
+(define (locale-fallbacks tag)
+  "List TAG and its progressively shorter prefixes, most specific first.
+So `zh-Hant-CN' falls back through `zh-Hant' to `zh'."
+  (let loop ((remaining tag) (collected '()))
+    (cond
+      ((string-null? remaining) (reverse collected))
+      ((string-rindex remaining #\-)
+       => (lambda (dash)
+            (loop (substring remaining 0 dash) (cons remaining collected))))
+      (else (reverse (cons remaining collected))))))
+
 (define* (message catalog key #:optional (locale (message-catalog-default catalog)))
-  "Look up KEY in CATALOG for LOCALE, then the default locale, then the key name."
+  "Look up KEY in CATALOG for LOCALE, its shorter prefixes, the default locale,
+then the key name."
   (unless (message-catalog? catalog)
     (error "message requires a message catalog" catalog))
   (unless (symbol? key)
     (error "message key must be a symbol" key))
   (let* ((entries (message-catalog-entries catalog))
-         (messages (assoc-ref entries locale))
-         (fallback (assoc-ref entries (message-catalog-default catalog))))
-    (or (and messages (assq-ref messages key))
-        (and fallback (assq-ref fallback key))
+         (lookup (lambda (tags)
+                   (any (lambda (tag)
+                          (let ((messages (assoc-ref entries tag)))
+                            (and messages (assq-ref messages key))))
+                        tags))))
+    (or (lookup (locale-fallbacks locale))
+        (lookup (locale-fallbacks (message-catalog-default catalog)))
         (symbol->string key))))
