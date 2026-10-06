@@ -73,6 +73,10 @@ grove browse --project project.scm \
   --ssh 2222 --host-key host_rsa --authorized-keys authorized_keys
 ```
 
+Tune the server with `--ssh-workers N` (concurrency, default 4),
+`--ssh-login-timeout S`, `--ssh-session-timeout S` (0 disables), and
+`--ssh-memory-limit BYTES` (each worker's address-space cap).
+
 Add a Gemtext renderer to `#:renderers` to emit static files for a Gemini
 server:
 

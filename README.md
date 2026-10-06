@@ -66,7 +66,12 @@ A project's `project.scm` returns its configuration. From that directory:
 | `grove check` | Run the complete pipeline without writing outputs. |
 | `grove serve` | Preview at `http://127.0.0.1:8080/` and rebuild after edits. |
 | `grove browse` | Analyze the project and browse its model in the terminal. |
+| `grove ssh-keygen` | Generate an RSA host key for `grove browse --ssh`. |
 | `grove new` | Create a tree using the project's default prefix. |
+
+`grove browse` can also serve the same browser over SSH with `--ssh PORT`
+(plus `--host-key` and `--authorized-keys`); see
+[docs/project.md](docs/project.md) for host keys, limits, and concurrency.
 
 Set `#:default-prefix "jsk"` to create addresses such as `jsk-0001` and
 `jsk-000a`. `grove new math` selects another prefix. New trees need a title

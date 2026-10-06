@@ -26,6 +26,9 @@
 (define (ssh-ref name)
   (module-ref (ssh-support) name))
 
+(define numeric-option-keys
+  '(port ssh ssh-workers ssh-login-timeout ssh-session-timeout ssh-memory-limit))
+
 (define (parse-options arguments)
   (let loop ((arguments arguments) (command #f) (options '()))
     (match arguments
@@ -43,6 +46,11 @@
          (usage-error "--host-key is a browse and ssh-keygen option"))
        (when (and (not (equal? command "ssh-keygen")) (assq 'force options))
          (usage-error "--force is an ssh-keygen option"))
+       (when (and (not (equal? command "browse"))
+                  (or (assq 'ssh-workers options) (assq 'ssh-login-timeout options)
+                      (assq 'ssh-session-timeout options)
+                      (assq 'ssh-memory-limit options)))
+         (usage-error "--ssh-workers, --ssh-login-timeout, --ssh-session-timeout and --ssh-memory-limit are browse options"))
        (when (and (not (equal? command "serve"))
                   (or (assq 'port options) (assq 'no-watch options)))
          (usage-error "--port and --no-watch are serve options"))
@@ -65,13 +73,19 @@
                              (else 'help)) #t options)))
          ((member argument
                   '("--project" "--output" "--port" "--dest"
-                    "--ssh" "--host-key" "--authorized-keys"))
+                    "--ssh" "--host-key" "--authorized-keys"
+                    "--ssh-workers" "--ssh-login-timeout" "--ssh-session-timeout"
+                    "--ssh-memory-limit"))
           (let ((key (cond ((string=? argument "--project") 'project)
                            ((string=? argument "--output") 'output)
                            ((string=? argument "--dest") 'dest)
                            ((string=? argument "--ssh") 'ssh)
                            ((string=? argument "--host-key") 'host-key)
                            ((string=? argument "--authorized-keys") 'authorized-keys)
+                           ((string=? argument "--ssh-workers") 'ssh-workers)
+                           ((string=? argument "--ssh-login-timeout") 'ssh-login-timeout)
+                           ((string=? argument "--ssh-session-timeout") 'ssh-session-timeout)
+                           ((string=? argument "--ssh-memory-limit") 'ssh-memory-limit)
                            (else 'port))))
             (when (assq key options)
               (usage-error "duplicate option: ~a" argument))
@@ -79,12 +93,27 @@
               (((? (lambda (value)
                      (and (not (string-null? value))
                           (not (string-prefix? "-" value)))) value) . tail)
-               (let ((value (if (memq key '(port ssh))
+               (let ((value (if (memq key numeric-option-keys)
                                 (string->number value)
                                 value)))
-                 (when (and (memq key '(port ssh))
-                            (not (and (exact-integer? value) (<= 1 value 65535))))
-                   (usage-error "~a requires an integer from 1 to 65535" argument))
+                 (when (memq key numeric-option-keys)
+                   (unless (exact-integer? value)
+                     (usage-error "~a requires an integer" argument))
+                   (case key
+                     ((port ssh)
+                      (unless (<= 1 value 65535)
+                        (usage-error "~a requires an integer from 1 to 65535"
+                                     argument)))
+                     ((ssh-workers)
+                      (unless (<= 1 value 64)
+                        (usage-error "--ssh-workers must be from 1 to 64")))
+                     ((ssh-login-timeout ssh-session-timeout)
+                      (unless (>= value 0)
+                        (usage-error "~a must be a non-negative number of seconds"
+                                     argument)))
+                     ((ssh-memory-limit)
+                      (unless (> value 0)
+                        (usage-error "--ssh-memory-limit must be a positive number of bytes")))))
                  (loop tail command (acons key value options))))
               (_ (usage-error "~a requires a value" argument)))))
          ((and (string-prefix? "--" argument) (string-index argument #\=))
@@ -123,7 +152,7 @@
   (when (or (not command) (equal? command "new"))
     (display "  --dest PATH     Existing destination directory (new only).\n"))
   (when (or (not command) (equal? command "browse"))
-    (display "  --ssh PORT      Serve browsing over SSH (browse only).\n  --host-key PATH RSA host key for --ssh (browse only).\n  --authorized-keys PATH  Authorized client keys for --ssh (browse only).\n"))
+    (display "  --ssh PORT      Serve browsing over SSH (browse only).\n  --host-key PATH RSA host key for --ssh (browse only).\n  --authorized-keys PATH  Authorized client keys for --ssh (browse only).\n  --ssh-workers N         Concurrent sessions/processes (browse --ssh; default 4).\n  --ssh-login-timeout S   Drop clients that do not authenticate in S seconds (default 60).\n  --ssh-session-timeout S Drop a session after S seconds (0 disables; default 0).\n  --ssh-memory-limit BYTES Cap each worker's address space (browse --ssh).\n"))
   (when (or (not command) (equal? command "ssh-keygen"))
     (display "  --host-key PATH RSA host key to create (ssh-keygen).\n  --force         Overwrite an existing host key (ssh-keygen).\n"))
   (display "  --debug         Show the original exception and backtrace.\n  -h, --help      Show help.\n\nOption paths are relative to the invocation directory.\nProject paths are relative to the project file's directory.\n"))
@@ -189,6 +218,10 @@
                            #:host-key (absolute host-key)
                            #:authorized-keys
                            ((ssh-ref 'read-authorized-keys) (absolute authorized))
+                           #:workers (or (assq-ref options 'ssh-workers) 4)
+                           #:login-timeout (or (assq-ref options 'ssh-login-timeout) 60)
+                           #:session-timeout (or (assq-ref options 'ssh-session-timeout) 0)
+                           #:memory-limit (assq-ref options 'ssh-memory-limit)
                            #:handler
                            (lambda (input output)
                              ((project-browse project)
