@@ -25,7 +25,7 @@
     math math-token math-frac math-sup math-sub math-vector math-parens
     math-column math-align math-row math-cell
     math-diagnostic math-diagnostics math-semantic-check math-style
-    bilingual bilingual-pair bilingual-lane foreign-term
+    bilingual bilingual-pair bilingual-lane bilingual-more foreign-term
     details summary
     link query-link tag taxon image forest-query title))
 

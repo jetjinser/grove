@@ -11,9 +11,9 @@
   #:export (bilingual-container-style
             bilingual-fold-container-style
             bilingual-pair-style
+            bilingual-fold-pair-style
             bilingual-lane-style
-            bilingual-source-style
-            bilingual-source-label-style
+            bilingual-summary-style
             foreign-term-style
             bilingual-stylesheet
             default-bilingual-style))
@@ -50,11 +50,17 @@
 (define bilingual-pair-style
   (make-content-style #f (list (make-html-tag 'div))))
 
-(define bilingual-source-style
-  (make-content-style 'bilingual-source))
+;; A folded pair is a <details>, so its style only adds the class and leaves the
+;; element's tag alone.
+(define bilingual-fold-pair-style
+  (make-content-style 'bilingual-pair))
 
-(define bilingual-source-label-style
-  (make-content-style 'bilingual-source-label))
+(define* (bilingual-summary-style tag dir #:optional (style #f))
+  "Present the reader lane as a disclosure summary with its language."
+  (unless (string? tag)
+    (error "bilingual summary tag must be a string" tag))
+  (with-html-presentation (or style 'bilingual-lane)
+    (list (make-html-attributes `((lang . ,tag) (dir . ,dir))))))
 
 (define* (bilingual-lane-style tag dir #:optional (style #f))
   "Present one language lane as a block with an explicit language and direction."

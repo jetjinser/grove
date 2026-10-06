@@ -90,26 +90,34 @@ so `en zh en zh' becomes two pairs while `en zh fr' stays one three-lane group."
     #:style (bilingual-container-style style)
     #:flow-kind 'block))
 
-(define (source-disclosure lane reader-tag source-label)
-  "Fold one source LANE into a disclosure labelled with its language."
-  (let* ((tag (content-element-property lane 'lang))
-         (label (if (or (not source-label) (string-null? source-label))
-                    tag
-                    (format #f "~a · ~a" source-label tag))))
-    (make-content-element 'details
-      (list (make-content-element 'summary
-              (list (make-content-text label))
-              #:style bilingual-source-label-style)
-            lane)
-      #:style bilingual-source-style
+(define (fold-affordance folded source-label)
+  "The trailing hint inside a folded summary: a label or the folded languages."
+  (if (and source-label (not (string-null? source-label)))
+      source-label
+      (string-join
+        (map (lambda (lane) (content-element-property lane 'lang)) folded)
+        " ")))
+
+(define (reader-summary lane folded source-label)
+  "Present LANE as the disclosure summary, with a hint about the folded lanes."
+  (let ((tag (content-element-property lane 'lang))
+        (dir (content-element-property lane 'dir)))
+    (make-content-element 'summary
+      (append (content-element-children lane)
+              (list (make-content-element 'bilingual-more
+                      (list (make-content-text
+                              (fold-affordance folded source-label))))))
+      #:properties `((lang . ,tag) (dir . ,dir))
+      #:style (bilingual-summary-style tag dir)
       #:flow-kind 'block)))
 
 (define* (make-content-folded-bilingual lanes #:key (reader #f) (style #f)
-                                        (source-label "source"))
+                                        (source-label #f))
   "Build a reader-first bilingual block.
 
-Each group shows one language and folds the rest. READER, a locale, selects the
-visible language; without it the last lane of each group is the visible one."
+Each group shows one language as a disclosure summary and folds the rest into
+the body, so the reader's text is itself the control. READER, a locale, selects
+the visible language; without it the last lane of each group is shown."
   (unless (and (list? lanes) (every bilingual-lane? lanes))
     (error "bilingual requires language lanes" lanes))
   (when (and reader (not (locale? reader)))
@@ -130,16 +138,15 @@ visible language; without it the last lane of each group is the visible one."
                     (folded (if reader-tag
                                 (remove (lambda (lane) (memq lane visible)) group)
                                 (drop-right group 1))))
-               (make-content-element 'bilingual-pair
-                 (if (or (null? visible) (null? folded))
-                     group
-                     (append visible
-                             (map (lambda (lane)
-                                    (source-disclosure lane reader-tag
-                                                       source-label))
-                                  folded)))
-                 #:style bilingual-pair-style
-                 #:flow-kind 'block)))
+               (if (or (null? visible) (null? folded))
+                   (make-content-element 'bilingual-pair group
+                     #:style bilingual-pair-style
+                     #:flow-kind 'block)
+                   (make-content-element 'details
+                     (cons (reader-summary (car visible) folded source-label)
+                           folded)
+                     #:style bilingual-fold-pair-style
+                     #:flow-kind 'block))))
            (pair-translations lanes))
       #:style (bilingual-fold-container-style style)
       #:flow-kind 'block)))
@@ -162,13 +169,14 @@ visible language; without it the last lane of each group is the visible one."
               body))
 
 (define*-public (bilingual #:key (style #f) (mode 'fold) (reader #f)
-                           (source-label "source") . body)
+                           (source-label #f) . body)
   "Present several @lang blocks as language lanes.
 
-MODE is `fold' (default) or `parallel'. In fold mode one language is shown and
-the others fold into a disclosure; READER, a locale, chooses the visible
-language, or the last lane of each group is shown when READER is omitted.
-Parallel mode shows every lane as before."
+MODE is `fold' (default) or `parallel'. In fold mode the reader's lane is shown
+and doubles as the disclosure control; the other lanes fold into it. READER, a
+locale, chooses the visible language, or the last lane of each group is shown
+when READER is omitted. SOURCE-LABEL, when given, replaces the folded-language
+hint. Parallel mode shows every lane as before."
   (set! body (command-body body))
   (let ((lanes (bilingual-lanes body)))
     (unless (pair? lanes)
@@ -199,9 +207,9 @@ Parallel mode shows every lane as before."
       #:properties `((lang . ,tag) (dir . ,dir))
       #:style (foreign-term-style tag dir style))))
 
-;; Handlers that mark each language lane when rendering to text. Folded source
-;; disclosures keep their lane but drop the summary label, which is only
-;; meaningful in HTML.
+;; Handlers that mark each language lane when rendering to text. A folded pair
+;; keeps the reader lane (the summary) and the folded lanes; the trailing hint
+;; is decoration and is dropped.
 (define bilingual-text-handlers
   `((bilingual . ,(lambda (element body) body))
     (bilingual-pair . ,(lambda (element body) (string-append body "\n")))
@@ -211,4 +219,8 @@ Parallel mode shows every lane as before."
                          body)))
     (foreign-term . ,(lambda (element body) body))
     (details . ,(lambda (element body) body))
-    (summary . ,(lambda (element body) ""))))
+    (summary
+     . ,(lambda (element body)
+          (string-append "[" (content-element-property element 'lang) "] "
+                         body)))
+    (bilingual-more . ,(lambda (element body) ""))))

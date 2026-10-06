@@ -144,26 +144,45 @@
 (define (pair-children block)
   (content-element-children (car (content-element-children block))))
 
-(let ((pair (pair-children (bilingual english chinese))))
-  (test-equal "fold is the default bilingual mode"
-    "zh-CN" (content-element-property (car pair) 'lang))
-  (test-equal "folded bilingual folds the remaining lanes"
-    'details (content-element-kind (cadr pair)))
-  (test-equal "the folded disclosure carries the source lane"
-    '("en")
-    (map (lambda (child) (content-element-property child 'lang))
-         (filter bilingual-lane? (content-element-children (cadr pair))))))
+(define (chip-text summary)
+  (let ((chip (find (lambda (child)
+                      (eq? (content-element-kind child) 'bilingual-more))
+                    (content-element-children summary))))
+    (and chip (content-text-value (car (content-element-children chip))))))
 
-(let ((pair (pair-children (bilingual #:reader "en" english chinese))))
+(let* ((pair (car (content-element-children (bilingual english chinese))))
+       (summary (car (content-element-children pair)))
+       (folded (cdr (content-element-children pair))))
+  (test-equal "fold is the default bilingual mode"
+    'details (content-element-kind pair))
+  (test-equal "the reader lane is the disclosure summary"
+    'summary (content-element-kind summary))
+  (test-equal "the last lane is the default reader"
+    "zh-CN" (content-element-property summary 'lang))
+  (test-equal "the folded lanes carry their language"
+    '("en")
+    (map (lambda (lane) (content-element-property lane 'lang))
+         (filter bilingual-lane? folded)))
+  (test-equal "the summary hints at the folded language"
+    "en" (chip-text summary)))
+
+(let* ((pair (car (content-element-children
+                    (bilingual #:reader "en" english chinese))))
+       (kids (content-element-children pair)))
   (test-equal "an explicit reader selects the visible lane"
-    "en" (content-element-property (car pair) 'lang))
+    "en" (content-element-property (car kids) 'lang))
   (test-equal "the explicit reader folds the other language"
-    'details (content-element-kind (cadr pair))))
+    '("zh-CN")
+    (map (lambda (lane) (content-element-property lane 'lang))
+         (filter bilingual-lane? (cdr kids)))))
 
 (test-equal "the reader matches a more specific lane tag"
   "zh-CN"
   (content-element-property
-    (car (pair-children (bilingual #:reader "zh" english chinese))) 'lang))
+    (car (content-element-children
+           (car (content-element-children
+                  (bilingual #:reader "zh" english chinese)))))
+    'lang))
 
 (test-equal "an unmatched reader keeps the group parallel"
   2 (length (pair-children (bilingual #:reader "fr" english chinese))))
@@ -175,19 +194,19 @@
 (test-error "bilingual rejects unknown modes" #t
   (bilingual #:mode 'side english))
 
-(test-assert "folded bilingual serializes a source disclosure"
+(test-assert "folded bilingual makes the reader lane the disclosure"
   (let ((html (sxml->html
                 (content->sxml
                   (make-content-document
-                    (list (bilingual #:reader "en" #:source-label "原文"
-                                     english chinese)))))))
+                    (list (bilingual #:reader "en" english chinese)))))))
     (and (string-contains html "data-mode=\"fold\"")
-         (string-contains html "<details class=\"bilingual-source\">")
-         (string-contains html "原文 · zh-CN")
-         (string-contains html "lang=\"en\" dir=\"ltr\""))))
+         (string-contains html "<details class=\"bilingual-pair\">")
+         (string-contains html
+           "<summary class=\"bilingual-lane\" lang=\"en\" dir=\"ltr\"")
+         (string-contains html "class=\"bilingual-more\">zh-CN"))))
 
-(test-equal "text output hides the fold label"
-  "[en] The grove is a small forest.\n[zh-CN] 树林是一片小小的森林。\n\n"
+(test-equal "text output keeps the reader lane and marks folded lanes"
+  "[en] The grove is a small forest.\n[zh-CN] 树林是一片小小的森林。\n"
   (content->text
     (make-content-document (list (bilingual #:reader "en" english chinese)))
     #:handlers bilingual-text-handlers))
