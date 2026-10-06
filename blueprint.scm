@@ -9,6 +9,10 @@
              (blue types configuration)
              (blue types variable)
              (blue types command)
+             (blue subprocess)
+             (ice-9 format)
+             (ice-9 popen)
+             (srfi srfi-1)
              (blueprint tests)
              (blueprint install)
              (blueprint buildables)
@@ -42,6 +46,31 @@
   (write (scribble-parse (open-input-string (car args))))
   (newline))
 
+(define-command (grove-command arguments)
+  ([invoke "grove"]
+   [category 'develop]
+   [synopsis "Run Grove from this checkout"]
+   [help "Run Grove's CLI in an isolated Guile process using this checkout's module paths."]
+   [load-configuration-policy 'no])
+  (let* ((module-arguments
+           (append-map (lambda (path) (list "-L" path)) %load-path))
+         (compiled-arguments
+           (append-map (lambda (path) (list "-C" path)) %load-compiled-path))
+         (program
+           (format #f "(use-modules (grove cli)) (exit (main '~s))"
+             arguments))
+         (status
+           (popen "guile"
+             (append '("--no-auto-compile")
+                     module-arguments
+                     compiled-arguments
+                     (list "-c" program))
+             #:input (current-input-port)
+             #:output (current-output-port)
+             #:error (current-error-port))))
+    (and (status:exit-val status)
+         (zero? (status:exit-val status)))))
+
 (define grove-configuration
   (configuration (variables grove-variables)))
 
@@ -51,5 +80,6 @@
     (append grove-modules forester-modules grove-programs))
   (commands
     (list install-command
+          grove-command
           parse-command))
   (testables grove-tests))
