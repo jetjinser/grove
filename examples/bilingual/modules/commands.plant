@@ -1,0 +1,8 @@
+@; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+@; SPDX-License-Identifier: CC0-1.0
+
+@(define-module (bilingual commands)
+  #:use-module (forester commands)
+  #:use-module (forester i18n)
+  #:re-export (title summary published updated link image tag taxon subtree
+               transclude lang bilingual term))

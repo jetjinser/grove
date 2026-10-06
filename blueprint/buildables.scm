@@ -14,6 +14,7 @@
 (define +grove-sources+
   '("grove/build.scm"
     "grove/highlight.scm"
+    "grove/i18n.scm"
     "grove/build/state.scm"
     "grove/collect.scm"
     "grove/cli.scm"
@@ -104,6 +105,7 @@
 (define +forester-sources+
   '("forester/backmatter.scm"
     "forester/commands.scm"
+    "forester/i18n.scm"
     "forester/composition.scm"
     "forester/private/content-index.scm"
     "forester/private/date.scm"
@@ -112,6 +114,7 @@
     "forester/private/web.scm"
     "forester/site.scm"
     "forester/style/html.scm"
+    "forester/style/i18n.scm"
     "forester/input/scribble.scm"
     "forester/render/artifact.scm"
     "forester/render/html.scm"
@@ -157,6 +160,10 @@
       (template-file
         (inputs "forester/style/default.css")
         (outputs "forester/style/default.css")
+        (install-location #%~(string-append #%?guile-module-dir "/forester/style")))
+      (template-file
+        (inputs "forester/style/i18n.css")
+        (outputs "forester/style/i18n.css")
         (install-location #%~(string-append #%?guile-module-dir "/forester/style"))))))
 
 (define (runtime-library-paths paths extension required?)

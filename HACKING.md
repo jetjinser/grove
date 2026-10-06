@@ -76,6 +76,7 @@ Keep a fact in one place and link to it rather than repeating it here.
 | --- | --- |
 | [Projects](docs/project.md) | Configuration, dependencies, caching, preview, templates, highlighting, and measurement. |
 | [Tree composition](docs/forester-composition.md) | Identity, transclusion, backmatter, and styling. |
+| [Internationalization](docs/i18n.md) | Locales, message catalogs, and bilingual content. |
 | [Relations](docs/relations.md) | Fact schemas, query semantics, and deferred queries. |
 | [Mathematics](docs/math.md) | Frontends, assumptions, calculations, and verification boundaries. |
 

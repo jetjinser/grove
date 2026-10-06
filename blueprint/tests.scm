@@ -89,6 +89,7 @@
     "unit/grove/test-registry.scm"
     "unit/forester/commands.scm"
     "unit/forester/composition.scm"
+    "unit/forester/i18n.scm"
     "unit/forester/project.scm"
     "unit/forester/render.scm"
     "unit/forester/queries.scm"

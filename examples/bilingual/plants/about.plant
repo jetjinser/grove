@@ -1,0 +1,12 @@
+@; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+@; SPDX-License-Identifier: CC0-1.0
+
+@use-modules[(bilingual commands)]
+
+@title{About this note}
+@summary{About the bilingual example.}
+@published{2026-10-06}
+
+@paragraph{The @link["hello"]{bilingual note} shows the facility itself. This
+page links back to it, so the note's backmatter is populated from a message
+catalog rather than hard-coded English.}
