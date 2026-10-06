@@ -112,6 +112,7 @@
     "forester/render/artifact.scm"
     "forester/render/html.scm"
     "forester/render/graph.scm"
+    "forester/render/gemtext.scm"
     "forester/render/rss.scm"
     "forester/render/sitemap.scm"
     "forester/render/text.scm"

@@ -7,6 +7,7 @@
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64)
   #:use-module (forester render html)
+  #:use-module (forester render gemtext)
   #:use-module (forester render rss)
   #:use-module (forester render sitemap)
   #:use-module (forester render text)
@@ -23,6 +24,56 @@
   #:use-module (tests unit forester fixtures))
 
 (test-begin "forester renderers")
+
+(let* ((forest (make-forest (make-site (list algebra limits))))
+       (artifacts (render-gemtext forest))
+       (index (artifact-content
+                (find (lambda (artifact)
+                        (string=? (artifact-path artifact) "index.gmi"))
+                      artifacts)))
+       (algebra-gemtext (artifact-content
+                          (find (lambda (artifact)
+                                  (string=? (artifact-path artifact)
+                                            "algebra.gmi"))
+                                artifacts))))
+  (test-assert "Gemtext renderer creates a capsule index and page artifacts"
+    (equal? '("index.gmi" "algebra.gmi" "limits.gmi")
+            (map artifact-path artifacts)))
+  (test-assert "Gemtext index links to each page"
+    (and (string-prefix? "# Site\n" index)
+         (string-contains index "=> algebra.gmi Algebra & limits")
+         (string-contains index "=> limits.gmi Limits")))
+  (test-assert "Gemtext page titles use headings and links occupy their own lines"
+    (and (string-prefix? "# Algebra & limits\n" algebra-gemtext)
+         (string-contains algebra-gemtext "=> limits.gmi limits")
+         (not (string-contains algebra-gemtext "The limits are useful."))))
+  (test-assert "Gemtext artifacts retain Forest source dependencies"
+    (equal? (source-paths forest) (artifact-sources (car artifacts)))))
+
+(let* ((source
+         (make-site-page
+           "source" "Source"
+           (make-content-document
+             (list
+               (make-content-element
+                 'paragraph
+                 (list "Before "
+                       (make-content-element 'link '("the limit")
+                         #:properties '((target . "limits")))
+                       " after."))
+               (make-content-element 'item '("A list item") #:flow-kind 'block)
+               (make-content-element 'code-block
+                 (list (make-content-text "(+ 1 2)"))
+                 #:properties '((language . scheme)) #:flow-kind 'block)))))
+       (forest (make-forest (make-site (list source algebra limits))))
+       (page (cdr (assoc "source" (site->gemtext forest)))))
+  (test-assert "Gemtext converts inline references to standalone link lines"
+    (and (string-contains page "Before ")
+         (string-contains page "=> limits.gmi the limit")
+         (string-contains page " after.")))
+  (test-assert "Gemtext uses native list and preformatted code syntax"
+    (and (string-contains page "* A list item")
+         (string-contains page "``` scheme\n(+ 1 2)\n```"))))
 (let* ((paragraph-node
          (car (content-document-children (site-page-document algebra))))
        (link-node (cadr (content-element-children paragraph-node)))
