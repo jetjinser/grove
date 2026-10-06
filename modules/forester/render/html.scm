@@ -74,14 +74,15 @@
       (set! position (1+ position))
       (let* ((id (tree-occurrence-target element))
              (target (find-page forest id))
-             (anchor (format #f "~atree-~a" anchor-prefix position)))
+             (anchor (format #f "~atree-~a" anchor-prefix position))
+             (author-anchor (content-element-property element 'anchor)))
         (tree-block-sxml
           (if (eq? (content-element-kind element) 'subtree)
               "inline-subtree" "transclusion")
           id (site-page-title target) (html-page-url routes id)
           (subtree-content-sxml forest routes target (string-append anchor "--") (1+ depth) highlighters
                                 #:title-decoration title-decoration)
-          #:anchor anchor #:depth (1+ depth)
+          #:anchor anchor #:anchor-id author-anchor #:depth (1+ depth)
           #:title-decoration (if title-decoration
                                  (title-decoration forest id)
                                  '())
@@ -100,25 +101,32 @@
       (string-append "#" (substring id (string-length "unstable-")))
       id))
 (define* (tree-block-sxml kind id title page-url content
-                          #:key (open? #t) anchor (depth 2) (title-decoration '()))
-  `(section (@ (class ,(string-append "forest-tree-block " kind))
-               (data-tree-id ,id) (id ,anchor))
-     (details ,@(if open? '((@ (open "open"))) '())
-       (summary
-         (,(string->symbol (format #f "h~a" (min depth 6)))
-           (@ (class "forest-tree-title"))
-           ,@title-decoration
-           (span ,title)
-           (a (@ (class "forest-tree-id")
-               (href ,page-url)
-               (aria-label ,(string-append
-                              "Open tree " (display-tree-id id)
-                              " as a page")))
-              "[" ,(display-tree-id id) "]")))
-       (div (@ (class "forest-tree-content"))
-            ,@(if (and (pair? content) (eq? (car content) 'article))
-                  (cdr content)
-                  (list content))))))
+                          #:key (open? #t) anchor (anchor-id #f) (depth 2)
+                          (title-decoration '()))
+  (let ((details-attributes
+          (append
+            (if anchor-id `((id ,anchor-id)) '())
+            (if open? '((open "open")) '()))))
+    `(section (@ (class ,(string-append "forest-tree-block " kind))
+                 (data-tree-id ,id) (id ,anchor))
+       (details ,@(if (null? details-attributes)
+                      '()
+                      (list (cons '@ details-attributes)))
+         (summary
+           (,(string->symbol (format #f "h~a" (min depth 6)))
+             (@ (class "forest-tree-title"))
+             ,@title-decoration
+             (span ,title)
+             (a (@ (class "forest-tree-id")
+                 (href ,page-url)
+                 (aria-label ,(string-append
+                                "Open tree " (display-tree-id id)
+                                " as a page")))
+                "[" ,(display-tree-id id) "]")))
+         (div (@ (class "forest-tree-content"))
+              ,@(if (and (pair? content) (eq? (car content) 'article))
+                    (cdr content)
+                    (list content)))))))
 
 (define (backlink-reference-sxml forest routes reference)
   (let ((source

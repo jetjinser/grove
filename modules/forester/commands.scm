@@ -138,7 +138,7 @@ page and must be a valid anchor ID."
 (define-public (taxon value)
   (topic-element 'taxon value))
 
-(define*-public (subtree #:key [id #f] [open? #t] [style #f] . arguments)
+(define*-public (subtree #:key [id #f] [anchor #f] [open? #t] [style #f] . arguments)
   (unless (boolean? open?)
     (error "Forester subtree #:open? must be a boolean" open?))
   ;;     Guile's rest argument contains keyword arguments as well.
@@ -151,6 +151,8 @@ page and must be a valid anchor ID."
                (or (not (non-empty-string? id))
                    (string-index id #\#)))
       (error "Forester subtree ID must be a non-empty string without #" id))
+    (when anchor
+      (checked-anchor-id anchor))
     (match titles
       [(title-element)
        (define title-text
@@ -165,13 +167,20 @@ page and must be a valid anchor ID."
          #:properties
          `((title . ,title-text)
            (open? . ,open?)
-           ,@(if id `((tree-id . ,id)) '()))
+           ,@(if id `((tree-id . ,id)) '())
+           ,@(cond (anchor `((anchor . ,anchor)))
+                   (id `((anchor . ,id)))
+                   (else '())))
          #:flow-kind 'block)]
       [_ (error "Forester subtree requires exactly one direct @title"
                 (length titles))])))
 
-(define*-public (transclude id #:key (style #f))
+(define*-public (transclude id #:key (style #f) (anchor #f))
   (unless (non-empty-string? id)
     (error "Forester transclusion target must be a non-empty tree ID" id))
-  (make-content-element 'transclude '() #:style style #:properties `((target . ,id))
+  (when anchor
+    (checked-anchor-id anchor))
+  (make-content-element 'transclude '() #:style style
+                        #:properties `((target . ,id)
+                                       ,@(if anchor `((anchor . ,anchor)) '()))
                         #:flow-kind 'block))

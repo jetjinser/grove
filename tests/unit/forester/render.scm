@@ -266,6 +266,35 @@
   (test-equal "tree link queries use the same identities"
     '("overview") (links forest "source")))
 
+(let* ((theorems
+         (make-site-page "theorems" "Theorems"
+           (evaluate-document
+             (string-append
+               "@subtree[#:id \"theorem-3\"]{@title{Theorem 3}@paragraph{Statement.}}\n"
+               "@subtree[#:id \"lemma-9\" #:anchor \"lemma-nine\"]{@title{Lemma 9}@paragraph{Proof.}}"))))
+       (notes
+         (make-site-page "notes" "Notes"
+           (evaluate-document
+             (string-append
+               "@transclude[\"theorem-3\" #:anchor \"theorem-3-note\"]\n"
+               "@transclude[\"lemma-9\"]\n"
+               "@paragraph{See @link[\"theorems#theorem-3\"]{the theorem}.}"))))
+       (forest (make-forest (make-site (list notes theorems))))
+       (html (render-test-html forest)))
+  (test-assert "explicit subtree ids anchor their host occurrence"
+    (and (string-contains (assoc-ref html "theorems")
+                          "<details id=\"theorem-3\" open=\"open\">")
+         (string-contains (assoc-ref html "theorems") "id=\"tree-1\"")))
+  (test-assert "subtree anchors override the tree id default"
+    (string-contains (assoc-ref html "theorems") "<details id=\"lemma-nine\""))
+  (test-assert "transclusions anchor only when explicitly asked"
+    (and (string-contains (assoc-ref html "notes")
+                          "<details id=\"theorem-3-note\" open=\"open\">")
+         (not (string-contains (assoc-ref html "notes") "id=\"lemma-nine\""))))
+  (test-assert "anchor links route through the host page with their fragment"
+    (string-contains (assoc-ref html "notes")
+                     "href=\"/theorems.html#theorem-3\"")))
+
 (test-error "a raw # in a link target is rejected (fragments are separate)" #t
   (make-forest
     (make-site (list (make-site-page "target" "Target" (make-content-document '()))
