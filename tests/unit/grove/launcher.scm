@@ -14,6 +14,8 @@
 (resolve-interface '(blueprint buildables))
 (define runtime-library-paths
   (module-ref (resolve-module '(blueprint buildables)) 'runtime-library-paths))
+(define runtime-extension-paths
+  (module-ref (resolve-module '(blueprint buildables)) 'runtime-extension-paths))
 (define root (format #f "/tmp/grove-launcher-test-~a" (getpid)))
 (define launcher (string-append root "/grove"))
 (define (write-file path text)
@@ -55,7 +57,9 @@
           (cons "@GUILE_RUNTIME_LOAD_PATH@"
                 (format #f "~s" (runtime-library-paths %load-path ".scm" #t)))
           (cons "@GUILE_RUNTIME_COMPILED_PATH@"
-                (format #f "~s" (runtime-library-paths %load-compiled-path ".go" #f)))))
+                (format #f "~s" (runtime-library-paths %load-compiled-path ".go" #f)))
+          (cons "@GUILE_RUNTIME_EXTENSION_PATH@"
+                (format #f "~s" (runtime-extension-paths '("ssh/session"))))))
       (write-file launcher template)
       (chmod launcher #o755))
     (write-file (string-append root "/project.scm")

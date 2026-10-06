@@ -4,6 +4,7 @@
 (define-module (grove cli)
   #:use-module (grove project)
   #:use-module (grove project new)
+  #:use-module (grove ssh)
   #:use-module (grove serve)
   #:use-module (grove private cli progress)
   #:use-module (grove project load)
@@ -142,25 +143,19 @@
                  (unless (project-browse project)
                    (error "project does not define a #:browse callback"))
                  (if ssh-port
-                     (let ((module (catch #t
-                                     (lambda () (resolve-module '(grove ssh)))
-                                     (lambda _ #f)))
-                           (host-key (assq-ref options 'host-key))
+                     (let ((host-key (assq-ref options 'host-key))
                            (authorized (assq-ref options 'authorized-keys)))
-                       (unless module
-                         (error "SSH browsing requires guile-ssh and (grove ssh)"))
                        (unless host-key
                          (error "--ssh requires --host-key"))
                        (unless authorized
                          (error "--ssh requires --authorized-keys"))
                        (format (current-error-port)
                                "grove: serving SSH browsing on port ~a~%" ssh-port)
-                       ((module-ref module 'serve-ssh)
+                       (serve-ssh
                          #:port ssh-port
                          #:host-key (absolute host-key)
                          #:authorized-keys
-                         ((module-ref module 'read-authorized-keys)
-                          (absolute authorized))
+                         (read-authorized-keys (absolute authorized))
                          #:handler
                          (lambda (input output)
                            (browse-project project #:input input

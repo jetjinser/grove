@@ -87,6 +87,7 @@
     "grove/private/minikanren.scm"
     "grove/relation/dsl.scm"
     "grove/site.scm"
+    "grove/ssh.scm"
     "grove/input/scribble.scm"
     "grove/render/html.scm"
     "grove/render/html/routes.scm"
@@ -173,7 +174,29 @@
                                 (+ 1 (string-length filename))))
             (required? (error "missing Grove runtime dependency" module))
             (else #f))))
-      '("gcrypt/hash" "faster-minikanren/mk-guile" "ts" "grove/highlight/languages"))
+      '("gcrypt/hash" "faster-minikanren/mk-guile" "ts"
+        "grove/highlight/languages" "ssh/session"))
+    string=?))
+
+(define (runtime-extension-paths modules)
+  ;; Locate the native extension directories of bundled Guile modules so the
+  ;; installed launcher can find them without the development shell.
+  (delete-duplicates
+    (filter-map
+      (lambda (module)
+        (let ((path (search-path %load-path (string-append module ".scm"))))
+          (and path
+               (let* ((canonical (canonicalize-path path))
+                      (marker "/share/guile/site/")
+                      (index (string-contains canonical marker)))
+                 (and index
+                      (let* ((prefix (substring canonical 0 index))
+                             (rest (substring canonical
+                                              (+ index (string-length marker))))
+                             (version (car (string-split rest #\/))))
+                        (string-append prefix "/lib/guile/" version
+                                       "/extensions")))))))
+      modules)
     string=?))
 
 (define grove-programs
@@ -189,5 +212,7 @@
                  (cons 'GUILE_RUNTIME_LOAD_PATH
                        (format #f "~s" (runtime-library-paths %load-path ".scm" #t)))
                  (cons 'GUILE_RUNTIME_COMPILED_PATH
-                       (format #f "~s" (runtime-library-paths %load-compiled-path ".go" #f)))))
+                       (format #f "~s" (runtime-library-paths %load-compiled-path ".go" #f)))
+                 (cons 'GUILE_RUNTIME_EXTENSION_PATH
+                       (format #f "~s" (runtime-extension-paths '("ssh/session"))))))
       (install-location #%~#%?bindir))))

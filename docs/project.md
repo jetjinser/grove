@@ -54,10 +54,11 @@ project wires `#:browse (make-forest-browser)` to read the Forest directly in
 the terminal instead of reading rendered HTML or Gemtext.
 
 Add `--ssh PORT` (with `--host-key` and `--authorized-keys`) to serve the same
-browse callback over SSH. The optional `(grove ssh)` module requires guile-ssh
-and is loaded on demand, so the base install does not depend on libssh. It
-accepts only public-key authentication, never executes a client command, and
-hands the session channel to the project callback as its input and output.
+browse callback over SSH. The bundled `(grove ssh)` module uses guile-ssh; the
+launcher exposes the Guile extension path so an installed Grove finds it
+without the development shell. It accepts only public-key authentication,
+never executes a client command, and hands the session channel to the project
+callback as its input and output.
 
 ```sh
 grove browse --project project.scm \

@@ -8,5 +8,15 @@
   (append (list "@GUILE_MODULE_DIR@") '@GUILE_RUNTIME_LOAD_PATH@ %load-path))
 (set! %load-compiled-path
   (append (list "@GUILE_OBJECT_DIR@") '@GUILE_RUNTIME_COMPILED_PATH@ %load-compiled-path))
+
+;; Bundled native extensions (guile-ssh) are loaded with load-extension.
+(use-modules (srfi srfi-13))
+(setenv "GUILE_EXTENSIONS_PATH"
+  (string-join
+    (append '@GUILE_RUNTIME_EXTENSION_PATH@
+            (let ((existing (getenv "GUILE_EXTENSIONS_PATH")))
+              (if existing (string-split existing #\:) '())))
+    ":"))
+
 (use-modules (grove cli))
 (exit (main (cdr (command-line))))
