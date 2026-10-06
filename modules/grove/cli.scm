@@ -25,10 +25,15 @@
          (usage-error "expected a command; use 'grove --help'"))
        (when (and (member command '("check" "browse")) (assq 'output options))
          (usage-error "~a does not accept --output" command))
-       (when (and (not (equal? command "browse"))
-                  (or (assq 'ssh options) (assq 'host-key options)
-                      (assq 'authorized-keys options)))
-         (usage-error "--ssh, --host-key and --authorized-keys are browse options"))
+       (when (and (not (equal? command "browse")) (assq 'ssh options))
+         (usage-error "--ssh is a browse option"))
+       (when (and (not (equal? command "browse")) (assq 'authorized-keys options))
+         (usage-error "--authorized-keys is a browse option"))
+       (when (and (not (member command '("browse" "ssh-keygen")))
+                  (assq 'host-key options))
+         (usage-error "--host-key is a browse and ssh-keygen option"))
+       (when (and (not (equal? command "ssh-keygen")) (assq 'force options))
+         (usage-error "--force is an ssh-keygen option"))
        (when (and (not (equal? command "serve"))
                   (or (assq 'port options) (assq 'no-watch options)))
          (usage-error "--port and --no-watch are serve options"))
@@ -39,12 +44,15 @@
        (cons command options))
       ((argument . rest)
        (cond
-         ((and (not command) (member argument '("build" "check" "serve" "new" "browse")))
+         ((and (not command)
+               (member argument
+                       '("build" "check" "serve" "new" "browse" "ssh-keygen")))
           (loop rest argument options))
-         ((member argument '("--help" "-h" "--debug" "--no-watch"))
+         ((member argument '("--help" "-h" "--debug" "--no-watch" "--force"))
           (loop rest command
                 (acons (cond ((string=? argument "--debug") 'debug)
                              ((string=? argument "--no-watch") 'no-watch)
+                             ((string=? argument "--force") 'force)
                              (else 'help)) #t options)))
          ((member argument
                   '("--project" "--output" "--port" "--dest"
@@ -93,8 +101,10 @@
        "Usage: grove serve [OPTIONS]\n\nServe successful build outputs on localhost and watch for changes.\n")
       ((equal? command "browse")
        "Usage: grove browse [OPTIONS]\n\nRead and analyze the project, then browse its model in the terminal.\n")
+      ((equal? command "ssh-keygen")
+       "Usage: grove ssh-keygen --host-key PATH [OPTIONS]\n\nGenerate an RSA host key for 'grove browse --ssh'.\n")
       (else
-       "Usage: grove COMMAND [OPTIONS]\n\nCommands:\n  build   Build the project and update its outputs.\n  check   Validate the complete pipeline without writing outputs.\n  serve   Preview on localhost and rebuild when inputs change.\n  browse  Analyze the project and browse its model in the terminal.\n  new     Create a tree with an increasing base36 ID.\n")))
+       "Usage: grove COMMAND [OPTIONS]\n\nCommands:\n  build       Build the project and update its outputs.\n  check       Validate the complete pipeline without writing outputs.\n  serve       Preview on localhost and rebuild when inputs change.\n  browse      Analyze the project and browse its model in the terminal.\n  ssh-keygen  Generate an RSA host key for --ssh.\n  new         Create a tree with an increasing base36 ID.\n")))
   (when (or (not command) (member command '("build" "check" "serve" "browse" "new")))
     (display "\nOptions:\n  --project PATH  Project file (default: ./project.scm).\n"))
   (when (or (not command) (member command '("build" "serve")))
@@ -105,11 +115,23 @@
     (display "  --dest PATH     Existing destination directory (new only).\n"))
   (when (or (not command) (equal? command "browse"))
     (display "  --ssh PORT      Serve browsing over SSH (browse only).\n  --host-key PATH RSA host key for --ssh (browse only).\n  --authorized-keys PATH  Authorized client keys for --ssh (browse only).\n"))
+  (when (or (not command) (equal? command "ssh-keygen"))
+    (display "  --host-key PATH RSA host key to create (ssh-keygen).\n  --force         Overwrite an existing host key (ssh-keygen).\n"))
   (display "  --debug         Show the original exception and backtrace.\n  -h, --help      Show help.\n\nOption paths are relative to the invocation directory.\nProject paths are relative to the project file's directory.\n"))
 
 (define (run-command command options)
   (let ((filename (or (assq-ref options 'project) "project.scm")))
     (cond
+      ((string=? command "ssh-keygen")
+       (let* ((invocation (getcwd))
+              (path (assq-ref options 'host-key))
+              (absolute (and path
+                             (if (absolute-file-name? path) path
+                                 (string-append invocation "/" path)))))
+         (unless path
+           (error "--host-key is required"))
+         (generate-host-key absolute #:force (assq-ref options 'force))
+         0))
       ((string=? command "new")
        (let* ((destination (assq-ref options 'dest))
               (destination (and destination

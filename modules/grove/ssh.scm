@@ -15,6 +15,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (read-authorized-keys
+            generate-host-key
             serve-ssh))
 
 ;; SSH transport for Grove browsing. It authenticates a client, opens a session
@@ -56,6 +57,7 @@
     (lambda _ #f)))
 
 (define (handle-auth msg type authorized output)
+  "Answer one authentication message. Return #t once the client is authenticated."
   (message-auth-set-methods! msg '(public-key))
   (case (cadr type)
     ((auth-method-publickey)
@@ -65,20 +67,23 @@
             (offered (public-key-blob
                        (catch #t (lambda () (auth-req:pubkey request))
                               (lambda _ #f)))))
-       (format output "grove ssh: public key authentication state=~a~%" state)
        (case state
          ((none)
           (if (and offered (member offered authorized string=?))
               (message-auth-reply-public-key-ok msg)
-              (message-reply-default msg)))
+              (message-reply-default msg))
+          #f)
          ((valid)
           ;; libssh only reports a valid signature; the offered key was already
           ;; checked against the authorized set at the "none" state.
-          (message-reply-success msg))
+          (message-reply-success msg)
+          #t)
          (else
-          (message-reply-default msg)))))
+          (message-reply-default msg)
+          #f))))
     (else
-     (message-reply-default msg))))
+     (message-reply-default msg)
+     #f)))
 
 (define (handle-channel-request msg type channel session handler output)
   "Handle a channel request. Return #t when the session must end."
@@ -109,41 +114,74 @@
      (message-reply-success msg)
      #f)))
 
-(define (handle-session session handler authorized output)
-  (let loop ((channel #f))
-    (let ((msg (catch 'guile-ssh-error
-                 (lambda () (server-message-get session))
-                 (lambda _ #f))))
-      (if (not msg)
-          (if (connected? session)
-              (begin (usleep 50000) (loop channel))
-              #f)
-          (let ((type (message-get-type msg)))
-            (case (car type)
-              ((request-service)
-               (message-reply-success msg)
-               (loop channel))
-              ((request-auth)
-               (handle-auth msg type authorized output)
-               (loop channel))
-              ((request-channel-open)
-               (case (cadr type)
-                 ((channel-session)
-                  (loop (message-channel-request-open-reply-accept msg)))
-                 (else
-                  (message-reply-default msg)
-                  (loop channel))))
-              ((request-channel)
-               (if (handle-channel-request msg type channel session handler output)
-                   #t
-                   (loop channel)))
-              (else
-               (message-reply-default msg)
-               (loop channel))))))))
+(define* (handle-session session handler authorized output
+                         #:key (login-timeout 0))
+  (let ((deadline (and (> login-timeout 0)
+                       (+ (current-time) login-timeout))))
+    (let loop ((channel #f) (authenticated #f))
+      (cond
+        ((and deadline (not authenticated) (>= (current-time) deadline))
+         (format output "grove ssh: login timed out after ~a s~%" login-timeout)
+         #f)
+        (else
+         (let ((msg (catch 'guile-ssh-error
+                      (lambda () (server-message-get session))
+                      (lambda _ #f))))
+           (if (not msg)
+               (if (connected? session)
+                   (begin (usleep 50000) (loop channel authenticated))
+                   #f)
+               (let ((type (message-get-type msg)))
+                 (case (car type)
+                   ((request-service)
+                    (message-reply-success msg)
+                    (loop channel authenticated))
+                   ((request-auth)
+                    (loop channel (or authenticated
+                                      (handle-auth msg type authorized output))))
+                   ((request-channel-open)
+                    (case (cadr type)
+                      ((channel-session)
+                       (loop (message-channel-request-open-reply-accept msg)
+                             authenticated))
+                      (else
+                       (message-reply-default msg)
+                       (loop channel authenticated))))
+                   ((request-channel)
+                    (if (handle-channel-request msg type channel session handler
+                                                output)
+                        #t
+                        (loop channel authenticated)))
+                   (else
+                    (message-reply-default msg)
+                    (loop channel authenticated)))))))))))
 
 (define (close-channel channel)
   (when channel
     (catch #t (lambda () (close channel)) (lambda _ #t))))
+
+(define* (generate-host-key path #:key (bits 3072) (force #f)
+                            (output (current-error-port)))
+  "Generate an RSA host key at PATH for use with serve-ssh.
+
+Uses ssh-keygen; refuses to overwrite an existing key unless FORCE is #t."
+  (unless (and (string? path) (not (string-null? path)))
+    (error "host key requires a file path" path))
+  (when (and (file-exists? path) (not force))
+    (error "host key already exists; pass --force to overwrite" path))
+  (let ((ssh-keygen (search-path
+                      (string-split (or (getenv "PATH") "") #\:)
+                      "ssh-keygen")))
+    (unless ssh-keygen
+      (error "ssh-keygen was not found on PATH"))
+    (let ((status (system* ssh-keygen "-t" "rsa" "-b" (number->string bits)
+                           "-m" "PEM" "-N" "" "-q" "-f" path)))
+      (unless (and (status:exit-val status)
+                   (zero? (status:exit-val status)))
+        (error "ssh-keygen failed to create a host key" path))
+      (catch #t (lambda () (chmod path #o600)) (lambda _ #t))
+      (format output "grove ssh: wrote host key ~a (~a-bit RSA)~%" path bits)
+      path)))
 
 (define* (serve-ssh #:key
                     (address "127.0.0.1")
@@ -152,16 +190,21 @@
                     (authorized-keys '())
                     (banner "Grove")
                     (log-verbosity 'nolog)
+                    (login-timeout 60)
                     handler
                     (output (current-error-port)))
   "Serve HANDLER over SSH until interrupted.
 
 HANDLER receives the session channel as both input and output. HOST-KEY is an
-RSA host key file; AUTHORIZED-KEYS is a list from read-authorized-keys."
+RSA host key file; AUTHORIZED-KEYS is a list from read-authorized-keys.
+LOGIN-TIMEOUT, in seconds, drops clients that have not authenticated; 0 disables
+it."
   (unless (procedure? handler)
     (error "SSH server requires a session handler" handler))
   (unless (and (string? host-key) (file-exists? host-key))
     (error "SSH server requires an existing host key" host-key))
+  (unless (and (exact-integer? login-timeout) (>= login-timeout 0))
+    (error "SSH login timeout must be a non-negative integer" login-timeout))
   (let ((server (make-server #:bindaddr address
                              #:bindport port
                              #:rsakey host-key
@@ -178,7 +221,8 @@ RSA host key file; AUTHORIZED-KEYS is a list from read-authorized-keys."
               (server-handle-key-exchange session)
               (catch #t
                 (lambda ()
-                  (handle-session session handler authorized-keys output))
+                  (handle-session session handler authorized-keys output
+                                  #:login-timeout login-timeout))
                 (lambda (key . arguments)
                   (format output "grove ssh: session error: ~s ~s~%"
                           key arguments)))
