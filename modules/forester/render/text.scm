@@ -51,13 +51,20 @@
                           (if fragment (string-append "#" fragment) "")
                           "]"))))))))
 
+(define (occurrence-anchor element prefix position)
+  "The canonical anchor of a tree occurrence: the author anchor when the
+element declares one, otherwise the generated position anchor. Mirrors the
+HTML renderer so text and HTML address occurrences identically."
+  (or (content-element-property element 'anchor)
+      (format #f "~atree-~a" prefix position)))
+
 (define* (subtree-content-text forest routes page #:optional (prefix ""))
   (let ((position 0))
     (define (render-tree element _render)
       (set! position (1+ position))
       (let* ((id (tree-occurrence-target element))
              (target (find-page forest id))
-             (anchor (format #f "~atree-~a" prefix position)))
+             (anchor (occurrence-anchor element prefix position)))
         (string-append (title-text (site-page-title target)) "[#" anchor "]\n"
                        (subtree-content-text forest routes target (string-append anchor "--")))))
     (content->text (site-page-document page)
@@ -80,7 +87,7 @@
       (map (lambda (element position)
              (let* ((target-id (tree-occurrence-target element))
                     (target (find-page forest target-id))
-                    (anchor (format #f "~atree-~a" prefix position)))
+                    (anchor (occurrence-anchor element prefix position)))
                (string-append indent "- " (site-page-title target) " [#" anchor "]\n"
                  (entries target-id (string-append anchor "--") (string-append indent "  ")))))
            (tree-occurrences forest id) (iota (length (tree-occurrences forest id)) 1))))

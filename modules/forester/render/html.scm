@@ -33,6 +33,13 @@
     (html-page-url routes (reference-source-page-id reference))
     "#" (reference-source-id reference)))
 
+(define (occurrence-anchor element prefix position)
+  "The canonical anchor of a tree occurrence: the author anchor when the
+element declares one (explicitly or through the unique-occurrence pass),
+otherwise the generated position anchor that backs repeated occurrences."
+  (or (content-element-property element 'anchor)
+      (format #f "~atree-~a" prefix position)))
+
 (define* (page-content-handlers forest routes page #:optional (anchor-prefix ""))
   (let ((references (outgoing-references forest (site-page-id page))))
     `((tag . ,(lambda (_element _children) '()))
@@ -74,15 +81,14 @@
       (set! position (1+ position))
       (let* ((id (tree-occurrence-target element))
              (target (find-page forest id))
-             (anchor (format #f "~atree-~a" anchor-prefix position))
-             (author-anchor (content-element-property element 'anchor)))
+             (anchor (occurrence-anchor element anchor-prefix position)))
         (tree-block-sxml
           (if (eq? (content-element-kind element) 'subtree)
               "inline-subtree" "transclusion")
           id (site-page-title target) (html-page-url routes id)
           (subtree-content-sxml forest routes target (string-append anchor "--") (1+ depth) highlighters
                                 #:title-decoration title-decoration)
-          #:anchor anchor #:anchor-id author-anchor #:depth (1+ depth)
+          #:anchor anchor #:depth (1+ depth)
           #:title-decoration (if title-decoration
                                  (title-decoration forest id)
                                  '())
@@ -101,32 +107,25 @@
       (string-append "#" (substring id (string-length "unstable-")))
       id))
 (define* (tree-block-sxml kind id title page-url content
-                          #:key (open? #t) anchor (anchor-id #f) (depth 2)
-                          (title-decoration '()))
-  (let ((details-attributes
-          (append
-            (if anchor-id `((id ,anchor-id)) '())
-            (if open? '((open "open")) '()))))
-    `(section (@ (class ,(string-append "forest-tree-block " kind))
-                 (data-tree-id ,id) (id ,anchor))
-       (details ,@(if (null? details-attributes)
-                      '()
-                      (list (cons '@ details-attributes)))
-         (summary
-           (,(string->symbol (format #f "h~a" (min depth 6)))
-             (@ (class "forest-tree-title"))
-             ,@title-decoration
-             (span ,title)
-             (a (@ (class "forest-tree-id")
-                 (href ,page-url)
-                 (aria-label ,(string-append
-                                "Open tree " (display-tree-id id)
-                                " as a page")))
-                "[" ,(display-tree-id id) "]")))
-         (div (@ (class "forest-tree-content"))
-              ,@(if (and (pair? content) (eq? (car content) 'article))
-                    (cdr content)
-                    (list content)))))))
+                          #:key (open? #t) anchor (depth 2) (title-decoration '()))
+  `(section (@ (class ,(string-append "forest-tree-block " kind))
+               (data-tree-id ,id) (id ,anchor))
+     (details ,@(if open? '((@ (open "open"))) '())
+       (summary
+         (,(string->symbol (format #f "h~a" (min depth 6)))
+           (@ (class "forest-tree-title"))
+           ,@title-decoration
+           (span ,title)
+           (a (@ (class "forest-tree-id")
+               (href ,page-url)
+               (aria-label ,(string-append
+                              "Open tree " (display-tree-id id)
+                              " as a page")))
+              "[" ,(display-tree-id id) "]")))
+       (div (@ (class "forest-tree-content"))
+            ,@(if (and (pair? content) (eq? (car content) 'article))
+                  (cdr content)
+                  (list content))))))
 
 (define (backlink-reference-sxml forest routes reference)
   (let ((source
@@ -225,7 +224,7 @@
     (map (lambda (element position)
            (let* ((target-id (tree-occurrence-target element))
                   (target (find-page forest target-id))
-                  (anchor (format #f "~atree-~a" prefix position))
+                  (anchor (occurrence-anchor element prefix position))
                   (decoration (if title-decoration
                                   (title-decoration forest target-id)
                                   '()))

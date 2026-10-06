@@ -249,8 +249,8 @@
       (list (reference-source-page-id reference) (reference-source-id reference)
             (reference-target-page-id reference) (reference-label reference))))
   (test-assert "tree directory follows nested display structure"
-    (and (string-contains (assoc-ref html "target") "href=\"#tree-1\">Overview</a>")
-         (string-contains (assoc-ref html "target") "href=\"#tree-1--tree-1\">Details</a>")))
+    (and (string-contains (assoc-ref html "target") "href=\"#overview\">Overview</a>")
+         (string-contains (assoc-ref html "target") "href=\"#details\">Details</a>")))
   (test-assert "title levels follow display depth"
     (and (string-contains (assoc-ref html "target") "<h2 class=\"forest-tree-title\"><span>Overview</span>")
          (string-contains (assoc-ref html "target") "<h3 class=\"forest-tree-title\"><span>Details</span>")))
@@ -261,8 +261,8 @@
     (and (string-contains (assoc-ref html "overview") "href=\"/source.html#ref-1\">Source</a>")
          (null? (incoming-references forest "target"))))
   (test-assert "text directory and body share occurrence anchors"
-    (and (string-contains (assoc-ref text "target") "- Overview [#tree-1]")
-         (string-contains (assoc-ref text "target") "  - Details [#tree-1--tree-1]")))
+    (and (string-contains (assoc-ref text "target") "- Overview [#overview]")
+         (string-contains (assoc-ref text "target") "  - Details [#details]")))
   (test-equal "tree link queries use the same identities"
     '("overview") (links forest "source")))
 
@@ -283,18 +283,19 @@
        (html (render-test-html forest)))
   (test-assert "explicit subtree ids anchor their host occurrence"
     (and (string-contains (assoc-ref html "theorems")
-                          "<details id=\"theorem-3\" open=\"open\">")
-         (string-contains (assoc-ref html "theorems") "id=\"tree-1\"")))
+                          "data-tree-id=\"theorem-3\" id=\"theorem-3\"")
+         (not (string-contains (assoc-ref html "theorems") "id=\"tree-1\""))
+         (not (string-contains (assoc-ref html "theorems") "<details id="))))
   (test-assert "subtree anchors override the tree id default"
     (and (string-contains (assoc-ref html "theorems")
-                          "<details id=\"lemma-nine\"")
+                          "data-tree-id=\"lemma-9\" id=\"lemma-nine\"")
          (not (string-contains (assoc-ref html "theorems")
-                               "<details id=\"lemma-9\""))))
+                               " id=\"lemma-9\""))))
   (test-assert "unique transclusions anchor with the tree id"
     (and (string-contains (assoc-ref html "notes")
-                          "<details id=\"theorem-3-note\" open=\"open\">")
+                          "data-tree-id=\"theorem-3\" id=\"theorem-3-note\"")
          (string-contains (assoc-ref html "notes")
-                          "<details id=\"lemma-9\" open=\"open\">")))
+                          "data-tree-id=\"lemma-9\" id=\"lemma-9\"")))
   (test-assert "anchor links route through the host page with their fragment"
     (string-contains (assoc-ref html "notes")
                      "href=\"/theorems.html#theorem-3\"")))
@@ -310,7 +311,7 @@
        (html (render-test-html forest)))
   (test-assert "unnamed subtrees anchor with their unstable id"
     (string-contains (assoc-ref html "scratch")
-                     "<details id=\"unstable-0\" open=\"open\">")))
+                     "data-tree-id=\"unstable-0\" id=\"unstable-0\"")))
 
 (let* ((definitions
          (make-site-page "definitions" "Definitions"
@@ -329,9 +330,11 @@
            (make-forest (make-site (list host definitions)))))
        (html (render-test-html forest))
        (message (get-output-string port)))
-  (test-assert "repeated occurrences stay unanchored and their links warn"
-    (and (not (string-contains (assoc-ref html "host")
-                               "<details id=\"theorem-3\""))
+  (test-assert "repeated occurrences fall back to position anchors and warn"
+    (and (string-contains (assoc-ref html "host") "id=\"tree-1\"")
+         (string-contains (assoc-ref html "host") "id=\"tree-2\"")
+         (not (string-contains (assoc-ref html "host")
+                               "data-tree-id=\"theorem-3\" id=\"theorem-3\""))
          (string-contains message "does not resolve in page host"))))
 
 (test-error "a raw # in a link target is rejected (fragments are separate)" #t
@@ -728,7 +731,7 @@
       "<span class=\"source\">?</span>"))
   (test-assert "title-decoration decorates the table of contents"
     (string-contains html
-      "href=\"#tree-1\"><span class=\"taxon\">overview. </span><span class=\"source\">?</span>Overview</a>")))
+      "href=\"#overview\"><span class=\"taxon\">overview. </span><span class=\"source\">?</span>Overview</a>")))
 
 (let* ((annotated
          (make-site-page "annotated" "Annotated"
