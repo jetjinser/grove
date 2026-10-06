@@ -8,10 +8,16 @@
   #:use-module (grove private cli progress)
   #:use-module (grove project load)
   #:use-module (grove project diagnostic)
+  #:use-module (ice-9 command-line)
   #:use-module (ice-9 format)
   #:use-module (ice-9 match)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (main))
+
+;; Reported by `grove --version'. The build system may substitute a real value
+;; later; the source tree reports "dev".
+(define grove-version "dev")
 
 (define (usage-error message . arguments)
   (throw 'grove-usage-error (apply format #f message arguments)))
@@ -26,102 +32,158 @@
 (define (ssh-ref name)
   (module-ref (ssh-support) name))
 
-(define numeric-option-keys
-  '(port ssh ssh-workers ssh-login-timeout ssh-session-timeout ssh-memory-limit))
+;;; Options are described once and drive parsing, validation, and help.
+
+(define command-names '("build" "check" "serve" "new" "browse" "ssh-keygen"))
+
+(define* (option-spec flag #:key (key (string->symbol flag)) (arity 'flag)
+                      (parse 'string) check (commands #f) help helps)
+  "Describe one option as an association list.
+
+FLAG is the literal token (including dashes). ARITY is `flag' or `value'.
+PARSE is `string' or `integer'. CHECK validates a parsed value. COMMANDS lists
+the commands the option is accepted by, or #f for all. HELP is the help line,
+with HELP overrides keyed by command."
+  (list (cons 'flag flag) (cons 'key key) (cons 'arity arity)
+        (cons 'parse parse) (cons 'check check) (cons 'commands commands)
+        (cons 'help help) (cons 'helps helps)))
+
+(define (option-field spec field) (assq-ref spec field))
+
+(define (option-by-flag flag)
+  (find (lambda (spec) (string=? flag (option-field spec 'flag))) option-specs))
+
+(define (option-by-key key)
+  (find (lambda (spec) (eq? key (option-field spec 'key))) option-specs))
+
+(define (port-check value flag)
+  (unless (<= 1 value 65535)
+    (usage-error "~a requires an integer from 1 to 65535" flag))
+  value)
+
+(define (workers-check value flag)
+  (unless (<= 1 value 64)
+    (usage-error "--ssh-workers must be from 1 to 64"))
+  value)
+
+(define (seconds-check value flag)
+  (unless (>= value 0)
+    (usage-error "~a must be a non-negative number of seconds" flag))
+  value)
+
+(define (bytes-check value flag)
+  (unless (> value 0)
+    (usage-error "--ssh-memory-limit must be a positive number of bytes"))
+  value)
+
+(define option-specs
+  (list
+    (option-spec "--project" #:key 'project #:arity 'value
+                 #:commands '(build check serve new browse)
+                 #:help "  --project PATH  Project file (default: ./project.scm).\n")
+    (option-spec "--output" #:key 'output #:arity 'value
+                 #:commands '(build serve)
+                 #:help "  --output PATH   Override the output directory (build and serve).\n")
+    (option-spec "--port" #:key 'port #:arity 'value #:parse 'integer
+                 #:check port-check #:commands '(serve)
+                 #:help "  --port NUMBER   Listen on this port (serve only; default: 8080).\n")
+    (option-spec "--no-watch" #:key 'no-watch #:commands '(serve)
+                 #:help "  --no-watch      Serve without automatic rebuilding (serve only).\n")
+    (option-spec "--dest" #:key 'dest #:arity 'value #:commands '(new)
+                 #:help "  --dest PATH     Existing destination directory (new only).\n")
+    (option-spec "--ssh" #:key 'ssh #:arity 'value #:parse 'integer
+                 #:check port-check #:commands '(browse)
+                 #:help "  --ssh PORT      Serve browsing over SSH (browse only).\n")
+    (option-spec "--host-key" #:key 'host-key #:arity 'value
+                 #:commands '(browse ssh-keygen)
+                 #:help "  --host-key PATH RSA host key for --ssh (browse only).\n"
+                 #:helps '((ssh-keygen
+                            . "  --host-key PATH RSA host key to create (ssh-keygen).\n")))
+    (option-spec "--authorized-keys" #:key 'authorized-keys #:arity 'value
+                 #:commands '(browse)
+                 #:help "  --authorized-keys PATH  Authorized client keys for --ssh (browse only).\n")
+    (option-spec "--ssh-generate-host-key" #:key 'ssh-generate-host-key
+                 #:commands '(browse)
+                 #:help "  --ssh-generate-host-key Create the host key if it is missing (browse --ssh).\n")
+    (option-spec "--ssh-workers" #:key 'ssh-workers #:arity 'value
+                 #:parse 'integer #:check workers-check #:commands '(browse)
+                 #:help "  --ssh-workers N         Concurrent sessions/processes (browse --ssh; default 4).\n")
+    (option-spec "--ssh-login-timeout" #:key 'ssh-login-timeout #:arity 'value
+                 #:parse 'integer #:check seconds-check #:commands '(browse)
+                 #:help "  --ssh-login-timeout S   Drop clients that do not authenticate in S seconds (default 60).\n")
+    (option-spec "--ssh-session-timeout" #:key 'ssh-session-timeout #:arity 'value
+                 #:parse 'integer #:check seconds-check #:commands '(browse)
+                 #:help "  --ssh-session-timeout S Drop a session after S seconds (0 disables; default 0).\n")
+    (option-spec "--ssh-memory-limit" #:key 'ssh-memory-limit #:arity 'value
+                 #:parse 'integer #:check bytes-check #:commands '(browse)
+                 #:help "  --ssh-memory-limit BYTES Cap each worker's address space (browse --ssh).\n")
+    (option-spec "--force" #:key 'force #:commands '(ssh-keygen)
+                 #:help "  --force         Overwrite an existing host key (ssh-keygen).\n")
+    (option-spec "--debug" #:key 'debug)
+    (option-spec "--help" #:key 'help)
+    (option-spec "-h" #:key 'help)
+    (option-spec "--version" #:key 'version)))
+
+(define (coerce-option spec value flag)
+  "Parse and validate VALUE for SPEC, returning the stored value."
+  (case (option-field spec 'parse)
+    ((integer)
+     (let ((number (string->number value)))
+       (unless (exact-integer? number)
+         (usage-error "~a requires an integer" flag))
+       (let ((check (option-field spec 'check)))
+         (if check (check number flag) number))))
+    (else value)))
+
+(define (command-in? command commands)
+  (and commands command (member command (map symbol->string commands))))
+
+(define (validate-options command options)
+  "Reject options used with a command they do not belong to, plus cross rules."
+  (for-each
+    (lambda (entry)
+      (let ((spec (option-by-key (car entry))))
+        (when spec
+          (let ((commands (option-field spec 'commands)))
+            (when (and commands command (not (command-in? command commands)))
+              (usage-error "~a is a ~a option"
+                           (option-field spec 'flag)
+                           (string-join (map symbol->string commands) " and ")))))))
+    options)
+  (when (and (assq 'ssh-generate-host-key options) (not (assq 'ssh options)))
+    (usage-error "--ssh-generate-host-key requires --ssh")))
 
 (define (parse-options arguments)
   (let loop ((arguments arguments) (command #f) (options '()))
     (match arguments
       (()
-       (unless (or command (assq 'help options))
+       (unless (or command (assq 'help options) (assq 'version options))
          (usage-error "expected a command; use 'grove --help'"))
-       (when (and (member command '("check" "browse")) (assq 'output options))
-         (usage-error "~a does not accept --output" command))
-       (when (and (not (equal? command "browse")) (assq 'ssh options))
-         (usage-error "--ssh is a browse option"))
-       (when (and (not (equal? command "browse")) (assq 'authorized-keys options))
-         (usage-error "--authorized-keys is a browse option"))
-       (when (and (not (member command '("browse" "ssh-keygen")))
-                  (assq 'host-key options))
-         (usage-error "--host-key is a browse and ssh-keygen option"))
-       (when (and (not (equal? command "ssh-keygen")) (assq 'force options))
-         (usage-error "--force is an ssh-keygen option"))
-       (when (and (not (equal? command "browse"))
-                  (or (assq 'ssh-workers options) (assq 'ssh-login-timeout options)
-                      (assq 'ssh-session-timeout options)
-                      (assq 'ssh-memory-limit options)
-                      (assq 'ssh-generate-host-key options)))
-         (usage-error "--ssh-* options are browse options"))
-       (when (and (assq 'ssh-generate-host-key options) (not (assq 'ssh options)))
-         (usage-error "--ssh-generate-host-key requires --ssh"))
-       (when (and (not (equal? command "serve"))
-                  (or (assq 'port options) (assq 'no-watch options)))
-         (usage-error "--port and --no-watch are serve options"))
-       (when (and (not (equal? command "new")) (assq 'dest options))
-         (usage-error "--dest is a new option"))
-       (when (and (equal? command "new") (assq 'output options))
-         (usage-error "new does not accept --output"))
+       (validate-options command options)
        (cons command options))
       ((argument . rest)
        (cond
-         ((and (not command)
-               (member argument
-                       '("build" "check" "serve" "new" "browse" "ssh-keygen")))
+         ((and (not command) (member argument command-names))
           (loop rest argument options))
-         ((member argument '("--help" "-h" "--debug" "--no-watch" "--force"
-                             "--ssh-generate-host-key"))
-          (loop rest command
-                (acons (cond ((string=? argument "--debug") 'debug)
-                             ((string=? argument "--no-watch") 'no-watch)
-                             ((string=? argument "--force") 'force)
-                             ((string=? argument "--ssh-generate-host-key")
-                              'ssh-generate-host-key)
-                             (else 'help)) #t options)))
-         ((member argument
-                  '("--project" "--output" "--port" "--dest"
-                    "--ssh" "--host-key" "--authorized-keys"
-                    "--ssh-workers" "--ssh-login-timeout" "--ssh-session-timeout"
-                    "--ssh-memory-limit"))
-          (let ((key (cond ((string=? argument "--project") 'project)
-                           ((string=? argument "--output") 'output)
-                           ((string=? argument "--dest") 'dest)
-                           ((string=? argument "--ssh") 'ssh)
-                           ((string=? argument "--host-key") 'host-key)
-                           ((string=? argument "--authorized-keys") 'authorized-keys)
-                           ((string=? argument "--ssh-workers") 'ssh-workers)
-                           ((string=? argument "--ssh-login-timeout") 'ssh-login-timeout)
-                           ((string=? argument "--ssh-session-timeout") 'ssh-session-timeout)
-                           ((string=? argument "--ssh-memory-limit") 'ssh-memory-limit)
-                           (else 'port))))
-            (when (assq key options)
-              (usage-error "duplicate option: ~a" argument))
-            (match rest
-              (((? (lambda (value)
-                     (and (not (string-null? value))
-                          (not (string-prefix? "-" value)))) value) . tail)
-               (let ((value (if (memq key numeric-option-keys)
-                                (string->number value)
-                                value)))
-                 (when (memq key numeric-option-keys)
-                   (unless (exact-integer? value)
-                     (usage-error "~a requires an integer" argument))
-                   (case key
-                     ((port ssh)
-                      (unless (<= 1 value 65535)
-                        (usage-error "~a requires an integer from 1 to 65535"
-                                     argument)))
-                     ((ssh-workers)
-                      (unless (<= 1 value 64)
-                        (usage-error "--ssh-workers must be from 1 to 64")))
-                     ((ssh-login-timeout ssh-session-timeout)
-                      (unless (>= value 0)
-                        (usage-error "~a must be a non-negative number of seconds"
-                                     argument)))
-                     ((ssh-memory-limit)
-                      (unless (> value 0)
-                        (usage-error "--ssh-memory-limit must be a positive number of bytes")))))
-                 (loop tail command (acons key value options))))
-              (_ (usage-error "~a requires a value" argument)))))
+         ((option-by-flag argument)
+          => (lambda (spec)
+               (let ((key (option-field spec 'key)))
+                 (if (eq? (option-field spec 'arity) 'flag)
+                     (loop rest command
+                           (if (assq key options) options
+                               (acons key #t options)))
+                     (begin
+                       (when (assq key options)
+                         (usage-error "duplicate option: ~a" argument))
+                       (match rest
+                         (((? (lambda (value)
+                                (and (not (string-null? value))
+                                     (not (string-prefix? "-" value)))) value)
+                           . tail)
+                          (loop tail command
+                                (acons key (coerce-option spec value argument)
+                                       options)))
+                         (_ (usage-error "~a requires a value" argument))))))))
          ((and (string-prefix? "--" argument) (string-index argument #\=))
           (let ((index (string-index argument #\=)))
             (loop (cons (substring argument 0 index)
@@ -132,36 +194,34 @@
           (loop rest command (acons 'prefix argument options)))
          (else (usage-error "unknown command or option: ~a" argument)))))))
 
+(define command-synopses
+  '(("new" . "Usage: grove new [PREFIX] [OPTIONS]\n\nCreate a tree using PREFIX or the project default, with an increasing base36 ID.\n")
+    ("build" . "Usage: grove build [OPTIONS]\n\nBuild the project and update its outputs.\n")
+    ("check" . "Usage: grove check [OPTIONS]\n\nRead, analyze, render, and validate without writing outputs.\n")
+    ("serve" . "Usage: grove serve [OPTIONS]\n\nServe successful build outputs on localhost and watch for changes.\n")
+    ("browse" . "Usage: grove browse [OPTIONS]\n\nRead and analyze the project, then browse its model in the terminal.\n")
+    ("ssh-keygen" . "Usage: grove ssh-keygen --host-key PATH [OPTIONS]\n\nGenerate an RSA host key for 'grove browse --ssh'.\n")))
+
+(define general-synopsis
+  "Usage: grove COMMAND [OPTIONS]\n\nCommands:\n  build       Build the project and update its outputs.\n  check       Validate the complete pipeline without writing outputs.\n  serve       Preview on localhost and rebuild when inputs change.\n  browse      Analyze the project and browse its model in the terminal.\n  ssh-keygen  Generate an RSA host key for --ssh.\n  new         Create a tree with an increasing base36 ID.\n")
+
 (define (print-help command)
-  (display
-    (cond
-      ((equal? command "new")
-       "Usage: grove new [PREFIX] [OPTIONS]\n\nCreate a tree using PREFIX or the project default, with an increasing base36 ID.\n")
-      ((equal? command "build")
-       "Usage: grove build [OPTIONS]\n\nBuild the project and update its outputs.\n")
-      ((equal? command "check")
-       "Usage: grove check [OPTIONS]\n\nRead, analyze, render, and validate without writing outputs.\n")
-      ((equal? command "serve")
-       "Usage: grove serve [OPTIONS]\n\nServe successful build outputs on localhost and watch for changes.\n")
-      ((equal? command "browse")
-       "Usage: grove browse [OPTIONS]\n\nRead and analyze the project, then browse its model in the terminal.\n")
-      ((equal? command "ssh-keygen")
-       "Usage: grove ssh-keygen --host-key PATH [OPTIONS]\n\nGenerate an RSA host key for 'grove browse --ssh'.\n")
-      (else
-       "Usage: grove COMMAND [OPTIONS]\n\nCommands:\n  build       Build the project and update its outputs.\n  check       Validate the complete pipeline without writing outputs.\n  serve       Preview on localhost and rebuild when inputs change.\n  browse      Analyze the project and browse its model in the terminal.\n  ssh-keygen  Generate an RSA host key for --ssh.\n  new         Create a tree with an increasing base36 ID.\n")))
-  (when (or (not command) (member command '("build" "check" "serve" "browse" "new")))
-    (display "\nOptions:\n  --project PATH  Project file (default: ./project.scm).\n"))
-  (when (or (not command) (member command '("build" "serve")))
-    (display "  --output PATH   Override the output directory (build and serve).\n"))
-  (when (or (not command) (equal? command "serve"))
-    (display "  --port NUMBER   Listen on this port (serve only; default: 8080).\n  --no-watch      Serve without automatic rebuilding (serve only).\n"))
-  (when (or (not command) (equal? command "new"))
-    (display "  --dest PATH     Existing destination directory (new only).\n"))
-  (when (or (not command) (equal? command "browse"))
-    (display "  --ssh PORT      Serve browsing over SSH (browse only).\n  --host-key PATH RSA host key for --ssh (browse only).\n  --authorized-keys PATH  Authorized client keys for --ssh (browse only).\n  --ssh-generate-host-key Create the host key if it is missing (browse --ssh).\n  --ssh-workers N         Concurrent sessions/processes (browse --ssh; default 4).\n  --ssh-login-timeout S   Drop clients that do not authenticate in S seconds (default 60).\n  --ssh-session-timeout S Drop a session after S seconds (0 disables; default 0).\n  --ssh-memory-limit BYTES Cap each worker's address space (browse --ssh).\n"))
-  (when (or (not command) (equal? command "ssh-keygen"))
-    (display "  --host-key PATH RSA host key to create (ssh-keygen).\n  --force         Overwrite an existing host key (ssh-keygen).\n"))
-  (display "  --debug         Show the original exception and backtrace.\n  -h, --help      Show help.\n\nOption paths are relative to the invocation directory.\nProject paths are relative to the project file's directory.\n"))
+  (display (or (and command (assq-ref command-synopses command)) general-synopsis))
+  (let ((lines
+         (filter-map
+           (lambda (spec)
+             (let ((commands (option-field spec 'commands)))
+               (if (or (not commands) (not command)
+                       (member command (map symbol->string commands)))
+                   (or (and command (assq-ref (or (option-field spec 'helps) '())
+                                              command))
+                       (option-field spec 'help))
+                   #f)))
+           option-specs)))
+    (when (pair? lines)
+      (display "\nOptions:\n")
+      (for-each display lines)))
+  (display "  --debug         Show the original exception and backtrace.\n  --version       Show version information.\n  -h, --help      Show help.\n\nOption paths are relative to the invocation directory.\nProject paths are relative to the project file's directory.\n"))
 
 (define (run-command command options)
   (let ((filename (or (assq-ref options 'project) "project.scm")))
@@ -273,15 +333,21 @@
       (let* ((parsed (parse-options arguments))
              (command (car parsed))
              (options (cdr parsed)))
-        (if (assq-ref options 'help)
-            (begin (print-help command) 0)
-            (catch 'grove-project-error
-              (lambda ()
-                (call-with-project-stage 'execute #f
-                  (lambda () (run-command command options))))
-              (lambda (_ error)
-                (print-project-error error (assq-ref options 'debug))
-                1)))))
+        (cond
+          ((assq-ref options 'version)
+           (version-etc "grove" grove-version #:command-name "grove")
+           0)
+          ((assq-ref options 'help)
+           (print-help command)
+           0)
+          (else
+           (catch 'grove-project-error
+             (lambda ()
+               (call-with-project-stage 'execute #f
+                 (lambda () (run-command command options))))
+             (lambda (_ error)
+               (print-project-error error (assq-ref options 'debug))
+               1))))))
     (lambda (_ message)
       (format (current-error-port) "grove: ~a~%" message)
       2)))

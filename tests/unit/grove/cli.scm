@@ -54,6 +54,10 @@
       (test-equal "help succeeds without loading a project" 0 (car result))
       (test-assert "help describes the command" (string-contains (cadr result) "build"))
       (test-equal "help writes no diagnostics" "" (caddr result)))
+    (let ((result (run "--version")))
+      (test-equal "version succeeds without loading a project" 0 (car result))
+      (test-assert "version identifies the program" (string-contains (cadr result) "grove"))
+      (test-equal "version writes no diagnostics" "" (caddr result)))
     (for-each
       (lambda (arguments)
         (let ((result (apply run arguments)))
