@@ -84,7 +84,7 @@ solutions; Grove is not a general-purpose computer algebra system.
 The repository examples are small, runnable demonstrations:
 
 - [Linked notes](examples/linked-notes/project.scm): trees, composition, queries,
-  styles, and several output formats.
+  styles, and several output formats, including static Gemtext in `build/gemini/`.
 - [Math derivations](examples/showcases/math-derivations/project.scm): calculations,
   checked steps, search, and diagnostics.
 - [Catalog](examples/catalog/project.scm) and [inventory](examples/inventory/project.scm):

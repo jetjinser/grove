@@ -6,6 +6,7 @@
              (ice-9 textual-ports)
              (forester input scribble)
              (forester render graph)
+             (forester render gemtext)
              (forester render html)
              (forester render rss)
              (forester render sitemap)
@@ -68,6 +69,7 @@
           (make-text-renderer
             #:prefix "text"
             #:routes notes-text-routes)
+          (make-gemtext-renderer #:prefix "gemini")
           (make-rss-renderer
             #:site-url "https://notes.example"
             #:routes notes-routes)

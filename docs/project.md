@@ -44,6 +44,20 @@ Site HTML routes require an explicit `#:home-page`. File-backed tree IDs are
 basenames without `.plant`; directories do not qualify IDs. Named subtrees
 share that namespace. See [composition](forester-composition.md) for tree rules.
 
+Add a Gemtext renderer to `#:renderers` to emit static files for a Gemini
+server:
+
+```scheme
+(use-modules (forester render gemtext))
+
+(make-gemtext-renderer #:prefix "gemini")
+```
+
+This writes `index.gmi` and one `.gmi` file per page below the project's output
+directory. The linked-notes example includes this renderer; Grove's `serve`
+command remains an HTTP preview server and does not implement the Gemini
+protocol.
+
 ## Dependencies and caching
 
 Projects, document readers, and built-in renderers cache by default. Set
