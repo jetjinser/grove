@@ -49,6 +49,12 @@
                        (string-append ">" (make-string (- width filled 1) #\space)) "")
                    "]")))
 
+(define stage-verbs
+  '((analyze . "Analyzed")
+    (render . "Rendered")
+    (validate . "Validated")
+    (write . "Written")))
+
 (define (call-with-cli-progress action filename procedure)
   "Keep one status line per input and a separate transient reading progress bar."
   (let* ((port (current-error-port))
@@ -58,12 +64,25 @@
          (bar-width (max 4 (min 28 (- columns 40))))
          (total 0)
          (completed 0)
-         (active? #f))
+         (active? #f)
+         (timed-stage #f)
+         (stage-start 0))
     (define (clear-progress)
       (when active?
         (display "\r\x1b[2K" port)
         (set! active? #f)
         (force-output port)))
+    (define (finish-stage)
+      ;;     Report how long the previous stage took, so slow phases are
+      ;;     visible instead of folding into the total.
+      (when timed-stage
+        (status-line port
+          (assq-ref stage-verbs timed-stage)
+          (format #f "in ~,2fs" (- (cli-seconds) stage-start))
+          "1;36")
+        (newline port)
+        (force-output port)
+        (set! timed-stage #f)))
     (define (draw-progress path)
       (when terminal?
         (clear-progress)
@@ -99,10 +118,18 @@
                         ((validate) "Validating")
                         ((write) "Writing")
                         (else #f))))
-           (when label
-             (clear-progress)
-             (print-cli-status label (if detail (display-path detail) "") port))))))
+           ;;     Renderers arrive one call each; time them together and
+           ;;     print the stage line only for the first.
+           (unless (and (eq? stage 'render) (eq? timed-stage 'render))
+             (when label
+               (clear-progress)
+               (finish-stage)
+               (set! timed-stage stage)
+               (set! stage-start (cli-seconds))
+               (print-cli-status label (if detail (display-path detail) "") port)))))))
     (dynamic-wind
       (lambda () (print-cli-status action (display-path filename) port))
       (lambda () (procedure report))
-      clear-progress)))
+      (lambda ()
+        (clear-progress)
+        (finish-stage)))))
