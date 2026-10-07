@@ -111,6 +111,13 @@
         ((read-done)
          (set! completed (+ completed 1))
          (draw-progress detail))
+        ((analysis-phase)
+         ;;     Analysis phases, reported by the project's own
+         ;;     analyzer; each names itself.
+         (clear-progress)
+         (print-cli-status "Analyzing"
+           (format #f "~18a ~,2fs" (car detail) (cdr detail))
+           port))
         ((render-renderer)
          ;;     One line per renderer: artifacts and wall time locate a
          ;;     slow renderer without per-page noise.
@@ -126,9 +133,10 @@
                         ((validate) "Validating")
                         ((write) "Writing")
                         (else #f))))
-           ;;     Renderers arrive one call each; time them together and
-           ;;     print the stage line only for the first.
-           (unless (and (eq? stage 'render) (eq? timed-stage 'render))
+           ;;     A stage may arrive several times (renderers arrive one
+           ;;     call each); time each stage as a whole and print its
+           ;;     line only for the first arrival.
+           (unless (eq? timed-stage stage)
              (when label
                (clear-progress)
                (finish-stage)

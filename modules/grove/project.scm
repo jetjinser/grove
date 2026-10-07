@@ -18,6 +18,7 @@
   #:use-module (srfi srfi-9)
   #:export (project?
             make-project
+            current-analysis-timings
             project-source-directory
             project-tree-template
             project-default-prefix
@@ -49,6 +50,11 @@
             project-analysis?
             project-analysis-model
             browse-project))
+
+;; Analysis-phase timing hook. Analyzers that support it (make-forest)
+;; call it once per phase with the phase symbol and its wall time; the
+;; CLI installs a reporter so phase durations show in the build log.
+(define current-analysis-timings (make-parameter #f))
 
 (define-record-type <project-input>
   (make-project-input path value)

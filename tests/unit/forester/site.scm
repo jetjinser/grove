@@ -24,6 +24,7 @@
   #:use-module (grove relation dsl)
   #:use-module (tests unit forester fixtures)
   #:use-module (grove site)
+  #:use-module (grove project)
   #:use-module (grove style html))
 
 (test-begin "forester site")
@@ -43,6 +44,20 @@
     (map car (reverse phases)))
   (test-assert "forest timings report nonnegative seconds"
     (every (lambda (entry) (>= (cdr entry) 0)) phases)))
+
+(let* ((phases '())
+       (page (make-site-page "measured" "Measured"
+                            (evaluate-document "A paragraph.")))
+       (forest
+         (parameterize ((current-analysis-timings
+                          (lambda (phase seconds)
+                            (set! phases (cons (cons phase seconds) phases)))))
+           (make-forest (make-site (list page))))))
+  (test-equal "analysis timings flow through the parameter hook"
+    '(identify-trees extract-trees occurrence-anchors equation-numbers
+      anchors references transclusions reference-index page-index content
+      composition queries)
+    (map car (reverse phases))))
 
 (define (document-paragraph-texts document)
   (map (lambda (paragraph)

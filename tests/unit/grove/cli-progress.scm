@@ -10,6 +10,20 @@
     (get-output-string port)))
 
 (test-begin "CLI progress events")
+
+(test-equal "analysis phases print as their own status lines"
+  (string-append
+    (format #f "~12@a project.scm~%" "Building")
+    (format #f "~12@a~%" "Analyzing")
+    (format #f "~12@a ~18a ~,2fs~%" "Analyzing" "queries" 1.5)
+    (format #f "~12@a in 0.00s~%" "Analyzed"))
+  (capture
+    (lambda ()
+      (call-with-cli-progress "Building" "project.scm"
+        (lambda (report)
+          (report 'analyze #f)
+          (report 'analysis-phase '(queries . 1.5))
+          (report 'analyze #f))))))
 (test-equal "redirected progress preserves ordered statuses and reports input reuse"
   (string-append
     (format #f "~12@a project.scm~%" "Building")

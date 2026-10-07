@@ -310,16 +310,20 @@ with HELP overrides keyed by command."
                  (call-with-cli-progress (if checking? "Checking" "Building")
                    filename
                    (lambda (progress)
-                     (call-with-loaded-project filename
-                       (lambda (project)
-                         (let ((report
-                                 (if checking?
-                                     (check-project project #:progress progress)
-                                     (build-project/report project #:progress progress))))
-                           (cons (and (not checking?)
-                                      (canonicalize-path (project-output-directory project)))
-                                 report)))
-                       #:output-directory (assq-ref options 'output)))))
+                     (parameterize ((current-analysis-timings
+                                      (lambda (phase seconds)
+                                        (progress 'analysis-phase
+                                                  (cons phase seconds)))))
+                       (call-with-loaded-project filename
+                         (lambda (project)
+                           (let ((report
+                                   (if checking?
+                                       (check-project project #:progress progress)
+                                       (build-project/report project #:progress progress))))
+                             (cons (and (not checking?)
+                                        (canonicalize-path (project-output-directory project)))
+                                   report)))
+                       #:output-directory (assq-ref options 'output))))))
                (output (car result))
                (report (cdr result)))
           (print-cli-summary report (- (cli-seconds) started)
