@@ -39,8 +39,8 @@
     "Measured" (site-page-title (find-page forest "measured")))
   (test-equal "forest timings follow analysis order"
     '(identify-trees extract-trees occurrence-anchors equation-numbers
-      anchors references transclusions reference-index page-index content
-      composition queries)
+      references transclusions reference-index page-index content
+      composition anchors queries)
     (map car (reverse phases)))
   (test-assert "forest timings report nonnegative seconds"
     (every (lambda (entry) (>= (cdr entry) 0)) phases)))
@@ -55,8 +55,8 @@
            (make-forest (make-site (list page))))))
   (test-equal "analysis timings flow through the parameter hook"
     '(identify-trees extract-trees occurrence-anchors equation-numbers
-      anchors references transclusions reference-index page-index content
-      composition queries)
+      references transclusions reference-index page-index content
+      composition anchors queries)
     (map car (reverse phases))))
 
 (define (document-paragraph-texts document)
@@ -218,6 +218,23 @@
     (and (string-contains message "eq-2")
          (string-contains message "notes")
          (string-contains message "tree-1"))))
+
+(let* ((container
+         (evaluate-document
+           (string-append
+             "@subtree[#:id \"chapter\"]{@title{Chapter}\n"
+             " @subtree[#:id \"section\"]{@title{Section}\n"
+             "  @tex-display-math[#:id \"eq-1\"]{a}}}\n"
+             "@paragraph{See @link[\"chapter#eq-1\"]{the equation}.}")))
+       (port (open-output-string))
+       (forest
+         (parameterize ((current-warning-port port))
+           (make-forest
+             (make-site (list (make-site-page "chapter" "Chapter"
+                                 container))))))
+       (message (get-output-string port)))
+  (test-assert "a container page's registry covers its subtree anchors"
+    (string-null? message)))
 
 (let* ((numbered-document
          (evaluate-document

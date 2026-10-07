@@ -307,6 +307,59 @@ through transclusions belong to their own pages and stay out of this set."
              (append (tree-pass:subtree-elements document)
                      (tree-pass:transclusion-elements document)))))))
 
+(define (dom-anchor-index pages composition transclusion-index)
+  "Build a page-id → rendered-anchor-ids table.  A page's set is its own
+anchors plus, transitively, the anchors of every tree its rendered DOM
+includes through subtrees and transclusions - the set of anchors a
+fragment link against this page can actually scroll to.  Composition
+cycles are rejected before this runs; the visited guard only guards the
+walk itself."
+  (let* ((own
+          (let ((table (make-hash-table)))
+            (for-each
+              (lambda (page)
+                (hash-set! table (site-page-id page)
+                           (map cdr (page-anchor-facts page))))
+              pages)
+            table))
+         (children
+           (let ((table (make-hash-table)))
+             (define (link! parent child)
+               (hash-set! table parent
+                          (cons child (hash-ref table parent '()))))
+             (for-each
+               (lambda (entry)
+                 (for-each
+                   (lambda (transclusion)
+                     (link! (car entry)
+                            (composition:transclusion-target-tree-id
+                              transclusion)))
+                   (cdr entry)))
+               transclusion-index)
+             (for-each
+               (lambda (definition)
+                 (link! (composition:subtree-definition-parent definition)
+                        (composition:subtree-definition-child definition)))
+               (composition:subtree-definitions composition))
+             table))
+         (dom (make-hash-table)))
+    (define (dom-of id)
+      (or (hash-ref dom id)
+          (let ()
+            (hash-set! dom id '())      ;; cycle guard for the walk
+            (let ((anchors
+                    (apply lset-union equal?
+                           (hash-ref own id '())
+                           (map dom-of (hash-ref children id '())))))
+              (hash-set! dom id anchors)
+              anchors))))
+    (for-each
+      (lambda (page)
+        (hash-set! dom (site-page-id page)
+                   (dom-of (site-page-id page))))
+      pages)
+    dom))
+
 (define (ensure-unique-anchor-ids pages)
   "Reject duplicate author-facing anchor IDs in a page's own rendering.
 
@@ -373,15 +426,6 @@ anchors."
                         (hash-set! page-index (site-page-id page) page))
                       pages))
          (_ (ensure-unique-anchor-ids pages))
-         (anchor-index
-           (measure 'anchors
-             (let ((index (make-hash-table)))
-               (for-each
-                 (lambda (page)
-                   (hash-set! index (site-page-id page)
-                              (map cdr (page-anchor-facts page))))
-                 pages)
-               index)))
          (reference-facts
            (measure 'references (append-map
              (lambda (source-page)
@@ -406,18 +450,6 @@ anchors."
                              (or (site-page-source source-page)
                                  "<unknown source>")
                              target)))
-                       (let ((fragment
-                               (content-element-property element 'fragment)))
-                         (when (and fragment
-                                    (not (member fragment
-                                                 (hash-ref anchor-index
-                                                           target-page-id '())
-                                                 string=?)))
-                           (format (current-warning-port)
-                             "warning: fragment ~s does not resolve in page ~a (link authored in ~a at ~a)\n"
-                             fragment target-page-id source-id
-                             (or (site-page-source source-page)
-                                 "<unknown source>"))))
                        (list source-id (format #f "ref-~a" index)
                              target-page-id
                              (content-index:content->plain-text element))))
@@ -482,6 +514,32 @@ anchors."
                         (site-page-document page))))
                pages)
              (append-map cdr transclusion-index))))
+         (anchor-index
+           (measure 'anchors
+             (dom-anchor-index pages composition transclusion-index)))
+         (_ (for-each
+              (lambda (source-page)
+                (let ((source-id (site-page-id source-page))
+                      (source-path
+                        (or (site-page-source source-page) "<unknown source>")))
+                  (for-each
+                    (lambda (element)
+                      (let ((fragment
+                              (content-element-property element 'fragment))
+                            (target-page-id
+                              (content-element-property element 'target)))
+                        (when (and fragment
+                                   (not (member fragment
+                                                (hash-ref anchor-index
+                                                          target-page-id '())
+                                                string=?)))
+                          (format (current-warning-port)
+                            "warning: fragment ~s does not resolve in page ~a (link authored in ~a at ~a)\n"
+                            fragment target-page-id source-id source-path))))
+                    (tree-pass:link-elements
+                      (tree-pass:owned-content
+                        (site-page-document source-page))))))
+              pages))
          (_ (validate-tree-cycles! pages
               (lambda (page)
                 (composition:target-ids composition (site-page-id page))))))
