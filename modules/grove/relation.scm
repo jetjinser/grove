@@ -25,6 +25,7 @@
             make-relation
             relation-arity
             relation-facts
+            relation-indexes
             relationo))
 
 (define-record-type <relation>
@@ -35,12 +36,14 @@
   (indexes relation-indexes))
 
 (define (make-index facts position)
+  ;;     Rows within one key keep their facts order: walk in reverse so
+  ;;     the front cons rebuilds the original sequence.
   (let ((index (make-hash-table)))
     (for-each
       (lambda (fact)
         (let ((key (list-ref fact position)))
           (hash-set! index key (cons fact (hash-ref index key '())))))
-      facts)
+      (reverse facts))
     index))
 
 (define (unique-facts facts)
@@ -90,7 +93,20 @@
       (membero value rest)))))
 
 (define (indexed-values index key)
-  (reverse (hash-ref index key '())))
+  ;;     make-index rebuilds each key's rows in facts order, so no
+  ;;     reversal is needed here.
+  (hash-ref index key '()))
+
+(define (ground-row-matches? row terms)
+  ;;     Every ground term must equal its column; unconstrained columns
+  ;;     (logic variables) match anything.
+  (let loop ((terms terms) (row row))
+    (cond
+      ((null? terms) #t)
+      ((ground-term? (car terms))
+       (and (equal? (car terms) (car row))
+            (loop (cdr terms) (cdr row))))
+      (else (loop (cdr terms) (cdr row))))))
 
 (define (relationo/ground relation terms)
   (unless (relation? relation)
@@ -103,8 +119,13 @@
     (if (null? remaining)
         (membero terms (relation-facts relation))
         (if (ground-term? (car remaining))
+            ;;     The column index narrows the facts to this
+            ;;     constraint's rows; the solver unifies the rest.
             (membero terms
-                     (indexed-values (force (car indexes)) (car remaining)))
+                     (filter (lambda (row)
+                               (ground-row-matches? row terms))
+                             (indexed-values (force (car indexes))
+                                             (car remaining))))
             (find-candidates (cdr remaining)
                              (cdr indexes))))))
 

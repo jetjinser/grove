@@ -195,43 +195,42 @@
                 (label label))
     (== fixed-source-page-id source-page-id)))
 
+;; Reference queries read the materialized column indexes that
+;; make-relation builds lazily per column. Solving the same rows
+;; through the solver costs ~0.2s per query on a large site; an index
+;; lookup is constant.
+(define (reference-column-index relation position)
+  (force (list-ref (relation-indexes relation) position)))
+
 (define (incoming-reference-rows relation target-page-id)
-  (query (source-page-id reference-id result-target-page-id label)
-    (incoming-reference-rowo relation target-page-id
-                             source-page-id reference-id result-target-page-id label)))
+  (hash-ref (reference-column-index relation 2) target-page-id '()))
 
 (define (incoming-reference-keys relation target-page-id)
   (map (lambda (row) (list (car row) (cadr row)))
        (incoming-reference-rows relation target-page-id)))
 
 (define (outgoing-reference-rows relation source-page-id)
-  (query (result-source-page-id reference-id target-page-id label)
-    (outgoing-reference-rowo relation source-page-id
-                             result-source-page-id reference-id target-page-id
-                             label)))
+  (hash-ref (reference-column-index relation 0) source-page-id '()))
 
 (define (outgoing-reference-ids relation source-page-id)
   (map cadr (outgoing-reference-rows relation source-page-id)))
 
 (define (backlink-page-ids relation target-page-id)
   (delete-duplicates
-    (query (source-page-id)
-      (referenceo relation
-                  (source-page-id source-page-id)
-                  (target-page-id target-page-id)))
+    (map car (hash-ref (reference-column-index relation 2)
+                       target-page-id '()))
     equal?))
 
 (define (common-backlink-page-ids relation left-page-id right-page-id)
-  (delete-duplicates
-    (query (source-page-id)
-      (all
-        (referenceo relation
-                    (source-page-id source-page-id)
-                    (target-page-id left-page-id))
-        (referenceo relation
-                    (source-page-id source-page-id)
-                    (target-page-id right-page-id))))
-    equal?))
+  (let ((right-sources (make-hash-table)))
+    (for-each
+      (lambda (row) (hash-set! right-sources (car row) #t))
+      (hash-ref (reference-column-index relation 2) right-page-id '()))
+    (delete-duplicates
+      (filter (lambda (source) (hash-ref right-sources source))
+              (map car (hash-ref (reference-column-index relation 2)
+                                 left-page-id '())))
+      equal?)))
 
 (define-relation (not-membero value values)
   (either
@@ -263,7 +262,30 @@
                          (cons middle-page-id seen)))))))
 
 (define (reachable-page-ids relation source-page-id)
-  (delete-duplicates
-    (query (target-page-id)
-      (reachableo relation source-page-id target-page-id))
-    equal?))
+  ;;     Breadth-first closure over the source index. The solver's
+  ;;     path enumeration is exponential in branchy graphs; the target
+  ;;     set is what callers want.
+  (let ((source-index (reference-column-index relation 0)))
+    (let loop ((pending (list source-page-id))
+               (seen (list source-page-id))
+               (seen-set (let ((table (make-hash-table)))
+                           (hash-set! table source-page-id #t)
+                           table)))
+      (if (null? pending)
+          (reverse
+            (filter (lambda (id) (not (equal? id source-page-id)))
+                    seen))
+          (let* ((id (car pending))
+                 (targets
+                   (filter (lambda (target)
+                             (not (hash-ref seen-set target)))
+                           (delete-duplicates
+                             (map caddr (hash-ref source-index id '()))
+                             equal?))))
+            (loop (append targets (cdr pending))
+                  (append (reverse targets) seen)
+                  (begin
+                    (for-each
+                      (lambda (target) (hash-set! seen-set target #t))
+                      targets)
+                    seen-set)))))))

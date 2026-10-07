@@ -9,6 +9,7 @@
                make-relation
                relation-arity
                relation-facts
+               relation-indexes
                relationo
                run
                run*
