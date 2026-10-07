@@ -111,6 +111,14 @@
         ((read-done)
          (set! completed (+ completed 1))
          (draw-progress detail))
+        ((render-renderer)
+         ;;     One line per renderer: artifacts and wall time locate a
+         ;;     slow renderer without per-page noise.
+         (clear-progress)
+         (print-cli-status "Renderer"
+           (format #f "~d: ~d artifacts in ~,2fs"
+                   (+ (car detail) 1) (caddr detail) (cadr detail))
+           port))
         (else
          (let ((label (case stage
                         ((analyze) "Analyzing")

@@ -322,15 +322,19 @@
            (call-with-output-string
              (lambda (port) (write (list (version) (setlocale LC_CTYPE) configurations) port)))))))
 
-(define (render-all model renderers)
+(define (render-all model renderers progress)
   (let loop ((renderers renderers)
              (index 0)
              (artifacts '())
              (owners '()))
     (if (null? renderers)
         (list artifacts owners)
-        (let ((generated (call-with-project-stage 'render #f
-                           (lambda () (render-model model (list (car renderers)))))))
+        (let* ((start (get-internal-real-time))
+               (generated (call-with-project-stage 'render #f
+                            (lambda () (render-model model (list (car renderers))))))
+               (seconds (/ (- (get-internal-real-time) start)
+                           internal-time-units-per-second)))
+          (progress 'render-renderer (list index seconds (length generated)))
           (loop (cdr renderers)
                 (+ index 1)
                 (append artifacts generated)
@@ -340,14 +344,15 @@
                              generated)))))))
 
 (define (render-with-cache model renderers previous-entries cached-artifacts
-                           previous-sources changed)
+                           previous-sources changed progress)
   (let loop ((renderers renderers)
              (index 0)
              (artifacts '())
              (owners '()))
     (if (null? renderers)
         (list artifacts owners)
-        (let* ((renderer (car renderers))
+        (let* ((start (get-internal-real-time))
+               (renderer (car renderers))
                (old-entries
                  (filter (lambda (entry)
                            (equal? (build-state-artifact-renderer entry)
@@ -402,7 +407,10 @@
                  (map (lambda (artifact)
                         (cons (artifact-path artifact) index))
                       current))
-               )
+               (seconds (/ (- (get-internal-real-time) start)
+                           internal-time-units-per-second)))
+          (progress 'render-renderer
+                    (list index seconds (length current)))
           (loop (cdr renderers)
                 (+ index 1)
                 (append artifacts current)
@@ -535,15 +543,15 @@ Return a project-analysis holding the analyzed model."
                     '()))
              (global-inputs-changed?
               (progress 'render #f)
-              (render-all model (project-renderers project)))
+              (render-all model (project-renderers project) progress))
              (cache-ready?
               (progress 'render #f)
               (render-with-cache model (project-renderers project)
                                  previous-artifacts cache-ready?
-                                 previous-sources changed))
+                                 previous-sources changed progress))
              (else
               (progress 'render #f)
-              (render-all model (project-renderers project)))))
+              (render-all model (project-renderers project) progress))))
          (artifacts (car render-result))
          (owners (cadr render-result))
          (affected
