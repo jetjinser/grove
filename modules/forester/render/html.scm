@@ -487,7 +487,9 @@ otherwise the generated position anchor that backs repeated occurrences."
            (route-table (html-route-table routes
                                           (map site-page-id forest-pages))))
       (map (lambda (page index)
-             (when report (report index total))
+             (when report
+               (report index total
+                       (cdr (assoc (site-page-id page) route-table))))
              (make-artifact
                (cdr (assoc (site-page-id page) route-table))
                (page-html forest page style routes mathjax-src backmatter

@@ -119,17 +119,21 @@
            (format #f "~18a ~,2fs" (car detail) (cdr detail))
            port))
         ((render-page)
-         ;;     Page-level transient bar, terminal-only; the per-render
-         ;;     line carries the durable numbers.
-         (when terminal?
+         ;;     Page-level progress. A terminal gets a transient bar;
+         ;;     a redirected run gets one line per page, which also
+         ;;     exposes a single slow page.
+         (let* ((done (car detail)) (total (cadr detail))
+                (path (caddr detail))
+                (bar-width (max 4 (min 28 (- columns 40))))
+                (message (format #f "~a ~d/~d: ~a"
+                           (progress-bar done total bar-width) done total path)))
            (clear-progress)
-           (let* ((done (car detail)) (total (cadr detail))
-                  (bar-width (max 4 (min 28 (- columns 40))))
-                  (message (format #f "~a ~d/~d"
-                             (progress-bar done total bar-width) done total)))
-             (status-line port "Rendering" message "1;36")
-             (set! active? #t)
-             (force-output port))))
+           (if terminal?
+               (begin
+                 (status-line port "Rendering" message "1;36")
+                 (set! active? #t)
+                 (force-output port))
+               (print-cli-status "Rendering" message port))))
         ((render-renderer)
          ;;     One line per renderer: artifacts and wall time locate a
          ;;     slow renderer without per-page noise.
