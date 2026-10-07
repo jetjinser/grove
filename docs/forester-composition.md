@@ -194,3 +194,30 @@ Styling does not change query or mathematical semantics. Text output ignores
 HTML presentation properties. Frontmatter commands extract data rather than
 rendering styled elements; computation commands returning several elements
 can be placed inside a styled subtree.
+
+## Custom elements
+
+`(grove element)` defines element vocabularies without adding renderer
+cases. `make-element` returns a command that renders its body inside the
+tag of your choice; the renderer adds no attributes of its own, and text
+output keeps the body:
+
+```scheme
+(use-modules (grove element))
+
+(define wbr     (make-element #:tag "wbr" #:void? #t))
+(define callout (make-element #:tag "aside" #:class "callout"
+                              #:flow-kind 'block))
+(define my:note (make-element #:tag "my:note"
+                              #:attributes
+                              '((xmlns:my . "https://example.com/ns"))))
+```
+
+`@wbr[]` renders `<wbr/>`; `#:void?` marks the element as empty, rejects
+content, and emits a self-closing tag. Other elements close explicitly, so
+unknown tags never swallow the rest of the document. `#:class` joins the
+tag's class, `#:attributes` carries static attribute pairs such as namespace
+declarations, and `#:flow-kind` selects inline or block. Tag names are
+validated at definition time: they must start with a letter and contain
+letters, digits, hyphens, underscores, or colons. The HTML is entirely the
+vocabulary author's; Grove ships no element table of its own.

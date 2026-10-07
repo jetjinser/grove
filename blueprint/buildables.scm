@@ -28,6 +28,7 @@
     "grove/private/preview/watch.scm"
     "grove/private/preview/worker.scm"
     "grove/ir.scm"
+    "grove/element.scm"
     "grove/string-fun.scm"
     "grove/style.scm"
     "grove/math/audit.scm"

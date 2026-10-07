@@ -63,6 +63,10 @@
                   (string->symbol (html-tag-name (car properties)))
                   tag))))))
 
+  (define (style-html-void? style)
+    (and style
+      (any html-void? (content-style-properties style))))
+
   (define (merge-html-attributes original additions)
     (fold
       (lambda (addition attributes)
@@ -92,9 +96,10 @@
   (define (apply-element-style element rendered)
     (let* ((style (content-element-style element))
            (attributes (style-html-attributes style))
-           (tag (style-html-tag style)))
+           (tag (style-html-tag style))
+           (void? (style-html-void? style)))
       (cond
-        ((and (null? attributes) (not tag)) rendered)
+        ((and (null? attributes) (not tag) (not void?)) rendered)
         ((not (and (pair? rendered) (symbol? (car rendered))))
          (error "HTML style requires a single root tag" element))
         (else
@@ -108,13 +113,19 @@
                            (cdar tail))
                       '()))
                 (children (if has-attributes? (cdr tail) tail))
-                (merged (merge-html-attributes original-attributes attributes)))
-           `(,(or tag (car rendered))
-             ,@(if (null? merged) '()
-                   (list (cons '@ (map (lambda (attribute)
-                                         (list (car attribute) (cdr attribute)))
-                                       merged))))
-             ,@children))))))
+                (merged (merge-html-attributes original-attributes attributes))
+                (tag-sxml `(,(or tag (car rendered))
+                            ,@(if (null? merged) '()
+                                  (list (cons '@ (map (lambda (attribute)
+                                                        (list (car attribute)
+                                                              (cdr attribute)))
+                                                      merged)))))))
+           (if void?
+               (begin
+                 (unless (null? children)
+                   (error "void HTML style takes no content" element))
+                 (cons '*void* tag-sxml))
+               (append tag-sxml children)))))))
 
   (define (render-code-block element)
     (let* ((language (content-element-property element 'language))
@@ -168,7 +179,17 @@
                          `(div (@ (class ,(symbol->string kind))) ,@children))
                         ((math-diagnostic)
                          `(aside (@ (class "math-diagnostic")) ,@children))
-                        (else `(span (@ (class ,(symbol->string kind))) ,@children)))))))))
+                        (else
+                         ;;     A style that replaces the tag owns the
+                         ;;     element's shape: emit the bare form and
+                         ;;     no invented class.  Styles that only add
+                         ;;     attributes keep the kind class.
+                         (if (and (content-element-style element)
+                                  (style-html-tag
+                                    (content-element-style element)))
+                             (cons 'span children)
+                             `(span (@ (class ,(symbol->string kind)))
+                                    ,@children))))))))))
       (apply-element-style element rendered)))
 
   (define (render-math-children children)
@@ -287,5 +308,61 @@
 
   (render content))
 
+(define (sxml-void? node)
+  (and (pair? node) (eq? (car node) '*void*)))
+
+(define (sxml-contains-void? node)
+  (cond
+    ((sxml-void? node) #t)
+    ((pair? node) (any sxml-contains-void? (cdr node)))
+    (else #f)))
+
+(define (write-html-attributes attributes port)
+  (for-each
+    (lambda (attribute)
+      (display " " port)
+      (display (car attribute) port)
+      (display "=\"" port)
+      (sxml->xml (cadr attribute) port)
+      (display "\"" port))
+    attributes))
+
+(define (write-html node port)
+  ;;     Trees free of author-void elements delegate to sxml->xml
+  ;;     verbatim, keeping its escaping behavior byte-for-byte; only
+  ;;     the void markers need hand emission.
+  (if (sxml-contains-void? node)
+      (cond
+        ((not (pair? node)) (sxml->xml node port))
+        ((sxml-void? node)
+         (let* ((tag (cadr node))
+                (rest (cddr node))
+                (attributes
+                  (if (and (pair? rest) (pair? (car rest))
+                           (eq? (caar rest) '@))
+                      (cdar rest)
+                      '())))
+           (display "<" port)
+           (display tag port)
+           (write-html-attributes attributes port)
+           (display "/>" port)))
+        (else
+         (let* ((tag (car node))
+                (rest (cdr node))
+                (has-attributes?
+                  (and (pair? rest) (pair? (car rest))
+                       (eq? (caar rest) '@)))
+                (attributes (if has-attributes? (cdar rest) '()))
+                (children (if has-attributes? (cdr rest) rest)))
+           (display "<" port)
+           (display tag port)
+           (write-html-attributes attributes port)
+           (display ">" port)
+           (for-each (lambda (child) (write-html child port)) children)
+           (display "</" port)
+           (display tag port)
+           (display ">" port))))
+      (sxml->xml node port)))
+
 (define (sxml->html sxml)
-  (call-with-output-string (lambda (port) (sxml->xml sxml port))))
+  (call-with-output-string (lambda (port) (write-html sxml port))))

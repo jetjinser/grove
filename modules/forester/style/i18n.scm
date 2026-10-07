@@ -39,16 +39,21 @@
                  style))))
 
 (define* (bilingual-container-style #:optional (style #f))
-  (with-html-presentation style (list (make-html-tag 'div))))
+  (with-html-presentation style
+    (list (make-html-tag 'div)
+          (make-html-attributes '((class . "bilingual"))))))
 
 (define* (bilingual-fold-container-style #:optional (style #f))
   "A bilingual container whose reader language is shown and whose sources fold."
   (with-html-presentation style
     (list (make-html-tag 'div)
-          (make-html-attributes '((data-mode . "fold"))))))
+          (make-html-attributes
+            '((class . "bilingual") (data-mode . "fold"))))))
 
 (define bilingual-pair-style
-  (make-content-style #f (list (make-html-tag 'div))))
+  (make-content-style #f
+    (list (make-html-tag 'div)
+          (make-html-attributes '((class . "bilingual-pair"))))))
 
 ;; A folded pair is a <details>, so its style only adds the class and leaves the
 ;; element's tag alone.
@@ -68,7 +73,8 @@
     (error "bilingual lane tag must be a string" tag))
   (with-html-presentation style
     (list (make-html-tag 'div)
-          (make-html-attributes `((lang . ,tag) (dir . ,dir))))))
+          (make-html-attributes
+            `((class . "bilingual-lane") (lang . ,tag) (dir . ,dir))))))
 
 (define* (foreign-term-style tag dir #:optional (style #f))
   "Mark inline foreign-language text without changing its flow."

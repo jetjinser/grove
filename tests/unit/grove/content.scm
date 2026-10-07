@@ -4,6 +4,7 @@
 
 (define-module (tests unit grove content)
   #:use-module (srfi srfi-64)
+  #:use-module (grove element)
   #:use-module (grove ir)
   #:use-module (grove style)
   #:use-module (grove style html)
@@ -124,5 +125,32 @@
       "Run `x + 1`.\n"
       "```\n(display \"hi\")\n```\n")
     text))
+
+(let* ((wbr (make-element #:tag "wbr" #:void? #t))
+       (note (make-element #:tag "my:note"
+                           #:attributes '((xmlns:my . "https://example.com/ns"))))
+       (callout (make-element #:tag "aside" #:class "callout"
+                              #:flow-kind 'block))
+       (document
+         (make-content-document
+           (list (make-content-element
+                   'paragraph
+                   (list "a" (wbr) "b" (note "注") (callout "提示")))))))
+  (test-equal "custom elements render their own shape with no invented class"
+    (string-append
+      "<article><p>a<wbr/>b"
+      "<my:note xmlns:my=\"https://example.com/ns\">注</my:note>"
+      "<aside class=\"callout\">提示</aside></p></article>")
+    (sxml->html (content->sxml document)))
+  (test-equal "text output of custom elements is their body"
+    "ab注提示\n"
+    (content->text document))
+  (test-error "void elements reject content" #t (wbr "oops"))
+  (test-error "invalid tag names fail at definition" #t
+    (make-element #:tag "1bad")))
+
+(test-equal "the HTML serializer emits declared void elements self-closed"
+  "<p>a<wbr/><em>x</em></p>"
+  (sxml->html '(p "a" (*void* wbr) (em "x"))))
 
 (test-end "grove content")

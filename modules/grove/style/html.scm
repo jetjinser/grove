@@ -12,7 +12,8 @@
             html-style-stylesheets
             html-style-artifacts
             make-html-attributes html-attributes? html-attributes-assoc
-            make-html-tag html-tag? html-tag-name))
+            make-html-tag html-tag? html-tag-name
+            make-html-void html-void?))
 
 (define-record-type <html-style>
   (%make-html-style stylesheets assets)
@@ -81,3 +82,14 @@
     (unless (html-tag-name? name)
       (error "invalid HTML tag name" name))
     (%make-html-tag name)))
+
+(define-record-type <html-void>
+  (%make-html-void marker)
+  html-void?
+  (marker html-void-marker))
+
+(define (make-html-void)
+  "Mark a styled content element as empty: the HTML renderer emits a
+self-closing tag and rejects content.  Voidness is the vocabulary
+author's decision; the renderer keeps no element table of its own."
+  (%make-html-void 'void))

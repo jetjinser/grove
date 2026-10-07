@@ -5,6 +5,8 @@
 (define-module (forester i18n)
   #:use-module (grove i18n)
   #:use-module (grove ir)
+  #:use-module (grove style)
+  #:use-module (grove style html)
   #:use-module (forester style i18n)
   #:use-module (language scribble command)
   #:use-module (language scribble flow)
@@ -122,9 +124,13 @@ on the same line instead of starting a new line under the paragraph margin."
   "Present LANE as the disclosure summary, with a hint about the folded lanes."
   (let ((tag (content-element-property lane 'lang))
         (dir (content-element-property lane 'dir))
-        (hint (make-content-element 'bilingual-more
-                (list (make-content-text
-                        (fold-affordance folded source-label))))))
+    (hint (make-content-element 'bilingual-more
+            (list (make-content-text
+                    (fold-affordance folded source-label)))
+            #:style (make-content-style #f
+                      (list (make-html-tag 'span)
+                            (make-html-attributes
+                              '((class . "bilingual-more"))))))))
     (make-content-element 'summary
       (attach-affordance (content-element-children lane) hint)
       #:properties `((lang . ,tag) (dir . ,dir))

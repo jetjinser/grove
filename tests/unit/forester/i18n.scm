@@ -248,7 +248,9 @@
   (content->sxml (term "fr" "une forêt")))
 
 (test-equal "a user style composes with the lane's language attributes"
-  '(div (@ (class "bilingual-lane note") (lang "en") (dir "ltr")) (p "Text"))
+  ;;     The style's own class precedes the lane's: class order carries no
+  ;;     meaning to CSS, and the style name is emitted first.
+  '(div (@ (class "note bilingual-lane") (lang "en") (dir "ltr")) (p "Text"))
   (content->sxml (lang "en" #:style 'note "Text")))
 
 ;;; Text presentation
