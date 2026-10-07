@@ -89,6 +89,8 @@ otherwise the generated position anchor that backs repeated occurrences."
           (subtree-content-sxml forest routes target (string-append anchor "--") (1+ depth) highlighters
                                 #:title-decoration title-decoration)
           #:anchor anchor #:depth (1+ depth)
+          #:style (content-element-style element)
+          #:id-prefix anchor-prefix
           #:title-decoration (if title-decoration
                                  (title-decoration forest id)
                                  '())
@@ -107,10 +109,24 @@ otherwise the generated position anchor that backs repeated occurrences."
       (string-append "#" (substring id (string-length "unstable-")))
       id))
 (define* (tree-block-sxml kind id title page-url content
-                          #:key (open? #t) anchor (depth 2) (title-decoration '()))
-  `(section (@ (class ,(string-append "forest-tree-block " kind))
-               (data-tree-id ,id) (id ,anchor))
-     (details ,@(if open? '((@ (open "open"))) '())
+                          #:key (open? #t) anchor (depth 2)
+                          (title-decoration '()) (style #f) (id-prefix ""))
+  (let* ((style-attributes (style-attribute-assoc style id-prefix))
+         (_ (when (assq 'id style-attributes)
+              (error "tree container style cannot set an id; the occurrence anchor owns it"
+                     (cdr (assq 'id style-attributes)))))
+         (attributes
+           (merge-html-attributes
+             `((class . ,(string-append "forest-tree-block " kind))
+               (data-tree-id . ,id)
+               (id . ,anchor))
+             style-attributes))
+         (section-attributes
+           (map (lambda (attribute)
+                  (list (car attribute) (cdr attribute)))
+                attributes)))
+    `(section (@ ,@section-attributes)
+       (details ,@(if open? '((@ (open "open"))) '())
        (summary
          (,(string->symbol (format #f "h~a" (min depth 6)))
            (@ (class "forest-tree-title"))
@@ -125,7 +141,7 @@ otherwise the generated position anchor that backs repeated occurrences."
        (div (@ (class "forest-tree-content"))
             ,@(if (and (pair? content) (eq? (car content) 'article))
                   (cdr content)
-                  (list content))))))
+                  (list content)))))))
 
 (define (backlink-reference-sxml forest routes reference)
   (let ((source

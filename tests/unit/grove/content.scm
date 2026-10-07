@@ -149,6 +149,20 @@
   (test-error "invalid tag names fail at definition" #t
     (make-element #:tag "1bad")))
 
+(let* ((base (make-content-style 'base (list (make-html-attributes '((role . "region"))))))
+       (tagged (make-content-style #f (list (make-html-tag 'aside))))
+       (accent (make-content-style 'accent
+                 (list (make-html-attributes '((data-print . "high"))))))
+       (merged (merge-content-style base tagged accent))
+       (element (make-content-element 'paragraph '("Body") #:style merged)))
+  (test-equal "merged styles join names and keep every property set"
+    '(aside (@ (class "base accent") (role "region")
+               (data-print "high"))
+         "Body")
+    (content->sxml element))
+  (test-error "merging requires style values" #t
+    (merge-content-style base 'not-a-style)))
+
 (test-equal "the HTML serializer emits declared void elements self-closed"
   "<p>a<wbr/><em>x</em></p>"
   (sxml->html '(p "a" (*void* wbr) (em "x"))))

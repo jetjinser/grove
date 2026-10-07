@@ -12,10 +12,63 @@
   #:use-module (srfi srfi-13)
   #:use-module (sxml simple)
   #:export (content->sxml
-            sxml->html))
+            sxml->html
+            style-attribute-assoc
+            merge-html-attributes))
+
+(define (style-attribute-assoc style id-prefix)
+  "The style's HTML attributes as an assoc list: the style name's class
+first, then each attribute set, with ids and local hrefs scoped by
+ID-PREFIX."
+  (if (not style) '()
+      (append
+        (let ((name (content-style-name style)))
+          (if name
+              `((class . ,(if (symbol? name) (symbol->string name) name)))
+              '()))
+        (append-map
+          (lambda (property)
+            (if (html-attributes? property)
+                (map (lambda (attribute)
+                       (let ((name (car attribute)) (value (cdr attribute)))
+                         (cons name
+                           (cond
+                             ((eq? name 'id) (string-append id-prefix value))
+                             ((and (eq? name 'href) (string-prefix? "#" value))
+                              (string-append "#" id-prefix (substring value 1)))
+                             (else value)))))
+                     (html-attributes-assoc property))
+                '()))
+          (content-style-properties style)))))
+
+(define (merge-html-attributes original additions)
+  (fold
+    (lambda (addition attributes)
+      (let* ((name (car addition))
+             (value (cdr addition))
+             (existing (assq name attributes)))
+        (cond
+          ((not existing) (append attributes (list addition)))
+          ((eq? name 'id)
+           (error "HTML style cannot replace a renderer-owned ID" (cdr existing) value))
+          ((eq? name 'class)
+           (map (lambda (attribute)
+                  (if (eq? (car attribute) name)
+                      (cons name (string-append (cdr attribute) " " value))
+                      attribute)) attributes))
+          ((eq? name 'style)
+           (map (lambda (attribute)
+                  (if (eq? (car attribute) name)
+                      (cons name (string-append (cdr attribute) "; " value))
+                      attribute)) attributes))
+          (else
+           (map (lambda (attribute)
+                  (if (eq? (car attribute) name) addition attribute))
+                attributes)))))
+    original additions))
 
 (define* (content->sxml content #:key (handlers '()) (lazy-handlers '()) (id-prefix "")
-                        (highlighters (default-highlighters)))
+                         (highlighters (default-highlighters)))
   (unless (and (list? highlighters)
                (every (lambda (entry)
                         (and (pair? entry) (symbol? (car entry))
@@ -32,28 +85,6 @@
        (cons 'article (map render (content-document-children content))))
       (else (error "not a content node" content))))
 
-  (define (style-html-attributes style)
-    (if (not style) '()
-        (append
-          (let ((name (content-style-name style)))
-            (if name
-                `((class . ,(if (symbol? name) (symbol->string name) name)))
-                '()))
-          (append-map
-            (lambda (property)
-              (if (html-attributes? property)
-                  (map (lambda (attribute)
-                         (let ((name (car attribute)) (value (cdr attribute)))
-                           (cons name
-                             (cond
-                               ((eq? name 'id) (string-append id-prefix value))
-                               ((and (eq? name 'href) (string-prefix? "#" value))
-                                (string-append "#" id-prefix (substring value 1)))
-                               (else value)))))
-                       (html-attributes-assoc property))
-                  '()))
-            (content-style-properties style)))))
-
   (define (style-html-tag style)
     (and style
       (let loop ((properties (content-style-properties style)) (tag #f))
@@ -67,35 +98,9 @@
     (and style
       (any html-void? (content-style-properties style))))
 
-  (define (merge-html-attributes original additions)
-    (fold
-      (lambda (addition attributes)
-        (let* ((name (car addition))
-               (value (cdr addition))
-               (existing (assq name attributes)))
-          (cond
-            ((not existing) (append attributes (list addition)))
-            ((eq? name 'id)
-             (error "HTML style cannot replace a renderer-owned ID" (cdr existing) value))
-            ((eq? name 'class)
-             (map (lambda (attribute)
-                    (if (eq? (car attribute) name)
-                        (cons name (string-append (cdr attribute) " " value))
-                        attribute)) attributes))
-            ((eq? name 'style)
-             (map (lambda (attribute)
-                    (if (eq? (car attribute) name)
-                        (cons name (string-append (cdr attribute) "; " value))
-                        attribute)) attributes))
-            (else
-             (map (lambda (attribute)
-                    (if (eq? (car attribute) name) addition attribute))
-                  attributes)))))
-      original additions))
-
   (define (apply-element-style element rendered)
     (let* ((style (content-element-style element))
-           (attributes (style-html-attributes style))
+           (attributes (style-attribute-assoc style id-prefix))
            (tag (style-html-tag style))
            (void? (style-html-void? style)))
       (cond
@@ -190,7 +195,12 @@
                              (cons 'span children)
                              `(span (@ (class ,(symbol->string kind)))
                                     ,@children))))))))))
-      (apply-element-style element rendered)))
+      ;;     Lazy handlers own their element's presentation entirely -
+      ;;     tree blocks apply the style themselves - so the generic
+      ;;     application runs only for the remaining elements.
+      (if lazy-handler
+          rendered
+          (apply-element-style element rendered))))
 
   (define (render-math-children children)
     (map render-math-child children))

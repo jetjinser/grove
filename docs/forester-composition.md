@@ -188,6 +188,30 @@ metadata carries one. Equations without an `#:id` receive a generated
 Numbers may shift when equations are inserted; IDs stay author-owned, and
 generated IDs carry the same instability as unnamed trees' `unstable-N`.
 
+### Styles are values
+
+A content style is an ordinary Scheme value: bind it, pass it through
+custom commands, and combine styles with `merge-content-style`, which
+joins names into one class list and keeps every property set (later
+styles win where a renderer reads one property of a kind, such as the
+tag):
+
+```scheme
+(define print-accent
+  (merge-content-style accent
+    (make-content-style #f
+      (list (make-html-attributes '((data-print . "high")))))))
+```
+
+`subtree` and `transclude` attach their `#:style` to the occurrence
+container, next to `forest-tree-block`: `@transclude["t" #:style
+'aside-box]` renders `class="forest-tree-block transclusion aside-box"`,
+so CSS descendant selectors scope any stylesheet to that embedding or to
+every occurrence of the tree (whose container also carries
+`data-tree-id`). A container style cannot set an id; the occurrence
+anchor owns it. Styles never push down into the attached content -
+descendant selectors cover that.
+
 `content-with-style` applies the same interface to an element returned by
 Scheme code, preserving its content, properties, source, and flow kind.
 Styling does not change query or mathematical semantics. Text output ignores

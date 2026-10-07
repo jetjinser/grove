@@ -20,6 +20,7 @@
   #:use-module (grove render html routes)
   #:use-module (grove output)
   #:use-module (grove site)
+  #:use-module (grove style)
   #:use-module (grove style html)
   #:use-module (tests unit forester fixtures))
 
@@ -336,6 +337,39 @@
          (not (string-contains (assoc-ref html "host")
                                "data-tree-id=\"theorem-3\" id=\"theorem-3\""))
          (string-contains message "does not resolve in page host"))))
+
+(let* ((target
+         (make-site-page "styled-target" "Styled target"
+           (evaluate-document "@paragraph{Inner body}")))
+       (host
+         (make-site-page "styled-host" "Styled host"
+           (make-content-document
+             (list (make-content-element
+                     'transclude '()
+                     #:properties '((target . "styled-target"))
+                     #:style (merge-content-style
+                               (make-content-style 'aside-box)
+                               (make-content-style #f
+                                 (list (make-html-attributes
+                                         '((data-tone . "quiet"))))))
+                     #:flow-kind 'block)))))
+       (forest (make-forest (make-site (list host target))))
+       (html (assoc-ref (render-test-html forest) "styled-host")))
+  (test-assert "tree transclusions attach their style to the container"
+    (string-contains html
+      "class=\"forest-tree-block transclusion aside-box\" data-tree-id=\"styled-target\" id=\"styled-target\" data-tone=\"quiet\""))
+  (test-error "tree container styles cannot set an id" #t
+    (make-forest
+      (make-site
+        (list (make-site-page "host2" "Host2"
+                (make-content-document
+                  (list (make-content-element
+                          'transclude '()
+                          #:properties '((target . "styled-target"))
+                          #:style (make-content-style #f
+                                    (list (make-html-attributes '((id . "mine")))))
+                          #:flow-kind 'block)))
+                target))))))
 
 (let* ((equations
          (make-site-page "equations" "Equations"
