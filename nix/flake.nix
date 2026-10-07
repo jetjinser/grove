@@ -43,8 +43,6 @@
           };
           devshells.default = {
             packages = with pkgs; [
-              racket
-
               guile
               guile-ssh
               guile-gcrypt
