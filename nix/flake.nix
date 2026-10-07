@@ -44,7 +44,17 @@
           devshells.default = {
             packages = with pkgs; [
               guile
-              guile-ssh
+              (guile-ssh.overrideAttrs (old: {
+                version = "1.0.0";
+                src = fetchFromGitHub {
+                  owner = "artyom-poptsov";
+                  repo = "guile-ssh";
+                  rev = "03cfa463a275803c64ee84168c3d126a65f65796";
+                  hash = "sha256-gaCFQxn69KENqdET/331Bnznl9uNwgUO2xuIE4Zpxgo=";
+                };
+                nativeBuildInputs = old.nativeBuildInputs
+                  ++ [ autoreconfHook pkg-config ];
+              }))
               guile-gcrypt
               guile-quickcheck
               self'.packages.blue
