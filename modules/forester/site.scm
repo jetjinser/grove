@@ -100,6 +100,11 @@
   (content-node-index content-node-index)
   (query-page-ids query-page-ids))
 
+(define (id-member-set ids)
+  (let ((table (make-hash-table)))
+    (for-each (lambda (id) (hash-set! table id #t)) ids)
+    table))
+
 (define* (topic-pages forest topic-id #:optional kind)
   (let ((page-ids
           (topic-page-ids (content-node-relation forest) topic-id kind)))
@@ -109,13 +114,13 @@
 
 (define* (related-pages forest page-id
                         #:optional (reference-taxon-id "reference"))
-  "Return direct link targets except pages in the reference taxon."
-  (let ((reference-page-ids
-          (map site-page-id
-               (topic-pages forest reference-taxon-id 'taxon))))
+  "Return direct link targets except pages in the reference taxon."  (let ((reference-ids
+          (id-member-set
+            (map site-page-id
+                 (topic-pages forest reference-taxon-id 'taxon)))))
     (map (lambda (target-id) (find-page forest target-id))
          (filter (lambda (target-id)
-                   (not (member target-id reference-page-ids string=?)))
+                   (not (hash-ref reference-ids target-id)))
                  (delete-duplicates
                    (map reference-target-page-id
                         (outgoing-references forest page-id))
@@ -124,12 +129,13 @@
 (define* (reference-pages forest page-id
                           #:optional (reference-taxon-id "reference"))
   "Return reference-taxon pages linked from this tree and its composition."
-  (let ((reference-page-ids
-          (map site-page-id
-               (topic-pages forest reference-taxon-id 'taxon))))
+  (let ((reference-ids
+          (id-member-set
+            (map site-page-id
+                 (topic-pages forest reference-taxon-id 'taxon)))))
     (map (lambda (target-id) (find-page forest target-id))
          (filter (lambda (target-id)
-                   (member target-id reference-page-ids string=?))
+                   (hash-ref reference-ids target-id))
                  (delete-duplicates
                    (append-map
                      (lambda (tree-id)
@@ -240,9 +246,10 @@
     (if (null? query-pages)
         forest
         (let* ((query-page-ids (map site-page-id query-pages))
+               (query-ids (id-member-set query-page-ids))
                (resolved-pages
                  (map (lambda (page)
-                        (if (member (site-page-id page) query-page-ids string=?)
+                        (if (hash-ref query-ids (site-page-id page))
                             (make-site-page
                               (site-page-id page)
                               (site-page-title page)
@@ -498,10 +505,29 @@ anchors."
 (define (links forest id)
   (map reference-target-page-id (outgoing-references forest id)))
 
+;; Relation queries solve through miniKanren, so the same rows would be
+;; derived again for every page that renders a backmatter section. A
+;; forest's relations never change once built, so results memoize per
+;; forest for the forest's lifetime.
+(define %query-cache (make-weak-key-hash-table 0))
+
+(define (cached-rows forest key thunk)
+  (let ((forest-cache
+          (or (hash-ref %query-cache forest)
+              (let ((table (make-hash-table)))
+                (hash-set! %query-cache forest table)
+                table))))
+    (or (hash-ref forest-cache key)
+        (let ((value (thunk)))
+          (hash-set! forest-cache key value)
+          value))))
+
 (define (outgoing-references forest id)
   (find-page forest id)
-  (map (lambda (row) (apply %make-reference row))
-       (outgoing-reference-rows (reference-relation forest) id)))
+  (cached-rows forest `(outgoing-references ,id)
+    (lambda ()
+      (map (lambda (row) (apply %make-reference row))
+           (outgoing-reference-rows (reference-relation forest) id)))))
 
 (define (outgoing-transclusions forest id)
   (find-page forest id)
@@ -514,25 +540,33 @@ anchors."
     (composition forest) id))
 
 (define (transcluding-pages forest id)
-  (let ((source-ids
-          (delete-duplicates
-            (map composition:transclusion-source-tree-id
-                 (incoming-transclusions forest id))
-            equal?)))
-    (filter (lambda (page)
-              (member (site-page-id page) source-ids equal?))
-            (pages forest))))
+  (cached-rows forest `(transcluding-pages ,id)
+    (lambda ()
+      (let ((source-ids
+              (id-member-set
+                (delete-duplicates
+                  (map composition:transclusion-source-tree-id
+                       (incoming-transclusions forest id))
+                  equal?))))
+        (filter (lambda (page)
+                  (hash-ref source-ids (site-page-id page)))
+                (pages forest))))))
 
 (define (incoming-references forest id)
   (find-page forest id)
-  (map (lambda (row) (apply %make-reference row))
-       (incoming-reference-rows (reference-relation forest) id)))
+  (cached-rows forest `(incoming-references ,id)
+    (lambda ()
+      (map (lambda (row) (apply %make-reference row))
+           (incoming-reference-rows (reference-relation forest) id)))))
 
 (define (backlinks forest id)
   (find-page forest id)
   (let ((source-ids
-          (backlink-page-ids (reference-relation forest) id)))
-    (filter (lambda (page) (member (site-page-id page) source-ids equal?))
+          (cached-rows forest `(backlinks ,id)
+            (lambda ()
+              (id-member-set
+                (backlink-page-ids (reference-relation forest) id))))))
+    (filter (lambda (page) (hash-ref source-ids (site-page-id page)))
             (pages forest))))
 
 (define (common-backlinks forest left-id right-id)
@@ -541,17 +575,19 @@ anchors."
       (find-page forest id))
     (list left-id right-id))
   (let ((source-ids
-          (common-backlink-page-ids
-            (reference-relation forest) left-id right-id)))
-    (filter (lambda (page) (member (site-page-id page) source-ids equal?))
+          (id-member-set
+            (common-backlink-page-ids
+              (reference-relation forest) left-id right-id))))
+    (filter (lambda (page) (hash-ref source-ids (site-page-id page)))
             (pages forest))))
 
 (define (reachable-pages forest id)
   (find-page forest id)
   (let ((reachable-ids
-          (reachable-page-ids (reference-relation forest) id)))
+          (id-member-set
+            (reachable-page-ids (reference-relation forest) id))))
     (filter (lambda (page)
-              (member (site-page-id page) reachable-ids equal?))
+              (hash-ref reachable-ids (site-page-id page)))
             (pages forest))))
 
 (define (source-paths forest)
@@ -572,24 +608,29 @@ anchors."
             (site-sources site))))
 
 (define (included-tree-ids forest start-id)
-  (let loop ((pending (list start-id)) (seen '()))
-    (if (null? pending)
-        seen
-        (let ((id (car pending)))
-          (if (member id seen equal?)
-              (loop (cdr pending) seen)
-              (let ((page (find-page forest id)))
-                (loop
-                  (append
-            (map (lambda (element)
-                   (content-element-property element 'target))
-                 (tree-pass:transclusion-elements
-                   (site-page-document (find-page forest id))))
-                    (map (lambda (element)
-                           (content-element-property element 'tree-id))
-                         (tree-pass:subtree-elements (site-page-document page)))
-                    (cdr pending))
-                  (cons id seen))))))))
+  (cached-rows forest `(included-tree-ids ,start-id)
+    (lambda ()
+      (let loop ((pending (list start-id)) (seen '()))
+        (if (null? pending)
+            seen
+            (let ((id (car pending)))
+              (if (member id seen equal?)
+                  (loop (cdr pending) seen)
+                  (let ((page (find-page forest id)))
+                    (loop
+                      (append
+                       (map composition:transclusion-target-tree-id
+                            (composition:outgoing-transclusions
+                              (composition forest) id))
+                       (map composition:subtree-definition-child
+                            (filter (lambda (definition)
+                                      (equal? (composition:subtree-definition-parent
+                                                definition)
+                                            id))
+                                    (composition:subtree-definitions
+                                      (composition forest))))
+                       (cdr pending))
+                      (cons id seen))))))))))
 
 (define (page-source-paths forest page)
   (let ((included (included-tree-ids forest (site-page-id page))))

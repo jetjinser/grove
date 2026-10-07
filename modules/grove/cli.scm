@@ -314,21 +314,21 @@ with HELP overrides keyed by command."
                      (parameterize ((current-analysis-timings
                                       (lambda (phase seconds)
                                         (progress 'analysis-phase
-                                                  (cons phase seconds))))
-                                    (current-render-progress
-                                      (lambda (done total)
-                                        (progress 'render-page
-                                                  (list done total)))))
-                       (call-with-loaded-project filename
-                         (lambda (project)
-                           (let ((report
-                                   (if checking?
-                                       (check-project project #:progress progress)
-                                       (build-project/report project #:progress progress))))
-                             (cons (and (not checking?)
-                                        (canonicalize-path (project-output-directory project)))
-                                   report)))
-                       #:output-directory (assq-ref options 'output))))))
+                                                  (cons phase seconds)))))
+                       (parameterize ((current-render-progress
+                                        (lambda (done total path)
+                                          (progress 'render-page
+                                                    (list done total path)))))
+                         (call-with-loaded-project filename
+                           (lambda (project)
+                             (let ((report
+                                     (if checking?
+                                         (check-project project #:progress progress)
+                                         (build-project/report project #:progress progress))))
+                               (cons (and (not checking?)
+                                          (canonicalize-path (project-output-directory project)))
+                                     report)))
+                           #:output-directory (assq-ref options 'output)))))))
                (output (car result))
                (report (cdr result)))
           (print-cli-summary report (- (cli-seconds) started)

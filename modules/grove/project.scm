@@ -22,6 +22,7 @@
             project-source-directory
             project-tree-template
             project-default-prefix
+            project-renderers
             collect-project-sources
             project-extra-sources
             project-output-directory
