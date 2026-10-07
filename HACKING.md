@@ -41,7 +41,10 @@ Find the owning module and existing tests before editing. Test observable
 behavior and meaningful failures, rather than duplicating the implementation.
 Mathematical checks should use independent oracles where available.
 
-Inside the development shell:
+Enter the development shell with `nix develop ./nix` or
+`guix shell -m manifest.scm`. The two environments track the same
+dependency set; the nix flake additionally builds Racket-era tooling the
+Guix manifest omits. Inside the development shell:
 
 ```sh
 blue build
