@@ -37,8 +37,9 @@
   (test-equal "timing observation preserves the page"
     "Measured" (site-page-title (find-page forest "measured")))
   (test-equal "forest timings follow analysis order"
-    '(identify-trees extract-trees occurrence-anchors anchors references
-      transclusions reference-index page-index content composition queries)
+    '(identify-trees extract-trees occurrence-anchors equation-numbers
+      anchors references transclusions reference-index page-index content
+      composition queries)
     (map car (reverse phases)))
   (test-assert "forest timings report nonnegative seconds"
     (every (lambda (entry) (>= (cdr entry) 0)) phases)))
@@ -202,6 +203,24 @@
     (and (string-contains message "eq-2")
          (string-contains message "notes")
          (string-contains message "tree-1"))))
+
+(let* ((numbered-document
+         (evaluate-document
+           (string-append
+             "@tex-display-math[#:id \"named\"]{a}\n"
+             "@tex-display-math{b}\n"
+             "@paragraph{See @link[\"notes#unstable-eq-2\"]{b} and"
+             " @link[\"notes#unstable-eq-9\"]{missing}.}")))
+       (port (open-output-string))
+       (forest
+         (parameterize ((current-warning-port port))
+           (make-forest
+             (make-site
+               (list (make-site-page "notes" "Notes" numbered-document))))))
+       (message (get-output-string port)))
+  (test-assert "generated equation ids join the registry"
+    (and (string-contains message "unstable-eq-9")
+         (not (string-contains message "unstable-eq-2")))))
 
 (test-error "duplicate page ids fail site analysis" #t
   (make-site

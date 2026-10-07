@@ -20,7 +20,8 @@
             owned-content
             subtree-pages
             assign-subtree-identifiers
-            assign-unique-occurrence-anchors))
+            assign-unique-occurrence-anchors
+            assign-equation-numbers))
 
 (define* (walk-content content select? #:key (postorder? #f) (stop? (const #f)))
   (define (walk node)
@@ -214,3 +215,75 @@ check documents."
           (site-page-source page)
           #:metadata (site-page-metadata page))))
     pages))
+
+(define (assign-equation-numbers pages)
+  "Number every display equation in each page's own content, in document
+order. All display equations count, named or not; the number lands on
+equations the author did not tag, and a generated unstable-eq-N ID lands on
+equations the author did not name, joining the anchor registry like any
+other math ID. The chapter prefix is the page's declared chapter, never
+invented here."
+  (define (rewrite page)
+    (let* ((document (site-page-document page))
+           (chapter (assq-ref (site-page-metadata page) 'chapter))
+           (counter 0))
+      (define (number-string)
+        (if chapter
+            (format #f "~a.~a" chapter counter)
+            (format #f "~a" counter)))
+      (let next ((content document) (nested? #f))
+        (cond
+          ((content-document? content)
+           (make-content-document
+             (map (lambda (child) (next child nested?))
+                  (content-document-children content))
+             (content-document-source content)))
+          ((not (content-element? content)) content)
+          ;; Equations inside subtrees belong to the subtrees' own pages.
+          ((or nested?
+               (memq (content-element-kind content) '(subtree forest-query)))
+           content)
+          ((and (eq? (content-element-kind content) 'math)
+                (content-element-property content 'display?))
+           (set! counter (1+ counter))
+           (let* ((id (or (content-element-property content 'id)
+                          (format #f "unstable-eq-~a" counter)))
+                  ;;     \tag is a TeX notion; MathML equations always number.
+                  (tagged? (and (content-element-property content 'tex?)
+                                (string-contains
+                                  (content-verbatim-string
+                                    (content-element-children content))
+                                  "\\tag")))
+                  (properties
+                    (cons (cons 'id id)
+                          (if tagged?
+                              (filter (lambda (entry)
+                                        (not (eq? (car entry) 'id)))
+                                      (content-element-properties content))
+                              (cons (cons 'number (number-string))
+                                    (filter (lambda (entry)
+                                              (not (eq? (car entry) 'id)))
+                                            (content-element-properties content)))))))
+             (make-content-element
+               'math (content-element-children content)
+               (content-element-source content)
+               #:properties properties
+               #:style (content-element-style content)
+               #:flow-kind (content-element-flow-kind content))))
+          (else
+           (make-content-element
+             (content-element-kind content)
+             (map (lambda (child) (next child nested?))
+                  (content-element-children content))
+             (content-element-source content)
+             #:properties (content-element-properties content)
+             #:style (content-element-style content)
+             #:flow-kind (content-element-flow-kind content)))))))
+  (map (lambda (page)
+         (make-site-page
+           (site-page-id page)
+           (site-page-title page)
+           (rewrite page)
+           (site-page-source page)
+           #:metadata (site-page-metadata page)))
+       pages))

@@ -340,6 +340,8 @@ anchors."
          (pages (append root-pages subtrees))
          (pages (measure 'occurrence-anchors
                   (tree-pass:assign-unique-occurrence-anchors pages)))
+         (pages (measure 'equation-numbers
+                  (tree-pass:assign-equation-numbers pages)))
          (_ (make-site pages
                        #:title (site-title site)
                        #:description (site-description site)

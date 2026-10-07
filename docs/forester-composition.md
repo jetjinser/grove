@@ -180,6 +180,14 @@ Generated position anchors (`tree-N`, `ref-N`) are implementation details,
 not author contracts, and warn like any other unknown fragment. Links
 returned by queries receive the same check.
 
+Display equations are numbered per page in document order: every display
+equation counts, named or not. Equations without an author `\tag` render the
+build number, prefixed with the page's declared chapter when the page
+metadata carries one. Equations without an `#:id` receive a generated
+`unstable-eq-N` ID, which joins the anchor registry like any other math ID.
+Numbers may shift when equations are inserted; IDs stay author-owned, and
+generated IDs carry the same instability as unnamed trees' `unstable-N`.
+
 `content-with-style` applies the same interface to an element returned by
 Scheme code, preserving its content, properties, source, and flow kind.
 Styling does not change query or mathematical semantics. Text output ignores

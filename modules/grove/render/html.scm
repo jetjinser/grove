@@ -261,20 +261,29 @@
   (define (render-math element)
     (let* ((display? (content-element-property element 'display?))
            (class (if display? "math-display" "math-inline"))
-           (attributes (math-attributes element class)))
+           (attributes (math-attributes element class))
+           (number (and display? (content-element-property element 'number))))
       (if (content-element-property element 'tex?)
-          `(,(if display? 'div 'span)
-             ,attributes
-             ,(string-append (if display? "\\[" "\\(")
-                             (content-verbatim-string
-                               (content-element-children element))
-                             (if display? "\\]" "\\)")))
+          (let ((tex (content-verbatim-string
+                       (content-element-children element))))
+            `(,(if display? 'div 'span)
+               ,attributes
+               ,(string-append
+                  (if display? "\\[" "\\(")
+                  tex
+                  (if number (string-append " \\tag{" number "}") "")
+                  (if display? "\\]" "\\)"))))
           (let ((mathml
                   `(math (@ (xmlns "http://www.w3.org/1998/Math/MathML")
                             ,@(if display? '((display "block")) '()))
                        ,(render-math-row
                           (content-element-children element)))))
-            `(,(if display? 'div 'span) ,attributes ,mathml)))))
+            (if number
+                `(div ,attributes
+                      (span (@ (class "math-number"))
+                            "(" ,number ")")
+                      ,mathml)
+                `(,(if display? 'div 'span) ,attributes ,mathml))))))
 
   (render content))
 

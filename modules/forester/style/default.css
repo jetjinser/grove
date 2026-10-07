@@ -22,6 +22,8 @@ h1, h2, h3, h4, h5, h6 { margin-block: .75em; }
 blockquote { margin-inline: 2em; }
 hr { margin-block: 1em; }
 pre, .math-display { overflow-x: auto; }
+.math-display { position: relative; }
+.math-number { position: absolute; right: 0; opacity: .75; }
 
 .forest-tree-block { margin: 1rem 0; border-radius: .3rem; transition: background-color .12s ease; }
 .forest-tree-block:hover, .forest-tree-block:focus-within { background-color: rgba(0, 100, 255, .04); }

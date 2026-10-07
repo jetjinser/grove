@@ -193,7 +193,7 @@
   (test-assert "inline math keeps TeX delimiters"
     (string-contains algebra-html "\\(x^2+y^2=z^2\\)"))
   (test-assert "display math keeps TeX delimiters"
-    (string-contains algebra-html "\\[a^2+b^2=c^2\\]"))
+    (string-contains algebra-html "\\[a^2+b^2=c^2 \\tag{1}\\]"))
   (test-assert "images use route-aware URLs and alternative text"
     (string-contains algebra-html
                      "<img src=\"/images/algebra.svg\" alt=\"An algebra diagram.\" />"))
@@ -336,6 +336,34 @@
          (not (string-contains (assoc-ref html "host")
                                "data-tree-id=\"theorem-3\" id=\"theorem-3\""))
          (string-contains message "does not resolve in page host"))))
+
+(let* ((equations
+         (make-site-page "equations" "Equations"
+           (evaluate-document
+             (string-append
+               "@tex-display-math{a^2}\n"
+               "@tex-display-math[#:id \"named\"]{b^2}\n"
+               "@tex-display-math{c^2 \\tag{9}}"))))
+       (chaptered
+         (make-site-page "chaptered" "Chaptered"
+           (evaluate-document "@tex-display-math{x}")
+           #:metadata '((chapter . 2))))
+       (rendered (render-test-html
+                   (make-forest (make-site (list equations chaptered)))
+                   #:mathjax-src #f))
+       (html (assoc-ref rendered "equations")))
+  (test-assert "display equations render build numbers and generated ids"
+    (and (string-contains html "\\[a^2 \\tag{1}\\]")
+         (string-contains html "id=\"unstable-eq-1\"")
+         (string-contains html "\\[b^2 \\tag{2}\\]")
+         (string-contains html "id=\"named\"")
+         (not (string-contains html "id=\"unstable-eq-2\""))
+         (string-contains html "\\[c^2 \\tag{9}\\]")
+         (string-contains html "id=\"unstable-eq-3\"")
+         (not (string-contains html "\\tag{3}"))))
+  (test-assert "declared chapters prefix equation numbers"
+    (string-contains (assoc-ref rendered "chaptered")
+                     "\\[x \\tag{2.1}\\]")))
 
 (test-error "a raw # in a link target is rejected (fragments are separate)" #t
   (make-forest
