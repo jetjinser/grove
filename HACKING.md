@@ -42,9 +42,13 @@ behavior and meaningful failures, rather than duplicating the implementation.
 Mathematical checks should use independent oracles where available.
 
 Enter the development shell with `nix develop ./nix` or
-`guix shell -m manifest.scm`. The two environments track the same
-dependency set; the nix flake additionally builds Racket-era tooling the
-Guix manifest omits. Inside the development shell:
+`guix shell --container --pure -m manifest.scm`. The two environments
+track the same dependency set; the nix flake additionally builds
+Racket-era tooling the Guix manifest omits. The container is required,
+not cosmetic: when the host already exports GUIX_LOCPATH or LANG, a
+plain `guix shell` inherits them and Guile cannot install a UTF-8
+locale, which mangles multilingual test fixtures. Inside the
+development shell:
 
 ```sh
 blue build

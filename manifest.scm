@@ -20,6 +20,7 @@
              (gnu packages texinfo)
              (gnu packages tree-sitter)
              (guix build-system gnu)
+             (guix build-system guile)
              (guix build-system trivial)
              (guix gexp)
              (guix git-download)
@@ -84,69 +85,68 @@ drive its module builds and test suites from a blueprint file.")
        (file-name (git-file-name name version))
        (sha256
         (base32 "0fpdbiybw97raz3ak855i8fcbwbzjimg3pwgixcs5960gfi5r2b8"))))
-    (build-system gnu-build-system)
+    (build-system guile-build-system)
     (arguments
      (list
-      #:modules '((guix build gnu-build-system)
-                  (guix build utils))
+      ;;     Only the seven Guile module files are installed; the test
+      ;;     scripts and the Racket/Chez flavors stay out.  find-files
+      ;;     matches base names only, so this is a whitelist.
+      #:scheme-file-regexp
+      "^(mk-guile|mk-vicare|mk|matche|full-interp|numbers|simple-interp)\\.scm$"
+      ;;     The interpreters must compile while mk-guile is loaded,
+      ;;     which guild cannot express; a phase below handles them.
+      ;;     Unlike scheme-file-regexp this matches the whole relative
+      ;;     path, so it stays end-anchored only.
+      #:not-compiled-file-regexp
+      "(full-interp|numbers|simple-interp)\\.scm$"
       #:phases
       #~(modify-phases %standard-phases
-          (delete 'configure)
-          (replace 'build
+          (add-before 'build 'stage-module-sources
             (lambda _
-              (let ((sources '("mk-guile.scm" "mk-vicare.scm" "mk.scm"
-                               "matche.scm" "full-interp.scm" "numbers.scm"
-                               "simple-interp.scm")))
-                (mkdir-p "build/source/faster-minikanren")
-                (mkdir-p "build/site-ccache/faster-minikanren")
-                (for-each
-                 (lambda (file)
-                   (copy-file file
-                              (string-append "build/source/faster-minikanren/"
-                                             file)))
-                 sources)
-                (with-directory-excursion "build"
-                  ;;     mk-guile compiles with plain guild.
-                  (invoke "guild" "compile" "-L" "source"
-                          "-o" "site-ccache/faster-minikanren/mk-guile.go"
-                          "source/faster-minikanren/mk-guile.scm")
-                  ;;     The interpreters must compile while mk-guile is
-                  ;;     loaded, which guild cannot express.
-                  (for-each
-                   (lambda (module)
-                     (invoke "guile" "--no-auto-compile"
-                             "-L" "source" "-C" "site-ccache" "-c"
-                             (format #f (string-append
-                                         "(use-modules (system base compile)"
-                                         " (faster-minikanren mk-guile))"
-                                         "(compile-file \"source/faster-minikanren/~a.scm\""
-                                         " #:output-file \"site-ccache/faster-minikanren/~a.go\""
-                                         " #:env (current-module))")
-                             module module)))
-                   '("full-interp" "numbers" "simple-interp"))))))
-          (replace 'check
-            (lambda _
-              (invoke "guile" "--no-auto-compile"
-                      "-L" "build/source" "-C" "build/site-ccache"
-                      "test-all-guile.scm")))
-          (replace 'install
-            (lambda* (#:key inputs #:allow-other-keys)
-              (use-modules (ice-9 popen)
-                           (ice-9 rdelim)
-                           (srfi srfi-13))
-              (let* ((effective
-                      (string-trim-both
-                       (read-line
-                        (open-input-pipe
-                         "guile -c '(display (effective-version))'"))))
-                     (site (string-append #$output "/share/guile/site/"
+              ;;     The modules live at the source root under their own
+              ;;     namespace prefix, which mk-guile's include-from-path
+              ;;     expects on the load path.  Move (not copy) them so
+              ;;     only the namespaced copies are installed.
+              (mkdir-p "faster-minikanren")
+              (for-each
+               (lambda (file)
+                 (rename-file file (string-append "faster-minikanren/" file)))
+               '("mk-guile.scm" "mk-vicare.scm" "mk.scm" "matche.scm"
+                 "full-interp.scm" "numbers.scm" "simple-interp.scm"))))
+          (add-after 'build 'compile-interpreter-modules
+            (lambda* (#:key outputs #:allow-other-keys)
+              ;;     guile is on PATH (set-paths), which is also where
+              ;;     the version probe falls back when given no path.
+              (let* ((effective (target-guile-effective-version))
+                     (out (assoc-ref outputs "out"))
+                     (site (string-append out "/share/guile/site/"
                                           effective))
-                     (ccache (string-append #$output "/lib/guile/"
-                                            effective "/site-ccache")))
-                (copy-recursively "build/source/faster-minikanren"
-                                  (string-append site "/faster-minikanren"))
-                (copy-recursively "build/site-ccache/faster-minikanren"
-                                  (string-append ccache "/faster-minikanren"))))))))
+                     (go (string-append out "/lib/guile/" effective
+                                        "/site-ccache")))
+                (for-each
+                 (lambda (module)
+                   (invoke "guile" "--no-auto-compile"
+                           "-L" site "-C" go "-c"
+                           (string-append
+                            "(use-modules (system base compile)"
+                            " (faster-minikanren mk-guile))"
+                            "(compile-file \"faster-minikanren/" module
+                            ".scm\" #:output-file \"" go
+                            "/faster-minikanren/" module
+                            ".go\" #:env (current-module))")))
+                 '("full-interp" "numbers" "simple-interp")))))
+          (add-after 'compile-interpreter-modules 'check
+            (lambda* (#:key outputs tests? #:allow-other-keys)
+              (when tests?
+                (let* ((effective (target-guile-effective-version))
+                       (out (assoc-ref outputs "out"))
+                       (site (string-append out "/share/guile/site/"
+                                            effective))
+                       (go (string-append out "/lib/guile/" effective
+                                          "/site-ccache")))
+                  (invoke "guile" "--no-auto-compile"
+                          "-L" site "-C" go
+                          "test-all-guile.scm"))))))))
     (native-inputs (list guile))
     (home-page "https://github.com/michaelballantyne/faster-minikanren")
     (synopsis
@@ -259,8 +259,16 @@ Grove's highlighter consumes.")
  (append
   (list blue faster-minikanren grove-highlights guile)
   (map specification->package
-       (list "guile-ssh"
+       (list ;;     /bin/sh and env for subprocess-spawning code under a
+             ;;     containerized shell.
+             "bash"
+             "coreutils"
+             "guile-ssh"
              "guile-gcrypt"
              "guile-quickcheck"
              "guile-ts"
+             ;;     The test fixtures are multilingual; without locales
+             ;;     the C.UTF-8 that blue sets is unavailable and Unicode
+             ;;     text degrades to ??? in project builds.
+             "glibc-locales"
              "reuse"))))
