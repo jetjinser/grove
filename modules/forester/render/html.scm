@@ -20,6 +20,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (site->html
+            split-into-chunks
             render-html
             make-html-renderer))
 
@@ -459,6 +460,18 @@ otherwise the generated position anchor that backs repeated occurrences."
                           #:home-link home-link)))
        (pages forest)))
 
+(define (split-into-chunks entries chunk-size)
+  "Split ENTRIES into consecutive groups of at most CHUNK-SIZE entries,
+preserving order.  The tail group may be shorter, so the tail walk uses
+the remaining length instead of the chunk size: this Guile's list-tail
+errors when the count outlives the list."
+  (let loop ((rest entries) (chunks '()))
+    (if (null? rest)
+        (reverse chunks)
+        (let ((size (min chunk-size (length rest))))
+          (loop (list-tail rest size)
+                (cons (list-head rest size) chunks))))))
+
 (define* (render-html forest #:key
                              (style default-html-style)
                              (highlighters (default-highlighters))
@@ -486,10 +499,11 @@ otherwise the generated position anchor that backs repeated occurrences."
            (total (length forest-pages))
            (route-table (html-route-table routes
                                           (map site-page-id forest-pages))))
+      ;;     Pages render independently against the shared forest. The
+      ;;     entry list is zipped with an explicit named let: the
+      ;;     multi-list map on load paths that pull in
+      ;;     faster-minikanren's rnrs override is unreliable.
       (map (lambda (page index)
-             (when report
-               (report index total
-                       (cdr (assoc (site-page-id page) route-table))))
              (make-artifact
                (cdr (assoc (site-page-id page) route-table))
                (page-html forest page style routes mathjax-src backmatter
@@ -504,7 +518,6 @@ otherwise the generated position anchor that backs repeated occurrences."
                (page-source-paths forest page)))
            forest-pages
            (iota total 1)))))
-
 (define* (make-html-renderer #:key
                                       (style default-html-style)
                                       (highlighters (default-highlighters))

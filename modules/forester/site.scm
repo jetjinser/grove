@@ -12,6 +12,8 @@
   #:use-module ((forester private query-output) #:prefix query-output:)
   #:use-module ((forester composition) #:prefix composition:)
   #:use-module (forester relations)
+  #:use-module (grove relation dsl)
+  #:use-module (ice-9 threads)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
@@ -483,6 +485,14 @@ anchors."
          (_ (validate-tree-cycles! pages
               (lambda (page)
                 (composition:target-ids composition (site-page-id page))))))
+    ;;     Force every column index while still single-threaded: page
+    ;;     rendering reads them in parallel and a concurrent force would
+    ;;     race inside the promise.
+    (for-each
+      (lambda (relation)
+        (for-each force (relation-indexes relation)))
+      (list reference-relation page-relation
+            (car content-node-state)))
     (measure 'queries (resolve-forest-queries
       (%make-forest site pages
                     reference-relation composition page-index page-relation
@@ -508,19 +518,22 @@ anchors."
 ;; Relation queries solve through miniKanren, so the same rows would be
 ;; derived again for every page that renders a backmatter section. A
 ;; forest's relations never change once built, so results memoize per
-;; forest for the forest's lifetime.
+;; forest for the forest's lifetime. Page rendering reads these caches
+;; from several threads, so writes take the site lock.
 (define %query-cache (make-weak-key-hash-table 0))
+(define %site-lock (make-mutex))
 
 (define (cached-rows forest key thunk)
-  (let ((forest-cache
-          (or (hash-ref %query-cache forest)
-              (let ((table (make-hash-table)))
-                (hash-set! %query-cache forest table)
-                table))))
-    (or (hash-ref forest-cache key)
-        (let ((value (thunk)))
-          (hash-set! forest-cache key value)
-          value))))
+  (with-mutex %site-lock
+    (let ((forest-cache
+            (or (hash-ref %query-cache forest)
+                (let ((table (make-hash-table)))
+                  (hash-set! %query-cache forest table)
+                  table))))
+      (or (hash-ref forest-cache key)
+          (let ((value (thunk)))
+            (hash-set! forest-cache key value)
+            value)))))
 
 (define (outgoing-references forest id)
   (find-page forest id)
