@@ -481,9 +481,13 @@ otherwise the generated position anchor that backs repeated occurrences."
   (check-html-input forest style routes mathjax-src)
   (append
     (html-style-artifacts style)
-    (let ((route-table (html-route-table routes
-                                          (map site-page-id (pages forest)))))
-      (map (lambda (page)
+    (let* ((report (current-render-progress))
+           (forest-pages (pages forest))
+           (total (length forest-pages))
+           (route-table (html-route-table routes
+                                          (map site-page-id forest-pages))))
+      (map (lambda (page index)
+             (when report (report index total))
              (make-artifact
                (cdr (assoc (site-page-id page) route-table))
                (page-html forest page style routes mathjax-src backmatter
@@ -496,7 +500,8 @@ otherwise the generated position anchor that backs repeated occurrences."
                           #:site-nav site-nav
                           #:home-link home-link)
                (page-source-paths forest page)))
-           (pages forest)))))
+           forest-pages
+           (iota total 1)))))
 
 (define* (make-html-renderer #:key
                                       (style default-html-style)

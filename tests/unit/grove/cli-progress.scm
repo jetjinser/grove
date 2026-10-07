@@ -14,7 +14,6 @@
 (test-equal "analysis phases print as their own status lines"
   (string-append
     (format #f "~12@a project.scm~%" "Building")
-    (format #f "~12@a~%" "Analyzing")
     (format #f "~12@a ~18a ~,2fs~%" "Analyzing" "queries" 1.5)
     (format #f "~12@a in 0.00s~%" "Analyzed"))
   (capture
@@ -29,9 +28,7 @@
     (format #f "~12@a project.scm~%" "Building")
     (format #f "~12@a plants/example.plant~%" "Reading")
     (format #f "~12@a 1/2 document results~%" "Reused")
-    (format #f "~12@a~%" "Analyzing")
     (format #f "~12@a in 0.00s~%" "Analyzed")
-    (format #f "~12@a~%" "Rendering")
     (format #f "~12@a in 0.00s~%" "Rendered")
     (format #f "~12@a~%" "Validating")
     (format #f "~12@a in 0.00s~%" "Validated")

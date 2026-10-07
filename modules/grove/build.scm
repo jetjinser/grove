@@ -8,6 +8,7 @@
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-9)
   #:export (render-model
+            current-render-progress
             cached-renderer?
             cached-renderer-cache?
             cached-renderer-configuration
@@ -16,6 +17,11 @@
             cached-renderer-inputs
             make-cached-renderer
             renderer-configurations))
+
+;; Page-level render reporting. Renderers call it as (done total) while
+;; walking a model; the CLI installs a reporter so progress can show a
+;; bar. Unset means silent.
+(define current-render-progress (make-parameter #f))
 
 (define-record-type <cached-renderer>
   (%make-cached-renderer cache? configuration procedure render-changed inputs)

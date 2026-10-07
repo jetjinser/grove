@@ -3,6 +3,7 @@
 
 (define-module (grove cli)
   #:use-module (grove project)
+  #:use-module (grove build)
   #:use-module (grove project new)
   #:use-module (grove serve)
   #:use-module (grove private cli progress)
@@ -313,7 +314,11 @@ with HELP overrides keyed by command."
                      (parameterize ((current-analysis-timings
                                       (lambda (phase seconds)
                                         (progress 'analysis-phase
-                                                  (cons phase seconds)))))
+                                                  (cons phase seconds))))
+                                    (current-render-progress
+                                      (lambda (done total)
+                                        (progress 'render-page
+                                                  (list done total)))))
                        (call-with-loaded-project filename
                          (lambda (project)
                            (let ((report

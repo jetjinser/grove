@@ -118,6 +118,18 @@
          (print-cli-status "Analyzing"
            (format #f "~18a ~,2fs" (car detail) (cdr detail))
            port))
+        ((render-page)
+         ;;     Page-level transient bar, terminal-only; the per-render
+         ;;     line carries the durable numbers.
+         (when terminal?
+           (clear-progress)
+           (let* ((done (car detail)) (total (cadr detail))
+                  (bar-width (max 4 (min 28 (- columns 40))))
+                  (message (format #f "~a ~d/~d"
+                             (progress-bar done total bar-width) done total)))
+             (status-line port "Rendering" message "1;36")
+             (set! active? #t)
+             (force-output port))))
         ((render-renderer)
          ;;     One line per renderer: artifacts and wall time locate a
          ;;     slow renderer without per-page noise.
@@ -134,14 +146,16 @@
                         ((write) "Writing")
                         (else #f))))
            ;;     A stage may arrive several times (renderers arrive one
-           ;;     call each); time each stage as a whole and print its
-           ;;     line only for the first arrival.
-           (unless (eq? timed-stage stage)
-             (when label
+           ;;     call each); time each stage as a whole.  Analyzing and
+           ;;     Rendering announce themselves through their detail
+           ;;     lines, so they print no stage line of their own.
+           (when (and (assq stage stage-verbs)
+                      (not (eq? timed-stage stage)))
+             (finish-stage)
+             (set! timed-stage stage)
+             (set! stage-start (cli-seconds))
+             (unless (memq stage '(analyze render))
                (clear-progress)
-               (finish-stage)
-               (set! timed-stage stage)
-               (set! stage-start (cli-seconds))
                (print-cli-status label (if detail (display-path detail) "") port)))))))
     (dynamic-wind
       (lambda () (print-cli-status action (display-path filename) port))
