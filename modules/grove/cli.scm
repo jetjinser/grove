@@ -98,7 +98,7 @@ with HELP overrides keyed by command."
                  #:commands '(browse ssh-keygen)
                  #:help "  --host-key PATH RSA host key for --ssh (browse only).\n"
                  #:helps '((ssh-keygen
-                            . "  --host-key PATH RSA host key to create (ssh-keygen).\n")))
+                            . "  --host-key PATH RSA host key to create.\n")))
     (option-spec "--authorized-keys" #:key 'authorized-keys #:arity 'value
                  #:commands '(browse)
                  #:help "  --authorized-keys PATH  Authorized client keys for --ssh (browse only).\n")
@@ -118,7 +118,7 @@ with HELP overrides keyed by command."
                  #:parse 'integer #:check bytes-check #:commands '(browse)
                  #:help "  --ssh-memory-limit BYTES Cap each worker's address space (browse --ssh).\n")
     (option-spec "--force" #:key 'force #:commands '(ssh-keygen)
-                 #:help "  --force         Overwrite an existing host key (ssh-keygen).\n")
+                 #:help "  --force         Overwrite an existing host key.\n")
     (option-spec "--debug" #:key 'debug)
     (option-spec "--help" #:key 'help)
     (option-spec "-h" #:key 'help)

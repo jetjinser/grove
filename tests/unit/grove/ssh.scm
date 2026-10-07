@@ -141,19 +141,15 @@
 
       ;; Host key generation
       (test-assert "generate-host-key writes an RSA host key"
-        (if ssh-keygen?
-            (let ((path (string-append test-directory "/generated_host")))
-              ((ssh-proc 'generate-host-key) path #:output (open-output-string))
-              (file-exists? path))
-            #t))
+        (let ((path (string-append test-directory "/generated_host")))
+          ((ssh-proc 'generate-host-key) path #:output (open-output-string))
+          (file-exists? path)))
 
       (test-assert "generate-host-key refuses to overwrite an existing key"
-        (if ssh-keygen?
-            (let ((path (string-append test-directory "/generated_host")))
-              (catch #t
-                (lambda () ((ssh-proc 'generate-host-key) path) #f)
-                (lambda _ #t)))
-            #t))
+        (let ((path (string-append test-directory "/generated_host")))
+          (catch #t
+            (lambda () ((ssh-proc 'generate-host-key) path) #f)
+            (lambda _ #t))))
 
       ;; Transport (gated on ssh(1), timeout(1), and the generated keys)
       (if (and keys-ready? (have-program? "ssh") (have-program? "timeout"))

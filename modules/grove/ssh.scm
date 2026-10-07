@@ -160,28 +160,26 @@
   (when channel
     (catch #t (lambda () (close channel)) (lambda _ #t))))
 
-(define* (generate-host-key path #:key (bits 3072) (force #f)
+(define* (generate-host-key path #:key (bits 3072) (type 'rsa) (force #f)
                             (output (current-error-port)))
-  "Generate an RSA host key at PATH for use with serve-ssh.
+  "Generate a host key at PATH for use with serve-ssh.
 
-Uses ssh-keygen; refuses to overwrite an existing key unless FORCE is #t."
+TYPE is a key symbol understood by (ssh key), BITS its size where the
+type has one.  Refuses to overwrite an existing key unless FORCE is #t."
   (unless (and (string? path) (not (string-null? path)))
     (error "host key requires a file path" path))
   (when (and (file-exists? path) (not force))
     (error "host key already exists; pass --force to overwrite" path))
-  (let ((ssh-keygen (search-path
-                      (string-split (or (getenv "PATH") "") #\:)
-                      "ssh-keygen")))
-    (unless ssh-keygen
-      (error "ssh-keygen was not found on PATH"))
-    (let ((status (system* ssh-keygen "-t" "rsa" "-b" (number->string bits)
-                           "-m" "PEM" "-N" "" "-q" "-f" path)))
-      (unless (and (status:exit-val status)
-                   (zero? (status:exit-val status)))
-        (error "ssh-keygen failed to create a host key" path))
-      (catch #t (lambda () (chmod path #o600)) (lambda _ #t))
-      (format output "grove ssh: wrote host key ~a (~a-bit RSA)~%" path bits)
-      path)))
+  (catch 'guile-ssh-error
+    (lambda ()
+      (let ((key (make-keypair type bits)))
+        (private-key-to-file key path)
+        (catch #t (lambda () (chmod path #o600)) (lambda _ #t))
+        (format output "grove ssh: wrote ~a host key ~a~%"
+                (get-key-type key) path)
+        path))
+    (lambda (key . arguments)
+      (error "host key generation failed" type bits key arguments))))
 
 (define (accept-session server)
   (catch 'guile-ssh-error
