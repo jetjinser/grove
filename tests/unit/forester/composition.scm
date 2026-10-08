@@ -279,6 +279,11 @@
   (test-assert "default text backmatter shows transclusion context"
     (and (string-contains (assoc-ref text "reusable") "Context:")
          (string-contains (assoc-ref text "reusable") "Host (host.txt)")))
+  (test-assert "backlink entries carry the label and source slug"
+    (let ((destination-html (assoc-ref html "destination")))
+      (and (string-contains destination-html
+                             "href=\"/reusable.html#ref-1\">Follow destination.</a>")
+           (string-contains destination-html "[reusable]"))))
   (test-assert "context sources are included in target artifact dependencies"
     (member "plants/host.plant" (page-source-paths forest target) string=?))
   (test-assert "backmatter sections can be disabled"
@@ -342,16 +347,23 @@
        (host
          (make-site-page
            "host" "Host"
-           (evaluate-document "Before. @transclude[\"piece\"] After.")
+           (evaluate-document
+             (string-append
+               "@taxon[\"host-tax\"]"
+               " Before. @transclude[\"piece\"] After."))
            "plants/host.plant"))
        (forest (make-forest (make-site (list root host))))
        (html (render-test-html forest #:mathjax-src #f)))
   (test-equal "context unions the defining page with transcluding pages"
     '("root" "host")
     (map site-page-id (context-pages forest "piece")))
-  (test-assert "defining page renders in the subtree's standalone context"
-    (string-contains (assoc-ref html "piece")
-                     "href=\"/index.html\">Root</a>")))
+  (test-assert "backmatter entries carry the page slug and taxon"
+    (let ((piece-html (assoc-ref html "piece")))
+      (and (string-contains piece-html
+                             "href=\"/index.html\">Root</a> <a class=\"forest-tree-id\"")
+           (string-contains piece-html "[root]")
+           (string-contains piece-html "data-taxon=\"host-tax\"")
+           (string-contains piece-html ">host-tax </span>")))))
 
 (let* ((citation
          (make-site-page "citation" "A citation"

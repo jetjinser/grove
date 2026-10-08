@@ -172,10 +172,11 @@
   (test-assert "links produce reverse links"
     (and (string-contains algebra-html "class=\"backmatter backlinks\"")
          (string-contains algebra-html
-                          "href=\"/limits.html#ref-1\">Limits</a>")))
+                          "href=\"/limits.html#ref-1\">the algebra note</a>")
+         (string-contains algebra-html "[limits]")))
   (test-assert "reverse links point back to their source"
     (string-contains limits-html
-                     "href=\"/index.html#ref-1\">Algebra &amp; limits</a>"))
+                     "href=\"/index.html#ref-1\">limits</a>"))
   (test-assert "backlinks have a semantic heading"
     (string-contains limits-html "<h2>Backlinks</h2>"))
   (test-assert "backmatter labels can be customized in HTML and text"
@@ -259,7 +260,8 @@
     (and (string-contains (assoc-ref html "source") "href=\"/overview.html\">the overview</a>")
          (string-contains (assoc-ref text "source") "overview.txt")))
   (test-assert "backlinks belong to the referenced tree"
-    (and (string-contains (assoc-ref html "overview") "href=\"/source.html#ref-1\">Source</a>")
+    (and (string-contains (assoc-ref html "overview")
+                          "href=\"/source.html#ref-1\">the overview</a>")
          (null? (incoming-references forest "target"))))
   (test-assert "text directory and body share occurrence anchors"
     (and (string-contains (assoc-ref text "target") "- Overview [#overview]")

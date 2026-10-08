@@ -410,10 +410,15 @@
         (string-contains algebra-html
           "href=\"/notes/limits.html\">limits</a>"))
       (test-assert "HTML does not impose topic navigation"
-        (and (not (string-contains algebra-html "page-topics"))
-             (not (string-contains algebra-html "class=\"tag\""))
-             (not (string-contains algebra-html "class=\"taxon\""))
-             (not (string-contains algebra-html "Mathematics"))))
+        (let* ((cut (or (string-contains algebra-html "<aside")
+                        (string-length algebra-html)))
+               (body (substring algebra-html 0 cut)))
+          ;;     Taxa surface only inside backmatter entries; the page
+          ;;     body and titles stay free of topic chrome.
+          (and (not (string-contains algebra-html "page-topics"))
+               (not (string-contains body "class=\"tag\""))
+               (not (string-contains body "class=\"taxon\""))
+               (not (string-contains algebra-html "Mathematics")))))
       (test-assert "HTML project emits named tree titles"
         (string-contains algebra-html
           "<h2 class=\"forest-tree-title\"><span>Quadratic equations</span>"))
@@ -422,7 +427,7 @@
           "href=\"/notes/quadratic-equations.html\">about quadratics</a>"))
       (test-assert "HTML project output contains reverse links"
         (string-contains limits-html
-          "href=\"/index.html#ref-1\">Algebra</a>"))
+          "href=\"/index.html#ref-1\">limits</a>"))
       (test-assert "HTML project output preserves TeX for MathJax"
         (and (string-contains algebra-html "\\(x^2+y^2=z^2\\)")
              (string-contains algebra-html
@@ -497,7 +502,7 @@
               (read-test-file
                 (string-append cache-output-directory
                                "/notes/unlinked.html"))
-              "Algebra"))
+              "href=\"/index.html#ref-2\">unlinked</a>"))
           (test-assert "text target updates new backlink content"
             (string-contains
               (read-test-file

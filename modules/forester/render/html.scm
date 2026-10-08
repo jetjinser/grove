@@ -14,6 +14,7 @@
   #:use-module (grove highlight)
   #:use-module (grove render html routes)
   #:use-module (grove site)
+  #:use-module ((forester private content-index) #:prefix content-index:)
   #:use-module (forester backmatter)
   #:use-module (grove style html)
   #:use-module (forester style html)
@@ -144,17 +145,50 @@ otherwise the generated position anchor that backs repeated occurrences."
                   (cdr content)
                   (list content)))))))
 
+(define (taxon-entry-sxml page)
+  "Leading taxon span for a backmatter entry, from the page's own
+top-level taxon element; empty pages contribute nothing."
+  (let loop ((children (content-document-children (site-page-document page))))
+    (if (null? children)
+        '()
+        (let ((child (car children)))
+          (if (and (content-element? child)
+                   (eq? (content-element-kind child) 'taxon))
+              (let ((text (content-index:content->plain-text child)))
+                (if (string-null? text)
+                    '()
+                    (let ((id (content-element-property child 'id)))
+                      `((span (@ (class "taxon")
+                                  ,@(if id `((data-taxon ,id)) '()))
+                              ,text " ")))))
+              (loop (cdr children)))))))
+
+(define (tree-slug-sxml id url)
+  `(a (@ (class "forest-tree-id") (href ,url)
+         (aria-label ,(string-append "Open tree " (display-tree-id id)
+                                     " as a page")))
+      "[" ,(display-tree-id id) "]"))
+
+(define (backmatter-page-entry-sxml routes page)
+  (let* ((id (site-page-id page))
+         (url (html-page-url routes id)))
+    `(li ,@(taxon-entry-sxml page)
+       (a (@ (href ,url)) ,(site-page-title page)) " "
+       ,(tree-slug-sxml id url))))
+
 (define (backlink-reference-sxml forest routes reference)
-  (let ((source
-          (find (lambda (candidate)
-                  (equal? (site-page-id candidate)
-                          (reference-source-page-id reference)))
-                (pages forest))))
-    `(li
-       (a (@ (href ,(reference-source-url routes reference)))
-          ,(site-page-title source))
-       " — "
-       ,(reference-label reference))))
+  (let* ((source
+           (find (lambda (candidate)
+                   (equal? (site-page-id candidate)
+                           (reference-source-page-id reference)))
+                 (pages forest)))
+          (url (reference-source-url routes reference))
+          (id (reference-source-page-id reference))
+          (label (reference-label reference)))
+    `(li ,@(taxon-entry-sxml source)
+       (a (@ (href ,url))
+          ,(if (string-null? label) (site-page-title source) label)) " "
+       ,(tree-slug-sxml id url))))
 
 (define (backmatter-section-sxml class label content details?)
   (if details?
@@ -181,12 +215,7 @@ otherwise the generated position anchor that backs repeated occurrences."
   (let* ((sources (context-pages forest (site-page-id page)))
          (items
            (map (lambda (source)
-                  (list 'li
-                    (list 'a
-                      (list '@
-                        (list 'href
-                          (html-page-url routes (site-page-id source))))
-                      (site-page-title source))))
+                  (backmatter-page-entry-sxml routes source))
                 sources)))
     (if (null? sources)
         '()
@@ -199,13 +228,7 @@ otherwise the generated position anchor that backs repeated occurrences."
                 class label
                 (list `(ul
                         ,@(map (lambda (target)
-                                 (list 'li
-                                   (list 'a
-                                     (list '@
-                                       (list 'href
-                                         (html-page-url
-                                           routes (site-page-id target))))
-                                     (site-page-title target))))
+                                 (backmatter-page-entry-sxml routes target))
                                targets)))
                 details?))))
 
