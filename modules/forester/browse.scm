@@ -130,7 +130,7 @@
   (section "Related" (related-pages forest (site-page-id page)))
   (section "References" (reference-pages forest (site-page-id page)))
   (section "Backlinks" (backlinks forest (site-page-id page)))
-  (section "Context" (transcluding-pages forest (site-page-id page))))
+  (section "Context" (context-pages forest (site-page-id page))))
 
 (define (render-page forest page expanded output)
   "Write PAGE and return its navigable entries as (kind label target) lists."

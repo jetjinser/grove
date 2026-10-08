@@ -118,7 +118,7 @@ HTML renderer so text and HTML address occurrences identically."
                  references))))))
 
 (define (context-text forest page routes label)
-  (let ((sources (transcluding-pages forest (site-page-id page))))
+  (let ((sources (context-pages forest (site-page-id page))))
     (if (null? sources)
         ""
         (string-append

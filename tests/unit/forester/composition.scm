@@ -331,6 +331,28 @@
   (test-assert "transcluded text links use the host route and destination"
     (string-contains (assoc-ref text "host") "destination.txt")))
 
+(let* ((root
+         (make-site-page
+           "root" "Root"
+           (evaluate-document
+             (string-append
+               "@subtree[#:id \"piece\"]{@title{Piece}@paragraph{Owned text.}}"
+               " @transclude[\"piece\"]"))
+           "plants/root.plant"))
+       (host
+         (make-site-page
+           "host" "Host"
+           (evaluate-document "Before. @transclude[\"piece\"] After.")
+           "plants/host.plant"))
+       (forest (make-forest (make-site (list root host))))
+       (html (render-test-html forest #:mathjax-src #f)))
+  (test-equal "context unions the defining page with transcluding pages"
+    '("root" "host")
+    (map site-page-id (context-pages forest "piece")))
+  (test-assert "defining page renders in the subtree's standalone context"
+    (string-contains (assoc-ref html "piece")
+                     "href=\"/index.html\">Root</a>")))
+
 (let* ((citation
          (make-site-page "citation" "A citation"
            (evaluate-document "@taxon[\"ReFeReNcE\"]")

@@ -200,7 +200,7 @@
              (case name
                ((context)
                 (section heading
-                         (transcluding-pages forest (site-page-id page))))
+                         (context-pages forest (site-page-id page))))
                ((references)
                 (section heading
                          (reference-pages forest (site-page-id page)

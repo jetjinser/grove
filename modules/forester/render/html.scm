@@ -178,7 +178,7 @@ otherwise the generated position anchor that backs repeated occurrences."
                 details?)))))
 
 (define (context-sxml forest page routes label details?)
-  (let* ((sources (transcluding-pages forest (site-page-id page)))
+  (let* ((sources (context-pages forest (site-page-id page)))
          (items
            (map (lambda (source)
                   (list 'li

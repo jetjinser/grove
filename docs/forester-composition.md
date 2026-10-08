@@ -68,7 +68,7 @@ that order; empty sections are omitted:
 
 | Section | Meaning |
 | --- | --- |
-| Context | Trees that transclude this tree. |
+| Context | Trees embedding this tree: the tree that defines it as a subtree and the trees that transclude it. |
 | References | Reference-taxon targets linked from this tree and its composition. |
 | Backlinks | Authored links to this tree. |
 | Related | Non-reference targets linked directly from this tree. |

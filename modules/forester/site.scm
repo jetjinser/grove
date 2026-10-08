@@ -45,6 +45,7 @@
             outgoing-transclusions
             incoming-transclusions
             transcluding-pages
+            context-pages
             source-paths
             module-paths
             page-source-paths))
@@ -618,6 +619,29 @@ anchors."
                 (delete-duplicates
                   (map composition:transclusion-source-tree-id
                        (incoming-transclusions forest id))
+                  equal?))))
+        (filter (lambda (page)
+                  (hash-ref source-ids (site-page-id page)))
+                (pages forest))))))
+
+;; Context = every page in whose displayed content this page appears:
+;; hosts of its transclusions and the page that defines it as a subtree.
+(define (context-pages forest id)
+  (cached-rows forest `(context-pages ,id)
+    (lambda ()
+      (let ((source-ids
+              (id-member-set
+                (delete-duplicates
+                  (append
+                   (map composition:transclusion-source-tree-id
+                        (incoming-transclusions forest id))
+                   (map composition:subtree-definition-parent
+                        (filter (lambda (definition)
+                                  (equal? (composition:subtree-definition-child
+                                            definition)
+                                          id))
+                                (composition:subtree-definitions
+                                  (composition forest)))))
                   equal?))))
         (filter (lambda (page)
                   (hash-ref source-ids (site-page-id page)))
