@@ -7,135 +7,50 @@
   #:use-module (blue stencils guile)
   #:use-module (blue stencils template-file)
   #:use-module (blue stencils texinfo)
+  #:use-module (ice-9 ftw)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (grove-modules forester-modules grove-programs))
 
-(define +grove-sources+
-  '("grove/build.scm"
-    "grove/highlight.scm"
-    "grove/i18n.scm"
-    "grove/build/state.scm"
-    "grove/collect.scm"
-    "grove/cli.scm"
-    "grove/project/new.scm"
-    "grove/private/cache-dir.scm"
-    "grove/private/cli/progress.scm"
-    "grove/private/input/cache.scm"
-    "grove/private/input/dependencies.scm"
-    "grove/private/files.scm"
-    "grove/serve.scm"
-    "grove/private/preview/http.scm"
-    "grove/private/preview/watch.scm"
-    "grove/private/preview/worker.scm"
-    "grove/ir.scm"
-    "grove/element.scm"
-    "grove/string-fun.scm"
-    "grove/style.scm"
-    "grove/math/audit.scm"
-    "grove/math/syntax.scm"
-    "grove/math/term.scm"
-    "grove/math/operator.scm"
-    "grove/math/assumption.scm"
-    "grove/math/declaration.scm"
-    "grove/math/domain.scm"
-    "grove/math/context.scm"
-    "grove/math/types.scm"
-    "grove/math/rule-spec.scm"
-    "grove/math/rule.scm"
-    "grove/math/catalog.scm"
-    "grove/math/identities.scm"
-    "grove/math/vector.scm"
-    "grove/math/differentiation.scm"
-    "grove/math/partial.scm"
-    "grove/math/function-derivative.scm"
-    "grove/math/components.scm"
-    "grove/math/spatial.scm"
-    "grove/math/polynomial.scm"
-    "grove/math/polynomial/contract.scm"
-    "grove/math/private/checker-polynomial.scm"
-    "grove/math/exact-polynomial.scm"
-    "grove/math/integration.scm"
-    "grove/math/arithmetic.scm"
-    "grove/math/number.scm"
-    "grove/math/normalization.scm"
-    "grove/math/scalar.scm"
-    "grove/math/premise.scm"
-    "grove/math/derivation.scm"
-    "grove/math/proof.scm"
-    "grove/math/diagnostic.scm"
-    "grove/math/report.scm"
-    "grove/math/source.scm"
-    "grove/math/provenance.scm"
-    "grove/math/expression.scm"
-    "grove/math/semantic.scm"
-    "grove/math/formula.scm"
-    "grove/math/formula/reader.scm"
-    "grove/math/notation.scm"
-    "grove/math/notation/core.scm"
-    "grove/math/presentation.scm"
-    "grove/math/pass.scm"
-    "grove/math/strategy.scm"
-    "grove/math/verification.scm"
-    "grove/math/semantic-check.scm"
-    "grove/math/layout.scm"
-    "grove/math/rewrite.scm"
-    "grove/math/pipeline.scm"
-    "grove/relation.scm"
-    "grove/output.scm"
-    "grove/project.scm"
-    "grove/project/diagnostic.scm"
-    "grove/project/load.scm"
-    "grove/project/site.scm"
-    "grove/private/minikanren.scm"
-    "grove/relation/dsl.scm"
-    "grove/site.scm"
-    "grove/input/scribble.scm"
-    "grove/render/html.scm"
-    "grove/render/html/routes.scm"
-    "grove/render/static.scm"
-    "grove/render/text.scm"
-    "grove/style/html.scm"
-    "grove/style/highlight.scm"
-    "language/scribble/command.scm"
-    "language/scribble/flow.scm"
-    "language/scribble/commands.scm"
-    "language/scribble/parser.scm"
-    "language/scribble/source.scm"
-    "language/scribble/spec.scm"))
+;;     The module manifest is scanned from the tree when the blueprint
+;;     loads, so a new file cannot be missed at install; grove/ssh.scm
+;;     stays conditional because compiling it requires guile-ssh.
+(define module-root
+  (string-append (dirname (dirname (current-filename))) "/modules"))
 
-(define +forester-sources+
-  '("forester/backmatter.scm"
-    "forester/browse.scm"
-    "forester/commands.scm"
-    "forester/i18n.scm"
-    "forester/composition.scm"
-    "forester/private/content-index.scm"
-    "forester/private/date.scm"
-    "forester/private/query-output.scm"
-    "forester/private/trees.scm"
-    "forester/private/web.scm"
-    "forester/site.scm"
-    "forester/style/html.scm"
-    "forester/style/i18n.scm"
-    "forester/input/scribble.scm"
-    "forester/render/artifact.scm"
-    "forester/render/html.scm"
-    "forester/render/graph.scm"
-    "forester/render/gemtext.scm"
-    "forester/render/rss.scm"
-    "forester/render/sitemap.scm"
-    "forester/render/text.scm"
-    "forester/render/text/routes.scm"
-    "forester/relations.scm"))
+(define (scan-module-sources directory)
+  (define (relative name prefix)
+    (if (string-null? prefix) name (string-append prefix "/" name)))
+  (sort
+    (let loop ((path directory) (prefix ""))
+      (append-map
+        (lambda (name)
+          (cond
+            ((member name '("." "..")) '())
+            ((file-is-directory? (string-append path "/" name))
+             (loop (string-append path "/" name) (relative name prefix)))
+            ((string-suffix? ".scm" name)
+             (list (relative name prefix)))
+            (else '())))
+        (scandir path)))
+    string<?))
 
-;; SSH support needs guile-ssh. It is a conditional component: build it when the
-;; dependency is available, otherwise leave it out and let the CLI report that
-;; SSH is unavailable.
 (define guile-ssh?
   (and=> (search-path %load-path "ssh/session.scm") (lambda (_path) #t)))
 
-(define +grove-ssh-sources+ '("grove/ssh.scm"))
+(define all-module-sources (scan-module-sources module-root))
+
+(define grove-source-files
+  (filter (lambda (source) (string-prefix? "grove/" source))
+          (if guile-ssh?
+              all-module-sources
+              (delete "grove/ssh.scm" all-module-sources))))
+
+(define forester-source-files
+  (filter (lambda (source)
+            (any (lambda (prefix) (string-prefix? prefix source))
+                 '("forester/" "language/")))
+          all-module-sources))
 
 (define grove-modules
   (append (map
@@ -146,9 +61,7 @@
         (load-path #%~(list #%?srcdir))
         (optimizations
           '(#:seal-private-binddings? #t))))
-    (if guile-ssh?
-        (append +grove-sources+ +grove-ssh-sources+)
-        +grove-sources+))
+    grove-source-files)
     (list (template-file
             (inputs "grove/style/highlight.css")
             (outputs "grove/style/highlight.css")
@@ -164,7 +77,7 @@
           (load-path #%~(list #%?srcdir))
           (optimizations
             '(#:seal-private-binddings? #t))))
-      +forester-sources+)
+      forester-source-files)
     (list
       (template-file
         (inputs "forester/data/lipsum-la.txt")
