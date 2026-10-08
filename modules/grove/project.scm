@@ -4,6 +4,7 @@
 
 (define-module (grove project)
   #:use-module (grove string-fun)
+  #:use-module (grove private cache-dir)
   #:use-module (grove private input cache)
   #:use-module (grove private input dependencies)
   #:use-module (grove build)
@@ -496,12 +497,12 @@ Return a project-analysis holding the analyzed model."
          (analysis-trace (project-analysis-trace analysis))
          (model (project-analysis-model analysis))
          (input-cache-context (project-analysis-input-cache-context analysis))
+         (state-directory
+           (grove-cache-directory (project-output-directory project)))
          (state-path
-           (string-append (project-output-directory project) "/"
-                          build-state-name))
+           (string-append state-directory "/" build-state-name))
          (state-temp-path
-           (string-append (project-output-directory project) "/"
-                          build-state-temp-name))
+           (string-append state-directory "/" build-state-temp-name))
          (previous-state (and write? (read-build-state state-path)))
          (previous-sources (if previous-state
                                (build-state-sources previous-state) '()))

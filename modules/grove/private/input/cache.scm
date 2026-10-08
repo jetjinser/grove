@@ -3,6 +3,7 @@
 
 (define-module (grove private input cache)
   #:use-module (grove ir)
+  #:use-module (grove private cache-dir)
   #:use-module (grove private input dependencies)
   #:use-module (grove style)
   #:use-module (grove style html)
@@ -22,7 +23,8 @@
   (and enabled?
     (let ((globals (make-hash-table)))
       (for-each (lambda (path) (hash-set! globals path #t)) dependencies)
-      (list (string-append directory "/.grove-input-cache")
+      (list (string-append (grove-cache-directory directory)
+                           "/input-cache")
             enabled? dependencies (make-hash-table) globals))))
 
 (define (register-input-dependencies! context paths)

@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove output)
+  #:use-module (grove private cache-dir)
   #:use-module (grove string-fun)
   #:use-module (ice-9 ftw)
   #:use-module (ice-9 binary-ports)
@@ -20,7 +21,8 @@
             artifact-sources
             prefix-artifacts
             validate-artifacts
-            write-artifacts))
+            write-artifacts
+            ensure-directory))
 
 (define-record-type <artifact>
   (%make-artifact path content sources)
@@ -76,6 +78,29 @@
 
 (define artifact-manifest-name ".grove-artifacts")
 (define artifact-manifest-temp-name ".grove-artifacts.tmp")
+
+(define legacy-metadata-names
+  '(".grove-artifacts" ".grove-artifacts.tmp"
+    ".grove-build-state" ".grove-build-state.tmp"
+    ".grove-input-cache"))
+
+(define (delete-tree path)
+  (if (file-is-directory? path)
+      (begin
+        (for-each (lambda (entry)
+                    (unless (member entry '("." ".."))
+                      (delete-tree (string-append path "/" entry))))
+                  (scandir path))
+        (rmdir path))
+      (delete-file path)))
+
+(define (delete-legacy-metadata directory)
+  ;;     Earlier versions kept these inside the output directory.
+  (for-each (lambda (name)
+              (let ((path (string-append directory "/" name)))
+                (when (file-exists? path)
+                  (delete-tree path))))
+            legacy-metadata-names))
 
 (define (reserved-artifact-path? path)
   (any (lambda (reserved)
@@ -152,12 +177,14 @@
 (define (write-artifacts directory artifacts)
   (validate-artifacts artifacts)
   (let* ((paths (map artifact-path artifacts))
+         (cache-directory (grove-cache-directory directory))
          (manifest-path
-           (string-append directory "/" artifact-manifest-name))
+           (string-append cache-directory "/" artifact-manifest-name))
          (manifest-temp-path
-           (string-append directory "/" artifact-manifest-temp-name))
+           (string-append cache-directory "/" artifact-manifest-temp-name))
          (previous-paths (read-artifact-manifest manifest-path)))
     (ensure-directory directory)
+    (ensure-directory cache-directory)
     (for-each
       (lambda (artifact)
         (let ((path (string-append directory "/" (artifact-path artifact))))
@@ -185,4 +212,5 @@
             (when (file-exists? full-path)
               (delete-file full-path)))))
       previous-paths)
-    (write-artifact-manifest manifest-path manifest-temp-path paths)))
+    (write-artifact-manifest manifest-path manifest-temp-path paths)
+    (delete-legacy-metadata directory)))

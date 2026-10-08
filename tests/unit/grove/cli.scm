@@ -6,6 +6,7 @@
   #:use-module (ice-9 textual-ports)
   #:use-module (ice-9 string-fun)
   #:use-module (grove build state)
+  #:use-module (grove private cache-dir)
   #:use-module (tests unit grove subprocess)
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64))
@@ -35,6 +36,9 @@
 (test-begin "grove CLI")
 (dynamic-wind
   (lambda ()
+    ;;     The same cache root the subprocesses receive below, so
+    ;;     snapshots computed here read the files they write.
+    (setenv "XDG_CACHE_HOME" (string-append root "/cache"))
     (mkdir root)
     (prepare-subprocess root)
     (mkdir (string-append root "/sources"))
@@ -127,8 +131,11 @@
       (test-equal "missing project exits with status 1" 1 (car result))
       (test-assert "missing project identifies loading stage"
         (string-contains (caddr result) "load failed")))
-    (let* ((paths (map (lambda (name) (string-append root "/output/" name))
-                       '("page.txt" ".grove-artifacts" ".grove-build-state")))
+    (let* ((cache-directory (grove-cache-directory
+                              (string-append root "/output")))
+           (paths (list (string-append root "/output/page.txt")
+                        (string-append cache-directory "/.grove-artifacts")
+                        (string-append cache-directory "/.grove-build-state")))
            (snapshot (lambda ()
                        (map (lambda (path)
                               (list (file-fingerprint path)
@@ -157,7 +164,8 @@
           ("validate" "(list (make-artifact \"page.txt\" \"page\"))"
                       "(list (make-artifact \"a\" \"file\") (make-artifact \"a/b\" \"nested\"))")))
       (write-file config original-config)
-      (write-file (string-append root "/output/.grove-build-state") "malformed state")
+      (write-file (string-append cache-directory "/.grove-build-state")
+                  "malformed state")
       (let ((before (snapshot)))
         (test-equal "CLI check ignores malformed published cache state" 0
           (car (run "check" "--project" config)))

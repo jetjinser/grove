@@ -140,6 +140,7 @@
                 identity)))
     (unless (valid-build-state? state)
       (error "refusing to write invalid Grove build state" state))
+    (ensure-directory (dirname temp-path))
     (call-with-output-file temp-path
       (lambda (port)
         (set-port-encoding! port "UTF-8")

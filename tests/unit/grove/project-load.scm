@@ -34,6 +34,7 @@
 (test-begin "project loading")
 (dynamic-wind
   (lambda ()
+    (setenv "XDG_CACHE_HOME" (string-append root "/.cache"))
     (mkdir root)
     (mkdir (string-append root "/sources"))
     (write-file (string-append root "/sources/input.txt") "input")

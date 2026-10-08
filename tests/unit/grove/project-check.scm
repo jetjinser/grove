@@ -5,6 +5,7 @@
   #:use-module (grove build)
   #:use-module (grove build state)
   #:use-module (grove output)
+  #:use-module (grove private cache-dir)
   #:use-module (grove project)
   #:use-module (grove project diagnostic)
   #:use-module (ice-9 ftw)
@@ -30,16 +31,19 @@
     #:output-directory output))
 
 (define (snapshot)
-  (map (lambda (name)
-         (let* ((path (string-append output "/" name))
+  (map (lambda (pair)
+         (let* ((path (string-append (car pair) "/" (cdr pair)))
                 (info (stat path)))
-           (list name (file-fingerprint path)
+           (list path (file-fingerprint path)
                  (stat:ino info) (stat:mtime info))))
-       '("page.txt" ".grove-artifacts" ".grove-build-state")))
+       (list (cons output "page.txt")
+             (cons (grove-cache-directory output) ".grove-artifacts")
+             (cons (grove-cache-directory output) ".grove-build-state"))))
 
 (test-begin "project checks")
 (dynamic-wind
   (lambda ()
+    (setenv "XDG_CACHE_HOME" (string-append root "/.cache"))
     (mkdir root)
     (call-with-output-file source (lambda (port) (display "source" port))))
   (lambda ()
@@ -77,7 +81,8 @@
                                 (make-artifact "a" "2"))))
     (test-error "artifact validation rejects reserved paths without writing" #t
       (validate-artifacts (list (make-artifact ".grove-build-state/data" "x"))))
-    (call-with-output-file (string-append output "/.grove-build-state")
+    (call-with-output-file
+      (string-append (grove-cache-directory output) "/.grove-build-state")
       (lambda (port) (display "invalid state" port)))
     (set! artifacts '())
     (test-assert "check does not read malformed output cache state"

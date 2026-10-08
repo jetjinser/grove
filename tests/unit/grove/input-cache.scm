@@ -13,6 +13,7 @@
   #:use-module (grove project)
   #:use-module (grove output)
   #:use-module (grove render html)
+  #:use-module (grove private cache-dir)
   #:use-module (ice-9 ftw)
   #:use-module (ice-9 textual-ports)
   #:use-module (system base compile)
@@ -67,7 +68,10 @@
 
 (test-begin "document result cache")
 (dynamic-wind
-  (lambda () (mkdir root) (put source "First") (put dependency "one"))
+  (lambda ()
+    (setenv "XDG_CACHE_HOME" (string-append root "/.cache"))
+    (mkdir root)
+    (put source "First") (put dependency "one"))
   (lambda ()
     (parameterize ((current-input-fingerprints (make-hash-table)))
       (let* ((before (input-fingerprint dependency))
@@ -101,7 +105,8 @@
     (test-equal "reader dependencies conservatively force a full render" 1 partial-renders)
     (build-project (project #f))
     (test-equal "disabling project cache forces evaluation" 4 evaluations)
-    (let* ((directory (string-append output "/.grove-input-cache"))
+    (let* ((directory (string-append (grove-cache-directory output)
+                                     "/input-cache"))
            (entry (string-append directory "/"
                     (car (scandir directory (lambda (name)
                                              (not (member name '("." "..")))))))))
@@ -115,7 +120,8 @@
     (test-equal "check always evaluates the source" 5 evaluations)
     (build-project (project #t))
     (test-equal "check does not replace the stored entry" 5 evaluations)
-    (let* ((directory (string-append output "/.grove-input-cache"))
+    (let* ((directory (string-append (grove-cache-directory output)
+                                     "/input-cache"))
            (entry (string-append directory "/"
                     (car (scandir directory (lambda (name)
                                              (not (member name '("." "..")))))))))
@@ -285,7 +291,8 @@
         (test-equal "renderer opt-out forces rendering on every build" 4 renders)))
     (prune-input-cache! (make-input-cache-context output #t '()))
     (test-equal "entries outside the current selection are removed"
-      '("." "..") (scandir (string-append output "/.grove-input-cache")))
+      '("." "..") (scandir (string-append (grove-cache-directory output)
+                                          "/input-cache")))
     (test-error "input cache directory is reserved from artifacts" #t
       (validate-artifacts (list (make-artifact ".grove-input-cache/user" "x")))))
   (lambda () (system* "rm" "-rf" root)))

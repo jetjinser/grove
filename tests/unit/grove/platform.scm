@@ -28,6 +28,7 @@
 
 (dynamic-wind
   (lambda ()
+    (setenv "XDG_CACHE_HOME" (string-append platform-root "/.cache"))
     (mkdir platform-root)
     (mkdir source-directory)
     (write-test-file alpha-source "alpha")
@@ -148,10 +149,6 @@
           (delete-file path)))
       (list (string-append output-directory "/pages.list")
             (string-append output-directory "/page-count")
-            (string-append output-directory "/.grove-artifacts")
-            (string-append output-directory "/.grove-artifacts.tmp")
-            (string-append output-directory "/.grove-build-state")
-            (string-append output-directory "/.grove-build-state.tmp")
             alpha-source
             beta-source
             theme-source))
@@ -159,6 +156,7 @@
       (rmdir output-directory))
     (when (file-exists? source-directory)
       (rmdir source-directory))
+    (system* "rm" "-rf" (string-append platform-root "/.cache"))
     (when (file-exists? platform-root)
       (rmdir platform-root))))
 

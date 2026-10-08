@@ -55,6 +55,7 @@
 
 (dynamic-wind
   (lambda ()
+    (setenv "XDG_CACHE_HOME" (string-append project-root "/.cache"))
     (mkdir source-directory)
     (mkdir module-directory)
     (mkdir mathematics-directory)
