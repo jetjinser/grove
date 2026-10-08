@@ -19,6 +19,7 @@
   #:export (project?
             make-project
             current-analysis-timings
+            current-analysis-phase-start
             project-source-directory
             project-tree-template
             project-default-prefix
@@ -56,6 +57,10 @@
 ;; call it once per phase with the phase symbol and its wall time; the
 ;; CLI installs a reporter so phase durations show in the build log.
 (define current-analysis-timings (make-parameter #f))
+
+;; Phase-start hook, fired with just the phase symbol before a phase
+;; runs, so the CLI can announce it before knowing its duration.
+(define current-analysis-phase-start (make-parameter #f))
 
 (define-record-type <project-input>
   (make-project-input path value)

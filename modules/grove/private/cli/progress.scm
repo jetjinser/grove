@@ -10,6 +10,11 @@
 (define (cli-seconds)
   (/ (get-internal-real-time) internal-time-units-per-second))
 
+(define (format-duration seconds)
+  (if (< seconds 1)
+      (format #f "~dms" (inexact->exact (round (* 1000 seconds))))
+      (format #f "~,2fs" seconds)))
+
 (define (terminal-output? port)
   (and (isatty? port) (not (equal? (getenv "TERM") "dumb"))))
 
@@ -33,11 +38,13 @@
 (define* (print-cli-summary report elapsed #:key output (checked? #f))
   (print-cli-status "Finished"
     (if checked?
-        (format #f "~d artifact~:p checked in ~,2fs"
-                (length (build-report-artifacts report)) elapsed)
-        (format #f "~d artifact~:p (~d affected) in ~,2fs"
+        (format #f "~d artifact~:p checked in ~a"
                 (length (build-report-artifacts report))
-                (length (build-report-affected-artifacts report)) elapsed)))
+                (format-duration elapsed))
+        (format #f "~d artifact~:p (~d affected) in ~a"
+                (length (build-report-artifacts report))
+                (length (build-report-affected-artifacts report))
+                (format-duration elapsed))))
   (when output (print-cli-status "Output" output))
   (unless (build-report-rendered? report)
     (print-cli-status "Cached" "Renderer cache hit.")))
@@ -65,12 +72,14 @@
          (total 0)
          (completed 0)
          (active? #f)
+         (analysis-open? #f)
          (timed-stage #f)
          (stage-start 0))
     (define (clear-progress)
       (when active?
         (display "\r\x1b[2K" port)
         (set! active? #f)
+        (set! analysis-open? #f)
         (force-output port)))
     (define (finish-stage)
       ;;     Report how long the previous stage took, so slow phases are
@@ -78,7 +87,7 @@
       (when timed-stage
         (status-line port
           (assq-ref stage-verbs timed-stage)
-          (format #f "in ~,2fs" (- (cli-seconds) stage-start))
+          (format #f "in ~a" (format-duration (- (cli-seconds) stage-start)))
           "1;36")
         (newline port)
         (force-output port)
@@ -111,13 +120,31 @@
         ((read-done)
          (set! completed (+ completed 1))
          (draw-progress detail))
+        ((analysis-phase-start)
+         ;;     Announce the phase before it runs. A terminal keeps the
+         ;;     line open and completes it with the duration; redirected
+         ;;     output waits for the whole line.
+         (when terminal?
+           (clear-progress)
+           (status-line port "Analyzing" (format #f "~18a" detail))
+           (set! active? #t)
+           (set! analysis-open? #t)
+           (force-output port)))
         ((analysis-phase)
          ;;     Analysis phases, reported by the project's own
          ;;     analyzer; each names itself.
-         (clear-progress)
-         (print-cli-status "Analyzing"
-           (format #f "~18a ~,2fs" (car detail) (cdr detail))
-           port))
+         (if (and terminal? analysis-open?)
+             (begin
+               (format port " ~a~%" (format-duration (cdr detail)))
+               (set! active? #f)
+               (set! analysis-open? #f)
+               (force-output port))
+             (begin
+               (clear-progress)
+               (print-cli-status "Analyzing"
+                 (format #f "~18a ~a" (car detail)
+                         (format-duration (cdr detail)))
+                 port))))
         ((render-page)
          ;;     Page-level progress. A terminal gets a transient bar;
          ;;     a redirected run gets one line per page, which also
@@ -139,8 +166,9 @@
          ;;     slow renderer without per-page noise.
          (clear-progress)
          (print-cli-status "Renderer"
-           (format #f "~d: ~d artifacts in ~,2fs"
-                   (+ (car detail) 1) (caddr detail) (cadr detail))
+           (format #f "~d: ~d artifacts in ~a"
+                   (+ (car detail) 1) (caddr detail)
+                   (format-duration (cadr detail)))
            port))
         (else
          (let ((label (case stage
