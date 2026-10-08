@@ -157,6 +157,18 @@
 (let* ((rendered (render-test-html (make-forest (make-site (list algebra limits)))))
        (algebra-html (assoc-ref rendered "algebra"))
        (limits-html (assoc-ref rendered "limits")))
+  (test-assert "metadata items are a user-extensible hook"
+    (string-contains
+      (assoc-ref
+        (render-test-html
+          (make-forest (make-site (list algebra limits)))
+          #:mathjax-src #f
+          #:metadata-items
+          (lambda (page)
+            (cons '(li (@ (class "meta-item")) "hooked")
+                  (default-metadata-items page))))
+        "algebra")
+      "<div class=\"metadata\"><ul><li class=\"meta-item\">hooked</li></ul></div>"))
   (test-assert "at-exp link resolves to a page"
     (string-contains algebra-html "href=\"/limits.html\">limits</a>"))
   (test-assert "standalone pages use the open tree disclosure"

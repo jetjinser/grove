@@ -23,6 +23,7 @@
   #:export (site->html
             split-into-chunks
             render-html
+            default-metadata-items
             make-html-renderer))
 
 (define (link-url routes reference element)
@@ -77,7 +78,8 @@ otherwise the generated position anchor that backs repeated occurrences."
 
 (define* (subtree-content-sxml forest routes page
                               #:optional (anchor-prefix "") (depth 1) (highlighters '())
-                              #:key (title-decoration #f))
+                              #:key (title-decoration #f)
+                              (metadata-items default-metadata-items))
   (let ((position 0))
     (define (render-tree element _render)
       (set! position (1+ position))
@@ -89,11 +91,12 @@ otherwise the generated position anchor that backs repeated occurrences."
               "inline-subtree" "transclusion")
           id (site-page-title target) (html-page-url routes id)
           (subtree-content-sxml forest routes target (string-append anchor "--") (1+ depth) highlighters
-                                #:title-decoration title-decoration)
+                                #:title-decoration title-decoration
+                                #:metadata-items metadata-items)
           #:anchor anchor #:depth (1+ depth)
           #:style (content-element-style element)
           #:id-prefix anchor-prefix
-          #:metadata (site-page-metadata target)
+          #:metadata-items (metadata-items target)
           #:title-decoration (if title-decoration
                                  (title-decoration forest id)
                                  '())
@@ -111,26 +114,28 @@ otherwise the generated position anchor that backs repeated occurrences."
   (if (string-prefix? "unstable-" id)
       (string-append "#" (substring id (string-length "unstable-")))
       id))
-(define (metadata-sxml metadata)
-  "A tree's metadata line, forester-style: publication dates under the
-title. Pages without dates contribute nothing."
-  (let ((published (assq-ref metadata 'published))
-        (updated (assq-ref metadata 'updated)))
-    (if (and (not published) (not updated))
-        '()
-        (list `(div (@ (class "metadata"))
-                  (ul ,@(if published
-                            `((li (@ (class "meta-item")) ,published))
-                            '())
-                      ,@(if updated
-                            `((li (@ (class "meta-item"))
-                                  ,(string-append "updated " updated)))
-                            '())))))))
+(define (default-metadata-items page)
+  "The stock metadata items: the page's publication dates. Render
+hooks replace this wholesale; compose with it to extend."
+  (let ((published (assq-ref (site-page-metadata page) 'published))
+        (updated (assq-ref (site-page-metadata page) 'updated)))
+    `(,@(if published
+            `((li (@ (class "meta-item")) ,published))
+            '())
+      ,@(if updated
+            `((li (@ (class "meta-item"))
+                  ,(string-append "updated " updated)))
+            '()))))
+
+(define (metadata-sxml items)
+  (if (null? items)
+      '()
+      (list `(div (@ (class "metadata")) (ul ,@items)))))
 
 (define* (tree-block-sxml kind id title page-url content
                           #:key (open? #t) anchor (depth 2)
                           (title-decoration '()) (style #f) (id-prefix "")
-                          (metadata '()))
+                          (metadata-items '()))
   (let* ((style-attributes (style-attribute-assoc style id-prefix))
          (_ (when (assq 'id style-attributes)
               (error "tree container style cannot set an id; the occurrence anchor owns it"
@@ -158,7 +163,7 @@ title. Pages without dates contribute nothing."
                               "Open tree " (display-tree-id id)
                               " as a page")))
               "[" ,(display-tree-id id) "]"))
-         ,@(metadata-sxml metadata))
+         ,@(metadata-sxml metadata-items))
        (div (@ (class "forest-tree-content"))
             ,@(if (and (pair? content) (eq? (car content) 'article))
                   (cdr content)
@@ -188,15 +193,15 @@ top-level taxon element; empty pages contribute nothing."
                                      " as a page")))
       "[" ,(display-tree-id id) "]"))
 
-(define (backmatter-page-entry-sxml routes page)
+(define (backmatter-page-entry-sxml routes page metadata-items)
   (let* ((id (site-page-id page))
          (url (html-page-url routes id)))
     `(li ,@(taxon-entry-sxml page)
        (a (@ (href ,url)) ,(site-page-title page)) " "
        ,(tree-slug-sxml id url)
-       ,@(metadata-sxml (site-page-metadata page)))))
+       ,@(metadata-sxml (metadata-items page)))))
 
-(define (backlink-reference-sxml forest routes reference)
+(define (backlink-reference-sxml forest routes reference metadata-items)
   (let* ((source
            (find (lambda (candidate)
                    (equal? (site-page-id candidate)
@@ -209,7 +214,7 @@ top-level taxon element; empty pages contribute nothing."
        (a (@ (href ,url))
           ,(if (string-null? label) (site-page-title source) label)) " "
        ,(tree-slug-sxml id url)
-       ,@(metadata-sxml (site-page-metadata source)))))
+       ,@(metadata-sxml (metadata-items source)))))
 
 (define (backmatter-section-sxml class label content details?)
   (if details?
@@ -221,63 +226,73 @@ top-level taxon element; empty pages contribute nothing."
          (h2 ,label)
          ,@content)))
 
-(define (backlinks-sxml forest page routes label details?)
+(define (backlinks-sxml forest page routes label details? metadata-items)
   (let ((references (incoming-references forest (site-page-id page))))
     (if (null? references)
         '()
         (list (backmatter-section-sxml
                 "backlinks" label
                 (list `(ul ,@(map (lambda (reference)
-                                    (backlink-reference-sxml forest routes reference))
+                                    (backlink-reference-sxml forest routes reference
+                                                             metadata-items))
                                   references)))
                 details?)))))
 
-(define (context-sxml forest page routes label details?)
+(define (context-sxml forest page routes label details? metadata-items)
   (let* ((sources (context-pages forest (site-page-id page)))
          (items
            (map (lambda (source)
-                  (backmatter-page-entry-sxml routes source))
+                  (backmatter-page-entry-sxml routes source metadata-items))
                 sources)))
     (if (null? sources)
         '()
         (list (backmatter-section-sxml "context" label (list `(ul ,@items)) details?)))))
 
-(define (page-list-backmatter-sxml routes class label targets details?)
+(define (page-list-backmatter-sxml routes class label targets details?
+                                   metadata-items)
     (if (null? targets)
         '()
         (list (backmatter-section-sxml
                 class label
                 (list `(ul
                         ,@(map (lambda (target)
-                                 (backmatter-page-entry-sxml routes target))
+                                 (backmatter-page-entry-sxml routes target
+                                                             metadata-items))
                                targets)))
                 details?))))
 
-(define (related-sxml forest page routes reference-taxon-id label details?)
+(define (related-sxml forest page routes reference-taxon-id label details?
+                      metadata-items)
   (page-list-backmatter-sxml
     routes "related" label
     (related-pages forest (site-page-id page) reference-taxon-id)
-    details?))
+    details? metadata-items))
 
-(define (references-sxml forest page routes reference-taxon-id label details?)
+(define (references-sxml forest page routes reference-taxon-id label details?
+                         metadata-items)
   (page-list-backmatter-sxml
     routes "references" label
     (reference-pages forest (site-page-id page) reference-taxon-id)
-    details?))
+    details? metadata-items))
 
-(define (backmatter-sxml forest page routes sections labels
-                         reference-taxon-id details?)
+(define* (backmatter-sxml forest page routes sections labels
+                         reference-taxon-id details?
+                         #:key (metadata-items default-metadata-items))
   (append-map
     (lambda (section)
       (case section
         ((context) (context-sxml forest page routes
-                                 (assq-ref labels 'context) details?))
+                                 (assq-ref labels 'context) details?
+                                 metadata-items))
         ((references) (references-sxml forest page routes reference-taxon-id
-                                       (assq-ref labels 'references) details?))
+                                       (assq-ref labels 'references) details?
+                                       metadata-items))
         ((backlinks) (backlinks-sxml forest page routes
-                                     (assq-ref labels 'backlinks) details?))
+                                     (assq-ref labels 'backlinks) details?
+                                     metadata-items))
         ((related) (related-sxml forest page routes reference-taxon-id
-                                 (assq-ref labels 'related) details?))))
+                                 (assq-ref labels 'related) details?
+                                 metadata-items))))
     sections))
 
 (define* (table-of-contents-sxml forest page #:key (title-decoration #f))
@@ -384,23 +399,26 @@ top-level taxon element; empty pages contribute nothing."
                     reference-taxon-id
                     #:optional (inline-stylesheets? #f) (highlighters '())
                     #:key (title-decoration #f) (article? #f) (backmatter-details? #f)
-                    (html-attributes '()) (head '()) (site-nav '()) (home-link #f))
+                    (html-attributes '()) (head '()) (site-nav '()) (home-link #f)
+                    (metadata-items default-metadata-items))
   (let* ((site (site forest))
          (body (subtree-content-sxml forest routes page "" 1 highlighters
-                                     #:title-decoration title-decoration))
+                                     #:title-decoration title-decoration
+                                     #:metadata-items metadata-items))
          (tree (tree-block-sxml
                  "page-tree" (site-page-id page) (site-page-title page)
                  (html-page-url routes (site-page-id page)) body
                  #:anchor (string-append "tree-root-" (site-page-id page))
                  #:depth 1
-                 #:metadata (site-page-metadata page)
+                 #:metadata-items (metadata-items page)
                  #:title-decoration (if title-decoration
                                         (title-decoration forest (site-page-id page))
                                         '())))
          (article (append (list tree)
                           (backmatter-sxml forest page routes backmatter
                                            labels reference-taxon-id
-                                           backmatter-details?))))
+                                           backmatter-details?
+                                           #:metadata-items metadata-items))))
     (serialize-html-document
       (html-document
         (site-page-title page)
@@ -423,7 +441,8 @@ top-level taxon element; empty pages contribute nothing."
                              changed old-artifacts highlighters
                              #:key (title-decoration #f) (article? #f)
                              (backmatter-details? #f) (html-attributes '())
-                             (head '()) (site-nav '()) (home-link #f))
+                             (head '()) (site-nav '()) (home-link #f)
+                             (metadata-items default-metadata-items))
   (set! routes (resolve-html-routes forest routes))
   (check-html-input forest style routes mathjax-src)
   (let* ((route-table
@@ -442,7 +461,8 @@ top-level taxon element; empty pages contribute nothing."
                                    #:html-attributes html-attributes
                                    #:head head
                                    #:site-nav site-nav
-                                   #:home-link home-link)))))
+                                   #:home-link home-link
+                                   #:metadata-items metadata-items)))))
                 (pages forest))))
     (append (html-style-artifacts style) page-artifacts)))
 
@@ -485,7 +505,8 @@ top-level taxon element; empty pages contribute nothing."
                        (html-attributes '())
                        (head '())
                        (site-nav '())
-                       (home-link #f))
+                       (home-link #f)
+                       (metadata-items default-metadata-items))
   (validate-backmatter-sections backmatter)
   (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
   (check-reference-taxon-id reference-taxon-id)
@@ -502,7 +523,8 @@ top-level taxon element; empty pages contribute nothing."
                           #:html-attributes html-attributes
                           #:head head
                           #:site-nav site-nav
-                          #:home-link home-link)))
+                          #:home-link home-link
+                          #:metadata-items metadata-items)))
        (pages forest)))
 
 (define (split-into-chunks entries chunk-size)
@@ -531,7 +553,8 @@ errors when the count outlives the list."
                              (html-attributes '())
                              (head '())
                              (site-nav '())
-                             (home-link #f))
+                             (home-link #f)
+                             (metadata-items default-metadata-items))
   (validate-backmatter-sections backmatter)
   (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
   (check-reference-taxon-id reference-taxon-id)
@@ -559,7 +582,8 @@ errors when the count outlives the list."
                           #:html-attributes html-attributes
                           #:head head
                           #:site-nav site-nav
-                          #:home-link home-link)
+                          #:home-link home-link
+                          #:metadata-items metadata-items)
                (page-source-paths forest page)))
            forest-pages
            (iota total 1)))))
@@ -578,6 +602,7 @@ errors when the count outlives the list."
                                       (head '())
                                       (site-nav '())
                                       (home-link #f)
+                                      (metadata-items default-metadata-items)
                                       (cache? #t))
   (validate-backmatter-sections backmatter)
   (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
@@ -598,7 +623,8 @@ errors when the count outlives the list."
                                       #:html-attributes html-attributes
                                       #:head head
                                       #:site-nav site-nav
-                                      #:home-link home-link))))
+                                      #:home-link home-link
+                                      #:metadata-items metadata-items))))
     (make-cached-renderer render #:cache? cache?
           #:configuration
           (lambda (forest)

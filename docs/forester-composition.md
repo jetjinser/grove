@@ -82,6 +82,20 @@ link, and a dimmed `[tree-id]` slug; backlink entries show the link's text
 (falling back to the source title) with the source tree's slug, linking to
 the exact reference anchor.
 
+## Metadata
+
+Tree headers and backmatter entries end in a metadata line. The stock items
+are the page's dates (`@published`/`@updated`); pages without dates render
+nothing. The HTML renderers accept `#:metadata-items`, a `page -> items`
+hook whose items fill the `<ul>`; it replaces the stock hook, and
+`default-metadata-items` is exported to compose with:
+
+```scheme
+(define (flora-metadata-items page)
+  (append (default-metadata-items page)
+          (list `(li (@ (class "meta-item")) "…author or source items…"))))
+```
+
 ## Composition API
 
 `(forester composition)` accepts typed `make-subtree-definition` and
