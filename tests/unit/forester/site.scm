@@ -565,4 +565,13 @@
                   "@tex-display-math[#:id \"one\"]{x}
                    @tex-display-math[#:id \"two\"]{y}")))))))
 
+(let* ((page
+         (make-site-page "chars" "Äbc"
+           (evaluate-document
+             "@paragraph{One two. @link[\"chars\"]{Ägain}}")))
+       (forest (make-forest (make-site (list page)))))
+  (test-equal "used codepoints collect titles and document text"
+    (string->list " .OabceginotwÄ")
+    (used-codepoints forest)))
+
 (test-end "forester site")

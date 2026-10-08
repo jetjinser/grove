@@ -46,6 +46,7 @@
             incoming-transclusions
             transcluding-pages
             context-pages
+            used-codepoints
             source-paths
             module-paths
             page-source-paths))
@@ -648,6 +649,38 @@ anchors."
         (filter (lambda (page)
                   (hash-ref source-ids (site-page-id page)))
                 (pages forest))))))
+
+(define (used-codepoints forest)
+  "Every codepoint in the site's rendered text — document text and page
+titles, as a sorted character list. This is the universe a text font
+must cover; site chrome strings stay the caller's concern. Math is
+counted through its plain-text rendering, a harmless superset since
+MathJax draws it with its own fonts."
+  (cached-rows forest 'used-codepoints
+    (lambda ()
+      (let ((codepoints (make-hash-table)))
+        (for-each
+          (lambda (page)
+            (for-each
+              (lambda (text)
+                (string-for-each
+                  (lambda (char) (hash-set! codepoints char #t))
+                  text))
+                (append (list (site-page-title page)
+                              (content-index:content->plain-text
+                                (site-page-document page)))
+                        ;;     Analysis strips link text from the document;
+                        ;;     the label is what rendering puts back. Rows
+                        ;;     come straight from the relation: the cached
+                        ;;     query helper would re-take the site lock.
+                        (map (lambda (row)
+                               (reference-label (apply %make-reference row)))
+                             (outgoing-reference-rows
+                               (reference-relation forest)
+                               (site-page-id page))))))
+          (pages forest))
+        (sort (hash-map->list (lambda (char _) char) codepoints)
+              (lambda (a b) (< (char->integer a) (char->integer b))))))))
 
 (define (incoming-references forest id)
   (find-page forest id)
