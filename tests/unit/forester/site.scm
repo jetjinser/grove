@@ -225,12 +225,12 @@
              "@subtree[#:id \"chapter\"]{@title{Chapter}\n"
              " @subtree[#:id \"section\"]{@title{Section}\n"
              "  @tex-display-math[#:id \"eq-1\"]{a}}}\n"
-             "@paragraph{See @link[\"chapter#eq-1\"]{the equation}.}")))
+             "@paragraph{See @link[\"book#eq-1\"]{the equation}.}")))
        (port (open-output-string))
        (forest
          (parameterize ((current-warning-port port))
            (make-forest
-             (make-site (list (make-site-page "chapter" "Chapter"
+             (make-site (list (make-site-page "book" "Book"
                                  container))))))
        (message (get-output-string port)))
   (test-assert "a container page's registry covers its subtree anchors"
