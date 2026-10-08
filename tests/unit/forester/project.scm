@@ -428,6 +428,11 @@
       (test-assert "HTML project output contains reverse links"
         (string-contains limits-html
           "href=\"/index.html#ref-1\">limits</a>"))
+      (test-assert "page titles and backmatter entries carry dates"
+        (and (string-contains algebra-html
+               "<div class=\"metadata\"><ul><li class=\"meta-item\">2026-09-27</li><li class=\"meta-item\">updated 2026-09-28</li></ul></div>")
+             (string-contains limits-html
+               "[algebra]</a><div class=\"metadata\"><ul><li class=\"meta-item\">2026-09-27</li>")))
       (test-assert "HTML project output preserves TeX for MathJax"
         (and (string-contains algebra-html "\\(x^2+y^2=z^2\\)")
              (string-contains algebra-html

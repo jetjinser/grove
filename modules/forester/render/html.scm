@@ -93,6 +93,7 @@ otherwise the generated position anchor that backs repeated occurrences."
           #:anchor anchor #:depth (1+ depth)
           #:style (content-element-style element)
           #:id-prefix anchor-prefix
+          #:metadata (site-page-metadata target)
           #:title-decoration (if title-decoration
                                  (title-decoration forest id)
                                  '())
@@ -110,9 +111,26 @@ otherwise the generated position anchor that backs repeated occurrences."
   (if (string-prefix? "unstable-" id)
       (string-append "#" (substring id (string-length "unstable-")))
       id))
+(define (metadata-sxml metadata)
+  "A tree's metadata line, forester-style: publication dates under the
+title. Pages without dates contribute nothing."
+  (let ((published (assq-ref metadata 'published))
+        (updated (assq-ref metadata 'updated)))
+    (if (and (not published) (not updated))
+        '()
+        (list `(div (@ (class "metadata"))
+                  (ul ,@(if published
+                            `((li (@ (class "meta-item")) ,published))
+                            '())
+                      ,@(if updated
+                            `((li (@ (class "meta-item"))
+                                  ,(string-append "updated " updated)))
+                            '())))))))
+
 (define* (tree-block-sxml kind id title page-url content
                           #:key (open? #t) anchor (depth 2)
-                          (title-decoration '()) (style #f) (id-prefix ""))
+                          (title-decoration '()) (style #f) (id-prefix "")
+                          (metadata '()))
   (let* ((style-attributes (style-attribute-assoc style id-prefix))
          (_ (when (assq 'id style-attributes)
               (error "tree container style cannot set an id; the occurrence anchor owns it"
@@ -139,7 +157,8 @@ otherwise the generated position anchor that backs repeated occurrences."
                (aria-label ,(string-append
                               "Open tree " (display-tree-id id)
                               " as a page")))
-              "[" ,(display-tree-id id) "]")))
+              "[" ,(display-tree-id id) "]"))
+         ,@(metadata-sxml metadata))
        (div (@ (class "forest-tree-content"))
             ,@(if (and (pair? content) (eq? (car content) 'article))
                   (cdr content)
@@ -174,7 +193,8 @@ top-level taxon element; empty pages contribute nothing."
          (url (html-page-url routes id)))
     `(li ,@(taxon-entry-sxml page)
        (a (@ (href ,url)) ,(site-page-title page)) " "
-       ,(tree-slug-sxml id url))))
+       ,(tree-slug-sxml id url)
+       ,@(metadata-sxml (site-page-metadata page)))))
 
 (define (backlink-reference-sxml forest routes reference)
   (let* ((source
@@ -188,7 +208,8 @@ top-level taxon element; empty pages contribute nothing."
     `(li ,@(taxon-entry-sxml source)
        (a (@ (href ,url))
           ,(if (string-null? label) (site-page-title source) label)) " "
-       ,(tree-slug-sxml id url))))
+       ,(tree-slug-sxml id url)
+       ,@(metadata-sxml (site-page-metadata source)))))
 
 (define (backmatter-section-sxml class label content details?)
   (if details?
@@ -372,6 +393,7 @@ top-level taxon element; empty pages contribute nothing."
                  (html-page-url routes (site-page-id page)) body
                  #:anchor (string-append "tree-root-" (site-page-id page))
                  #:depth 1
+                 #:metadata (site-page-metadata page)
                  #:title-decoration (if title-decoration
                                         (title-decoration forest (site-page-id page))
                                         '())))
