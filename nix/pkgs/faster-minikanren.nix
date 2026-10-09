@@ -35,6 +35,11 @@ stdenv.mkDerivation {
     hash = "sha256-aIlconvApKJZj4/f8WqUf/HFHIqloKnGV/kkvnxc7To=";
   };
 
+  # mk-guile imports (rnrs) without a duplicates declaration, so loading
+  # it warns twice per process about overriding core `map' and `error'.
+  # The rnrs bindings are meant to shadow the core ones; declare it.
+  patches = [ ./faster-minikanren-duplicates.patch ];
+
   nativeBuildInputs = [ guile ];
   doCheck = true;
 

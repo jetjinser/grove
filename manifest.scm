@@ -84,7 +84,13 @@ drive its module builds and test suites from a blueprint file.")
              (commit "a25c70209800ab781983ace5c6840784bb32b4da")))
        (file-name (git-file-name name version))
        (sha256
-        (base32 "0fpdbiybw97raz3ak855i8fcbwbzjimg3pwgixcs5960gfi5r2b8"))))
+        (base32 "0fpdbiybw97raz3ak855i8fcbwbzjimg3pwgixcs5960gfi5r2b8"))
+       ;; mk-guile imports (rnrs) without a duplicates declaration, so
+       ;; loading it warns twice per process about overriding core `map'
+       ;; and `error'.  The rnrs bindings are meant to shadow the core
+       ;; ones; declare it.
+       (patches
+        (list (local-file "nix/pkgs/faster-minikanren-duplicates.patch")))))
     (build-system guile-build-system)
     (arguments
      (list
