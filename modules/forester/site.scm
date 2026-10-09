@@ -143,20 +143,25 @@
 (define* (reference-pages forest page-id
                           #:optional (reference-taxon-id "reference"))
   "Return reference-taxon pages linked from this tree and its composition."
-  (let ((reference-ids
+  (let* ((reference-ids
           (id-member-set
             (map site-page-id
-                 (topic-pages forest reference-taxon-id 'taxon)))))
-    (map (lambda (target-id) (find-page forest target-id))
-         (filter (lambda (target-id)
-                   (hash-ref reference-ids target-id))
-                 (delete-duplicates
-                   (append-map
-                     (lambda (tree-id)
-                       (map reference-target-page-id
-                            (outgoing-references forest tree-id)))
-                     (included-tree-ids forest page-id))
-                   string=?)))))
+                 (topic-pages forest reference-taxon-id 'taxon))))
+         (seen (make-hash-table)))
+    (filter-map
+      (lambda (target-id)
+        ;; Dedup, the reference-taxon filter, and page resolution fuse
+        ;; here: the appended reference rows can carry thousands of
+        ;; entries per page and a quadratic rescan showed up in builds.
+        (and (not (hash-ref seen target-id))
+             (begin (hash-set! seen target-id #t)
+                    (and (hash-ref reference-ids target-id)
+                         (find-page forest target-id)))))
+      (append-map
+        (lambda (tree-id)
+          (map reference-target-page-id
+               (outgoing-references forest tree-id)))
+        (included-tree-ids forest page-id)))))
 
 (define (query-in-content? content)
   (and (content-document? content)

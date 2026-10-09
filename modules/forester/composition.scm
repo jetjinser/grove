@@ -61,9 +61,16 @@
   (kind source occurrence target))
 
 (define-record-type <composition>
-  (%make-composition relation)
+  (%make-composition relation definitions
+                     definitions-by-parent
+                     transclusions-by-source
+                     transclusions-by-target)
   composition?
-  (relation composition-relation))
+  (relation composition-relation)
+  (definitions composition-definitions)
+  (definitions-by-parent composition-definitions-by-parent)
+  (transclusions-by-source composition-transclusions-by-source)
+  (transclusions-by-target composition-transclusions-by-target))
 
 (define (make-composition definitions transclusions)
   (unless (and (list? definitions) (every subtree-definition? definitions))
@@ -88,7 +95,7 @@
                        equal?)))
     (error "composition contains duplicate transclusion occurrences"
            transclusions))
-  (let ((relation
+  (let* ((relation
           (make-composition-relation
             (append
               (map (lambda (definition)
@@ -101,43 +108,54 @@
                            (transclusion-source-tree-id transclusion)
                            (transclusion-source-id transclusion)
                            (transclusion-target-tree-id transclusion)))
-                   transclusions)))))
-    (%make-composition relation)))
+                   transclusions))))
+         ;;     Composition accessors answer per-page queries during
+         ;;     rendering, so the buckets are built once here instead of
+         ;;     re-running the relation query for every page.
+         (definitions-by-parent (make-hash-table))
+         (transclusions-by-source (make-hash-table))
+         (transclusions-by-target (make-hash-table)))
+    (for-each
+      (lambda (definition)
+        (let ((parent (subtree-definition-parent definition)))
+          (hash-set! definitions-by-parent parent
+                     (cons definition
+                           (hash-ref definitions-by-parent parent '())))))
+      definitions)
+    (for-each
+      (lambda (transclusion)
+        (let ((source (transclusion-source-tree-id transclusion))
+              (target (transclusion-target-tree-id transclusion)))
+          (hash-set! transclusions-by-source source
+                     (cons transclusion
+                           (hash-ref transclusions-by-source source '())))
+          (hash-set! transclusions-by-target target
+                     (cons transclusion
+                           (hash-ref transclusions-by-target target '())))))
+      transclusions)
+    (%make-composition relation definitions
+                       definitions-by-parent
+                       transclusions-by-source
+                       transclusions-by-target)))
 
 (define (target-ids composition source-tree-id)
-  (map caddr
-       (query (kind occurrence target)
-         (compositiono (composition-relation composition)
-                       (source source-tree-id)
-                       (kind kind)
-                       (occurrence occurrence)
-                       (target target)))))
+  ;;     Every tree reachable in one hop: defined subtrees first, then
+  ;;     transclusion targets, matching the relation's row order.
+  (append
+    (map subtree-definition-child
+         (hash-ref (composition-definitions-by-parent composition)
+                   source-tree-id '()))
+    (map transclusion-target-tree-id
+         (hash-ref (composition-transclusions-by-source composition)
+                   source-tree-id '()))))
 
 (define (subtree-definitions composition)
-  (map (lambda (answer)
-         (make-subtree-definition (car answer) (cadr answer)))
-       (query (parent child)
-         (compositiono (composition-relation composition)
-                       (kind "subtree")
-                       (source parent)
-                       (target child)))))
+  (composition-definitions composition))
 
 (define (outgoing-transclusions composition source-tree-id)
-  (map (lambda (answer)
-         (make-transclusion source-tree-id (car answer) (cadr answer)))
-       (query (occurrence target)
-         (compositiono (composition-relation composition)
-                       (kind "transclude")
-                       (source source-tree-id)
-                       (occurrence occurrence)
-                       (target target)))))
+  (hash-ref (composition-transclusions-by-source composition)
+            source-tree-id '()))
 
 (define (incoming-transclusions composition target-tree-id)
-  (map (lambda (answer)
-         (make-transclusion (car answer) (cadr answer) target-tree-id))
-       (query (source occurrence)
-         (compositiono (composition-relation composition)
-                       (kind "transclude")
-                       (source source)
-                       (occurrence occurrence)
-                       (target target-tree-id)))))
+  (hash-ref (composition-transclusions-by-target composition)
+            target-tree-id '()))
