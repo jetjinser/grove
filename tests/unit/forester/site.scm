@@ -358,6 +358,15 @@
   (test-equal "taxon IR is queryable through the same topic relation"
     '(("query-article" "mathematics"))
     math-pages)
+  (test-equal "topic-pages resolves a taxon topic to its pages"
+    '("query-article")
+    (map site-page-id (topic-pages forest "mathematics" 'taxon)))
+  (test-equal "repeated topic-pages calls return the memoized pages"
+    '("query-article")
+    (map site-page-id (topic-pages forest "mathematics" 'taxon)))
+  (test-equal "topic-pages answers absent topics with an empty list"
+    '()
+    (topic-pages forest "nonexistent-topic"))
   (test-equal "link nodes and their target properties remain in content IR"
     '("target")
     (query (target-id)

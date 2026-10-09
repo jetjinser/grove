@@ -110,11 +110,20 @@
     table))
 
 (define* (topic-pages forest topic-id #:optional kind)
-  (let ((page-ids
-          (topic-page-ids (content-node-relation forest) topic-id kind)))
-    (filter (lambda (page)
-              (member (site-page-id page) page-ids string=?))
-            (pages forest))))
+  ;;     Backmatter consults this for every rendered page, so the scan
+  ;;     over all pages must run once per topic, not once per page: the
+  ;;     memo key carries the topic and the kind, and the id set turns
+  ;;     the membership test into a hash lookup instead of a repeated
+  ;;     string-list scan.
+  (cached-rows forest `(topic-pages ,topic-id ,kind)
+    (lambda ()
+      (let ((page-ids
+              (id-member-set
+                (topic-page-ids (content-node-relation forest)
+                                topic-id kind))))
+        (filter (lambda (page)
+                  (hash-ref page-ids (site-page-id page)))
+                (pages forest))))))
 
 (define* (related-pages forest page-id
                         #:optional (reference-taxon-id "reference"))
