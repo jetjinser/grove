@@ -28,6 +28,7 @@
             related-pages
             reference-pages
             find-page
+            lookup-page
             links
             tree-occurrences
             tree-occurrence-target
@@ -576,6 +577,12 @@ anchors."
   (or (hash-ref (page-index forest) id)
       (error "unknown forest page" id)))
 
+(define (lookup-page forest id)
+  "The page carrying ID from the index, or #f when none does.
+Backmatter entry rendering resolves relation-sourced ids through this
+index instead of scanning the page list per entry."
+  (hash-ref (page-index forest) id))
+
 (define (subtree-definitions forest)
   (map (lambda (definition)
        (list (composition:subtree-definition-parent definition)
@@ -700,13 +707,13 @@ MathJax draws it with its own fonts."
 
 (define (backlinks forest id)
   (find-page forest id)
-  (let ((source-ids
-          (cached-rows forest `(backlinks ,id)
-            (lambda ()
+  (cached-rows forest `(backlink-pages ,id)
+    (lambda ()
+      (let ((source-ids
               (id-member-set
-                (backlink-page-ids (reference-relation forest) id))))))
-    (filter (lambda (page) (hash-ref source-ids (site-page-id page)))
-            (pages forest))))
+                (backlink-page-ids (reference-relation forest) id))))
+        (filter (lambda (page) (hash-ref source-ids (site-page-id page)))
+                (pages forest))))))
 
 (define (common-backlinks forest left-id right-id)
   (for-each

@@ -203,10 +203,7 @@ top-level taxon element; empty pages contribute nothing."
 
 (define (backlink-reference-sxml forest routes reference metadata-items)
   (let* ((source
-           (find (lambda (candidate)
-                   (equal? (site-page-id candidate)
-                           (reference-source-page-id reference)))
-                 (pages forest)))
+           (lookup-page forest (reference-source-page-id reference)))
           (url (reference-source-url routes reference))
           (id (reference-source-page-id reference))
           (label (reference-label reference)))

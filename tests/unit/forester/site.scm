@@ -367,6 +367,11 @@
   (test-equal "topic-pages answers absent topics with an empty list"
     '()
     (topic-pages forest "nonexistent-topic"))
+  (test-equal "lookup-page resolves known ids and misses unknown ones"
+    (list "target" #f)
+    (list (and (lookup-page forest "target")
+               (site-page-id (lookup-page forest "target")))
+          (lookup-page forest "no-such-page")))
   (test-equal "link nodes and their target properties remain in content IR"
     '("target")
     (query (target-id)
