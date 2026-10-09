@@ -192,9 +192,18 @@
            (define (register files)
              (for-each (lambda (file)
                          (unless (string=? file canonical) (hash-set! globals file #t))) files))
+           ;;     Every read resolves the same shared dependency list, so
+           ;;     the deduplication must be linear: the list mixes the
+           ;;     framework's runtime inputs with the project's assets and
+           ;;     srfi-1 delete-duplicates would rescan it per read.
+           (define (unique-paths paths)
+             (let ((seen (make-hash-table)))
+               (filter (lambda (file)
+                         (and (not (hash-ref seen file))
+                              (begin (hash-set! seen file #t) #t)))
+                       paths)))
            (register (append shared dependencies))
-           (let* ((paths (delete-duplicates (cons path (append shared dependencies))
-                                           string=?))
+           (let* ((paths (unique-paths (cons path (append shared dependencies))))
                   (snapshot (map (lambda (file) (list file (input-fingerprint file))) paths))
                   (identity (list reader (version) (setlocale LC_CTYPE)
                                   %load-path %load-compiled-path snapshot))
