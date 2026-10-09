@@ -24,6 +24,7 @@
              (guix build-system trivial)
              (guix gexp)
              (guix git-download)
+             (guix utils)
              ((guix licenses) #:prefix license:)
              (guix packages))
 
@@ -261,9 +262,17 @@ file and generates the (grove highlight languages) registry module that
 Grove's highlighter consumes.")
       (license (list license:gpl3+ license:expat)))))
 
+(load "grove-package.scm")
+(define grove
+  (make-grove blue guile faster-minikanren grove-highlights
+              (specification->package "guile-gcrypt")
+              (specification->package "guile-ssh")
+              (specification->package "guile-ts")
+              (specification->package "coreutils")))
+
 (packages->manifest
  (append
-  (list blue faster-minikanren grove-highlights guile)
+  (list blue faster-minikanren grove-highlights guile grove)
   (map specification->package
        (list ;;     /bin/sh and env for subprocess-spawning code under a
              ;;     containerized shell.

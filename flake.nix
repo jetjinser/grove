@@ -19,8 +19,8 @@
   };
 
   outputs =
-    inputs@{ flake-parts, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } {
+    inputs@{ self, flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs self; } {
       imports = [
         inputs.devshell.flakeModule
       ];
@@ -35,10 +35,17 @@
         {
           packages = lib.packagesFromDirectoryRecursive {
             inherit (pkgs) callPackage;
-            directory = ./pkgs;
+            directory = ./nix/pkgs;
           } // {
-            grove-highlights = pkgs.callPackage ./pkgs/grove-highlights.nix {
+            grove-highlights = pkgs.callPackage ./nix/pkgs/grove-highlights.nix {
               guile-ts = self'.packages.guile-ts;
+            };
+            grove = pkgs.callPackage ./nix/pkgs/grove.nix {
+              src = self;
+              blue = self'.packages.blue;
+              faster-minikanren = self'.packages.faster-minikanren;
+              guile-ts = self'.packages.guile-ts;
+              grove-highlights = self'.packages.grove-highlights;
             };
           };
           devshells.default = {
@@ -61,6 +68,7 @@
               self'.packages.faster-minikanren
               self'.packages.guile-ts
               self'.packages.grove-highlights
+              self'.packages.grove
 
               reuse
             ];

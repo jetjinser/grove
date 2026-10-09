@@ -16,16 +16,24 @@ programmable. The same content can produce HTML, text, feeds, and other formats.
 
 ## Get started
 
-From the repository root, enter the development environment and install locally:
+Enter the development environment:
 
 ```sh
-nix develop ./nix
-blue prefix=/tmp/grove-install exec-prefix=/tmp/grove-install \
-  bindir=/tmp/grove-install/bin \
-  guile-module-dir=/tmp/grove-install/share/guile/site/3.0 \
-  guile-object-dir=/tmp/grove-install/lib/guile/3.0/site-ccache \
-  build -- install
-export PATH=/tmp/grove-install/bin:$PATH
+nix develop
+```
+
+Build and install the CLI:
+
+```sh
+nix build .#grove
+export PATH=$PWD/result/bin:$PATH
+```
+
+With Guix, the manifest carries the same CLI; install or build it with:
+
+```sh
+guix package -m manifest.scm
+guix build -m manifest.scm
 ```
 
 Build the linked-notes example:
