@@ -133,6 +133,20 @@
                      (cons transclusion
                            (hash-ref transclusions-by-target target '())))))
       transclusions)
+    ;;     Buckets were consed, so restore occurrence order.
+    (for-each
+      (lambda (key)
+        (hash-set! definitions-by-parent key
+                   (reverse (hash-ref definitions-by-parent key '())))
+        (hash-set! transclusions-by-source key
+                   (reverse (hash-ref transclusions-by-source key '())))
+        (hash-set! transclusions-by-target key
+                   (reverse (hash-ref transclusions-by-target key '()))))
+      (delete-duplicates
+        (append (hash-map->list (lambda (key _) key) definitions-by-parent)
+                (hash-map->list (lambda (key _) key) transclusions-by-source)
+                (hash-map->list (lambda (key _) key) transclusions-by-target))
+        eq?))
     (%make-composition relation definitions
                        definitions-by-parent
                        transclusions-by-source
