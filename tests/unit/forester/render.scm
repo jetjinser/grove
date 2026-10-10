@@ -184,13 +184,13 @@
   (test-assert "links produce reverse links"
     (and (string-contains algebra-html "class=\"backmatter backlinks\"")
          (string-contains algebra-html
-                          "href=\"/limits.html#ref-1\">Limits</a>")
+                          "data-tree-id=\"limits\"")
+         (string-contains algebra-html "<span>Limits</span>")
          (string-contains algebra-html "[limits]")))
   (test-assert "reverse links identify their source by title, not alt"
     (and (string-contains limits-html
-                          "href=\"/index.html#ref-1\">Algebra &amp; limits</a>")
-         (not (string-contains limits-html
-                               "href=\"/index.html#ref-1\">limits</a>"))))
+                          "<span>Algebra &amp; limits</span>")
+         (not (string-contains limits-html "<span>limits</span>"))))
   (test-assert "backlinks have a semantic heading"
     (string-contains limits-html "<h2>Backlinks</h2>"))
   (test-assert "backmatter labels can be customized in HTML and text"
@@ -275,7 +275,9 @@
          (string-contains (assoc-ref text "source") "overview.txt")))
   (test-assert "backlinks belong to the referenced tree"
     (and (string-contains (assoc-ref html "overview")
-                          "href=\"/source.html#ref-1\">Source</a>")
+                          "data-tree-id=\"source\"")
+         (string-contains (assoc-ref html "overview")
+                          "<span>Source</span>")
          (null? (incoming-references forest "target"))))
   (test-assert "text directory and body share occurrence anchors"
     (and (string-contains (assoc-ref text "target") "- Overview [#overview]")
@@ -304,10 +306,18 @@
          (not (string-contains (assoc-ref html "theorems") "id=\"tree-1\""))
          (not (string-contains (assoc-ref html "theorems") "<details id="))))
   (test-assert "subtree anchors override the tree id default"
-    (and (string-contains (assoc-ref html "theorems")
-                          "data-tree-id=\"lemma-9\" id=\"lemma-nine\"")
-         (not (string-contains (assoc-ref html "theorems")
-                               " id=\"lemma-9\""))))
+    ;;     Backlink entries embed the citing page's content, which
+    ;;     legitimately reuses occurrence anchors; scope the negative
+    ;;     to the page's own tree, before the backmatter asides.
+    (let* ((document (assoc-ref html "theorems"))
+           (mainmatter
+             (substring document 0
+                        (or (string-contains document
+                                             "class=\"backmatter backlinks\"")
+                            (string-length document)))))
+      (and (string-contains document
+                            "data-tree-id=\"lemma-9\" id=\"lemma-nine\"")
+           (not (string-contains mainmatter " id=\"lemma-9\"")))))
   (test-assert "unique transclusions anchor with the tree id"
     (and (string-contains (assoc-ref html "notes")
                           "data-tree-id=\"theorem-3\" id=\"theorem-3-note\"")

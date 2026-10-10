@@ -187,33 +187,35 @@ top-level taxon element; empty pages contribute nothing."
                               ,text " ")))))
               (loop (cdr children)))))))
 
-(define (tree-slug-sxml id url)
-  `(a (@ (class "forest-tree-id") (href ,url)
-         (aria-label ,(string-append "Open tree " (display-tree-id id)
-                                     " as a page")))
-      "[" ,(display-tree-id id) "]"))
+(define* (backmatter-entry-sxml forest routes class page metadata-items
+                                highlighters
+                                #:key
+                                (url (html-page-url routes
+                                                  (site-page-id page))))
+  ;;     Forester-style: a backmatter entry is a tree in its own
+  ;;     right.  The summary identifies the tree - taxon, title, [id],
+  ;;     metadata - and the disclosure reveals its content, so entries
+  ;;     fold like ordinary trees.  They start collapsed; embedding
+  ;;     every cited tree open would bury the page under its own
+  ;;     backmatter.  The alt text of a reference stays in the citing
+  ;;     body, where it was authored.
+  (tree-block-sxml
+    "backmatter"
+    (site-page-id page) (site-page-title page) url
+    (subtree-content-sxml forest routes page "" 2 highlighters
+                          #:metadata-items metadata-items)
+    #:anchor (string-append "backmatter-" class "-" (site-page-id page))
+    #:depth 3
+    #:metadata-items (metadata-items page)
+    #:title-decoration (taxon-entry-sxml page)
+    #:open? #f))
 
-(define (backmatter-page-entry-sxml routes page metadata-items)
-  (let* ((id (site-page-id page))
-         (url (html-page-url routes id)))
-    `(li ,@(taxon-entry-sxml page)
-       (a (@ (href ,url)) ,(site-page-title page)) " "
-       ,(tree-slug-sxml id url)
-       ,@(metadata-sxml (metadata-items page)))))
-
-(define (backlink-reference-sxml forest routes reference metadata-items)
-  ;;     Forester-style entry: identify the tree that cites us by its
-  ;;     own title and metadata.  The alt text belongs to the citing
-  ;;     context in the body; repeating it here obscures what the
-  ;;     entry points at.
-  (let* ((source
-           (lookup-page forest (reference-source-page-id reference)))
-          (url (reference-source-url routes reference))
-          (id (reference-source-page-id reference)))
-    `(li ,@(taxon-entry-sxml source)
-       (a (@ (href ,url)) ,(site-page-title source)) " "
-       ,(tree-slug-sxml id url)
-       ,@(metadata-sxml (metadata-items source)))))
+(define (backlink-reference-sxml forest routes class reference
+                                 metadata-items highlighters)
+  (let ((source (lookup-page forest (reference-source-page-id reference))))
+    (backmatter-entry-sxml forest routes class source metadata-items
+                           highlighters
+                           #:url (reference-source-url routes reference))))
 
 (define (backmatter-section-sxml class label content details?)
   (if details?
@@ -225,73 +227,78 @@ top-level taxon element; empty pages contribute nothing."
          (h2 ,label)
          ,@content)))
 
-(define (backlinks-sxml forest page routes label details? metadata-items)
+(define (backlinks-sxml forest page routes label details? metadata-items
+                        highlighters)
   (let ((references (incoming-references forest (site-page-id page))))
     (if (null? references)
         '()
         (list (backmatter-section-sxml
                 "backlinks" label
-                (list `(ul ,@(map (lambda (reference)
-                                    (backlink-reference-sxml forest routes reference
-                                                             metadata-items))
-                                  references)))
+                (map (lambda (reference)
+                       (backlink-reference-sxml forest routes "backlinks"
+                                                reference metadata-items
+                                                highlighters))
+                     references)
                 details?)))))
 
-(define (context-sxml forest page routes label details? metadata-items)
-  (let* ((sources (context-pages forest (site-page-id page)))
-         (items
-           (map (lambda (source)
-                  (backmatter-page-entry-sxml routes source metadata-items))
-                sources)))
+(define (context-sxml forest page routes label details? metadata-items
+                      highlighters)
+  (let ((sources (context-pages forest (site-page-id page))))
     (if (null? sources)
         '()
-        (list (backmatter-section-sxml "context" label (list `(ul ,@items)) details?)))))
+        (list (backmatter-section-sxml
+                "context" label
+                (map (lambda (source)
+                       (backmatter-entry-sxml forest routes "context" source
+                                              metadata-items highlighters))
+                     sources)
+                details?)))))
 
-(define (page-list-backmatter-sxml routes class label targets details?
-                                   metadata-items)
+(define (page-list-backmatter-sxml forest routes class label targets
+                                   details? metadata-items highlighters)
     (if (null? targets)
         '()
         (list (backmatter-section-sxml
                 class label
-                (list `(ul
-                        ,@(map (lambda (target)
-                                 (backmatter-page-entry-sxml routes target
-                                                             metadata-items))
-                               targets)))
+                (map (lambda (target)
+                       (backmatter-entry-sxml forest routes class target
+                                              metadata-items highlighters))
+                     targets)
                 details?))))
 
 (define (related-sxml forest page routes reference-taxon-id label details?
-                      metadata-items)
+                      metadata-items highlighters)
   (page-list-backmatter-sxml
-    routes "related" label
+    forest routes "related" label
     (related-pages forest (site-page-id page) reference-taxon-id)
-    details? metadata-items))
+    details? metadata-items highlighters))
 
 (define (references-sxml forest page routes reference-taxon-id label details?
-                         metadata-items)
+                         metadata-items highlighters)
   (page-list-backmatter-sxml
-    routes "references" label
+    forest routes "references" label
     (reference-pages forest (site-page-id page) reference-taxon-id)
-    details? metadata-items))
+    details? metadata-items highlighters))
 
 (define* (backmatter-sxml forest page routes sections labels
                          reference-taxon-id details?
-                         #:key (metadata-items default-metadata-items))
+                         #:key (metadata-items default-metadata-items)
+                         (highlighters '()))
   (append-map
     (lambda (section)
       (case section
         ((context) (context-sxml forest page routes
                                  (assq-ref labels 'context) details?
-                                 metadata-items))
+                                 metadata-items highlighters))
         ((references) (references-sxml forest page routes reference-taxon-id
                                        (assq-ref labels 'references) details?
-                                       metadata-items))
+                                       metadata-items highlighters))
         ((backlinks) (backlinks-sxml forest page routes
                                      (assq-ref labels 'backlinks) details?
-                                     metadata-items))
+                                     metadata-items highlighters))
         ((related) (related-sxml forest page routes reference-taxon-id
                                  (assq-ref labels 'related) details?
-                                 metadata-items))))
+                                 metadata-items highlighters))))
     sections))
 
 (define* (table-of-contents-sxml forest page #:key (title-decoration #f))
@@ -417,7 +424,8 @@ top-level taxon element; empty pages contribute nothing."
                           (backmatter-sxml forest page routes backmatter
                                            labels reference-taxon-id
                                            backmatter-details?
-                                           #:metadata-items metadata-items))))
+                                           #:metadata-items metadata-items
+                                           #:highlighters highlighters))))
     (serialize-html-document
       (html-document
         (site-page-title page)
