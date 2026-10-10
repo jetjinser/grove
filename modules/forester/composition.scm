@@ -115,13 +115,16 @@
          (definitions-by-parent (make-hash-table))
          (transclusions-by-source (make-hash-table))
          (transclusions-by-target (make-hash-table)))
+    ;;     Cons 把行倒序压进桶，所以从后往前遍历，桶即恢复
+    ;;     occurrence order；不能用事后统一 reverse：eq? 去重不了
+    ;;     相等但不同对象的字符串键，重复键会被 reverse 两次。
     (for-each
       (lambda (definition)
         (let ((parent (subtree-definition-parent definition)))
           (hash-set! definitions-by-parent parent
                      (cons definition
                            (hash-ref definitions-by-parent parent '())))))
-      definitions)
+      (reverse definitions))
     (for-each
       (lambda (transclusion)
         (let ((source (transclusion-source-tree-id transclusion))
@@ -132,21 +135,7 @@
           (hash-set! transclusions-by-target target
                      (cons transclusion
                            (hash-ref transclusions-by-target target '())))))
-      transclusions)
-    ;;     Buckets were consed, so restore occurrence order.
-    (for-each
-      (lambda (key)
-        (hash-set! definitions-by-parent key
-                   (reverse (hash-ref definitions-by-parent key '())))
-        (hash-set! transclusions-by-source key
-                   (reverse (hash-ref transclusions-by-source key '())))
-        (hash-set! transclusions-by-target key
-                   (reverse (hash-ref transclusions-by-target key '()))))
-      (delete-duplicates
-        (append (hash-map->list (lambda (key _) key) definitions-by-parent)
-                (hash-map->list (lambda (key _) key) transclusions-by-source)
-                (hash-map->list (lambda (key _) key) transclusions-by-target))
-        eq?))
+      (reverse transclusions))
     (%make-composition relation definitions
                        definitions-by-parent
                        transclusions-by-source
