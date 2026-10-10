@@ -306,23 +306,29 @@
          (not (string-contains (assoc-ref html "theorems") "id=\"tree-1\""))
          (not (string-contains (assoc-ref html "theorems") "<details id="))))
   (test-assert "subtree anchors override the tree id default"
-    ;;     Backlink entries embed the citing page's content, which
-    ;;     legitimately reuses occurrence anchors; scope the negative
-    ;;     to the page's own tree, before the backmatter asides.
-    (let* ((document (assoc-ref html "theorems"))
-           (mainmatter
-             (substring document 0
-                        (or (string-contains document
-                                             "class=\"backmatter backlinks\"")
-                            (string-length document)))))
-      (and (string-contains document
-                            "data-tree-id=\"lemma-9\" id=\"lemma-nine\"")
-           (not (string-contains mainmatter " id=\"lemma-9\"")))))
+    (and (string-contains (assoc-ref html "theorems")
+                          "data-tree-id=\"lemma-9\" id=\"lemma-nine\"")
+         (not (string-contains (assoc-ref html "theorems")
+                               " id=\"lemma-9\""))))
   (test-assert "unique transclusions anchor with the tree id"
     (and (string-contains (assoc-ref html "notes")
                           "data-tree-id=\"theorem-3\" id=\"theorem-3-note\"")
          (string-contains (assoc-ref html "notes")
                           "data-tree-id=\"lemma-9\" id=\"lemma-9\"")))
+  (test-assert "backmatter entry outlines the citing tree"
+    ;;     The entry panel carries the citing tree's outline, linking
+    ;;     into the real page's sections; the fetch script upgrades it
+    ;;     to full content on first expand.  Notes is the home page in
+    ;;     these routes, so compute its URL instead of assuming it.
+    (let* ((routes (make-html-routes #:home-page "notes"))
+           (notes-url (html-page-url routes "notes"))
+           (html (assoc-ref html "theorems")))
+      (and (string-contains html "class=\"tree-outline\"")
+           (string-contains html
+             (string-append "href=\"" notes-url "#theorem-3-note\""))
+           (string-contains html
+             (string-append "href=\"" notes-url "#lemma-9\""))
+           (string-contains html "data-tree-id=\"notes\""))))
   (test-assert "anchor links route through the host page with their fragment"
     (string-contains (assoc-ref html "notes")
                      "href=\"/theorems.html#theorem-3\"")))

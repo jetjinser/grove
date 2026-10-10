@@ -116,6 +116,25 @@
                           (cons 'transclude render-tree)
                           (cons 'query-transclude render-tree))))
 
+(define (outline-lines forest id depth)
+  ;;     Indented titles of the tree's own subtrees and transclusions -
+  ;;     the terminal counterpart of the HTML backmatter outline.  Two
+  ;;     levels keep chapter-sized trees from flooding the screen; the
+  ;;     depth bound also ends transclusion cycles.
+  (append-map
+    (lambda (element)
+      (let* ((target-id (tree-occurrence-target element))
+             (head
+               (format #f "~a~a ~a"
+                       (make-string (* 2 depth) #\space)
+                       (case (content-element-kind element)
+                         ((subtree) "@") ((transclude) ">") (else "?"))
+                       (site-page-title (find-page forest target-id)))))
+        (if (< depth 2)
+            (cons head (outline-lines forest target-id (+ depth 1)))
+            (list head))))
+    (tree-occurrences forest id)))
+
 (define (display-backmatter forest page add-entry! output)
   (define (section label targets)
     (unless (null? targets)
@@ -125,7 +144,11 @@
           (format output "  [~a] ~a~%"
                   (add-entry! 'related (site-page-title target)
                               (site-page-id target))
-                  (site-page-title target)))
+                  (site-page-title target))
+          (for-each
+            (lambda (line)
+              (format output "      ~a~%" line))
+            (outline-lines forest (site-page-id target) 0)))
         targets)))
   (section "Related" (related-pages forest (site-page-id page)))
   (section "References" (reference-pages forest (site-page-id page)))

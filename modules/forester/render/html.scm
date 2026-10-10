@@ -188,33 +188,37 @@ top-level taxon element; empty pages contribute nothing."
               (loop (cdr children)))))))
 
 (define* (backmatter-entry-sxml forest routes class page metadata-items
-                                highlighters
                                 #:key
                                 (url (html-page-url routes
-                                                  (site-page-id page))))
+                                                 (site-page-id page))))
   ;;     Forester-style: a backmatter entry is a tree in its own
   ;;     right.  The summary identifies the tree - taxon, title, [id],
-  ;;     metadata - and the disclosure reveals its content, so entries
-  ;;     fold like ordinary trees.  They start collapsed; embedding
-  ;;     every cited tree open would bury the page under its own
-  ;;     backmatter.  The alt text of a reference stays in the citing
-  ;;     body, where it was authored.
-  (tree-block-sxml
-    "backmatter"
-    (site-page-id page) (site-page-title page) url
-    (subtree-content-sxml forest routes page "" 2 highlighters
-                          #:metadata-items metadata-items)
-    #:anchor (string-append "backmatter-" class "-" (site-page-id page))
-    #:depth 3
-    #:metadata-items (metadata-items page)
-    #:title-decoration (taxon-entry-sxml page)
-    #:open? #f))
+  ;;     metadata - and the disclosure folds open like any tree.  What
+  ;;     folds open is the tree's outline, linking into the real
+  ;;     page's sections: embedding full content statically made
+  ;;     citation-heavy pages explode (a 292-entry page rendered to
+  ;;     14 MiB).  The fetch script swaps the outline for the real
+  ;;     content on first expand.  The alt text of a reference stays
+  ;;     in the citing body, where it was authored.
+  (let ((outline (tree-outline-sxml
+                   forest (site-page-id page)
+                   #:base-url (html-page-url routes (site-page-id page)))))
+    (tree-block-sxml
+      "backmatter"
+      (site-page-id page) (site-page-title page) url
+      (if (null? outline)
+          '()
+          (list `(ol (@ (class "tree-outline")) ,@outline)))
+      #:anchor (string-append "backmatter-" class "-" (site-page-id page))
+      #:depth 3
+      #:metadata-items (metadata-items page)
+      #:title-decoration (taxon-entry-sxml page)
+      #:open? #f)))
 
 (define (backlink-reference-sxml forest routes class reference
-                                 metadata-items highlighters)
+                                 metadata-items)
   (let ((source (lookup-page forest (reference-source-page-id reference))))
     (backmatter-entry-sxml forest routes class source metadata-items
-                           highlighters
                            #:url (reference-source-url routes reference))))
 
 (define (backmatter-section-sxml class label content details?)
@@ -227,8 +231,7 @@ top-level taxon element; empty pages contribute nothing."
          (h2 ,label)
          ,@content)))
 
-(define (backlinks-sxml forest page routes label details? metadata-items
-                        highlighters)
+(define (backlinks-sxml forest page routes label details? metadata-items)
   (let ((references (incoming-references forest (site-page-id page))))
     (if (null? references)
         '()
@@ -236,13 +239,11 @@ top-level taxon element; empty pages contribute nothing."
                 "backlinks" label
                 (map (lambda (reference)
                        (backlink-reference-sxml forest routes "backlinks"
-                                                reference metadata-items
-                                                highlighters))
+                                                reference metadata-items))
                      references)
                 details?)))))
 
-(define (context-sxml forest page routes label details? metadata-items
-                      highlighters)
+(define (context-sxml forest page routes label details? metadata-items)
   (let ((sources (context-pages forest (site-page-id page))))
     (if (null? sources)
         '()
@@ -250,77 +251,98 @@ top-level taxon element; empty pages contribute nothing."
                 "context" label
                 (map (lambda (source)
                        (backmatter-entry-sxml forest routes "context" source
-                                              metadata-items highlighters))
+                                              metadata-items))
                      sources)
                 details?)))))
 
 (define (page-list-backmatter-sxml forest routes class label targets
-                                   details? metadata-items highlighters)
+                                   details? metadata-items)
     (if (null? targets)
         '()
         (list (backmatter-section-sxml
                 class label
                 (map (lambda (target)
                        (backmatter-entry-sxml forest routes class target
-                                              metadata-items highlighters))
+                                              metadata-items))
                      targets)
                 details?))))
 
 (define (related-sxml forest page routes reference-taxon-id label details?
-                      metadata-items highlighters)
+                      metadata-items)
   (page-list-backmatter-sxml
     forest routes "related" label
     (related-pages forest (site-page-id page) reference-taxon-id)
-    details? metadata-items highlighters))
+    details? metadata-items))
 
 (define (references-sxml forest page routes reference-taxon-id label details?
-                         metadata-items highlighters)
+                         metadata-items)
   (page-list-backmatter-sxml
     forest routes "references" label
     (reference-pages forest (site-page-id page) reference-taxon-id)
-    details? metadata-items highlighters))
+    details? metadata-items))
 
 (define* (backmatter-sxml forest page routes sections labels
                          reference-taxon-id details?
-                         #:key (metadata-items default-metadata-items)
-                         (highlighters '()))
+                         #:key (metadata-items default-metadata-items))
   (append-map
     (lambda (section)
       (case section
         ((context) (context-sxml forest page routes
                                  (assq-ref labels 'context) details?
-                                 metadata-items highlighters))
+                                 metadata-items))
         ((references) (references-sxml forest page routes reference-taxon-id
                                        (assq-ref labels 'references) details?
-                                       metadata-items highlighters))
+                                       metadata-items))
         ((backlinks) (backlinks-sxml forest page routes
                                      (assq-ref labels 'backlinks) details?
-                                     metadata-items highlighters))
+                                     metadata-items))
         ((related) (related-sxml forest page routes reference-taxon-id
                                  (assq-ref labels 'related) details?
-                                 metadata-items highlighters))))
+                                 metadata-items))))
     sections))
 
+(define* (tree-outline-sxml forest id
+                            #:key (base-url "") (title-decoration #f))
+  ;;     The tree's own subtree/transclusion outline as nested list
+  ;;     items.  With the default BASE-URL the links are same-page
+  ;;     fragments (the page's table of contents); pass a page URL to
+  ;;     point them at that page's sections from anywhere, e.g. from a
+  ;;     backmatter entry on another page.  The visited set keeps
+  ;;     transclusion cycles from recursing forever.
+  (letrec ((entries
+             (lambda (id prefix visited)
+               (map (lambda (element position)
+                      (let* ((target-id (tree-occurrence-target element))
+                             (target (find-page forest target-id))
+                             (anchor (occurrence-anchor element prefix
+                                                        position))
+                             (decoration
+                               (if title-decoration
+                                   (title-decoration forest target-id)
+                                   '()))
+                             (nested
+                               (if (member target-id visited)
+                                   '()
+                                   (entries target-id
+                                            (string-append anchor "--")
+                                            (cons target-id visited)))))
+                        `(li (a (@ (href ,(string-append base-url "#"
+                                                         anchor)))
+                                ,@decoration
+                                ,(site-page-title target))
+                             ,@(if (null? nested) '()
+                                   (list `(ol ,@nested))))))
+                    (tree-occurrences forest id)
+                    (iota (length (tree-occurrences forest id)) 1)))))
+    (entries id "" (list id))))
+
 (define* (table-of-contents-sxml forest page #:key (title-decoration #f))
-  (define (entries id prefix)
-    (map (lambda (element position)
-           (let* ((target-id (tree-occurrence-target element))
-                  (target (find-page forest target-id))
-                  (anchor (occurrence-anchor element prefix position))
-                  (decoration (if title-decoration
-                                  (title-decoration forest target-id)
-                                  '()))
-                  (nested (entries target-id (string-append anchor "--"))))
-             `(li (a (@ (href ,(string-append "#" anchor)))
-                     ,@decoration
-                     ,(site-page-title target))
-                  ,@(if (null? nested) '() (list `(ol ,@nested))))))
-         (tree-occurrences forest id)
-         (iota (length (tree-occurrences forest id)) 1)))
-  (let ((items (entries (site-page-id page) "")))
+  (let ((items (tree-outline-sxml forest (site-page-id page)
+                                  #:title-decoration title-decoration)))
     (if (null? items) '()
         (list `(nav (@ (class "table-of-contents") (aria-label "Contents"))
-                    (h2 "Contents") (ol ,@items))))))
+                    (h2 "Contents")
+                    (ol ,@items))))))
 
 (define default-mathjax-src
   "https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js")
@@ -353,10 +375,18 @@ top-level taxon element; empty pages contribute nothing."
 (define fragment-reveal-script
   "(function () {\n  function revealFragment() {\n    if (!location.hash) return;\n    var id = location.hash.slice(1);\n    try { id = decodeURIComponent(id); } catch (error) {}\n    var target = document.getElementById(id);\n    if (!target) return;\n    var node = target;\n    while (node) {\n      if (node.tagName === 'DETAILS') node.open = true;\n      node = node.parentElement;\n    }\n    window.requestAnimationFrame(function () { target.scrollIntoView(); });\n  }\n  window.addEventListener('hashchange', revealFragment);\n  revealFragment();\n}());")
 
+(define backmatter-fetch-script
+  ;;     On first expand, replace a backmatter entry's static outline
+  ;;     with the cited page's real content: the entry fetches the
+  ;;     page (which exists anyway), takes its tree root's content,
+  ;;     and swaps it in.  Zero duplication in the static output; a
+  ;;     failed fetch quietly keeps the outline.
+  "(function () {\n  function loadFull(entry) {\n    var details = entry.querySelector(':scope > details');\n    if (!details || details.dataset.full) return;\n    var id = entry.getAttribute('data-tree-id');\n    var slug = entry.querySelector('a.forest-tree-id');\n    if (!id || !slug) return;\n    var url = slug.getAttribute('href').split('#')[0];\n    if (!url) return;\n    details.dataset.full = 'pending';\n    fetch(url).then(function (response) { return response.text(); })\n      .then(function (html) {\n        var doc = new DOMParser().parseFromString(html, 'text/html');\n        var root = doc.getElementById('tree-root-' + id);\n        var content = root && root.querySelector('.forest-tree-content');\n        if (!content) throw new Error('tree content missing');\n        var panel = details.querySelector('.forest-tree-content');\n        panel.innerHTML = content.innerHTML;\n        panel.classList.add('backmatter-full');\n        details.dataset.full = 'done';\n      })\n      .catch(function () { delete details.dataset.full; });\n  }\n  document.querySelectorAll('section.forest-tree-block.backmatter')\n    .forEach(function (entry) {\n      var details = entry.querySelector(':scope > details');\n      if (details) details.addEventListener('toggle', function () {\n        if (details.open) loadFull(entry);\n      });\n    });\n}());")
+
 (define* (html-document title description body math? home-title style
                        routes mathjax-src inline-stylesheets?
                        #:key (html-attributes '()) (head '()) (site-nav '())
-                       (home-link #f))
+                       (home-link #f) (scripts '()))
   `(html
      ,@(if (null? html-attributes)
            '()
@@ -396,6 +426,7 @@ top-level taxon element; empty pages contribute nothing."
                            ,@site-nav))
                '()))
        ,@body
+       ,@(map (lambda (script) `(script ,script)) scripts)
        (script ,fragment-reveal-script))))
 
 (define (serialize-html-document sxml)
@@ -424,8 +455,7 @@ top-level taxon element; empty pages contribute nothing."
                           (backmatter-sxml forest page routes backmatter
                                            labels reference-taxon-id
                                            backmatter-details?
-                                           #:metadata-items metadata-items
-                                           #:highlighters highlighters))))
+                                           #:metadata-items metadata-items))))
     (serialize-html-document
       (html-document
         (site-page-title page)
@@ -441,7 +471,10 @@ top-level taxon element; empty pages contribute nothing."
         #:html-attributes html-attributes
         #:head head
         #:site-nav site-nav
-        #:home-link home-link))))
+        #:home-link home-link
+        #:scripts (if (null? backmatter)
+                      '()
+                      (list backmatter-fetch-script))))))
 
 (define* (render-html-changed forest style routes mathjax-src backmatter labels
                              reference-taxon-id

@@ -34,4 +34,7 @@ pre, .math-display { overflow-x: auto; }
 .forest-tree-id { margin-left: .15em; font-size: .75em; opacity: .65; }
 .forest-tree-id:hover { opacity: 1; }
 .forest-tree-content { padding: .25rem .85rem; }
+.tree-outline { margin: .25rem 0; padding-left: 1.2rem; font-size: .875rem; }
+.tree-outline ol { padding-left: 1rem; }
+.backmatter-full .tree-outline { display: none; }
 .backmatter { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid currentColor; }
