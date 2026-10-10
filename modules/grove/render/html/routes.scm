@@ -57,7 +57,8 @@
                      home-page))
 
 (define (html-page-path routes id)
-  (let ((path (if (string=? id (html-home-page routes))
+  (let ((path (if (and (html-home-page routes)
+                       (string=? id (html-home-page routes)))
                   (html-index-path routes)
                   ((html-page-path-procedure routes) id))))
     (unless (artifact-path? path)

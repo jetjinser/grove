@@ -63,7 +63,9 @@
     (error "Sitemap path must be a relative artifact path" sitemap-path))
   (unless (html-routes? routes)
     (error "Forester sitemap renderer requires HTML routes" routes))
-  (unless (find-page forest (html-home-page routes))
+  ;;     home-page 是可选的：没有主页的项目不需要校验它存在。
+  (unless (or (not (html-home-page routes))
+              (find-page forest (html-home-page routes)))
     (error "configured HTML home page was not found" (html-home-page routes)))
   (let* ((base (web-base-url site-url))
          (route-table
