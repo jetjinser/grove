@@ -202,14 +202,16 @@ top-level taxon element; empty pages contribute nothing."
        ,@(metadata-sxml (metadata-items page)))))
 
 (define (backlink-reference-sxml forest routes reference metadata-items)
+  ;;     Forester-style entry: identify the tree that cites us by its
+  ;;     own title and metadata.  The alt text belongs to the citing
+  ;;     context in the body; repeating it here obscures what the
+  ;;     entry points at.
   (let* ((source
            (lookup-page forest (reference-source-page-id reference)))
           (url (reference-source-url routes reference))
-          (id (reference-source-page-id reference))
-          (label (reference-label reference)))
+          (id (reference-source-page-id reference)))
     `(li ,@(taxon-entry-sxml source)
-       (a (@ (href ,url))
-          ,(if (string-null? label) (site-page-title source) label)) " "
+       (a (@ (href ,url)) ,(site-page-title source)) " "
        ,(tree-slug-sxml id url)
        ,@(metadata-sxml (metadata-items source)))))
 
