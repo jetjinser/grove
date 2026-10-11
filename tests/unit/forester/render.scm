@@ -809,13 +809,12 @@
        (html (assoc-ref
                (site->html forest #:routes routes
                  #:title-decoration
-                 (lambda (forest id)
-                   (let ((page (find-page forest id)))
-                     (if (string=? id "overview")
-                         `((span (@ (class "taxon")) "overview. ")
-                           (span (@ (class "source"))
-                             ,(or (site-page-source page) "?")))
-                         '()))))
+                 (lambda (forest page)
+                   (if (string=? (site-page-id page) "overview")
+                       `((span (@ (class "taxon")) "overview. ")
+                         (span (@ (class "source"))
+                           ,(or (site-page-source page) "?")))
+                       '())))
                "target")))
   (test-assert "title-decoration decorates tree headings"
     (string-contains html
@@ -835,11 +834,10 @@
        (html (assoc-ref
                (site->html forest #:routes (make-html-routes)
                  #:title-decoration
-                 (lambda (forest id)
-                   (let ((page (find-page forest id)))
-                     (if (assq-ref (site-page-metadata page) 'summary)
-                         '((span (@ (class "summary")) "S"))
-                         '()))))
+                 (lambda (forest page)
+                   (if (assq-ref (site-page-metadata page) 'summary)
+                       '((span (@ (class "summary")) "S"))
+                       '())))
                "annotated")))
   (test-assert "title-decoration reads page metadata through the forest"
     (string-contains html "<span class=\"summary\">S</span>")))

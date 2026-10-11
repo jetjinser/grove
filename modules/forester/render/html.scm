@@ -98,7 +98,7 @@ otherwise the generated position anchor that backs repeated occurrences."
           #:id-prefix anchor-prefix
           #:metadata-items (metadata-items target)
           #:title-decoration (if title-decoration
-                                 (title-decoration forest id)
+                                 (title-decoration forest target)
                                  '())
           #:open? (if (assq 'open? (content-element-properties element))
                       (content-element-property element 'open?) #t))))
@@ -171,22 +171,17 @@ hooks replace this wholesale; compose with it to extend."
 
 (define (taxon-entry-sxml page)
   "Leading taxon span for a backmatter entry, from the page's own
-top-level taxon element; empty pages contribute nothing."
-  (let loop ((children (content-document-children (site-page-document page))))
-    (if (null? children)
-        '()
-        (let ((child (car children)))
-          (if (and (content-element? child)
-                   (eq? (content-element-kind child) 'taxon))
-              (let ((text (content-index:content->plain-text child)))
-                (if (string-null? text)
-                    '()
-                    (let ((id (content-element-property child 'id)))
-                      `((span (@ (class "taxon")
-                                  ,@(if id `((data-taxon ,id)) '()))
-                              ,text " ")))))
-              (loop (cdr children)))))))
-
+top-level taxon element; pages without one contribute nothing."
+  (let ((taxon (page-taxon page)))
+    (if taxon
+        (let ((text (content-index:content->plain-text taxon)))
+          (if (string-null? text)
+              '()
+              (let ((id (content-element-property taxon 'id)))
+                `((span (@ (class "taxon")
+                            ,@(if id `((data-taxon ,id)) '()))
+                        ,text " ")))))
+        '())))
 (define* (backmatter-entry-sxml forest routes class page metadata-items
                                 #:key
                                 (url (html-page-url routes
@@ -318,7 +313,7 @@ top-level taxon element; empty pages contribute nothing."
                                                         position))
                              (decoration
                                (if title-decoration
-                                   (title-decoration forest target-id)
+                                   (title-decoration forest target)
                                    '()))
                              (nested
                                (if (member target-id visited)
@@ -449,7 +444,7 @@ top-level taxon element; empty pages contribute nothing."
                  #:depth 1
                  #:metadata-items (metadata-items page)
                  #:title-decoration (if title-decoration
-                                        (title-decoration forest (site-page-id page))
+                                        (title-decoration forest page)
                                         '())))
          (article (append (list tree)
                           (backmatter-sxml forest page routes backmatter

@@ -281,9 +281,12 @@ rewrite rendered markup. They are available on `render-html`, `site->html`, and
 - `#:home-link` — replaces the default home link: a procedure receiving the
   index URL and returning the anchor SXML. Provide it when the navigation link
   needs attributes, icons, or markup beyond the site title.
-- `#:title-decoration` — a procedure receiving a tree ID and returning SXML
-  inserted before the title in tree headings and the table of contents. This is
-  the supported way to show per-tree frontmatter such as a taxon.
+- `#:title-decoration` — a procedure receiving the forest and the tree's page
+  record (every tree ID resolves to a page) and returning SXML inserted before
+  the title in tree headings and the table of contents. This is the supported
+  way to show per-tree frontmatter such as a taxon: `(page-taxon page)` and
+  `(page-tags page)` return the tree's own topic elements without scanning the
+  document.
 - `#:article?` — wraps the page tree and its backmatter in one `<article>`
   element, leaving the table of contents outside it.
 - `#:backmatter-details?` — renders each backmatter section as a collapsible

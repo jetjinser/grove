@@ -29,6 +29,8 @@
             reference-pages
             find-page
             lookup-page
+            page-taxon
+            page-tags
             links
             tree-occurrences
             tree-occurrence-target
@@ -304,6 +306,27 @@
              (< id (vector-length index)))
         (vector-ref index id)
         (error "unknown content node" id))))
+
+(define (page-topic-elements page kind)
+  "The page's own top-level topic elements of KIND ('taxon or 'tag):
+frontmatter topics declared at the top of the tree.  Topics belonging
+to nested trees or arriving through transclusions stay out - they are
+those trees' frontmatter."
+  (filter-map
+    (lambda (node)
+      (and (content-element? node)
+           (eq? (content-element-kind node) kind)
+           node))
+    (content-document-children (site-page-document page))))
+
+(define (page-taxon page)
+  "The page's own taxon element, or #f when it declares none."
+  (let loop ((nodes (page-topic-elements page 'taxon)))
+    (if (null? nodes) #f (car nodes))))
+
+(define (page-tags page)
+  "The page's own tag elements, in declaration order."
+  (page-topic-elements page 'tag))
 
 (define (page-anchor-facts page)
   "Return (kind . id) pairs for the anchor IDs a page declares in its own
