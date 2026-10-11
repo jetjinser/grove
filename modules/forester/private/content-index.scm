@@ -9,46 +9,9 @@
   #:use-module (forester relations)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (content->plain-text
-            element-plain-text?
+  #:re-export (content->plain-text)
+  #:export (element-plain-text?
             build-content-node-index))
-
-(define (element->plain-text kind properties parts)
-  (case kind
-    ((math-token)
-     (let ((text (string-concatenate parts)))
-       (if (and (eq? (assq-ref properties 'token-kind) 'mo)
-                (member text '("+" "=" "×" "·" "→"
-                               "≈" "<" ">" "≤" "≥")))
-           (format #f " ~a " text)
-           text)))
-    ((math-frac)
-     (format #f "(~a)/(~a)" (or (first parts) "")
-             (or (second parts) "")))
-    ((math-sup) (format #f "~a^(~a)" (or (first parts) "")
-                        (or (second parts) "")))
-    ((math-sub) (format #f "~a_(~a)" (or (first parts) "")
-                        (or (second parts) "")))
-    ((math-parens) (string-append "(" (string-concatenate parts) ")"))
-    ((math-vector) (format #f "vec(~a)" (string-concatenate parts)))
-    ((math-column) (string-join parts ", "))
-    ((math-align) (string-join parts " ; "))
-    (else (string-concatenate parts))))
-
-(define (content->plain-text content)
-  (cond
-    ((string? content) content)
-    ((content-text? content) (content-text-value content))
-    ((content-layout? content) (content-layout-raw content))
-    ((content-element? content)
-     (element->plain-text
-       (content-element-kind content)
-       (content-element-properties content)
-       (map content->plain-text (content-element-children content))))
-    ((content-document? content)
-     (string-concatenate (map content->plain-text
-                              (content-document-children content))))
-    (else "")))
 
 (define (element-plain-text? element)
   (and (content-element? element)
