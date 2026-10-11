@@ -321,12 +321,6 @@ ID-PREFIX."
 (define (sxml-void? node)
   (and (pair? node) (eq? (car node) '*void*)))
 
-(define (sxml-contains-void? node)
-  (cond
-    ((sxml-void? node) #t)
-    ((pair? node) (any sxml-contains-void? (cdr node)))
-    (else #f)))
-
 (define (write-html-attributes attributes port)
   (for-each
     (lambda (attribute)
@@ -343,13 +337,44 @@ ID-PREFIX."
   ;;     `&&` must not become `&amp;&amp;`).
   '(script style))
 
+(define html-void-tags
+  ;;     HTML void elements have no end tag, so a childless occurrence
+  ;;     serializes open-only.  Every OTHER childless element must get
+  ;;     an explicit end tag: HTML parsing ignores the slash on a
+  ;;     self-closing non-void start tag, which then stays open and
+  ;;     swallows the markup that follows it.
+  '(area base br col embed hr img input link meta param source track
+    wbr))
+
 (define (write-html node port)
-  ;;     Trees free of author-void elements delegate to sxml->xml
-  ;;     verbatim, keeping its escaping behavior byte-for-byte; only
-  ;;     the void markers need hand emission.  Raw-text elements are
-  ;;     also hand-emitted: their text children go out unescaped.
+  ;;     The HTML serializer.  Element markup is hand-emitted so that
+  ;;     childless non-void elements get explicit end tags: HTML
+  ;;     parsing ignores the slash on a self-closing non-void start
+  ;;     tag, which then stays open and swallows the markup that
+  ;;     follows it.  Author-void markers and raw-text elements are
+  ;;     special-cased; strings, attribute values, and sxml special
+  ;;     nodes escape through sxml->xml exactly as before.
   (cond
-    ((and (pair? node) (memq (car node) html-raw-text-tags))
+    ((not (pair? node)) (sxml->xml node port))
+    ((and (pair? node) (not (symbol? (car node))))
+     ;;     A fragment - a list of sibling nodes (the page body is
+     ;;     one): emit the first node as text and continue with the
+     ;;     rest, matching sxml->xml's node-list handling.
+     (write-html (car node) port)
+     (write-html (cdr node) port))
+    ((sxml-void? node)
+     (let* ((tag (cadr node))
+            (rest (cddr node))
+            (attributes
+              (if (and (pair? rest) (pair? (car rest))
+                       (eq? (caar rest) '@))
+                  (cdar rest)
+                  '())))
+       (display "<" port)
+       (display tag port)
+       (write-html-attributes attributes port)
+       (display "/>" port)))
+    ((memq (car node) html-raw-text-tags)
      (let* ((rest (cdr node))
             (has-attributes?
               (and (pair? rest) (pair? (car rest))
@@ -369,39 +394,27 @@ ID-PREFIX."
          children)
        (display "</" port)
        (display (car node) port)
-       (display ">" port))))
-  (if (sxml-contains-void? node)
-      (cond
-        ((not (pair? node)) (sxml->xml node port))
-        ((sxml-void? node)
-         (let* ((tag (cadr node))
-                (rest (cddr node))
-                (attributes
-                  (if (and (pair? rest) (pair? (car rest))
-                           (eq? (caar rest) '@))
-                      (cdar rest)
-                      '())))
-           (display "<" port)
-           (display tag port)
-           (write-html-attributes attributes port)
-           (display "/>" port)))
-        (else
-         (let* ((tag (car node))
-                (rest (cdr node))
-                (has-attributes?
-                  (and (pair? rest) (pair? (car rest))
-                       (eq? (caar rest) '@)))
-                (attributes (if has-attributes? (cdar rest) '()))
-                (children (if has-attributes? (cdr rest) rest)))
-           (display "<" port)
-           (display tag port)
-           (write-html-attributes attributes port)
-           (display ">" port)
-           (for-each (lambda (child) (write-html child port)) children)
-           (display "</" port)
-           (display tag port)
-           (display ">" port))))
-      (sxml->xml node port)))
+       (display ">" port)))
+    ((memq (car node) '(*text* *entity* comment PI))
+     (sxml->xml node port))
+    (else
+     (let* ((rest (cdr node))
+            (has-attributes?
+              (and (pair? rest) (pair? (car rest))
+                   (eq? (caar rest) '@)))
+            (attributes (if has-attributes? (cdar rest) '()))
+            (children (if has-attributes? (cdr rest) rest)))
+       (display "<" port)
+       (display (car node) port)
+       (write-html-attributes attributes port)
+       (if (and (null? children) (memq (car node) html-void-tags))
+           (display " />" port)
+           (begin
+             (display ">" port)
+             (for-each (lambda (child) (write-html child port)) children)
+             (display "</" port)
+             (display (car node) port)
+             (display ">" port)))))))
 
 (define (sxml->html sxml)
   (call-with-output-string (lambda (port) (write-html sxml port))))

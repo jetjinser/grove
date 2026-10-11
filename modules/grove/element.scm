@@ -8,7 +8,7 @@
   #:use-module (grove style html)
   #:export (make-element))
 
-(define (element-command tag style void?)
+(define (element-command tag style void? flow-kind)
   (lambda body
     (for-each
       (lambda (argument)
@@ -17,7 +17,7 @@
       body)
     (when (and void? (pair? body))
       (error "void element takes no content" tag))
-    (make-content-element 'span body #:style style #:flow-kind 'inline)))
+    (make-content-element 'span body #:style style #:flow-kind flow-kind)))
 
 (define* (make-element #:key tag class (attributes '()) (flow-kind 'inline)
                        (void? #f))
@@ -26,7 +26,9 @@ TAG.  The HTML shape belongs to the vocabulary author - the renderer
 adds no attributes of its own and TEXT output keeps the body.  CLASS
 joins the tag's class; ATTRIBUTES are static attribute pairs, so a
 namespace declaration rides along as (xmlns:my . \"...\").  VOID?
-emits a self-closing tag and rejects content."
+emits a self-closing tag and rejects content.  FLOW-KIND (inline or
+block) tells the composition whether the element flows with text or
+stands as its own block; block elements are not wrapped in <p>."
   (unless tag
     (error "custom element requires a tag" tag))
   ;;     Validate at definition time, not first use.
@@ -43,4 +45,4 @@ emits a self-closing tag and rejects content."
                          void-markers
                          (filter (lambda (property) (not (null? property)))
                                  (list attributes class-attributes))))))
-      (element-command (html-tag-name tag) style void?))))
+      (element-command (html-tag-name tag) style void? flow-kind))))

@@ -167,4 +167,23 @@
   "<p>a<wbr/><em>x</em></p>"
   (sxml->html '(p "a" (*void* wbr) (em "x"))))
 
+(test-equal "childless non-void elements get explicit end tags"
+  "<div class=\"x\"><span class=\"y\"></span></div>"
+  (sxml->html '(div (@ (class "x")) (span (@ (class "y"))))))
+(test-equal "childless void tags stay self-closed"
+  "<img src=\"/a.svg\" alt=\"A\" />"
+  (sxml->html '(img (@ (src "/a.svg") (alt "A")))))
+(test-equal "raw-text elements serialize once and unescaped"
+  "<script>var x = 1 && 2;</script>"
+  (sxml->html '(script "var x = 1 && 2;")))
+
+(test-equal "make-element passes its flow kind through"
+  'block
+  (content-element-flow-kind
+    ((make-element #:tag "figure" #:flow-kind 'block) "body")))
+(test-equal "make-element defaults to inline flow"
+  'inline
+  (content-element-flow-kind
+    ((make-element #:tag "span") "body")))
+
 (test-end "grove content")
