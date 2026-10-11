@@ -4,7 +4,8 @@
 
 (define-module (grove private build-lock)
   #:use-module (system foreign)
-  #:export (with-build-lock))
+  #:export (with-build-lock try-exclusive-lock lock-port-exclusive
+            release-lock))
 
 (define (ensure-directory directory)
   (unless (or (string=? directory ".")
@@ -30,24 +31,36 @@
 (define LOCK_NB 4)
 
 (define (acquire-exclusive-lock port)
+  ;;     Poll with LOCK_NB: a blocking flock waits in the kernel
+  ;;     where Guile cannot announce the wait, and its -1 (interrupted
+  ;;     wait) would be easy to miss.  Polling keeps the announce and
+  ;;     a missed wake-up only delays by the tick.
   (let loop ((announced? #f))
-    (catch 'system-error
-      (lambda ()
-        (flock (fileno port) LOCK_EX))
-      (lambda arguments
-        (let ((errno (system-error-errno arguments)))
-          (cond
-            ((memv errno (list EAGAIN EWOULDBLOCK EINTR))
-             ;;     Another Grove build holds the lock.  Announce the
-             ;;     wait once, then poll: the holder is a live build
-             ;;     and will release when it finishes or dies.
-             (unless announced?
-               (display "Waiting for the project build lock; another Grove build is running...\n"
-                        (current-error-port))
-               (force-output (current-error-port)))
-             (sleep 1)
-             (loop #t))
-            (else (apply throw arguments))))))))
+    (or (try-exclusive-lock port)
+        (begin
+          (unless announced?
+            (display "Waiting for the project build lock; another Grove build is running...\n"
+                     (current-error-port))
+            (force-output (current-error-port)))
+          (sleep 1)
+          (loop #t)))))
+
+(define (try-exclusive-lock port)
+  "Take an exclusive lock on PORT without blocking: #t when acquired,
+#f when another process holds it."
+  ;;     Foreign calls do not raise on -1: flock's failure return IS
+  ;;     the would-block answer, and must be checked as a value.
+  (zero? (flock (fileno port) (logior LOCK_EX LOCK_NB))))
+
+(define (lock-port-exclusive port)
+  "Take an exclusive lock on PORT, blocking until it is available.
+Quiet - callers announce waits in their own terms."
+  (flock (fileno port) LOCK_EX))
+
+(define (release-lock port)
+  "Release the lock taken on PORT; never fails loudly."
+  (flock (fileno port) LOCK_UN)
+  (values))
 
 (define (canonical-directory directory)
   (ensure-directory directory)
@@ -70,7 +83,5 @@ another build holds the lock."
       (lambda () (acquire-exclusive-lock port))
       thunk
       (lambda ()
-        (catch 'system-error
-          (lambda () (flock (fileno port) LOCK_UN))
-          (lambda _ #f))
+        (release-lock port)
         (close-port port)))))

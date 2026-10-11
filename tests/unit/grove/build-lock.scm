@@ -25,6 +25,15 @@
     (with-build-lock root (lambda () #t))
     (file-exists? lock-path)))
 
+(test-assert "try-exclusive-lock fails while another port holds the lock"
+  ;;     Regression: flock's -1 on would-block is a value, not an
+  ;;     exception - treating it as success swept live workspaces.
+  (let ((p1 (open-file lock-path "a"))
+        (p2 (open-file lock-path "a")))
+    (and (try-exclusive-lock p1)
+         (not (try-exclusive-lock p2))
+         (begin (release-lock p1) #t))))
+
 (test-assert "a second holder waits for the first to release"
   (let ((entered #f) (left #f) (second-entered #f))
     (let ((first (call-with-new-thread

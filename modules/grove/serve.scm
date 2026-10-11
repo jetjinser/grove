@@ -4,6 +4,7 @@
 (define-module (grove serve)
   #:use-module (grove output)
   #:use-module (grove private cli progress)
+  #:use-module (grove private build-lock)
   #:use-module (grove project diagnostic)
   #:use-module (grove private preview http)
   #:use-module (grove private preview watch)
@@ -11,7 +12,7 @@
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (serve-project))
+  #:export (serve-project sweep-orphan-workspaces!))
 
 (define (milliseconds)
   (quotient (* 1000 (get-internal-real-time)) internal-time-units-per-second))
@@ -27,6 +28,33 @@
               (delete-file path))))
       (scandir directory (lambda (name) (not (member name '("." ".."))))))
     (rmdir directory)))
+
+(define (sweep-orphan-workspaces!)
+  ;;     A preview workspace whose .live lock can be taken has no live
+  ;;     serve behind it - a hard-killed session's leftovers.  A
+  ;;     missing .live marks a workspace from before the convention:
+  ;;     a day untouched means nothing is using it.
+  (let ((parent (or (getenv "TMPDIR") "/tmp")))
+    (for-each
+      (lambda (name)
+        (let* ((path (string-append parent "/" name))
+               (port (false-if-exception
+                       (open-file (string-append path "/.live") "a"))))
+          (if port
+              (let ((orphan? (try-exclusive-lock port)))
+                (release-lock port)
+                (close-port port)
+                (when orphan?
+                  (format (current-error-port)
+                          "Removing stale preview workspace ~a\n" path)
+                  (remove-workspace path)))
+              (let ((info (false-if-exception (lstat path))))
+                (when (and info
+                           (> (- (current-time) (stat:mtime info)) 86400))
+                  (format (current-error-port)
+                          "Removing stale preview workspace ~a\n" path)
+                  (remove-workspace path))))))
+      (scandir parent (lambda (name) (string-prefix? ".grove-preview-" name))))))
 
 (define worker-code
   "(setpgid 0 0) (use-modules (grove private preview worker)) (exit (worker-main (cdr (command-line))))")
@@ -51,8 +79,8 @@
          (modules '())
          (snapshot #f)
          (pid #f)
-         (generation 0)
          (workspace #f)
+         (live-port #f)
          (listener #f)
          (server-started? #f)
          (idle? #f)
@@ -64,7 +92,6 @@
         (call-with-output-file request
           (lambda (port)
             (write (list filename override modules roots files debug?) port)))
-        (set! generation (+ generation 1))
         (set! idle? #f)
         (force-output)
         (call-with-blocked-asyncs
@@ -76,7 +103,12 @@
                      (worker-arguments request result)
                      #:input input
                      #:environment
-                     (cons (format #f "XDG_CACHE_HOME=~a/cache-~a" workspace generation)
+                     ;;     One stable cache for the workspace's
+                     ;;     lifetime: entries are content-fingerprint
+                     ;;     addressed, so rebuilds reuse everything
+                     ;;     that has not changed instead of starting
+                     ;;     from an empty generation.
+                     (cons (format #f "XDG_CACHE_HOME=~a/cache" workspace)
                            (filter (lambda (entry)
                                      (not (string-prefix? "XDG_CACHE_HOME=" entry)))
                                    (environ)))))))))))
@@ -112,9 +144,10 @@
         (set! pid #f))
       (when (and listener (not (port-closed? listener))) (close-port listener))
       (when workspace (remove-workspace workspace))
+      (when live-port (close-port live-port))
       (when sigint (sigaction SIGINT (car sigint) (cdr sigint)))
       (when sigterm (sigaction SIGTERM (car sigterm) (cdr sigterm)))
-      (when sigpipe (sigaction SIGPIPE (car sigpipe) (cdr sigpipe))))
+      (when sigpipe (sigaction SIGPIPE SIG_IGN)))
     (catch 'preview-stop
       (lambda ()
         (dynamic-wind
@@ -123,8 +156,15 @@
             (set! sigterm (sigaction SIGTERM (lambda (signal) (throw 'preview-stop signal))))
             (set! sigpipe (sigaction SIGPIPE SIG_IGN)))
           (lambda ()
+            (sweep-orphan-workspaces!)
             (set! workspace (mkdtemp (string-append (or (getenv "TMPDIR") "/tmp")
                                                    "/.grove-preview-XXXXXX")))
+            ;;     The .live lock says this workspace has a live
+            ;;     serve: the startup sweep takes it without blocking
+            ;;     to tell leftovers from sessions like this one.
+            (set! live-port
+              (open-file (string-append workspace "/.live") "a"))
+            (lock-port-exclusive live-port)
             ;; Bind before building so an occupied port fails without rebuilding.
             (call-with-project-stage 'serve #f
               (lambda ()
@@ -155,10 +195,16 @@
                                 (valid-paths (map car (append before after))))
                            ;; Re-evaluate with the worker's actual output directory:
                            ;; newly created output files must not trigger rebuilds.
+                           ;; Additions to the watch set itself (modules and store
+                           ;; objects first recorded by this build) are not edits
+                           ;; either - counting them made every serve start spend
+                           ;; one full rebuild on nothing.
                            (set! pending
                              (delete-duplicates
                                (append (filter (lambda (path) (member path valid-paths string=?)) pending)
-                                       (snapshot-changes before after)) string=?))
+                                       (snapshot-changes before after
+                                                         #:ignore-additions? #t))
+                               string=?))
                            (set! current after)))
                         ((not snapshot) (error "initial preview build failed"))
                         (else

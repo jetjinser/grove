@@ -50,12 +50,22 @@ Directory symlinks are not traversed. Explicit files may live outside ROOTS."
       (lambda (left right) (string=? (car left) (car right))))
     (lambda (left right) (string<? (car left) (car right)))))
 
-(define (snapshot-changes previous current)
+(define* (snapshot-changes previous current #:key (ignore-additions? #f))
+  ;;     IGNORE-ADDITIONS? is for the post-build comparison: a build
+  ;;     widens the watch set on its first run (loaded modules, store
+  ;;     object paths join FILES), and counting those first sightings
+  ;;     as edits made every serve start spend one full rebuild on
+  ;;     nothing.  Mid-build edits are stamps that differ on paths the
+  ;;     baseline already knew; removals still trigger.
   (delete-duplicates
     (append
       (filter-map (lambda (entry)
                     (and (not (equal? entry (assoc (car entry) previous)))
-                         (car entry))) current)
+                         (or (not ignore-additions?)
+                             (assoc (car entry) previous))
+                         (car entry)))
+                  current)
       (filter-map (lambda (entry)
-                    (and (not (assoc (car entry) current)) (car entry))) previous))
+                    (and (not (assoc (car entry) current)) (car entry)))
+                  previous))
     string=?))
