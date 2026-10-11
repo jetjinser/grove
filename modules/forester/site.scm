@@ -34,6 +34,7 @@
             links
             tree-occurrences
             tree-occurrence-target
+            page-anchor-facts
             backlinks
             common-backlinks
             reachable-pages
@@ -330,9 +331,10 @@ those trees' frontmatter."
 
 (define (page-anchor-facts page)
   "Return (kind . id) pairs for the anchor IDs a page declares in its own
-document: the page's root anchor, explicit math IDs from owned content, and
-the anchors of its subtree and transclusion elements. Anchors brought in
-through transclusions belong to their own pages and stay out of this set."
+document: the page's root anchor, explicit math IDs from owned content, the
+anchors of its subtree and transclusion elements, and anchors declared by
+ordinary elements (a term definition, a figure). Anchors brought in through
+transclusions belong to their own pages and stay out of this set."
   (let ((document (site-page-document page)))
     (append
       (list (cons "anchor" (string-append "tree-root-" (site-page-id page))))
@@ -345,7 +347,10 @@ through transclusions belong to their own pages and stay out of this set."
            (filter-map
              (lambda (element) (content-element-property element 'anchor))
              (append (tree-pass:subtree-elements document)
-                     (tree-pass:transclusion-elements document)))))))
+                     (tree-pass:transclusion-elements document))))
+      (map (lambda (element)
+             (cons "anchor" (content-element-property element 'anchor)))
+           (tree-pass:declared-anchor-elements document)))))
 
 (define (dom-anchor-index pages composition transclusion-index)
   "Build a page-id → rendered-anchor-ids table.  A page's set is its own

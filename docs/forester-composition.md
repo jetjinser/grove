@@ -263,3 +263,12 @@ declarations, and `#:flow-kind` selects inline or block. Tag names are
 validated at definition time: they must start with a letter and contain
 letters, digits, hyphens, underscores, or colons. The HTML is entirely the
 vocabulary author's; Grove ships no element table of its own.
+
+`#:anchor` declares the occurrence as a linkable anchor — a term
+definition, a figure. It renders as the tag's `id` and registers the
+element with the anchor registry (`page-anchor-facts`), so fragment links
+against the page resolve to it and term queries can see it:
+
+```scheme
+(define defn (make-element #:tag "dfn" #:anchor "term-loom"))
+```

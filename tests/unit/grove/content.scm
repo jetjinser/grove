@@ -9,7 +9,12 @@
   #:use-module (grove style)
   #:use-module (grove style html)
   #:use-module (grove render html)
-  #:use-module (grove render text))
+  #:use-module (grove render html routes)
+  #:use-module (grove render text)
+  #:use-module (grove build)
+  #:use-module (grove site)
+  #:use-module (forester render html)
+  #:use-module (forester site))
 
 (test-begin "grove content")
 
@@ -185,5 +190,32 @@
   'inline
   (content-element-flow-kind
     ((make-element #:tag "span") "body")))
+
+(let ((definition (make-element #:tag "dfn" #:anchor "term-id")))
+  (define element (definition "a term"))
+  (test-equal "make-element registers its anchor as a property"
+    "term-id"
+    (content-element-property element 'anchor))
+  (test-equal "make-element renders the anchor as the tag's id"
+    "<dfn id=\"term-id\">a term</dfn>"
+    (sxml->html (content->sxml element))))
+
+(let* ((definition (make-element #:tag "dfn" #:anchor "term-id"))
+       (page (make-site-page "glossary" "Glossary"
+               (make-content-document
+                 (list (make-content-element
+                         'paragraph
+                         (list (definition "a term")))))))
+       (forest (make-forest (make-site (list page)))))
+  (test-equal "declared anchors enter the page's anchor registry"
+    '(("anchor" . "tree-root-glossary") ("anchor" . "term-id"))
+    (page-anchor-facts page))
+  (test-assert "the anchored element renders on its page"
+    (string-contains
+      (assoc-ref (site->html forest
+                             #:routes (make-html-routes
+                                        #:home-page "glossary"))
+                 "glossary")
+      "<dfn id=\"term-id\">a term</dfn>")))
 
 (test-end "grove content")

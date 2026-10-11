@@ -15,6 +15,7 @@
             math-elements
             subtree-elements
             direct-subtree-elements
+            declared-anchor-elements
             content-source-paths
             transclusion-elements
             owned-content
@@ -63,6 +64,18 @@
 
 (define (transclusion-elements content)
   (walk-content content (element-kind? 'transclude) #:postorder? #t))
+
+(define (declared-anchor-elements content)
+  ;;     Ordinary elements declaring an `anchor' property - a term
+  ;;     definition, a figure.  Tree boundaries stop the walk: their
+  ;;     interiors are other trees with anchors of their own.
+  (walk-content content
+    (lambda (element)
+      (and (content-element? element)
+           (not (memq (content-element-kind element)
+                      '(subtree transclude forest-query)))
+           (content-element-property element 'anchor)))
+    #:stop? (element-kind? 'subtree)))
 
 (define (owned-content content)
   (cond
