@@ -55,8 +55,14 @@
        (when (file-exists? directory)
          (let ((retained (filter identity (hash-map->list
                            (lambda (path status)
+                             ;;     A vanished path is a stale entry:
+                             ;;     drop it instead of failing the
+                             ;;     build - the cache is hygiene, not
+                             ;;     an invariant.
                              (and (memq status '(hit miss))
-                                  (content-fingerprint (canonicalize-path path))))
+                                  (false-if-exception
+                                   (content-fingerprint
+                                    (canonicalize-path path)))))
                            statuses))))
            (for-each
              (lambda (name)

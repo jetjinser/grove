@@ -206,10 +206,13 @@
       (lambda (stale-path)
         (unless (member stale-path paths string=?)
           (let ((full-path (string-append directory "/" stale-path)))
-            (when (file-is-directory? full-path)
-              (error "stale artifact path is a directory; refusing to remove"
-                     full-path))
+            ;;     Existence first: a stale path usually names a file
+            ;;     that is already gone (renamed or pruned elsewhere),
+            ;;     and file-is-directory? would stat it into an error.
             (when (file-exists? full-path)
+              (when (file-is-directory? full-path)
+                (error "stale artifact path is a directory; refusing to remove"
+                       full-path))
               (delete-file full-path)))))
       previous-paths)
     (write-artifact-manifest manifest-path manifest-temp-path paths)
