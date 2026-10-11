@@ -5,6 +5,7 @@
 (define-module (grove project)
   #:use-module (grove string-fun)
   #:use-module (grove private cache-dir)
+  #:use-module (grove private build-lock)
   #:use-module (grove private input cache)
   #:use-module (grove private input dependencies)
   #:use-module (grove build)
@@ -604,8 +605,13 @@ Return a project-analysis holding the analyzed model."
                         (not cache-hit?))))
 
 (define* (build-project/report project #:key (progress (lambda (stage path) #t)))
-  "Build PROJECT, notifying PROGRESS with a stage symbol and detail."
-  (execute-project project #t progress))
+  "Build PROJECT, notifying PROGRESS with a stage symbol and detail.
+
+The build takes the project's build lock: the artifact set, manifest,
+and stale-output cleanup all live in the output directory, so a serve
+watch and a manual build over one project must not run concurrently."
+  (with-build-lock (project-output-directory project)
+    (lambda () (execute-project project #t progress))))
 
 (define* (check-project project #:key (progress (lambda (stage path) #t)))
   "Read, analyze, render, and validate PROJECT without accessing output state."
