@@ -166,6 +166,19 @@
                                   (current-error-port))
                          (force-output (current-error-port)))))))
                 (when (and watch? (not pid) (pair? pending) (>= now deadline))
+                  ;;     Name the triggers: chained rebuilds - a build's
+                  ;;     own writes re-triggering the watcher - are
+                  ;;     indistinguishable from real edits without this.
+                  (format (current-error-port)
+                          "Rebuilding (~a changed path~a):\n"
+                          (length pending)
+                          (if (= (length pending) 1) "" "s"))
+                  (for-each
+                    (lambda (path)
+                      (format (current-error-port) "  ~a\n" path))
+                    (take (sort pending string<?)
+                          (min 12 (length pending))))
+                  (force-output (current-error-port))
                   (start-build!)
                   (set! pending '()))
                 (when (and watch? server-started? (not pid) (null? pending) (not idle?))
