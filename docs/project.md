@@ -295,7 +295,10 @@ rewrite rendered markup. They are available on `render-html`, `site->html`, and
   lane item with a numbered back-reference, and its anchor position keeps
   a superscript marker. Pair with grid CSS that places the lane beside
   the reading column; the option participates in the renderer's cache
-  configuration.
+  configuration. Kinds match the content element's `kind`, which
+  `make-element` defaults to `span` — declare `#:kind 'sidenote` on the
+  element definition (or build the element with `make-content-element`)
+  so the lane can see it.
 - `#:backmatter-details?` — renders each backmatter section as a collapsible
   `details`/`summary` block.
 

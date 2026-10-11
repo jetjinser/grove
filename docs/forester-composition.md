@@ -262,7 +262,10 @@ tag's class, `#:attributes` carries static attribute pairs such as namespace
 declarations, and `#:flow-kind` selects inline or block. Tag names are
 validated at definition time: they must start with a letter and contain
 letters, digits, hyphens, underscores, or colons. The HTML is entirely the
-vocabulary author's; Grove ships no element table of its own.
+vocabulary author's; Grove ships no element table of its own. `#:kind`
+overrides the content element's kind (default `span`) for renderer
+features that match on kinds - `#:anchor` and `#:side-lane` are the
+current ones.
 
 `#:anchor` declares the occurrence as a linkable anchor — a term
 definition, a figure. It renders as the tag's `id` and registers the

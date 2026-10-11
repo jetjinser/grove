@@ -190,6 +190,10 @@
   'inline
   (content-element-flow-kind
     ((make-element #:tag "span") "body")))
+(test-equal "make-element passes its kind through"
+  'sidenote
+  (content-element-kind
+    ((make-element #:tag "aside" #:kind 'sidenote) "body")))
 
 (let ((definition (make-element #:tag "dfn" #:anchor "term-id")))
   (define element (definition "a term"))
