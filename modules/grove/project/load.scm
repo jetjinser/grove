@@ -28,7 +28,15 @@ OUTPUT-DIRECTORY, when supplied, is resolved relative to the caller's directory.
                      (if (absolute-file-name? path) path
                          (string-append caller-directory "/" path))))
          (path (call-with-project-stage 'load filename
-                 (lambda () (canonicalize-path (absolute filename)))))
+                 (lambda ()
+                   ;;     A missing file deserves a direction, not a
+                   ;;     bare stat error from canonicalize-path.
+                   (let ((candidate (absolute filename)))
+                     (unless (file-exists? candidate)
+                       (error (string-append
+                                "no project file at " candidate
+                                "; pass --project or run from the project root")))
+                     (canonicalize-path candidate)))))
          (output (and output-directory (absolute output-directory))))
     (dynamic-wind
       (lambda () (chdir (dirname path)))
