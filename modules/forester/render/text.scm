@@ -97,12 +97,11 @@ HTML renderer so text and HTML address occurrences identically."
 (define (text-backlink-reference forest page-id routes reference indent)
   ;;     Title plus the anchored path; the citing context's alt text
   ;;     stays in the body where it was written.
-  (let* ((source-id (reference-source-page-id reference))
-         (source (find (lambda (candidate)
-                         (equal? source-id (site-page-id candidate)))
-                       (pages forest)))
+  (let* ((source (lookup-page forest (reference-source-page-id reference)))
          (path (text-relative-path (text-page-path routes page-id)
-                                   (text-page-path routes source-id))))
+                                   (text-page-path routes
+                                                   (reference-source-page-id
+                                                    reference)))))
     (string-append indent "- " (site-page-title source) " [" path "#"
                    (reference-source-id reference) "]\n")))
 
