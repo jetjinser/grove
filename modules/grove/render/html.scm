@@ -337,10 +337,39 @@ ID-PREFIX."
       (display "\"" port))
     attributes))
 
+(define html-raw-text-tags
+  ;;     HTML raw-text elements: their children are data, not markup,
+  ;;     so entity escaping would corrupt them (a script containing
+  ;;     `&&` must not become `&amp;&amp;`).
+  '(script style))
+
 (define (write-html node port)
   ;;     Trees free of author-void elements delegate to sxml->xml
   ;;     verbatim, keeping its escaping behavior byte-for-byte; only
-  ;;     the void markers need hand emission.
+  ;;     the void markers need hand emission.  Raw-text elements are
+  ;;     also hand-emitted: their text children go out unescaped.
+  (cond
+    ((and (pair? node) (memq (car node) html-raw-text-tags))
+     (let* ((rest (cdr node))
+            (has-attributes?
+              (and (pair? rest) (pair? (car rest))
+                   (eq? (caar rest) '@)))
+            (attributes (if has-attributes? (cdar rest) '()))
+            (children (if has-attributes? (cdr rest) rest)))
+       (display "<" port)
+       (display (car node) port)
+       (write-html-attributes attributes port)
+       (display ">" port)
+       (for-each
+         (lambda (child)
+           (cond
+             ((string? child) (display child port))
+             ((pair? child) (write-html child port))
+             (else (sxml->xml child port))))
+         children)
+       (display "</" port)
+       (display (car node) port)
+       (display ">" port))))
   (if (sxml-contains-void? node)
       (cond
         ((not (pair? node)) (sxml->xml node port))
