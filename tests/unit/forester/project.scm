@@ -427,13 +427,13 @@
         (string-contains limits-html
           "href=\"/notes/quadratic-equations.html\">about quadratics</a>"))
       (test-assert "HTML project output contains reverse links"
-        (string-contains limits-html
-          "href=\"/index.html#ref-1\">limits</a>"))
+        (and (string-contains limits-html "data-tree-id=\"algebra\"")
+             (string-contains limits-html "<span>Algebra</span>")))
       (test-assert "page titles and backmatter entries carry dates"
         (and (string-contains algebra-html
                "<div class=\"metadata\"><ul><li class=\"meta-item\">2026-09-27</li><li class=\"meta-item\">updated 2026-09-28</li></ul></div>")
              (string-contains limits-html
-               "[algebra]</a><div class=\"metadata\"><ul><li class=\"meta-item\">2026-09-27</li>")))
+               "[algebra]</a></h3><div class=\"metadata\"><ul><li class=\"meta-item\">2026-09-27</li>")))
       (test-assert "HTML project output preserves TeX for MathJax"
         (and (string-contains algebra-html "\\(x^2+y^2=z^2\\)")
              (string-contains algebra-html
@@ -504,11 +504,21 @@
               "text/limits.txt" "text/unlinked.txt" "text/quadratic-equations.txt")
             (build-report-affected-artifacts changed-links))
           (test-assert "new backlinks appear in the target page"
-            (string-contains
-              (read-test-file
-                (string-append cache-output-directory
-                               "/notes/unlinked.html"))
-              "href=\"/index.html#ref-2\">unlinked</a>"))
+            (and (string-contains
+                   (read-test-file
+                     (string-append cache-output-directory
+                                    "/notes/unlinked.html"))
+                   "data-tree-id=\"algebra\"")
+                 (string-contains
+                   (read-test-file
+                     (string-append cache-output-directory
+                                    "/notes/unlinked.html"))
+                   "href=\"/index.html#ref-2\"")
+                 (string-contains
+                   (read-test-file
+                     (string-append cache-output-directory
+                                    "/notes/unlinked.html"))
+                   "<span>Algebra</span>")))
           (test-assert "text target updates new backlink content"
             (string-contains
               (read-test-file

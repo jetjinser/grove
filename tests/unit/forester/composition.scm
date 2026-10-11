@@ -275,14 +275,20 @@
                           "class=\"backmatter context\"")
          (string-contains (assoc-ref html "reusable") "<h2>Context</h2>")
          (string-contains (assoc-ref html "reusable")
-                          "href=\"/index.html\">Host</a>")))
+                          "data-tree-id=\"host\"")
+         (string-contains (assoc-ref html "reusable")
+                          "<span>Host</span>")))
   (test-assert "default text backmatter shows transclusion context"
     (and (string-contains (assoc-ref text "reusable") "Context:")
          (string-contains (assoc-ref text "reusable") "Host (host.txt)")))
-  (test-assert "backlink entries carry the label and source slug"
+  (test-assert "backlink entries identify the source tree and occurrence"
     (let ((destination-html (assoc-ref html "destination")))
       (and (string-contains destination-html
-                             "href=\"/reusable.html#ref-1\">Follow destination.</a>")
+                             "data-tree-id=\"reusable\"")
+           (string-contains destination-html
+                             "<span>Reusable note</span>")
+           (string-contains destination-html
+                             "href=\"/reusable.html#ref-1\"")
            (string-contains destination-html "[reusable]"))))
   (test-assert "context sources are included in target artifact dependencies"
     (member "plants/host.plant" (page-source-paths forest target) string=?))
@@ -359,8 +365,7 @@
     (map site-page-id (context-pages forest "piece")))
   (test-assert "backmatter entries carry the page slug and taxon"
     (let ((piece-html (assoc-ref html "piece")))
-      (and (string-contains piece-html
-                             "href=\"/index.html\">Root</a> <a class=\"forest-tree-id\"")
+      (and (string-contains piece-html "<span>Root</span>")
            (string-contains piece-html "[root]")
            (string-contains piece-html "data-taxon=\"host-tax\"")
            (string-contains piece-html ">host-tax </span>")))))
@@ -392,7 +397,9 @@
   (test-assert "HTML Related lists linked non-reference pages"
     (and (string-contains (assoc-ref html "source") "<h2>Related</h2>")
          (string-contains (assoc-ref html "source")
-                          "href=\"/idea.html\">A related idea</a>")))
+                          "data-tree-id=\"idea\"")
+         (string-contains (assoc-ref html "source")
+                          "<span>A related idea</span>")))
   (test-assert "text Related lists linked non-reference pages"
     (and (string-contains (assoc-ref text "source") "Related:")
          (string-contains (assoc-ref text "source") "A related idea (idea.txt)")))
@@ -402,7 +409,9 @@
   (test-assert "HTML References shows the transcluded tree's citation"
     (and (string-contains (assoc-ref html "source") "<h2>References</h2>")
          (string-contains (assoc-ref html "source")
-                          "href=\"/citation.html\">A citation</a>")))
+                          "data-tree-id=\"citation\"")
+         (string-contains (assoc-ref html "source")
+                          "<span>A citation</span>")))
   (test-assert "text References shows the transcluded tree's citation"
     (and (string-contains (assoc-ref text "source") "References:")
          (string-contains (assoc-ref text "source")
