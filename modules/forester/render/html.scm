@@ -79,7 +79,8 @@ otherwise the generated position anchor that backs repeated occurrences."
 (define* (subtree-content-sxml forest routes page
                               #:optional (anchor-prefix "") (depth 1) (highlighters '())
                               #:key (title-decoration #f)
-                              (metadata-items default-metadata-items))
+                              (metadata-items default-metadata-items)
+                              (extra-handlers '()))
   (let ((position 0))
     (define (render-tree element _render)
       (set! position (1+ position))
@@ -92,7 +93,8 @@ otherwise the generated position anchor that backs repeated occurrences."
           id (site-page-title target) (html-page-url routes id)
           (subtree-content-sxml forest routes target (string-append anchor "--") (1+ depth) highlighters
                                 #:title-decoration title-decoration
-                                #:metadata-items metadata-items)
+                                #:metadata-items metadata-items
+                                #:extra-handlers extra-handlers)
           #:anchor anchor #:depth (1+ depth)
           #:style (content-element-style element)
           #:id-prefix anchor-prefix
@@ -106,7 +108,8 @@ otherwise the generated position anchor that backs repeated occurrences."
       (site-page-document page)
       #:id-prefix anchor-prefix
       #:highlighters highlighters
-      #:handlers (page-content-handlers forest routes page anchor-prefix)
+      #:handlers (append extra-handlers
+                         (page-content-handlers forest routes page anchor-prefix))
       #:lazy-handlers (map (lambda (kind) (cons kind render-tree))
                           '(subtree transclude query-transclude)))))
 
@@ -427,16 +430,69 @@ top-level taxon element; pages without one contribute nothing."
 (define (serialize-html-document sxml)
   (string-append "<!DOCTYPE html>\n" (sxml->html sxml)))
 
+(define (make-side-lane-collector)
+  ;;     Accumulates lifted elements in document order; the in-place
+  ;;     marker and the lane item share the sequence number.
+  (let ((count 0) (items '()))
+    (case-lambda
+      ((message element children)
+       (case message
+         ((put!)
+          (set! count (+ count 1))
+          (set! items (cons (list count children) items))
+          count)))
+      ((message)
+       (case message
+         ((items) (reverse items)))))))
+
+(define (side-lane-handlers kinds collector)
+  "Handlers for the SIDE-LANE kinds: the element's rendered body moves
+to the lane, and an in-place numbered marker links to it."
+  (map (lambda (kind)
+         (cons kind
+               (lambda (element children)
+                 (let ((n (collector 'put! element children)))
+                   `(sup (@ (class "margin-ref")
+                            (id ,(string-append "margin-ref-"
+                                                (number->string n))))
+                      (a (@ (href ,(string-append "#margin-"
+                                                  (number->string n))))
+                         ,(number->string n)))))))
+       kinds))
+
+(define (side-lane-sxml collector)
+  (let ((items (collector 'items)))
+    (if (null? items)
+        '()
+        (list `(div (@ (class "margin-lane"))
+                  ,@(map (lambda (entry)
+                           (let ((n (car entry))
+                                 (children (cadr entry)))
+                             `(div (@ (class "margin-item")
+                                      (id ,(string-append "margin-"
+                                                          (number->string n))))
+                                (a (@ (class "margin-backref")
+                                      (href ,(string-append "#margin-ref-"
+                                                            (number->string n))))
+                                   "↩")
+                                ,@children)))
+                         items))))))
+
 (define* (page-html forest page style routes mathjax-src backmatter labels
                     reference-taxon-id
                     #:optional (inline-stylesheets? #f) (highlighters '())
                     #:key (title-decoration #f) (article? #f) (backmatter-details? #f)
                     (html-attributes '()) (head '()) (site-nav '()) (home-link #f)
-                    (metadata-items default-metadata-items))
+                    (metadata-items default-metadata-items) (side-lane '()))
   (let* ((site (site forest))
+         (lane (and (pair? side-lane) (make-side-lane-collector)))
          (body (subtree-content-sxml forest routes page "" 1 highlighters
                                      #:title-decoration title-decoration
-                                     #:metadata-items metadata-items))
+                                     #:metadata-items metadata-items
+                                     #:extra-handlers
+                                     (if lane
+                                         (side-lane-handlers side-lane lane)
+                                         '())))
          (tree (tree-block-sxml
                  "page-tree" (site-page-id page) (site-page-title page)
                  (html-page-url routes (site-page-id page)) body
@@ -447,6 +503,7 @@ top-level taxon element; pages without one contribute nothing."
                                         (title-decoration forest page)
                                         '())))
          (article (append (list tree)
+                          (if lane (side-lane-sxml lane) '())
                           (backmatter-sxml forest page routes backmatter
                                            labels reference-taxon-id
                                            backmatter-details?
@@ -477,7 +534,8 @@ top-level taxon element; pages without one contribute nothing."
                              #:key (title-decoration #f) (article? #f)
                              (backmatter-details? #f) (html-attributes '())
                              (head '()) (site-nav '()) (home-link #f)
-                             (metadata-items default-metadata-items))
+                             (metadata-items default-metadata-items)
+                             (side-lane '()))
   (set! routes (resolve-html-routes forest routes))
   (check-html-input forest style routes mathjax-src)
   (let* ((route-table
@@ -497,7 +555,8 @@ top-level taxon element; pages without one contribute nothing."
                                    #:head head
                                    #:site-nav site-nav
                                    #:home-link home-link
-                                   #:metadata-items metadata-items)))))
+                                   #:metadata-items metadata-items
+                                   #:side-lane side-lane)))))
                 (pages forest))))
     (append (html-style-artifacts style) page-artifacts)))
 
@@ -541,7 +600,8 @@ top-level taxon element; pages without one contribute nothing."
                        (head '())
                        (site-nav '())
                        (home-link #f)
-                       (metadata-items default-metadata-items))
+                       (metadata-items default-metadata-items)
+                       (side-lane '()))
   (validate-backmatter-sections backmatter)
   (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
   (check-reference-taxon-id reference-taxon-id)
@@ -559,7 +619,8 @@ top-level taxon element; pages without one contribute nothing."
                           #:head head
                           #:site-nav site-nav
                           #:home-link home-link
-                          #:metadata-items metadata-items)))
+                          #:metadata-items metadata-items
+                          #:side-lane side-lane)))
        (pages forest)))
 
 (define (split-into-chunks entries chunk-size)
@@ -589,7 +650,8 @@ errors when the count outlives the list."
                              (head '())
                              (site-nav '())
                              (home-link #f)
-                             (metadata-items default-metadata-items))
+                             (metadata-items default-metadata-items)
+                             (side-lane '()))
   (validate-backmatter-sections backmatter)
   (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
   (check-reference-taxon-id reference-taxon-id)
@@ -618,7 +680,8 @@ errors when the count outlives the list."
                           #:head head
                           #:site-nav site-nav
                           #:home-link home-link
-                          #:metadata-items metadata-items)
+                          #:metadata-items metadata-items
+                          #:side-lane side-lane)
                (page-source-paths forest page)))
            forest-pages
            (iota total 1)))))
@@ -638,6 +701,7 @@ errors when the count outlives the list."
                                       (site-nav '())
                                       (home-link #f)
                                       (metadata-items default-metadata-items)
+                                      (side-lane '())
                                       (cache? #t))
   (validate-backmatter-sections backmatter)
   (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
@@ -659,7 +723,8 @@ errors when the count outlives the list."
                                       #:head head
                                       #:site-nav site-nav
                                       #:home-link home-link
-                                      #:metadata-items metadata-items))))
+                                      #:metadata-items metadata-items
+                                      #:side-lane side-lane))))
     (make-cached-renderer render #:cache? cache?
           #:configuration
           (lambda (forest)
@@ -668,6 +733,7 @@ errors when the count outlives the list."
                   (html-index-url routes)
                   mathjax-src backmatter backmatter-labels reference-taxon-id
                   article? backmatter-details? html-attributes head site-nav
+                  side-lane
                   (map (lambda (entry)
                          (list (car entry) (highlighter-configuration (cdr entry))))
                        highlighters)
@@ -695,4 +761,6 @@ errors when the count outlives the list."
                                      #:html-attributes html-attributes
                                      #:head head
                                      #:site-nav site-nav
-                                     #:home-link home-link))))))
+                                     #:home-link home-link
+                                     #:metadata-items metadata-items
+                                     #:side-lane side-lane))))))

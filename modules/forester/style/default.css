@@ -37,4 +37,8 @@ pre, .math-display { overflow-x: auto; }
 .tree-outline { margin: .25rem 0; padding-left: 1.2rem; font-size: .875rem; }
 .tree-outline ol { padding-left: 1rem; }
 .backmatter-full .tree-outline { display: none; }
+.margin-ref { vertical-align: super; font-size: .75em; }
+.margin-ref a { text-decoration: none; }
+.margin-lane { display: flex; flex-direction: column; gap: .8lh; }
+.margin-item { font-size: .875rem; }
 .backmatter { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid currentColor; }

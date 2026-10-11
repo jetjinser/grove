@@ -935,4 +935,31 @@
   (test-equal "fragment links to one page keep a single backlink"
     '("source") (map site-page-id (backlinks forest "target"))))
 
+(let* ((page
+         (make-site-page "annotated" "Annotated"
+           (make-content-document
+             (list (make-content-element
+                     'paragraph
+                     (list "Body with "
+                           (make-content-element 'sidenote
+                             (list "A marginal note."))
+                           "."))))))
+       (forest (make-forest (make-site (list page)))))
+  (test-assert "side-lane lifts declared kinds into a margin lane"
+    (let ((html (assoc-ref
+                  (site->html forest
+                              #:routes (make-html-routes #:home-page "annotated")
+                              #:side-lane '(sidenote))
+                  "annotated")))
+      (and (string-contains html "class=\"margin-lane\"")
+           (string-contains html "A marginal note.")
+           (string-contains html "class=\"margin-ref\"")
+           (string-contains html "id=\"margin-1\""))))
+  (test-assert "the margin lane is opt-in"
+    (not (string-contains
+           (assoc-ref (site->html forest
+                        #:routes (make-html-routes #:home-page "annotated"))
+                      "annotated")
+           "margin-lane"))))
+
 (test-end "forester renderers")

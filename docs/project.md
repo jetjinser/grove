@@ -289,6 +289,13 @@ rewrite rendered markup. They are available on `render-html`, `site->html`, and
   document.
 - `#:article?` — wraps the page tree and its backmatter in one `<article>`
   element, leaving the table of contents outside it.
+- `#:side-lane` — a list of content element kinds (e.g. `(sidenote)`).
+  Elements of these kinds are lifted out of the text flow into a
+  `<div class="margin-lane">` beside the page tree; each note becomes a
+  lane item with a numbered back-reference, and its anchor position keeps
+  a superscript marker. Pair with grid CSS that places the lane beside
+  the reading column; the option participates in the renderer's cache
+  configuration.
 - `#:backmatter-details?` — renders each backmatter section as a collapsible
   `details`/`summary` block.
 
