@@ -29,6 +29,10 @@ relative to the project file throughout loading and synchronous execution.
 configuration in a fresh top-level module. Named Guile modules still have
 process-wide lifetime; the working directory is not thread-local.
 
+Without `--project`, commands search the invocation directory and its
+ancestors for `project.scm`, git-style, and stop at a `.git` boundary or
+the filesystem root; `--project` always wins when given.
+
 `check-project` fully evaluates, analyzes, renders, and validates without
 accessing published output state. It does not sandbox Scheme effects or check
 browser layout. Its report treats all sources as added and artifacts as affected.

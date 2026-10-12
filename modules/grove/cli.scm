@@ -81,7 +81,7 @@ with HELP overrides keyed by command."
   (list
     (option-spec "--project" #:key 'project #:arity 'value
                  #:commands '(build check serve new browse)
-                 #:help "  --project PATH  Project file (default: ./project.scm).\n")
+                 #:help "  --project PATH  Project file (default: the nearest project.scm upward).\n")
     (option-spec "--output" #:key 'output #:arity 'value
                  #:commands '(build serve)
                  #:help "  --output PATH   Override the output directory (build and serve).\n")
@@ -224,8 +224,25 @@ with HELP overrides keyed by command."
       (for-each display lines)))
   (display "  --debug         Show the original exception and backtrace.\n  --version       Show version information.\n  -h, --help      Show help.\n\nOption paths are relative to the invocation directory.\nProject paths are relative to the project file's directory.\n"))
 
+(define (discover-project-filename)
+  ;;     Git-style upward search from the invocation directory.  A
+  ;;     repository boundary (.git) or the filesystem root stops the
+  ;;     walk; falling back to the bare relative name keeps the
+  ;;     loader's "no project file at ..." direction intact for a
+  ;;     directory that holds neither.
+  (let loop ((directory (getcwd)))
+    (let ((candidate (string-append directory "/project.scm")))
+      (if (file-exists? candidate)
+          candidate
+          (let ((parent (dirname directory)))
+            (if (or (file-exists? (string-append directory "/.git"))
+                    (string=? parent directory))
+                "project.scm"
+                (loop parent)))))))
+
 (define (run-command command options)
-  (let ((filename (or (assq-ref options 'project) "project.scm")))
+  (let ((filename (or (assq-ref options 'project)
+                      (discover-project-filename))))
     (cond
       ((string=? command "ssh-keygen")
        (let* ((invocation (getcwd))

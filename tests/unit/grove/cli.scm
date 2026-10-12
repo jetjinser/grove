@@ -122,6 +122,32 @@
         (string-contains (cadr result) "cache hit"))
       (test-assert "cache hits do not claim to render"
         (not (string-contains (caddr result) "Rendering"))))
+    ;;     Without --project, commands search upward from the
+    ;;     invocation directory and stop at a repository boundary.
+    (let ((invocation (getcwd)))
+      (dynamic-wind
+        (lambda () #t)
+        (lambda ()
+          (mkdir (string-append root "/nested"))
+          (mkdir (string-append root "/nested/deeper"))
+          (chdir (string-append root "/nested/deeper"))
+          (let ((result (run "check")))
+            (test-equal "commands discover the project file upward" 0 (car result))
+            (test-assert "discovered check reads the discovered project's inputs"
+              (string-contains (caddr result) "Reading sources/input.txt")))
+          (mkdir (string-append root "/boundary"))
+          (mkdir (string-append root "/boundary/.git"))
+          (mkdir (string-append root "/boundary/work"))
+          (chdir (string-append root "/boundary/work"))
+          (let ((result (run "check")))
+            (test-equal "a repository boundary stops the upward search" 1 (car result))
+            (test-assert "the boundary failure names the invocation directory"
+              (string-contains (caddr result)
+                               (string-append "no project file at "
+                                              root "/boundary/work/project.scm"))))
+          (test-equal "an explicit --project overrides the search" 0
+            (car (run "check" "--project" config))))
+        (lambda () (chdir invocation))))
     (let ((target (string-append root "/override")))
       (test-equal "equals-style options support output overrides" 0
         (car (run "build" (string-append "--project=" config)
