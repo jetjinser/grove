@@ -100,4 +100,36 @@
     (list (make-transclusion "lecture" "embed-1" "exercise")
           (make-transclusion "lecture" "embed-1" "definition"))))
 
+(define definitions
+  (make-term-definition-relation
+    '(("term-loom" "glossary" "term-loom" "loom")
+      ("term-loom" "ch01" "term-loom" "织机")
+      ("term-tree" "glossary" "term-tree" "tree"))))
+
+(test-equal "term definition queries return one term's occurrences"
+  '(("glossary" "term-loom" "loom")
+    ("ch01" "term-loom" "织机"))
+  (term-definition-rows definitions "term-loom"))
+
+(test-equal "an unqueried term returns no definition rows"
+  '() (term-definition-rows definitions "term-ghost"))
+
+(test-equal "term definition conflicts flag multi-page and drifted terms"
+  '(("term-loom" ("glossary" "loom") ("ch01" "织机")))
+  (term-definition-conflicts definitions))
+
+(define mentions
+  (make-term-mention-relation
+    '(("term-loom" "ch01")
+      ("term-ghost" "ch02")
+      ("term-ghost" "ch03"))))
+
+(test-equal "undefined mentions drop defined terms and group pages"
+  '(("term-ghost" ("ch02" "ch03")))
+  (undefined-term-mentions definitions mentions))
+
+(test-equal "mention lookups return one term's pages"
+  '("ch02" "ch03")
+  (term-mention-rows mentions "term-ghost"))
+
 (test-end "forester relations")

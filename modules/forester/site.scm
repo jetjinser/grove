@@ -7,11 +7,14 @@
   #:use-module (grove ir)
   #:use-module (grove site)
   #:use-module (grove project)
+  #:use-module (grove style)
+  #:use-module (grove style html)
   #:use-module ((forester private trees) #:prefix tree-pass:)
   #:use-module ((forester private content-index) #:prefix content-index:)
   #:use-module ((forester private query-output) #:prefix query-output:)
   #:use-module ((forester composition) #:prefix composition:)
   #:use-module (forester relations)
+  #:use-module ((forester relations) #:prefix relations:)
   #:use-module (grove relation dsl)
   #:use-module (ice-9 threads)
   #:use-module (srfi srfi-1)
@@ -53,7 +56,12 @@
             used-codepoints
             source-paths
             module-paths
-            page-source-paths))
+            page-source-paths
+            term-definition-relation
+            term-mention-relation
+            term-definitions
+            term-definition-conflicts
+            undefined-term-mentions))
 
 (define (describe-tree-cycle pages cycle)
   (string-join
@@ -96,7 +104,8 @@
 (define-record-type <forest>
   (%make-forest site pages reference-relation
                 composition page-index page-relation content-node-relation
-                content-node-index query-page-ids)
+                content-node-index term-definition-relation
+                term-mention-relation query-page-ids)
   forest?
   (site site)
   (pages pages)
@@ -106,6 +115,8 @@
   (page-relation page-relation)
   (content-node-relation content-node-relation)
   (content-node-index content-node-index)
+  (term-definition-relation term-definition-relation)
+  (term-mention-relation term-mention-relation)
   (query-page-ids query-page-ids))
 
 (define (id-member-set ids)
@@ -297,6 +308,8 @@
             (reference-relation forest) (composition forest)
             resolved-page-index (page-relation forest)
             (content-node-relation forest) (content-node-index forest)
+            (term-definition-relation forest)
+            (term-mention-relation forest)
             query-page-ids)))))
 
 (define (content-node forest id)
@@ -351,6 +364,18 @@ transclusions belong to their own pages and stay out of this set."
       (map (lambda (element)
              (cons "anchor" (content-element-property element 'anchor)))
            (tree-pass:declared-anchor-elements document)))))
+
+(define (element-tag-name element)
+  "The HTML tag a vocabulary element renders as, from the style's tag
+marker - dfn for a defining occurrence, say."
+  (let ((style (content-element-style element)))
+    (and style
+      (let loop ((properties (content-style-properties style)))
+        (cond
+          ((null? properties) #f)
+          ((html-tag? (car properties))
+           (html-tag-name (car properties)))
+          (else (loop (cdr properties))))))))
 
 (define (dom-anchor-index pages composition transclusion-index)
   "Build a page-id → rendered-anchor-ids table.  A page's set is its own
@@ -538,6 +563,24 @@ anchors."
              pages)))
          (reference-relation
            (measure 'reference-index (make-reference-relation reference-facts)))
+         (term-definition-relation
+           (measure 'term-definitions
+             (make-term-definition-relation
+               (append-map
+                 (lambda (page)
+                   (filter-map
+                     (lambda (element)
+                       (let ((anchor
+                               (content-element-property element 'anchor)))
+                         (and anchor
+                              (string=? "dfn" (element-tag-name element))
+                              (list anchor
+                                    (site-page-id page)
+                                    anchor
+                                    (content->plain-text element)))))
+                     (tree-pass:declared-anchor-elements
+                       (site-page-document page))))
+                 pages))))
          (page-relation
            (measure 'page-index (make-page-relation
              (map (lambda (page)
@@ -564,6 +607,31 @@ anchors."
          (anchor-index
            (measure 'anchors
              (dom-anchor-index pages composition transclusion-index)))
+         (term-mention-relation
+           (measure 'term-mentions
+             (make-term-mention-relation
+               (append-map
+                 (lambda (source-page)
+                   (let ((source-id (site-page-id source-page)))
+                     (filter-map
+                       (lambda (element)
+                         (let ((fragment
+                                 (content-element-property element 'fragment))
+                               (target-page-id
+                                 (content-element-property element 'target)))
+                           (and (non-empty-string? fragment)
+                                (not (member fragment
+                                             (hash-ref anchor-index
+                                                       target-page-id '())
+                                             string=?))
+                                (list fragment source-id))))
+                       (append (tree-pass:link-elements
+                                 (tree-pass:owned-content
+                                   (site-page-document source-page)))
+                               (tree-pass:query-link-elements
+                                 (tree-pass:owned-content
+                                   (site-page-document source-page)))))))
+                 pages))))
          (_ (for-each
               (lambda (source-page)
                 (let ((source-id (site-page-id source-page))
@@ -597,12 +665,14 @@ anchors."
       (lambda (relation)
         (for-each force (relation-indexes relation)))
       (list reference-relation page-relation
+            term-definition-relation term-mention-relation
             (car content-node-state)))
     (measure 'queries (resolve-forest-queries
       (%make-forest site pages
                     reference-relation composition page-index page-relation
                     (car content-node-state)
                     (cadr content-node-state)
+                    term-definition-relation term-mention-relation
                     '())
       anchor-index))))
 
@@ -768,6 +838,24 @@ MathJax draws it with its own fonts."
     (filter (lambda (page)
               (hash-ref reachable-ids (site-page-id page)))
             (pages forest))))
+
+;;     Term queries: one term's defining occurrences for glossary
+;;     generation and hover previews; terms whose occurrences disagree;
+;;     and the corpus's definition backlog - fragments pointed at but
+;;     never defined.
+
+(define (term-definitions forest term-id)
+  (relations:term-definition-rows
+    (term-definition-relation forest) term-id))
+
+(define (term-definition-conflicts forest)
+  (relations:term-definition-conflicts
+    (term-definition-relation forest)))
+
+(define (undefined-term-mentions forest)
+  (relations:undefined-term-mentions
+    (term-definition-relation forest)
+    (term-mention-relation forest)))
 
 (define (source-paths forest)
   (let ((site (site forest)))

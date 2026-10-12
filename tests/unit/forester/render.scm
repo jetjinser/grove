@@ -18,6 +18,8 @@
   #:use-module (grove ir)
   #:use-module (grove render html)
   #:use-module (grove render html routes)
+  #:use-module (grove style)
+  #:use-module (grove style html)
   #:use-module (grove output)
   #:use-module (grove site)
   #:use-module (grove style)
@@ -963,5 +965,51 @@
       ;;     margin classes, so probe the emitted markup, not the CSS.
       (and (not (string-contains html "class=\"margin-lane\""))
            (not (string-contains html "class=\"margin-ref\""))))))
+
+(let* ((dfn-element
+         (lambda (anchor children)
+           ;;     The vocabulary shape make-element produces: a span
+           ;;     whose style carries the tag and whose properties
+           ;;     declare the anchor.
+           (make-content-element
+             'span children #f
+             #:properties `((anchor . ,anchor))
+             #:style (make-content-style #f (list (make-html-tag "dfn"))))))
+       (text (lambda (value) (make-content-text value)))
+       (glossary
+         (make-site-page "glossary" "Glossary"
+           (make-content-document
+             (list (make-content-element 'paragraph
+                     (list (dfn-element "term-tree" (list (text "tree")))))
+                   (make-content-element 'paragraph
+                     (list (dfn-element "term-loom" (list (text "loom")))))))))
+       (chapter
+         (make-site-page "ch01" "Chapter"
+           (make-content-document
+             (list (make-content-element 'paragraph
+                     (list (dfn-element "term-loom" (list (text "织机")))
+                           " uses the "
+                           (make-content-element 'link (list (text "glossary"))
+                             #:properties '((target . "glossary")
+                                            (fragment . "term-tree")))
+                           " and the "
+                           (make-content-element 'link (list (text "ghost"))
+                             #:properties '((target . "glossary")
+                                            (fragment . "term-ghost")))))))))
+       (forest (make-forest (make-site (list glossary chapter)
+                                       #:title "T" #:home "glossary"))))
+  (test-equal "term definitions collect dfn occurrences across pages"
+    '(("glossary" "term-loom" "loom")
+      ("ch01" "term-loom" "织机"))
+    (term-definitions forest "term-loom"))
+  (test-equal "terms defined once are not conflicts"
+    '() (filter (lambda (entry) (string=? (car entry) "term-tree"))
+                (term-definition-conflicts forest)))
+  (test-equal "term definition conflicts report both display texts"
+    '(("term-loom" ("glossary" "loom") ("ch01" "织机")))
+    (term-definition-conflicts forest))
+  (test-equal "unresolved fragment links are the definition backlog"
+    '(("term-ghost" ("ch01")))
+    (undefined-term-mentions forest)))
 
 (test-end "forester renderers")

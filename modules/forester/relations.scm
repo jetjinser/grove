@@ -31,7 +31,15 @@
             shorter-than-o
             contains-texto
             topic-membero
-            topic-page-ids))
+            topic-page-ids
+            make-term-definition-relation
+            term-definitiono
+            term-definition-rows
+            term-definition-conflicts
+            make-term-mention-relation
+            term-mentiono
+            term-mention-rows
+            undefined-term-mentions))
 
 ;; Rows are (source-page-id local-reference-id target-page-id label).
 (define-relation-schema make-reference-relation referenceo
@@ -46,6 +54,19 @@
 (define-relation-schema make-content-node-relation nodeo
   (node-id page-id parent-id kind position properties text
    character-count plain-text?))
+
+;; Rows are (term-id page-id anchor display-text): one defining
+;; occurrence of a term, collected from dfn-tagged anchored elements.
+;; The term-id is the element's anchor - the corpus normalization
+;; derives it from the term text, making the anchor the canonical key.
+(define-relation-schema make-term-definition-relation term-definitiono
+  (term-id page-id anchor display-text))
+
+;; Rows are (term-id source-page-id): a fragment link aimed at an
+;; anchor that resolves nowhere - a term the corpus points at but
+;; nothing defines yet.
+(define-relation-schema make-term-mention-relation term-mentiono
+  (term-id source-page-id))
 
 (define-relation (list-membero value values)
   (either
@@ -231,6 +252,65 @@
               (map car (hash-ref (reference-column-index relation 2)
                                  left-page-id '())))
       equal?)))
+
+;; Term queries read the same materialized column indexes.
+(define (term-column-index relation position)
+  (force (list-ref (relation-indexes relation) position)))
+
+;; One term's defining occurrences as (page-id anchor display-text),
+;; in document order of collection. The relation's term-id column is
+;; the query key and projects out of the rows.
+(define (term-definition-rows relation term-id)
+  (map cdr (hash-ref (term-column-index relation 0) term-id '())))
+
+;; Terms whose defining occurrences disagree: more than one defining
+;; page, or display texts that differ - an in-passing definition that
+;; drifted from the canonical one. Returns (term-id (page-id
+;; display-text) ...) sorted by term-id.
+(define (term-definition-conflicts relation)
+  (define (conflict? entries)
+    (or (> (length (delete-duplicates (map car entries) string=?)) 1)
+        (> (length (delete-duplicates (map cadr entries) string=?)) 1)))
+  (let ((by-term (make-hash-table)))
+    (for-each
+      (lambda (row)
+        (hash-set! by-term (car row)
+                   ;;     Keep collection order: the glossary's
+                   ;;     canonical entry precedes in-passing uses.
+                   (reverse (cons (list (cadr row) (cadddr row))
+                                  (hash-ref by-term (car row) '())))))
+      (relation-facts relation))
+    (sort
+      (filter (lambda (entry) (conflict? (cdr entry)))
+              (hash-map->list cons by-term))
+      (lambda (left right) (string<? (car left) (car right))))))
+
+;; One term's mentioning pages.
+(define (term-mention-rows relation term-id)
+  (map cadr (hash-ref (term-column-index relation 0) term-id '())))
+
+;; Term-ids the corpus points at but nothing defines, each with its
+;; mentioning pages - the definition backlog. Sorted by term-id.
+(define (undefined-term-mentions definition-relation mention-relation)
+  (let ((defined (make-hash-table)))
+    (for-each
+      (lambda (row) (hash-set! defined (car row) #t))
+      (relation-facts definition-relation))
+    (let ((by-term (make-hash-table)))
+      (for-each
+        (lambda (row)
+          (unless (hash-ref defined (car row))
+            (hash-set! by-term (car row)
+                       (cons (cadr row)
+                             (hash-ref by-term (car row) '())))))
+        (relation-facts mention-relation))
+      (sort
+        (map (lambda (entry)
+               (list (car entry)
+                     (sort (delete-duplicates (cdr entry) string=?)
+                           string<?)))
+             (hash-map->list cons by-term))
+        (lambda (left right) (string<? (car left) (car right)))))))
 
 (define-relation (not-membero value values)
   (either

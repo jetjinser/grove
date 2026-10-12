@@ -12,6 +12,7 @@
   #:export (walk-content
             element-kind?
             link-elements
+            query-link-elements
             math-elements
             subtree-elements
             direct-subtree-elements
@@ -46,6 +47,9 @@
 
 (define (link-elements content)
   (walk-content content (element-kind? 'link) #:postorder? #t))
+
+(define (query-link-elements content)
+  (walk-content content (element-kind? 'query-link) #:postorder? #t))
 
 (define (math-elements content)
   (walk-content content (element-kind? 'math) #:postorder? #t))

@@ -275,3 +275,39 @@ against the page resolve to it and term queries can see it:
 ```scheme
 (define defn (make-element #:tag "dfn" #:anchor "term-loom"))
 ```
+
+## Term definitions
+
+Grove collects defining occurrences of terms from anchored elements tagged
+`dfn` — the HTML defining-instance semantic. An element like the `defn`
+above contributes a `(term-id page-id anchor display-text)` fact to the
+forest's term-definition relation, where the anchor is the canonical term
+id (derive it from the term text, as the topic convention does) and the
+display text is the element's plain-text body, so a defining element may
+carry an original term and a translation together.
+
+Three queries read the relations:
+
+```scheme
+(use-modules (forester site))
+
+;; One term's occurrences as (page-id anchor display-text), feeding a
+;; generated glossary listing or hover-preview text.
+(term-definitions forest "term-loom")
+
+;; Terms whose occurrences disagree - defined on more than one page,
+;; or with differing display texts. Each conflict is
+;; (term-id (page-id display-text) ...), in collection order.
+(term-definition-conflicts forest)
+
+;; Fragment links aimed at an anchor no page defines, grouped as
+;; (term-id (page-id ...)) - the corpus's definition backlog.
+(undefined-term-mentions forest)
+```
+
+A mention is any `link` or `query-link` whose `fragment` does not resolve
+in its target page's anchor index - the same condition the fragment
+warning reports, collected as data. The relation constructors
+(`make-term-definition-relation`, `make-term-mention-relation`) and their
+`term-definitiono` / `term-mentiono` goals are exported from
+`(forester relations)` for queries beyond these three.
