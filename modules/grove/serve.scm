@@ -59,13 +59,24 @@
 (define worker-code
   "(setpgid 0 0) (use-modules (grove private preview worker)) (exit (worker-main (cdr (command-line))))")
 
-(define (worker-arguments request-path result-path)
-  (append (list "guile" "--no-auto-compile")
-          (append-map (lambda (path) (list "-L" (absolute-path path)))
-                      (reverse %load-path))
-          (append-map (lambda (path) (list "-C" (absolute-path path)))
-                      (reverse %load-compiled-path))
-          (list "-c" worker-code request-path result-path)))
+(define (join-load-path paths)
+  (string-join (map absolute-path paths) ":"))
+
+(define (worker-environment)
+  ;;     Hand the worker the serve process's own resolved load paths
+  ;;     instead of replaying them through -L/-C: the worker must
+  ;;     resolve every module to the same file a manual build in this
+  ;;     checkout resolves it to, because the shared build state
+  ;;     records those resolved paths, and any difference in resolution
+  ;;     turns into a full re-render. -L/-C replay does not survive
+  ;;     Guile's path composition; the environment does.
+  (cons (format #f "GUILE_LOAD_PATH=~a" (join-load-path %load-path))
+        (cons (format #f "GUILE_LOAD_COMPILED_PATH=~a"
+                      (join-load-path %load-compiled-path))
+              (filter (lambda (entry)
+                        (not (or (string-prefix? "GUILE_LOAD_PATH=" entry)
+                                 (string-prefix? "GUILE_LOAD_COMPILED_PATH=" entry))))
+                      (environ)))))
 
 (define* (serve-project filename #:key (output-directory #f)
                                       (port 8080) (watch? #t) (debug? #f))
@@ -100,18 +111,18 @@
               (call-with-input-file "/dev/null"
                 (lambda (input)
                   (spawn (string-append (assq-ref %guile-build-info 'bindir) "/guile")
-                     (worker-arguments request result)
-                     #:input input
-                     #:environment
-                     ;;     One stable cache for the workspace's
-                     ;;     lifetime: entries are content-fingerprint
-                     ;;     addressed, so rebuilds reuse everything
-                     ;;     that has not changed instead of starting
-                     ;;     from an empty generation.
-                     (cons (format #f "XDG_CACHE_HOME=~a/cache" workspace)
-                           (filter (lambda (entry)
-                                     (not (string-prefix? "XDG_CACHE_HOME=" entry)))
-                                   (environ)))))))))))
+                    (list "guile" "--no-auto-compile"
+                          "-c" worker-code request result)
+                    #:input input
+                    ;;     The worker inherits this environment, so it
+                    ;;     reads and writes the same per-project cache
+                    ;;     as a manual build: sharing the build state
+                    ;;     and artifact manifest is what keeps a manual
+                    ;;     build over a serve-written output
+                    ;;     incremental instead of fully re-rendering.
+                    ;;     The build lock serializes the writers, and
+                    ;;     cache writes land through temp-file renames.
+                    #:environment (worker-environment)))))))))
     (define (start-http!)
       (listen listener 128)
       (set! server-started? #t)

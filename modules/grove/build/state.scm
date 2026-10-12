@@ -15,6 +15,7 @@
             build-state-identity
             build-state-source-path
             build-state-source-fingerprint
+            build-state-source-kind
             build-state-artifact-path
             build-state-artifact-fingerprint
             build-state-artifact-sources
@@ -34,6 +35,10 @@
 (define-inlinable (build-state-identity state) (list-ref state 3))
 (define-inlinable (build-state-source-path entry) (list-ref entry 0))
 (define-inlinable (build-state-source-fingerprint entry) (list-ref entry 1))
+;;     Entries written before source kinds existed have two elements
+;;     and are project sources by definition.
+(define (build-state-source-kind entry)
+  (if (>= (length entry) 3) (list-ref entry 2) 'source))
 (define-inlinable (build-state-artifact-path entry) (list-ref entry 0))
 (define-inlinable (build-state-artifact-fingerprint entry) (list-ref entry 1))
 (define-inlinable (build-state-artifact-sources entry) (list-ref entry 2))
@@ -71,10 +76,12 @@
 
 (define (valid-source-entry? entry)
   (and (list? entry)
-       (= (length entry) 2)
+       (or (= (length entry) 2) (= (length entry) 3))
        (string? (build-state-source-path entry))
        (or (not (build-state-source-fingerprint entry))
-           (valid-fingerprint? (build-state-source-fingerprint entry)))))
+           (valid-fingerprint? (build-state-source-fingerprint entry)))
+       (or (= (length entry) 2)
+           (memq (build-state-source-kind entry) '(source runtime)))))
 
 (define (valid-fingerprint? value)
   (and (string? value)

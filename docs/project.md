@@ -129,7 +129,10 @@ closure state. Built-in factories declare their settings themselves.
 Document entries live in Grove's cache directory, outside the output:
 `$XDG_CACHE_HOME/grove/<output-path-hash>` (override the base with
 `GROVE_CACHE_DIR`). The build state and artifact manifest live there too, so
-the output directory stays deployable as-is. Only data-only Content IR is
+the output directory stays deployable as-is. Every build process that targets
+an output directory — manual builds and serve workers alike — uses the same
+directory, so a manual build over a serve-written output stays incremental
+(the build lock serializes the writers). Only data-only Content IR is
 saved, including styles and source locations. Closures, unsupported records,
 and cyclic data are re-evaluated. Corruption is a miss; successful builds
 prune unselected entries. Declared inputs also participate in rendering

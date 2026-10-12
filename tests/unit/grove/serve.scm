@@ -102,6 +102,30 @@
                                 (and (not (zero? (car status))) (cdr status)))))))
     (set! processes (delv pid processes))
     status))
+(define (run-entry . arguments)
+  ;;     One synchronous CLI run in the same environment the serve
+  ;;     process gets: if the serve worker and this run do not share
+  ;;     the per-project cache, the assertions below see a full render.
+  (let ((stdout (open-output-file (string-append root "/.entry.out")))
+        (input (open-input-file "/dev/null")))
+    (dynamic-wind
+      (lambda () #t)
+      (lambda ()
+        (waitpid
+          (spawn "guile"
+            (append (list "guile" "--no-auto-compile"
+                          "-L" (dirname sources) "-L" sources
+                          "-C" (string-append (dirname sources) "/build")
+                          "-C" root
+                          (string-append root "/.entry.scm"))
+                    arguments)
+            #:input input #:output stdout #:error stdout
+            #:environment
+            (cons (string-append "XDG_CACHE_HOME=" root "/.cache")
+                  (filter (lambda (entry) (not (string-prefix? "XDG_CACHE_HOME=" entry)))
+                          (environ)))))
+        (read-file (string-append root "/.entry.out")))
+      (lambda () (close-port input) (close-port stdout)))))
 (define (stop-server pid signal)
   (kill pid signal)
   (status:exit-val (await-exit pid)))
@@ -202,6 +226,14 @@
       (test-assert "module-load failures retain the successful article" (string-contains (page) "three|module-2"))
       (write-file helper (helper-text "module-3"))
       (test-assert "fixing a module syntax error recovers in a fresh process" (await-text "module-3"))
+      ;;     The serve worker inherited this XDG cache, so the state and
+      ;;     manifest its builds wrote are exactly what a manual build
+      ;;     reads: no source changed since the module-3 rebuild, so
+      ;;     nothing may re-render.
+      (test-assert "a manual build over a served output is a cache hit"
+        (let ((summary (run-entry "build" "--project" config)))
+          (or (string-contains summary "(0 affected)")
+              (begin (display summary (current-error-port)) #f))))
       (write-file control "slow")
       (wait-for (lambda () (file-exists? (string-append root "/.building"))))
       (let ((building (call-with-input-file (string-append root "/.building") read)))

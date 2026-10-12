@@ -243,26 +243,59 @@
         entries))
 
 (define (changed-sources old-sources current-sources)
-  (let ((added
-          (filter (lambda (entry)
-                    (not (source-entry-by-path
-                           old-sources (build-state-source-path entry))))
-                  current-sources))
-        (modified
-          (filter (lambda (entry)
-                    (let ((previous
-                            (source-entry-by-path
-                              old-sources (build-state-source-path entry))))
-                      (and previous
-                           (not (equal? (build-state-source-fingerprint previous)
-                                        (build-state-source-fingerprint
-                                          entry))))))
-                  current-sources))
-        (removed
-          (filter (lambda (entry)
-                    (not (source-entry-by-path
-                           current-sources (build-state-source-path entry))))
-                  old-sources)))
+  ;;     An absent file has no content and cannot shape the outputs.
+  ;;     Project loads record load-path candidates that do not exist,
+  ;;     and those candidate sets shift between build processes, so
+  ;;     absent entries are dropped before the comparison instead of
+  ;;     counting as additions and removals.  Runtime inputs (module
+  ;;     files resolved through the load path) can additionally land
+  ;;     under different absolute paths in different build processes
+  ;;     without changing what the build produces, so a
+  ;;     removed-and-re-added pair with the same content cancels.
+  ;;     Declared project sources never cancel: a renamed page is a
+  ;;     real change.
+  (let* ((added
+           (filter (lambda (entry)
+                     (and (build-state-source-fingerprint entry)
+                          (not (source-entry-by-path
+                                 old-sources (build-state-source-path entry)))))
+                   current-sources))
+         (removed
+           (filter (lambda (entry)
+                     (and (build-state-source-fingerprint entry)
+                          (not (source-entry-by-path
+                                 current-sources (build-state-source-path entry)))))
+                   old-sources))
+         (modified
+           (filter (lambda (entry)
+                     (let ((previous
+                             (source-entry-by-path
+                               old-sources (build-state-source-path entry))))
+                       (and previous
+                            (not (equal? (build-state-source-fingerprint previous)
+                                         (build-state-source-fingerprint
+                                           entry))))))
+                   current-sources))
+         (churned
+           (lset-intersection
+             (lambda (left right)
+               (equal? (build-state-source-fingerprint left)
+                       (build-state-source-fingerprint right)))
+             (filter (lambda (entry)
+                       (eq? (build-state-source-kind entry) 'runtime))
+                     added)
+             (filter (lambda (entry)
+                       (eq? (build-state-source-kind entry) 'runtime))
+                     removed)))
+         (churned-paths (source-paths churned))
+         (added (filter (lambda (entry)
+                          (not (member (build-state-source-path entry)
+                                       churned-paths string=?)))
+                        added))
+         (removed (filter (lambda (entry)
+                            (not (member (build-state-source-path entry)
+                                         churned-paths string=?)))
+                          removed)))
     (values (source-paths added)
             (source-paths modified)
             (source-paths removed))))
@@ -520,20 +553,35 @@ Return a project-analysis holding the analyzed model."
                                  (build-state-artifacts previous-state) '()))
          (previous-identity (and previous-state
                                   (build-state-identity previous-state)))
+         (declared-sources
+           (delete-duplicates
+             (append prepared-sources source-paths
+                     (append-map
+                       (lambda (renderer)
+                         (if (and (cached-renderer? renderer)
+                                  (cached-renderer-inputs renderer))
+                             ((cached-renderer-inputs renderer))
+                             '()))
+                       (project-renderers project))
+                     (project-extra-sources project))
+             string=?))
+         ;;     Files tracked implicitly through reads and module loads
+         ;;     (the input cache's dependency set) sit outside the
+         ;;     project's own declarations.  Module files in particular
+         ;;     resolve to different absolute paths in different build
+         ;;     processes, so they are compared by content, not path.
+         (runtime-sources
+           (lset-difference string=?
+                            (input-cache-dependencies input-cache-context)
+                            declared-sources))
          (current-sources
-           (map (lambda (path) (list path (input-fingerprint path)))
-             (delete-duplicates
-                  (append prepared-sources source-paths
-                          (input-cache-dependencies input-cache-context)
-                          (append-map
-                            (lambda (renderer)
-                              (if (and (cached-renderer? renderer)
-                                       (cached-renderer-inputs renderer))
-                                  ((cached-renderer-inputs renderer))
-                                  '()))
-                            (project-renderers project))
-                          (project-extra-sources project))
-                  string=?)))
+           (append
+             (map (lambda (path)
+                    (list path (input-fingerprint path) 'source))
+                  declared-sources)
+             (map (lambda (path)
+                    (list path (input-fingerprint path) 'runtime))
+                  runtime-sources)))
          (source-changes
            (call-with-values
              (lambda () (changed-sources previous-sources current-sources))
