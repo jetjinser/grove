@@ -490,7 +490,16 @@ Return a project-analysis holding the analyzed model."
 (define (execute-project project write? progress)
   (unless (project? project)
     (error "project execution requires a Grove project" project))
-  (let* ((analysis (analyze-project project #:write? write? #:progress progress))
+  (let* (;;     Capture extra-sources fingerprints before anything runs:
+         ;;     these files are read at project-load time (their content
+         ;;     is baked into the style/hooks), so this is the baseline
+         ;;     the end-of-build drift check must compare against.
+         (pre-build-sources
+           (map (lambda (path) (list path (input-fingerprint path)))
+                (delete-duplicates
+                  (project-extra-sources project)
+                  string=?)))
+         (analysis (analyze-project project #:write? write? #:progress progress))
          (source-paths (project-analysis-source-paths analysis))
          (prepared-sources (project-analysis-prepared-sources analysis))
          (inputs (project-analysis-inputs analysis))
@@ -602,13 +611,13 @@ Return a project-analysis holding the analyzed model."
                              owners identity)
           (prune-input-cache! input-cache-context)
           ;;     源文件可能在构建中途被改回（revert 正是如此）：重读
-          ;;     指纹，漂移就删掉刚写的 state——下一次构建强制全量
-          ;;     重渲染，而不是拿着旧内容当命中继续服务。
+          ;;     pre-build 快照与 current-sources 的指纹并与写入时比对，
+          ;;     漂移就删掉刚写的 state——下一次构建强制全量重渲染。
           (let ((drifted?
                   (any (lambda (entry)
                          (not (equal? (cadr entry)
                                       (input-fingerprint (car entry)))))
-                       current-sources)))
+                       (append current-sources pre-build-sources))))
             (when drifted?
               (delete-file state-path))))))
     (%make-build-report (map build-state-source-path current-sources) artifacts added modified removed affected
