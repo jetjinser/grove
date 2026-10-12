@@ -600,7 +600,17 @@ Return a project-analysis holding the analyzed model."
           (write-artifacts (project-output-directory project) artifacts)
           (write-build-state state-path state-temp-path current-sources artifacts
                              owners identity)
-          (prune-input-cache! input-cache-context))))
+          (prune-input-cache! input-cache-context)
+          ;;     源文件可能在构建中途被改回（revert 正是如此）：重读
+          ;;     指纹，漂移就删掉刚写的 state——下一次构建强制全量
+          ;;     重渲染，而不是拿着旧内容当命中继续服务。
+          (let ((drifted?
+                  (any (lambda (entry)
+                         (not (equal? (cadr entry)
+                                      (input-fingerprint (car entry)))))
+                       current-sources)))
+            (when drifted?
+              (delete-file state-path))))))
     (%make-build-report (map build-state-source-path current-sources) artifacts added modified removed affected
                         (not cache-hit?))))
 
