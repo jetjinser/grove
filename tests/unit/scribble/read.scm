@@ -162,6 +162,20 @@
 
 (let* ((env (default-environment scribble))
        (document (evaluate-document env
+                   "intro text\n@(define (page-helper) \"helper ran\")\nmore text\n\n@(page-helper)")))
+  (test-assert "a top-level definition in a page binds in the page environment"
+    (and (procedure? (module-ref env 'page-helper))
+         (string-contains (content->text document) "helper ran"))))
+
+(test-assert "a definition inside a command argument stays in expression context"
+  (exception-contains?
+    (lambda ()
+      (evaluate-document (default-environment scribble)
+        "@(make-element 'paragraph (list \"x\" (define (f) 1)))"))
+    "definition in expression context"))
+
+(let* ((env (default-environment scribble))
+       (document (evaluate-document env
          "@derive[#:assumptions \"scalar(f); smooth(f)\" #:view 'full]{curl(grad(f)) + zero(vector)}"))
        (html (sxml->html (content->sxml document))))
   (test-assert "@derive composes scalar-field identities and vector-zero simplification"

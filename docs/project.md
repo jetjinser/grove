@@ -143,8 +143,15 @@ invalidation and file watching.
 The Scribble reader preserves ordinary Scheme syntax, including dotted pairs,
 rest arguments, quoted data, and macros using `...` or `#'`. Content source
 annotations apply to explicit at-commands rather than every nested Scheme pair.
+
+A document (`.plant`) evaluates each top-level `@(...)` form in a page
+environment, so a bare `@(define (helper) …)` at the top level binds
+`helper` for every later form in that page — no `begin` wrapper is needed.
 Definitions inside a command argument still follow Scheme's definition-context
-rules; writing them inside a subtree does not turn them into top-level bindings.
+rules and are rejected; writing them inside a subtree does not turn them into
+top-level bindings. Page helpers that grow, or that several pages share,
+belong in a `.plant` module article loaded through `#:prepare` with
+`make-scribble-module-setup`.
 
 `(language scribble source)` exports `source-text` and `source-range`. Both take
 an alist from `source-properties` (parsed data) or `syntax-source` (macro input).
