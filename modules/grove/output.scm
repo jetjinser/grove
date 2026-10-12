@@ -82,7 +82,8 @@
 (define legacy-metadata-names
   '(".grove-artifacts" ".grove-artifacts.tmp"
     ".grove-build-state" ".grove-build-state.tmp"
-    ".grove-input-cache"))
+    ".grove-input-cache"
+    ".grove-build-lock"))
 
 (define (delete-tree path)
   (if (file-is-directory? path)
@@ -108,7 +109,7 @@
              (string-prefix? (string-append reserved "/") path)))
        (list artifact-manifest-name artifact-manifest-temp-name
              ".grove-build-state" ".grove-build-state.tmp"
-             ".grove-input-cache")))
+             ".grove-input-cache" ".grove-build-lock")))
 
 (define (read-artifact-manifest path)
   (if (not (file-exists? path))

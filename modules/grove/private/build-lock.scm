@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove private build-lock)
+  #:use-module (grove private cache-dir)
   #:use-module (system foreign)
   #:export (with-build-lock try-exclusive-lock lock-port-exclusive
             release-lock))
@@ -67,17 +68,24 @@ Quiet - callers announce waits in their own terms."
   (canonicalize-path directory))
 
 (define* (with-build-lock directory thunk)
-  "Run THUNK holding an exclusive build lock on DIRECTORY - the build
-output directory.  A build writes the whole artifact set, the
-manifest, and the stale-output cleanup into that directory, so two
-builds over one project (a serve watch and a manual build, say) must
-not overlap: the loser's stale cleanup would delete the winner's fresh
-files.  The lock key is the canonical directory, so every process
-resolves to the same lock regardless of its working directory, and the
-kernel drops the lock if a holder dies.  Waits, announcing once, when
-another build holds the lock."
-  (let* ((directory (canonical-directory directory))
-         (path (string-append directory "/.grove-build-lock"))
+  "Run THUNK holding an exclusive build lock over the build output
+DIRECTORY.  A build writes the whole artifact set, the manifest, and
+the stale-output cleanup into that directory, so two builds over one
+project (a serve watch and a manual build, say) must not overlap: the
+loser's stale cleanup would delete the winner's fresh files.  The lock
+file lives in the per-project cache directory keyed by the output path
+- resolved through symlinks, so every build process targeting one
+output resolves the same lock, and the deployable output stays free of
+Grove's dotfiles; the kernel drops the lock if a holder dies.  Waits,
+announcing once, when another build holds the lock."
+  (let* ((resolved
+           ;;     A missing output directory has nothing to resolve:
+           ;;     key the lock on the path as given, like a first build.
+           (or (false-if-exception (canonicalize-path directory))
+               directory))
+         (lock-directory
+           (canonical-directory (grove-cache-directory resolved)))
+         (path (string-append lock-directory "/.grove-build-lock"))
          (port (open-file path "a")))
     (dynamic-wind
       (lambda () (acquire-exclusive-lock port))

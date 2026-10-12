@@ -19,6 +19,15 @@
 (define sources (getenv "GROVE_SRCDIR"))
 (define (write-file path text)
   (call-with-output-file path (lambda (port) (display text port))))
+;;     A build tree that lags the sources makes Guile log
+;;     source-vs-compiled notes on the subprocess's stderr; those are
+;;     loader chatter, not program diagnostics, so the stderr
+;;     assertions below ignore them.
+(define (without-loader-notes text)
+  (string-join
+    (filter (lambda (line) (not (string-prefix? ";;;" line)))
+            (string-split text #\newline))
+    "\n"))
 (define (run . arguments)
   (let ((status
           (apply system* "sh" "-c"
@@ -57,11 +66,13 @@
     (let ((result (run "--help")))
       (test-equal "help succeeds without loading a project" 0 (car result))
       (test-assert "help describes the command" (string-contains (cadr result) "build"))
-      (test-equal "help writes no diagnostics" "" (caddr result)))
+      (test-equal "help writes no diagnostics" ""
+        (without-loader-notes (caddr result))))
     (let ((result (run "--version")))
       (test-equal "version succeeds without loading a project" 0 (car result))
       (test-assert "version identifies the program" (string-contains (cadr result) "grove"))
-      (test-equal "version writes no diagnostics" "" (caddr result)))
+      (test-equal "version writes no diagnostics" ""
+        (without-loader-notes (caddr result))))
     (for-each
       (lambda (arguments)
         (let ((result (apply run arguments)))
@@ -291,7 +302,8 @@
     (let ((short (run "build" "--project" config))
           (debug (run "build" "--project" config "--debug")))
       (test-equal "project evaluation errors exit with status 1" 1 (car short))
-      (test-assert "default diagnostics remain bounded" (< (string-length (caddr short)) 1000))
+      (test-assert "default diagnostics remain bounded"
+        (< (string-length (without-loader-notes (caddr short))) 1000))
       (test-assert "debug includes the full diagnostic" (> (string-length (caddr debug)) 2000))))
   (lambda () (system* "rm" "-rf" root)))
 (test-subprocess-coverage '("grove/cli.scm" "grove/project/new.scm" "grove/private/cli/progress.scm"))
