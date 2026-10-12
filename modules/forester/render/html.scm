@@ -16,6 +16,7 @@
   #:use-module (grove site)
   #:use-module ((forester private content-index) #:prefix content-index:)
   #:use-module (forester backmatter)
+  #:use-module (forester relations)
   #:use-module (grove style html)
   #:use-module (forester style html)
   #:use-module (srfi srfi-1)
@@ -43,6 +44,29 @@ otherwise the generated position anchor that backs repeated occurrences."
   (or (content-element-property element 'anchor)
       (format #f "~atree-~a" prefix position)))
 
+(define (term-mention-sxml forest routes element children)
+  "Render an element marked with a term property: an anchor to the
+canonical defining occurrence - the owning page's own rendering keeps
+unprefixed anchor ids - with the definition's display text when the
+author supplies no body.  A term nothing defines is not a dead link:
+the body (or the term id) stays inline under missing-term, and the
+backlog report collects the mention."
+  (let* ((term-id (content-element-property element 'term))
+         (rows (term-definition-rows
+                 (term-definition-relation forest) term-id)))
+    (if (null? rows)
+        (if (null? children)
+            `(span (@ (class "missing-term")) ,term-id)
+            `(span (@ (class "missing-term")) ,@children))
+        (let* ((canonical (car rows))
+               (page (car canonical))
+               (anchor (cadr canonical))
+               (display (caddr canonical))
+               (label (if (null? children) (list display) children)))
+          `(a (@ (href ,(string-append (html-page-url routes page)
+                                       "#" anchor)))
+              ,@label)))))
+
 (define* (page-content-handlers forest routes page #:optional (anchor-prefix ""))
   (let ((references (outgoing-references forest (site-page-id page))))
     `((tag . ,(lambda (_element _children) '()))
@@ -56,25 +80,30 @@ otherwise the generated position anchor that backs repeated occurrences."
                         (alt (content-verbatim-string children)))
                    `(img (@ (src ,url) (alt ,alt))))))
       (link . ,(lambda (element children)
-                 (when (null? references)
-                   (error "Forester link rendering exceeded its index"
-                          (site-page-id page)))
-                 (let ((reference (car references)))
-                   (set! references (cdr references))
-                   `(a (@ (id ,(string-append anchor-prefix
-                                             (reference-source-id reference)))
-                     (href ,(link-url routes reference element)))
-                     ,@children))))
+                 (if (content-element-property element 'term)
+                     (term-mention-sxml forest routes element children)
+                     (begin
+                       (when (null? references)
+                         (error "Forester link rendering exceeded its index"
+                                (site-page-id page)))
+                       (let ((reference (car references)))
+                         (set! references (cdr references))
+                         `(a (@ (id ,(string-append anchor-prefix
+                                                   (reference-source-id reference)))
+                                (href ,(link-url routes reference element)))
+                             ,@children))))))
       (query-link . ,(lambda (element children)
-                       (let ((fragment
-                               (content-element-property element 'fragment)))
-                         `(a (@ (href ,(string-append
-                                         (html-page-url routes
-                                           (content-element-property element 'target))
-                                         (if fragment
-                                             (string-append "#" fragment)
-                                             ""))))
-                             ,@children)))))))
+                       (if (content-element-property element 'term)
+                           (term-mention-sxml forest routes element children)
+                           (let ((fragment
+                                   (content-element-property element 'fragment)))
+                             `(a (@ (href ,(string-append
+                                             (html-page-url routes
+                                               (content-element-property element 'target))
+                                             (if fragment
+                                                 (string-append "#" fragment)
+                                                 ""))))
+                                 ,@children))))))))
 
 (define* (subtree-content-sxml forest routes page
                               #:optional (anchor-prefix "") (depth 1) (highlighters '())

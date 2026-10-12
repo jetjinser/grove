@@ -62,11 +62,12 @@
 (define-relation-schema make-term-definition-relation term-definitiono
   (term-id page-id anchor display-text))
 
-;; Rows are (term-id source-page-id): a fragment link aimed at an
-;; anchor that resolves nowhere - a term the corpus points at but
-;; nothing defines yet.
+;; Rows are (term-id source-page-id resolved?): a fragment link aimed
+;; at an anchor that resolves nowhere, or an element marked with a
+;; term property.  Marked mentions record whether the definition
+;; relation resolved them.
 (define-relation-schema make-term-mention-relation term-mentiono
-  (term-id source-page-id))
+  (term-id source-page-id resolved?))
 
 (define-relation (list-membero value values)
   (either
@@ -285,12 +286,16 @@
               (hash-map->list cons by-term))
       (lambda (left right) (string<? (car left) (car right))))))
 
-;; One term's mentioning pages.
+;; One term's mentioning pages as (source-page-id resolved?).
 (define (term-mention-rows relation term-id)
-  (map cadr (hash-ref (term-column-index relation 0) term-id '())))
+  (map cdr (hash-ref (term-column-index relation 0) term-id '())))
 
 ;; Term-ids the corpus points at but nothing defines, each with its
-;; mentioning pages - the definition backlog. Sorted by term-id.
+;; mentioning pages - the definition backlog.  A mention counts as
+;; resolved only when it is marked with a term property AND the
+;; definition relation resolves it; unresolved fragment links and
+;; unresolved marked mentions both stay out of this report, sorted by
+;; term-id.
 (define (undefined-term-mentions definition-relation mention-relation)
   (let ((defined (make-hash-table)))
     (for-each
@@ -299,7 +304,7 @@
     (let ((by-term (make-hash-table)))
       (for-each
         (lambda (row)
-          (unless (hash-ref defined (car row))
+          (unless (or (hash-ref defined (car row)) (caddr row))
             (hash-set! by-term (car row)
                        (cons (cadr row)
                              (hash-ref by-term (car row) '())))))

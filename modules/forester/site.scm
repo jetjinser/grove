@@ -615,16 +615,31 @@ anchors."
                    (let ((source-id (site-page-id source-page)))
                      (filter-map
                        (lambda (element)
-                         (let ((fragment
+                         (let ((term-mark
+                                 (content-element-property element 'term))
+                               (fragment
                                  (content-element-property element 'fragment))
                                (target-page-id
                                  (content-element-property element 'target)))
-                           (and (non-empty-string? fragment)
-                                (not (member fragment
-                                             (hash-ref anchor-index
-                                                       target-page-id '())
-                                             string=?))
-                                (list fragment source-id))))
+                           (cond
+                             ;;     A marked mention: resolution goes
+                             ;;     through the definition relation -
+                             ;;     the raw anchor registry - never
+                             ;;     through rendered DOM ids.
+                             (term-mark
+                              (list term-mark source-id
+                                    (pair? (term-definition-rows
+                                             term-definition-relation
+                                             term-mark))))
+                             ;;     An ordinary fragment link aimed at
+                             ;;     an anchor that resolves nowhere.
+                             ((and (non-empty-string? fragment)
+                                   (not (member fragment
+                                                (hash-ref anchor-index
+                                                          target-page-id '())
+                                                string=?)))
+                              (list fragment source-id #f))
+                             (else #f))))
                        (append (tree-pass:link-elements
                                  (tree-pass:owned-content
                                    (site-page-document source-page)))

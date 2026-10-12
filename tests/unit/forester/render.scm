@@ -995,9 +995,21 @@
                            " and the "
                            (make-content-element 'link (list (text "ghost"))
                              #:properties '((target . "glossary")
-                                            (fragment . "term-ghost")))))))))
+                                            (fragment . "term-ghost")))
+                           " with a marked "
+                           (make-content-element 'link '()
+                             #:properties '((target . "glossary")
+                                            (term . "term-tree")))
+                           " and a marked "
+                           (make-content-element 'query-link
+                             (list (text "ghost mention"))
+                             #:properties '((term . "term-ghost")))))))))
        (forest (make-forest (make-site (list glossary chapter)
-                                       #:title "T" #:home "glossary"))))
+                                       #:title "T" #:home "glossary")))
+       (chapter-html
+         (assoc-ref (site->html forest
+                      #:routes (make-html-routes #:home-page "glossary"))
+                    "ch01")))
   (test-equal "term definitions collect dfn occurrences across pages"
     '(("glossary" "term-loom" "loom")
       ("ch01" "term-loom" "织机"))
@@ -1010,6 +1022,13 @@
     (term-definition-conflicts forest))
   (test-equal "unresolved fragment links are the definition backlog"
     '(("term-ghost" ("ch01")))
-    (undefined-term-mentions forest)))
+    (undefined-term-mentions forest))
+  (test-assert "a resolved marked mention renders the canonical display"
+    ;;     Glossary is the site home, so its route is /index.html.
+    (string-contains chapter-html
+                     "href=\"/index.html#term-tree\">tree</a>"))
+  (test-assert "an undefined marked mention renders without a link"
+    (string-contains chapter-html
+                     "class=\"missing-term\">ghost mention</span>")))
 
 (test-end "forester renderers")

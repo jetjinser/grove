@@ -311,3 +311,25 @@ warning reports, collected as data. The relation constructors
 (`make-term-definition-relation`, `make-term-mention-relation`) and their
 `term-definitiono` / `term-mentiono` goals are exported from
 `(forester relations)` for queries beyond these three.
+
+To mark a mention explicitly - keeping it distinguishable from ordinary
+links even when the term is defined - give a link element a `term`
+property naming the term id:
+
+```scheme
+;; a term command's expansion, at the content level:
+(make-content-element 'link body
+  #:properties `((target . ,defining-page)
+                 (fragment . ,anchor)
+                 (term . "term-loom")))
+```
+
+Resolution goes through the raw anchor registry - the definition
+relation - never through rendered DOM ids, which carry host prefixes
+inside subtrees. A resolved mention renders as an anchor to the defining
+page's own route (its standalone rendering keeps unprefixed anchor ids)
+with the definition's display text when the element has no body of its
+own; a term nothing defines renders inline under `missing-term` and
+lands in the backlog report instead of the href. The mention relation
+records both kinds with their resolution state, so counts of defined and
+undefined mentions need no guessing.

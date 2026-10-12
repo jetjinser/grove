@@ -120,16 +120,16 @@
 
 (define mentions
   (make-term-mention-relation
-    '(("term-loom" "ch01")
-      ("term-ghost" "ch02")
-      ("term-ghost" "ch03"))))
+    '(("term-loom" "ch01" #t)
+      ("term-ghost" "ch02" #f)
+      ("term-ghost" "ch03" #f))))
 
 (test-equal "undefined mentions drop defined terms and group pages"
   '(("term-ghost" ("ch02" "ch03")))
   (undefined-term-mentions definitions mentions))
 
-(test-equal "mention lookups return one term's pages"
-  '("ch02" "ch03")
+(test-equal "mention lookups keep pages with their resolution state"
+  '(("ch02" #f) ("ch03" #f))
   (term-mention-rows mentions "term-ghost"))
 
 (test-end "forester relations")
