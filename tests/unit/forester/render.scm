@@ -956,10 +956,12 @@
            (string-contains html "class=\"margin-ref\"")
            (string-contains html "id=\"margin-1\""))))
   (test-assert "the margin lane is opt-in"
-    (not (string-contains
-           (assoc-ref (site->html forest
-                        #:routes (make-html-routes #:home-page "annotated"))
-                      "annotated")
-           "margin-lane"))))
+    (let ((html (assoc-ref (site->html forest
+                          #:routes (make-html-routes #:home-page "annotated"))
+                        "annotated")))
+      ;;     The default stylesheet (inlined by site->html) names the
+      ;;     margin classes, so probe the emitted markup, not the CSS.
+      (and (not (string-contains html "class=\"margin-lane\""))
+           (not (string-contains html "class=\"margin-ref\""))))))
 
 (test-end "forester renderers")
