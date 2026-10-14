@@ -136,13 +136,19 @@ Plain renderer callbacks are assumed deterministic under tracked inputs.
 model-to-data procedure), or disables caching. Grove cannot infer hidden
 closure state. Built-in factories declare their settings themselves.
 
-Document entries live in Grove's cache directory, outside the output:
-`$XDG_CACHE_HOME/grove/<output-path-hash>` (override the base with
-`GROVE_CACHE_DIR`). The build state and artifact manifest live there too, so
-the output directory stays deployable as-is. Every build process that targets
-an output directory — manual builds and serve workers alike — uses the same
-directory, so a manual build over a serve-written output stays incremental
-(the build lock serializes the writers). Only data-only Content IR is
+Document entries live in the machine-global content store,
+`$XDG_CACHE_HOME/grove/store/input-cache` (override the base with
+`GROVE_STORE_DIR`), shared by every checkout and output directory of
+every project this user builds. Keys are content-derived — the project
+file's digest plus the project-relative document path — and tracked
+paths are normalized project-relative, so two checkouts of one project
+share document analyses. The build state and artifact manifest live in
+a per-output directory keyed by the output path, so the output
+directory stays deployable as-is. Every build process that targets an
+output directory — manual builds and serve workers alike — uses the
+same cache and store locations, so a manual build over a serve-written
+output stays incremental (the build lock serializes the writers). Only
+data-only Content IR is
 saved, including styles and source locations. Closures, unsupported records,
 and cyclic data are re-evaluated. Corruption is a miss; successful builds
 prune unselected entries. Declared inputs also participate in rendering
