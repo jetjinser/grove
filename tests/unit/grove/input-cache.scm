@@ -105,11 +105,10 @@
     (test-equal "reader dependencies conservatively force a full render" 1 partial-renders)
     (build-project (project #f))
     (test-equal "disabling project cache forces evaluation" 4 evaluations)
-    (let* ((directory (string-append (grove-cache-directory output)
-                                     "/input-cache"))
+    (let* ((directory (grove-store-directory))
            (entry (string-append directory "/"
                     (car (scandir directory (lambda (name)
-                                             (not (member name '("." "..")))))))))
+                                              (not (member name '("." "..")))))))))
       (define (snapshot)
         (let ((info (stat entry)))
           (list (file-fingerprint entry) (stat:ino info) (stat:mtime info))))
@@ -120,11 +119,10 @@
     (test-equal "check always evaluates the source" 5 evaluations)
     (build-project (project #t))
     (test-equal "check does not replace the stored entry" 5 evaluations)
-    (let* ((directory (string-append (grove-cache-directory output)
-                                     "/input-cache"))
+    (let* ((directory (grove-store-directory))
            (entry (string-append directory "/"
                     (car (scandir directory (lambda (name)
-                                             (not (member name '("." "..")))))))))
+                                              (not (member name '("." "..")))))))))
       (put entry "malformed")
       (build-project (project #t))
       (test-equal "corrupt cache falls back to source evaluation" 6 evaluations))
@@ -291,8 +289,7 @@
         (test-equal "renderer opt-out forces rendering on every build" 4 renders)))
     (prune-input-cache! (make-input-cache-context output #t '()))
     (test-equal "entries outside the current selection are removed"
-      '("." "..") (scandir (string-append (grove-cache-directory output)
-                                          "/input-cache")))
+      '("." "..") (scandir (grove-store-directory)))
     (test-error "input cache directory is reserved from artifacts" #t
       (validate-artifacts (list (make-artifact ".grove-input-cache/user" "x")))))
   (lambda () (system* "rm" "-rf" root)))

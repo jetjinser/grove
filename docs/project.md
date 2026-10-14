@@ -33,6 +33,12 @@ Without `--project`, commands search the invocation directory and its
 ancestors for `project.scm`, git-style, and stop at a `.git` boundary or
 the filesystem root; `--project` always wins when given.
 
+`--profile` (build, check, serve) reports where a build's wall-clock and
+memory go: the input-cache cost split (reused vs fresh document reads,
+with seconds), the project file's own evaluation time, and the process's
+peak resident set (VmHWM). Serve passes the flag to its workers, so the
+lines land on the serve terminal.
+
 `check-project` fully evaluates, analyzes, renders, and validates without
 accessing published output state. It does not sandbox Scheme effects or check
 browser layout. Its report treats all sources as added and artifacts as affected.

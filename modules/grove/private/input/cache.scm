@@ -11,7 +11,7 @@
   #:use-module (ice-9 match)
   #:use-module (ice-9 ftw)
   #:use-module (srfi srfi-1)
-  #:export (current-input-cache make-input-cache-context
+  #:export (current-input-cache current-project-key make-input-cache-context
             current-input-cache-timings
             input-cache-dependencies input-cache-summary input-cache-disabled? prune-input-cache!
             register-input-dependencies!
@@ -20,6 +20,11 @@
 ;; A build scopes this parameter; checks and standalone reads never reuse results.
 (define current-input-cache (make-parameter #f))
 
+;; Set by the project loader: the content digest of the project file.
+;; Document cache keys derive from it, so two checkouts of one project
+;; - and only that project - meet on the same entries.
+(define current-project-key (make-parameter #f))
+
 ;; Profile-mode accumulator: a hash the CLI installs and reads back
 ;; after the build.  cached-document adds reused/fresh seconds and
 ;; counts here - the reuse path covers the whole hit side (entry read,
@@ -27,13 +32,56 @@
 ;; the whole miss side (read-document).
 (define current-input-cache-timings (make-parameter #f))
 
+;;     Cross-checkout normalization: paths inside the loading process's
+;;     working directory key project-relative (identical across
+;;     checkouts of one project); foreign paths (module trees, stores)
+;;     key as given - they are machine-stable parts of the toolchain
+;;     identity, not of the project.
+(define (normalize-key-path path)
+  (let ((root (getcwd)))
+    (cond
+      ((string=? path root) ".")
+      ((string-prefix? (string-append root "/") path)
+       (substring path (+ (string-length root) 1)))
+      (else path))))
+
+(define (entry-key path)
+  (content-fingerprint
+    (string-append (or (current-project-key) "")
+                   "\0"
+                   (normalize-key-path path))))
+
+;;     Profile-mode miss diagnosis: when an entry exists but its
+;;     identity check fails, name the first element that differs, so
+;;     sharing problems (paths that should normalize but do not,
+;;     toolchain drift) are visible instead of silent misses.
+(define (first-identity-difference stored current)
+  (let loop ((a stored) (b current) (path '(identity)))
+    (cond
+      ((equal? a b) #f)
+      ((and (pair? a) (pair? b))
+       (or (loop (car a) (car b) (cons "car" path))
+           (loop (cdr a) (cdr b) (cons "cdr" path))))
+      (else
+       (let ((show (lambda (v)
+                     (let ((s (format #f "~s" v)))
+                       (if (> (string-length s) 160)
+                           (string-append (substring s 0 160) "…")
+                           s)))))
+         (format #f "~s: stored ~a, current ~a"
+                 (reverse path) (show a) (show b)))))))
+
 (define (make-input-cache-context directory enabled? dependencies)
   (and enabled?
     (let ((globals (make-hash-table)))
       (for-each (lambda (path) (hash-set! globals path #t)) dependencies)
-      (list (string-append (grove-cache-directory directory)
-                           "/input-cache")
-            enabled? dependencies (make-hash-table) globals))))
+      ;;     The document cache lives in the machine-global store, not
+      ;;     a per-output directory: its keys are content-derived, so
+      ;;     concurrent checkouts and worktrees share one set of
+      ;;     entries instead of recomputing identical analyses.
+      (list (grove-store-directory)
+            enabled? dependencies (make-hash-table) globals
+            (or (current-project-key) "")))))
 
 (define (register-input-dependencies! context paths)
   (when context
@@ -59,7 +107,7 @@
 (define (prune-input-cache! context)
   (when context
     (match context
-      ((directory enabled? dependencies statuses globals)
+      ((directory enabled? dependencies statuses globals project-key)
        (when (file-exists? directory)
          (let ((retained (filter identity (hash-map->list
                            (lambda (path status)
@@ -69,8 +117,7 @@
                              ;;     an invariant.
                              (and (memq status '(hit miss))
                                   (false-if-exception
-                                   (content-fingerprint
-                                    (canonicalize-path path)))))
+                                   (entry-key path))))
                            statuses))))
            (for-each
              (lambda (name)
@@ -215,7 +262,7 @@
     (if (not context)
         (timed 'fresh (read-document))
         (match context
-          ((directory enabled? shared statuses globals)
+          ((directory enabled? shared statuses globals project-key)
            (define (report result)
              (hash-set! statuses path result)
              (status path result))
@@ -234,25 +281,35 @@
                        paths)))
            (register (append shared dependencies))
            (let* ((paths (unique-paths (cons path (append shared dependencies))))
-                  (snapshot (map (lambda (file) (list file (input-fingerprint file))) paths))
+                  (snapshot (map (lambda (file)
+                                   (let ((key (normalize-key-path file)))
+                                     (list key (input-fingerprint key))))
+                                 paths))
                   (identity (list reader (version) (setlocale LC_CTYPE)
                                   %load-path %load-compiled-path snapshot))
                   (entry-path (string-append directory "/"
-                                (content-fingerprint (canonicalize-path path))))
+                                (entry-key path)))
                   (entry (and reuse? (read-entry entry-path)))
                   (hit (catch #t
                          (lambda ()
                            (match entry
                              ((stored extra reusable? document)
-                              (and (equal? stored identity)
-                                   reusable?
-                                   (every (lambda (input)
-                                            (match input
-                                              ((file digest)
-                                               (equal? digest (input-fingerprint file)))
-                                              (_ #f))) extra)
-                                   (begin (register (map car extra))
-                                          (unpack document))))
+                              (let ((checked
+                                      (and (equal? stored identity)
+                                           reusable?
+                                           (every (lambda (input)
+                                                    (match input
+                                                      ((file digest)
+                                                       (equal? digest (input-fingerprint file)))
+                                                      (_ #f))) extra)
+                                           (begin (register (map car extra))
+                                                  (unpack document)))))
+                                (when (and timings (not checked) (pair? entry))
+                                  (format (current-error-port)
+                                    "Profile cache miss diagnosis: ~a\n"
+                                    (or (first-identity-difference stored identity)
+                                        "dependency fingerprints changed")))
+                                checked))
                              (_ #f)))
                          (lambda _ #f))))
              (if (content-document? hit)
@@ -262,7 +319,9 @@
                         (extra (sort
                                  (hash-fold (lambda (file digest inputs)
                                               (if (and (string? file) (not (string=? file canonical)))
-                                                  (cons (list file digest) inputs) inputs))
+                                                  (cons (list (normalize-key-path file) digest)
+                                                        inputs)
+                                                  inputs))
                                             '() trace)
                                  (lambda (a b) (string<? (car a) (car b))))))
                    (register (map car extra))

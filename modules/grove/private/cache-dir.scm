@@ -8,7 +8,7 @@
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (grove-cache-directory))
+  #:export (cache-base grove-cache-directory grove-store-directory))
 
 (define (path-fingerprint text)
   (let ((digest (sha256 (string->utf8 text)))
@@ -42,3 +42,12 @@ back to the path as given."
               output-directory)))
     (string-append (cache-base) "/"
                    (substring (path-fingerprint canonical) 0 16))))
+
+(define (grove-store-directory)
+  "The machine-global content store, shared by every checkout and
+every output directory of every project this user builds.  Keys are
+content-derived, so concurrent writers land on identical objects and
+the write discipline (temp file + rename) makes races no-ops."
+  (string-append (or (getenv "GROVE_STORE_DIR")
+                     (string-append (cache-base) "/store"))
+                 "/input-cache"))

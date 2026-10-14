@@ -4,6 +4,8 @@
 (define-module (grove project load)
   #:use-module (grove project)
   #:use-module (grove project diagnostic)
+  #:use-module (grove build state)
+  #:use-module (grove private input cache)
   #:use-module (grove private input dependencies)
   #:use-module (ice-9 ftw)
   #:export (call-with-loaded-project))
@@ -47,6 +49,7 @@ OUTPUT-DIRECTORY, when supplied, is resolved relative to the caller's directory.
                           (lambda ()
                             (call-with-input-trace trace
                               (lambda () (read-project path))))))
+               (_ (current-project-key (file-fingerprint path)))
                (_ (let ((timings (current-analysis-timings)))
                     ;;     Profile mode: the project file's own
                     ;;     evaluation - style values, module loads,

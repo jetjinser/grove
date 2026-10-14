@@ -73,6 +73,7 @@
     "unit/grove/collect.scm"
     "unit/grove/state.scm"
     "unit/grove/input-cache.scm"
+    "unit/grove/store-sharing.scm"
     "unit/grove/content.scm"
     "unit/grove/string.scm"
     "unit/grove/relation.scm"

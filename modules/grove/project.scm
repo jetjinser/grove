@@ -482,7 +482,7 @@ Return a project-analysis holding the analyzed model."
            (input-cache-context
              (and write?
                (make-input-cache-context
-                 (project-output-directory project) (project-cache? project)
+                 (grove-store-directory) (project-cache? project)
                  (append prepared-sources (project-extra-sources project)
                          (runtime-inputs)))))
            (inputs
