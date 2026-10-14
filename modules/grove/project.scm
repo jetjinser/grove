@@ -50,6 +50,8 @@
             build-project/report
             build-project
             check-project
+            rebuild-from-forest
+            last-build-model
             analyze-project
             project-analysis?
             project-analysis-model
@@ -63,6 +65,12 @@
 ;; Phase-start hook, fired with just the phase symbol before a phase
 ;; runs, so the CLI can announce it before knowing its duration.
 (define current-analysis-phase-start (make-parameter #f))
+
+;; The analysis model of the most recent build, for long-lived preview
+;; workers that re-render from a retained forest.  Purely advisory:
+;; one-shot builds never read it back.
+(define %last-build-model #f)
+(define (last-build-model) %last-build-model)
 
 (define-record-type <project-input>
   (make-project-input path value)
@@ -646,6 +654,10 @@ Return a project-analysis holding the analyzed model."
                                    previous-artifacts))))
              (else
               (affected-artifacts artifacts previous-artifacts changed)))))
+    ;;     Expose the analysis model for long-lived preview workers:
+    ;;     a resident worker re-renders from this forest when only
+    ;;     load-time assets changed.
+    (set! %last-build-model model)
     (call-with-project-stage 'validate #f
       (lambda ()
         (progress 'validate #f)
@@ -679,6 +691,81 @@ and stale-output cleanup all live in the output directory, so a serve
 watch and a manual build over one project must not run concurrently."
   (with-build-lock (project-output-directory project)
     (lambda () (execute-project project #t progress))))
+
+;;     Forest-level reuse: a long-lived preview worker retains the
+;;     forest of its last successful build and re-renders with a
+;;     freshly loaded project when only load-time assets changed.
+;;     Analysis is skipped wholesale; render-with-cache re-runs just
+;;     the renderers whose inputs changed, and the on-disk build state
+;;     is refreshed (with content fingerprints) so manual builds stay
+;;     incremental.  Cache pruning is skipped here - the retained
+;;     state carries no selection statuses, and pruning is hygiene.
+(define* (rebuild-from-forest project forest retained-state changed removed
+                              #:key (progress (lambda (stage path) #t)))
+  "Render and write using a FOREST built by a previous build of the
+same PROJECT.  RETAINED-STATE is that build's on-disk state record;
+CHANGED names the sources modified or added since, REMOVED the ones
+deleted.  Renderers and style values come from the freshly loaded
+PROJECT, so load-time assets (stylesheets, scripts) re-read, while
+analysis results - pages, relations, indexes - come from the forest."
+  (with-build-lock (project-output-directory project)
+    (lambda ()
+      (let* ((cache-directory
+               (grove-cache-directory (project-output-directory project)))
+             (state-path
+               (string-append cache-directory "/" build-state-name))
+             (state-temp-path
+               (string-append cache-directory "/" build-state-temp-name))
+             (previous-sources (build-state-sources retained-state))
+             (previous-artifacts (build-state-artifacts retained-state))
+             (cached (load-cached-artifacts
+                       (project-output-directory project) previous-artifacts))
+             (render-result
+               (begin
+                 (progress 'render #f)
+                 (render-with-cache forest (project-renderers project)
+                                    previous-artifacts cached
+                                    previous-sources changed progress)))
+             (artifacts (car render-result))
+             (owners (cadr render-result))
+             (affected (affected-artifacts artifacts previous-artifacts changed))
+             ;;     Content-refresh every retained source: the on-disk
+             ;;     state must stay truthful for manual builds and for
+             ;;     drift detection, and deleted sources leave the
+             ;;     manifest.
+             (current-sources
+               (filter-map
+                 (lambda (source)
+                   (let ((digest (false-if-exception
+                                   (file-fingerprint
+                                     (build-state-source-path source)))))
+                     (and digest
+                          (list (build-state-source-path source)
+                                digest
+                                (build-state-source-kind source)))))
+                 previous-sources))
+             (kept (map build-state-source-path current-sources))
+             (report-removed
+               (filter (lambda (p) (not (member p changed string=?))) removed)))
+        (call-with-project-stage 'validate #f
+          (lambda ()
+            (progress 'validate #f)
+            (validate-artifacts artifacts)))
+        (call-with-project-stage 'write (project-output-directory project)
+          (lambda ()
+            (progress 'write (project-output-directory project))
+            (write-artifacts (project-output-directory project) artifacts)
+            (write-build-state state-path state-temp-path current-sources
+                               artifacts owners
+                               (build-state-identity retained-state))))
+        (%make-build-report
+          (map build-state-source-path current-sources)
+          artifacts
+          '()
+          changed
+          report-removed
+          affected
+          #t)))))
 
 (define* (check-project project #:key (progress (lambda (stage path) #t)))
   "Read, analyze, render, and validate PROJECT without accessing output state."
