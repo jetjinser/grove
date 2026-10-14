@@ -1017,11 +1017,12 @@
   (test-equal "terms defined once are not conflicts"
     '() (filter (lambda (entry) (string=? (car entry) "term-tree"))
                 (term-definition-conflicts forest)))
-  (test-equal "term definition conflicts report both display texts"
-    '(("term-loom" ("glossary" "loom") ("ch01" "织机")))
+  (test-equal "term definition conflicts report host, page, and both displays"
+    '(("term-loom" ("glossary" "Glossary" "glossary" "term-loom" "loom")
+                  ("ch01" "Chapter" "ch01" "term-loom" "织机")))
     (term-definition-conflicts forest))
   (test-equal "unresolved fragment links are the definition backlog"
-    '(("term-ghost" ("ch01")))
+    '(("term-ghost" (("ch01" "Chapter" "ch01"))))
     (undefined-term-mentions forest))
   (test-assert "a resolved marked mention renders the canonical display"
     ;;     Glossary is the site home, so its route is /index.html.
@@ -1030,5 +1031,33 @@
   (test-assert "an undefined marked mention renders without a link"
     (string-contains chapter-html
                      "class=\"missing-term\">ghost mention</span>")))
+
+(let* ((dfn (lambda (anchor children)
+              (make-content-element
+                'span children #f
+                #:properties `((anchor . ,anchor))
+                #:style (make-content-style #f (list (make-html-tag "dfn"))))))
+       (text (lambda (value) (make-content-text value)))
+       (article
+         (make-site-page "article" "Article"
+           (make-content-document
+             (list (make-content-element 'paragraph
+                     (list (dfn "term-sub" (list (text "root term")))))
+                   (make-content-element 'subtree
+                     (list (make-content-element 'paragraph
+                             (list (dfn "term-sub"
+                                       (list (text "subtree term"))))))
+                     #:properties '((tree-id . "named-sub")
+                                    (title . "Named Sub")))))))
+       (forest (make-forest (make-site (list article)
+                                       #:title "T" #:home "article"))))
+  (test-equal "an in-subtree definition names its owning subtree"
+    '(("article" "term-sub" "root term")
+      ("named-sub" "term-sub" "subtree term"))
+    (term-definitions forest "term-sub"))
+  (test-equal "conflict projections resolve the subtree's host article"
+    '(("term-sub" ("article" "Article" "article" "term-sub" "root term")
+                 ("article" "Article" "named-sub" "term-sub" "subtree term")))
+    (term-definition-conflicts forest)))
 
 (test-end "forester renderers")

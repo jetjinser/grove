@@ -286,7 +286,10 @@ id (derive it from the term text, as the topic convention does) and the
 display text is the element's plain-text body, so a defining element may
 carry an original term and a translation together.
 
-Three queries read the relations:
+Three queries read the relations. The report projections name the **host
+article** - the root page whose rendered DOM carries each occurrence -
+next to the owning page, because an in-paragraph definition's owning id
+(an anonymous `unstable-N` subtree) is unreadable in a report without it:
 
 ```scheme
 (use-modules (forester site))
@@ -296,12 +299,15 @@ Three queries read the relations:
 (term-definitions forest "term-loom")
 
 ;; Terms whose occurrences disagree - defined on more than one page,
-;; or with differing display texts. Each conflict is
-;; (term-id (page-id display-text) ...), in collection order.
+;; or with differing display texts.  Each conflict is
+;; (term-id (host-id host-title page-id anchor display-text) ...),
+;; in collection order, so a drift report can deep-link to
+;; host.html#anchor and name the article it happened in.
 (term-definition-conflicts forest)
 
 ;; Fragment links aimed at an anchor no page defines, grouped as
-;; (term-id (page-id ...)) - the corpus's definition backlog.
+;; (term-id (host-id host-title page-id) ...) - the corpus's
+;; definition backlog.
 (undefined-term-mentions forest)
 ```
 

@@ -857,20 +857,91 @@ MathJax draws it with its own fonts."
 ;;     Term queries: one term's defining occurrences for glossary
 ;;     generation and hover previews; terms whose occurrences disagree;
 ;;     and the corpus's definition backlog - fragments pointed at but
-;;     never defined.
+;;     never defined.  The report projections name the host article -
+;;     the root page whose rendered DOM carries each occurrence - next
+;;     to the owning subtree, because an in-paragraph definition's
+;;     owning id (an anonymous unstable-N) is unreadable in a report
+;;     without it.
+
+(define (forest-host-table forest)
+  "Memoized owning-page-id to (host-article-id host-article-title):
+the root page whose rendered DOM carries each page, walking subtree
+definitions up to the roots; transclusion inclusions fill the gaps for
+pages that only exist inside another article's DOM."
+  (cached-rows forest '(term-host-table)
+    (lambda ()
+      (let ((parent-of (make-hash-table)))
+        (for-each
+          (lambda (definition)
+            (unless (hash-ref parent-of
+                              (composition:subtree-definition-child definition))
+              (hash-set! parent-of
+                (composition:subtree-definition-child definition)
+                (composition:subtree-definition-parent definition))))
+          (composition:subtree-definitions (composition forest)))
+        (for-each
+          (lambda (page)
+            (for-each
+              (lambda (transclusion)
+                (unless (hash-ref parent-of
+                                  (composition:transclusion-target-tree-id
+                                    transclusion))
+                  (hash-set! parent-of
+                    (composition:transclusion-target-tree-id transclusion)
+                    (composition:transclusion-source-id transclusion))))
+              (composition:outgoing-transclusions
+                (composition forest) (site-page-id page))))
+          (pages forest))
+        (let ((hosts (make-hash-table)))
+          (define (host-of id)
+            (or (hash-ref hosts id)
+                (let* ((host
+                         (let loop ((current id) (path (list id)))
+                           (let ((parent (hash-ref parent-of current)))
+                             (cond
+                               ((not parent) current)
+                               ((member parent path equal?) current)
+                               (else (loop parent (cons parent path)))))))
+                       (host-page (hash-ref (page-index forest) host)))
+                  (hash-set! hosts id
+                    (list host (if host-page
+                                   (site-page-title host-page)
+                                   host)))
+                  (hash-ref hosts id))))
+          (for-each (lambda (page) (host-of (site-page-id page)))
+                    (pages forest))
+          hosts)))))
 
 (define (term-definitions forest term-id)
   (relations:term-definition-rows
     (term-definition-relation forest) term-id))
 
 (define (term-definition-conflicts forest)
-  (relations:term-definition-conflicts
-    (term-definition-relation forest)))
+  (let ((hosts (forest-host-table forest)))
+    (map
+      (lambda (entry)
+        (cons (car entry)
+              (map (lambda (occurrence)
+                     (let ((host (hash-ref hosts (car occurrence))))
+                       (list (car host) (cadr host)
+                             (car occurrence) (cadr occurrence)
+                             (caddr occurrence))))
+                   (cdr entry))))
+      (relations:term-definition-conflicts
+        (term-definition-relation forest)))))
 
 (define (undefined-term-mentions forest)
-  (relations:undefined-term-mentions
-    (term-definition-relation forest)
-    (term-mention-relation forest)))
+  (let ((hosts (forest-host-table forest)))
+    (map
+      (lambda (entry)
+        (list (car entry)
+              (map (lambda (page-id)
+                     (let ((host (hash-ref hosts page-id)))
+                       (list (car host) (cadr host) page-id)))
+                   (cadr entry))))
+      (relations:undefined-term-mentions
+        (term-definition-relation forest)
+        (term-mention-relation forest)))))
 
 (define (source-paths forest)
   (let ((site (site forest)))

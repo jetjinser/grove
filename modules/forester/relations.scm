@@ -266,8 +266,9 @@
 
 ;; Terms whose defining occurrences disagree: more than one defining
 ;; page, or display texts that differ - an in-passing definition that
-;; drifted from the canonical one. Returns (term-id (page-id
-;; display-text) ...) sorted by term-id.
+;; drifted from the canonical one.  Returns (term-id (page-id anchor
+;; display-text) ...) in collection order; the anchor stays in the
+;; projection so reports can deep-link to each occurrence.
 (define (term-definition-conflicts relation)
   (define (conflict? entries)
     (or (> (length (delete-duplicates (map car entries) string=?)) 1)
@@ -278,7 +279,7 @@
         (hash-set! by-term (car row)
                    ;;     Keep collection order: the glossary's
                    ;;     canonical entry precedes in-passing uses.
-                   (reverse (cons (list (cadr row) (cadddr row))
+                   (reverse (cons (list (cadr row) (caddr row) (cadddr row))
                                   (hash-ref by-term (car row) '())))))
       (relation-facts relation))
     (sort

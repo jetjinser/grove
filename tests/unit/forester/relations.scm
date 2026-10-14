@@ -115,7 +115,8 @@
   '() (term-definition-rows definitions "term-ghost"))
 
 (test-equal "term definition conflicts flag multi-page and drifted terms"
-  '(("term-loom" ("glossary" "loom") ("ch01" "织机")))
+  '(("term-loom" ("glossary" "term-loom" "loom")
+                 ("ch01" "term-loom" "织机")))
   (term-definition-conflicts definitions))
 
 (define mentions
