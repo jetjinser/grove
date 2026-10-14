@@ -3,9 +3,65 @@
 
 (define-module (grove private cli progress)
   #:use-module (grove project)
+  #:use-module ((grove private input cache) #:select (current-input-cache-timings))
   #:use-module (ice-9 format)
+  #:use-module (ice-9 rdelim)
+  #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-13)
-  #:export (call-with-cli-progress cli-seconds print-cli-status print-cli-summary))
+  #:use-module (srfi srfi-14)
+  #:re-export (current-input-cache-timings)
+  #:export (call-with-input-cache-timings
+            report-input-cache-timings
+            peak-rss-mib
+            report-profile
+            call-with-cli-progress cli-seconds print-cli-status print-cli-summary))
+
+;;     Profile mode: cache-hit cost split and peak RSS.  The build
+;;     summary answers "what changed"; these lines answer "where did
+;;     the wall-clock and the memory go".
+
+(define (call-with-input-cache-timings thunk)
+  (parameterize ((current-input-cache-timings (make-hash-table)))
+    (thunk)
+    (current-input-cache-timings)))
+
+(define (report-input-cache-timings port timings)
+  (let ((reused (hash-ref timings 'reused 0))
+        (fresh (hash-ref timings 'fresh 0))
+        (reused-count (hash-ref timings '(count reused) 0))
+        (fresh-count (hash-ref timings '(count fresh) 0)))
+    (print-cli-status "Profile"
+      (format #f "input cache: ~a reused in ~a, ~a fresh in ~a"
+              reused-count (format-duration reused)
+              fresh-count (format-duration fresh))
+      port)))
+
+(define (peak-rss-mib)
+  "The process's high-water resident set in MiB, from VmHWM - the
+whole process lifetime, no sampling needed."
+  (catch #t
+    (lambda ()
+      (call-with-input-file "/proc/self/status"
+        (lambda (port)
+          (let loop ((line (get-line port)))
+            (cond
+              ((eof-object? line) #f)
+              ((string-prefix? "VmHWM:" line)
+               (let ((parts (string-tokenize line char-set:graphic)))
+                 (and (>= (length parts) 2)
+                      (string->number (cadr parts)))))
+              (else (loop (get-line port))))))))
+    (lambda _ #f)))
+
+(define (report-profile port timings)
+  (when timings
+    (report-input-cache-timings port timings))
+  (let ((rss (peak-rss-mib)))
+    (when rss
+      (print-cli-status "Profile"
+        (format #f "peak RSS ~a MiB" (inexact->exact (round (/ rss 1024))))
+        port)))
+  (force-output port))
 
 (define (cli-seconds)
   (/ (get-internal-real-time) internal-time-units-per-second))

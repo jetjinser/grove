@@ -42,10 +42,20 @@ OUTPUT-DIRECTORY, when supplied, is resolved relative to the caller's directory.
       (lambda () (chdir (dirname path)))
       (lambda ()
         (let* ((trace (make-hash-table))
+               (started (get-internal-real-time))
                (project (call-with-project-stage 'load path
                           (lambda ()
                             (call-with-input-trace trace
                               (lambda () (read-project path))))))
+               (_ (let ((timings (current-analysis-timings)))
+                    ;;     Profile mode: the project file's own
+                    ;;     evaluation - style values, module loads,
+                    ;;     inlined assets - is a floor component the
+                    ;;     document-level numbers hide.
+                    (when timings
+                      (timings 'project-load
+                               (/ (- (get-internal-real-time) started)
+                                  internal-time-units-per-second)))))
                (configured
                  (project-with-options project
                    #:output-directory (or output (project-output-directory project))

@@ -85,6 +85,8 @@ with HELP overrides keyed by command."
     (option-spec "--output" #:key 'output #:arity 'value
                  #:commands '(build serve)
                  #:help "  --output PATH   Override the output directory (build and serve).\n")
+    (option-spec "--profile" #:key 'profile #:commands '(build check serve)
+                 #:help "  --profile       Report cache-hit cost split, phase timings, and peak RSS.\n")
     (option-spec "--port" #:key 'port #:arity 'value #:parse 'integer
                  #:check port-check #:commands '(serve)
                  #:help "  --port NUMBER   Listen on this port (serve only; default: 8080).\n")
@@ -273,7 +275,8 @@ with HELP overrides keyed by command."
           #:output-directory (assq-ref options 'output)
           #:port (or (assq-ref options 'port) 8080)
           #:watch? (not (assq-ref options 'no-watch))
-          #:debug? (assq-ref options 'debug)))
+          #:debug? (assq-ref options 'debug)
+          #:profile? (assq-ref options 'profile)))
       ((string=? command "browse")
        (let* ((invocation (getcwd))
               (absolute (lambda (path)
@@ -324,6 +327,7 @@ with HELP overrides keyed by command."
       (else
         (let* ((started (cli-seconds))
                (checking? (string=? command "check"))
+               (timings (and (assq-ref options 'profile) (make-hash-table)))
                (result
                  (call-with-cli-progress (if checking? "Checking" "Building")
                    filename
@@ -340,20 +344,23 @@ with HELP overrides keyed by command."
                                           (lambda (done total path)
                                             (progress 'render-page
                                                       (list done total path)))))
-                           (call-with-loaded-project filename
-                             (lambda (project)
-                               (let ((report
-                                       (if checking?
-                                           (check-project project #:progress progress)
-                                           (build-project/report project #:progress progress))))
-                                 (cons (and (not checking?)
-                                            (canonicalize-path (project-output-directory project)))
-                                       report)))
-                             #:output-directory (assq-ref options 'output))))))))
+                           (parameterize ((current-input-cache-timings timings))
+                             (call-with-loaded-project filename
+                               (lambda (project)
+                                 (let ((report
+                                         (if checking?
+                                             (check-project project #:progress progress)
+                                             (build-project/report project #:progress progress))))
+                                   (cons (and (not checking?)
+                                              (canonicalize-path (project-output-directory project)))
+                                         report)))
+                               #:output-directory (assq-ref options 'output)))))))))
                (output (car result))
                (report (cdr result)))
           (print-cli-summary report (- (cli-seconds) started)
             #:checked? checking? #:output output)
+          (when timings
+            (report-profile (current-error-port) timings))
           0)))))
 
 (define (main arguments)

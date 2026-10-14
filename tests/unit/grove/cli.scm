@@ -133,6 +133,12 @@
         (string-contains (cadr result) "cache hit"))
       (test-assert "cache hits do not claim to render"
         (not (string-contains (caddr result) "Rendering"))))
+    (let ((result (run "build" "--profile" "--project" config)))
+      (test-equal "profiled build succeeds" 0 (car result))
+      (test-assert "profile reports the cache cost split"
+        (string-contains (caddr result) "input cache:"))
+      (test-assert "profile reports peak RSS"
+        (string-contains (caddr result) "peak RSS")))
     ;;     Without --project, commands search upward from the
     ;;     invocation directory and stop at a repository boundary.
     (let ((invocation (getcwd)))

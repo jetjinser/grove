@@ -5,6 +5,7 @@
   #:use-module (grove project)
   #:use-module (grove project load)
   #:use-module (grove private cli progress)
+  #:use-module (grove private input cache)
   #:use-module (grove project diagnostic)
   #:use-module (grove build state)
   #:use-module (grove output)
@@ -49,7 +50,7 @@
 
 (define (build-preview request result-path)
   (match request
-    ((filename output previous-modules previous-roots previous-files debug?)
+    ((filename output previous-modules previous-roots previous-files debug? profile?)
      (let ((started (cli-seconds))
            (loaded '()) (loaded-stamps '()) (old-hook %load-hook))
        (dynamic-wind
@@ -75,9 +76,14 @@
                                        (watch-roots filename project files modules))
                                string=?))
                       (before (watch-snapshot roots files output))
-                      (report (call-with-cli-progress "Building" filename
-                                (lambda (progress)
-                                  (build-project/report configured #:progress progress))))
+                      (profile-timings (and profile? (make-hash-table)))
+                      (report
+                        (parameterize ((current-input-cache-timings
+                                         profile-timings))
+                          (call-with-cli-progress "Building" filename
+                            (lambda (progress)
+                              (build-project/report configured
+                                #:progress progress)))))
                       (modules (existing-files (append modules loaded)))
                       (files (delete-duplicates
                                (append (map absolute-path (build-report-sources report)) modules)
@@ -95,8 +101,15 @@
                               (build-report-artifacts report)))
                        port)
                      (newline port)))
-                 (print-cli-summary report (- (cli-seconds) started) #:output output)))
-             #:output-directory output))
+                 (begin
+                   (print-cli-summary report (- (cli-seconds) started) #:output output)
+                   ;;     Profile mode: the cache-hit cost split lands on
+                   ;;     stderr after the summary - the split that says
+                   ;;     whether warm builds pay for verification or
+                   ;;     materialization.
+                   (when profile-timings
+                     (report-profile (current-error-port) profile-timings)))))
+              #:output-directory output))
          (lambda () (set! %load-hook old-hook)))))
     (_ (error "invalid preview worker request" request))))
 

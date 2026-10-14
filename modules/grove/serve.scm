@@ -79,7 +79,8 @@
                       (environ)))))
 
 (define* (serve-project filename #:key (output-directory #f)
-                                      (port 8080) (watch? #t) (debug? #f))
+                                      (port 8080) (watch? #t) (debug? #f)
+                                      (profile? #f))
   "Build in fresh processes and preview the last successful artifact set on localhost."
   (let* ((filename (call-with-project-stage 'load filename
                      (lambda () (canonicalize-path filename))))
@@ -102,7 +103,8 @@
         (when (file-exists? result) (delete-file result))
         (call-with-output-file request
           (lambda (port)
-            (write (list filename override modules roots files debug?) port)))
+            (write (list filename override modules roots files debug? profile?)
+                   port)))
         (set! idle? #f)
         (force-output)
         (call-with-blocked-asyncs

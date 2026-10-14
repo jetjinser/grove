@@ -12,12 +12,20 @@
   #:use-module (ice-9 ftw)
   #:use-module (srfi srfi-1)
   #:export (current-input-cache make-input-cache-context
+            current-input-cache-timings
             input-cache-dependencies input-cache-summary input-cache-disabled? prune-input-cache!
             register-input-dependencies!
             cached-document))
 
 ;; A build scopes this parameter; checks and standalone reads never reuse results.
 (define current-input-cache (make-parameter #f))
+
+;; Profile-mode accumulator: a hash the CLI installs and reads back
+;; after the build.  cached-document adds reused/fresh seconds and
+;; counts here - the reuse path covers the whole hit side (entry read,
+;; identity check, dependency verification, unpack), the fresh path
+;; the whole miss side (read-document).
+(define current-input-cache-timings (make-parameter #f))
 
 (define (make-input-cache-context directory enabled? dependencies)
   (and enabled?
@@ -186,10 +194,26 @@
 
 (define* (cached-document path reader dependencies read-document status
                           #:optional (reuse? #t))
+  ;;     Profile mode times each call as a whole and books it to the
+  ;;   reuse side (entry read, identity check, dependency verification,
+  ;;   unpack) or the fresh side (read-document) - the split that says
+  ;;   whether warm builds are paying for verification or materialization.
   (let ((context (current-input-cache))
-        (canonical (canonicalize-path path)))
+        (canonical (canonicalize-path path))
+        (started (and (current-input-cache-timings)
+                      (get-internal-real-time)))
+        (timings (current-input-cache-timings)))
+    (define (timed kind value)
+      (when timings
+        (hash-set! timings kind
+                   (+ (/ (- (get-internal-real-time) started)
+                         internal-time-units-per-second)
+                      (hash-ref timings kind 0)))
+        (hash-set! timings (list 'count kind)
+                   (+ 1 (hash-ref timings (list 'count kind) 0))))
+      value)
     (if (not context)
-        (read-document)
+        (timed 'fresh (read-document))
         (match context
           ((directory enabled? shared statuses globals)
            (define (report result)
@@ -232,7 +256,7 @@
                              (_ #f)))
                          (lambda _ #f))))
              (if (content-document? hit)
-                 (begin (report 'hit) hit)
+                 (begin (report 'hit) (timed 'reused hit))
                  (let* ((trace (make-hash-table))
                         (document (call-with-input-trace trace read-document))
                         (extra (sort
@@ -254,4 +278,5 @@
                                       (append snapshot extra)))
                            (save-entry entry-path (list identity extra reusable? encoded)))))
                      (lambda _ (report 'uncacheable)))
-                   document))))))))
+                   (timed 'fresh document)))))))))
+
