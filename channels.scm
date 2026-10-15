@@ -1,7 +1,8 @@
 (list (channel
        (name 'guix)
-       (url #f)
-       (branch #f)
+       (url "https://mirror.nju.edu.cn/git/guix.git")
+       (branch "master")
+       (commit "65816f01827a951e576ce06162d2aa8bba085bfd")
        (introduction
         (make-channel-introduction
          "9edb3f66fd807b096b48283debdcddccfea34bad"
