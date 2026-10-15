@@ -26,7 +26,6 @@ stdenv.mkDerivation (finalAttrs: {
   patches = [
     ./blue-coverage.patch
     ./blue-coverage-compile-tests.patch
-    ./blue-content-store.patch
   ];
 
   buildInputs = [ guile ];

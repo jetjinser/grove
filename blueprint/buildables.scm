@@ -12,6 +12,20 @@
   #:use-module (srfi srfi-13)
   #:export (grove-modules forester-modules grove-programs))
 
+;;     The content-addressed module sharing (a local extension, not
+;;     part of the pinned package sources): when the extension module
+;;     ships with the working tree, BLUE methods restore compiled
+;;     outputs from, and publish them to, a store shared by every
+;;     checkout of this project.  Pinned builds without it run
+;;     unchanged.
+(let* ((dir (dirname (current-filename)))
+       (ext (string-append dir "/extensions/content-store.scm")))
+  (when (file-exists? ext)
+    (false-if-exception
+     (begin
+       (add-to-load-path dir)
+       (resolve-module '(blueprint extensions content-store))))))
+
 ;;     The module manifest is scanned from the tree when the blueprint
 ;;     loads, so a new file cannot be missed at install; grove/ssh.scm
 ;;     stays conditional because compiling it requires guile-ssh.
