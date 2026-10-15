@@ -3,7 +3,9 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove output)
+  #:use-module (grove private artifact-store)
   #:use-module (grove private cache-dir)
+  #:use-module (grove private fingerprint)
   #:use-module (grove string-fun)
   #:use-module (ice-9 ftw)
   #:use-module (ice-9 binary-ports)
@@ -175,6 +177,22 @@
       paths))
   artifacts)
 
+(define (write-artifact-bytes! path content)
+  ;;     Temp file plus rename: the artifact path may currently be a
+  ;;     hard link to a store blob, and in-place truncation would
+  ;;     corrupt the shared inode.
+  (let ((temp (string-append path ".write-tmp-" (number->string (getpid)))))
+    (if (string? content)
+        (call-with-output-file temp
+          (lambda (port)
+            (set-port-encoding! port "UTF-8")
+            (display content port)))
+        (call-with-output-file temp
+          (lambda (port)
+            (put-bytevector port content))
+          #:binary #t))
+    (rename-file temp path)))
+
 (define (write-artifacts directory artifacts)
   (validate-artifacts artifacts)
   (let* ((paths (map artifact-path artifacts))
@@ -188,20 +206,29 @@
     (ensure-directory cache-directory)
     (for-each
       (lambda (artifact)
-        (let ((path (string-append directory "/" (artifact-path artifact))))
+        (let* ((path (string-append directory "/" (artifact-path artifact)))
+               (content (artifact-content artifact))
+               (fingerprint (content-fingerprint content)))
           (ensure-directory (dirname path))
-          (unless (artifact-content-current? path (artifact-content artifact))
-            (if (string? (artifact-content artifact))
-                (call-with-output-file path
+          (if (artifact-content-current? path content)
+              ;;     The bytes are already in place; make sure the
+              ;;     shared store has the blob so other checkouts and
+              ;;     deleted build directories can restore it.
+              (publish-artifact-blob! fingerprint
+                (lambda (port)
+                  (if (string? content)
+                      (display content port)
+                      (put-bytevector port content))))
+              ;;     A store blob under this fingerprint holds exactly
+              ;;     the rendered bytes: restore it, hard-linked when
+              ;;     possible, and fall back to writing them.
+              (unless (restore-artifact-blob! fingerprint path)
+                (write-artifact-bytes! path content)
+                (publish-artifact-blob! fingerprint
                   (lambda (port)
-                    (set-port-encoding! port "UTF-8")
-                    (display (artifact-content artifact) port)))
-                (let ((port (open-file path "wb")))
-                  (dynamic-wind
-                    (lambda () #t)
-                    (lambda ()
-                      (put-bytevector port (artifact-content artifact)))
-                    (lambda () (close-port port))))))))
+                    (if (string? content)
+                        (display content port)
+                        (put-bytevector port content))))))))
       artifacts)
     (for-each
       (lambda (stale-path)

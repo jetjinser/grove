@@ -4,6 +4,7 @@
 
 (define-module (grove project)
   #:use-module (grove string-fun)
+  #:use-module (grove private artifact-store)
   #:use-module (grove private cache-dir)
   #:use-module (grove private build-lock)
   #:use-module (grove private input cache)
@@ -345,6 +346,15 @@
         (let* ((entry (car entries))
                (path (string-append directory "/"
                                     (build-state-artifact-path entry)))
+               ;;     The output file may be missing in a fresh
+               ;;     checkout whose build directory was deleted: the
+               ;;     shared store holds the bytes under the entry's
+               ;;     fingerprint, so restore the file instead of
+               ;;     paying for a re-render.
+               (_ (when (and (not (file-exists? path))
+                             (build-state-artifact-fingerprint entry))
+                    (restore-artifact-blob!
+                     (build-state-artifact-fingerprint entry) path)))
                (content
                  (and (file-exists? path)
                       (not (file-is-directory? path))
@@ -521,7 +531,7 @@ Return a project-analysis holding the analyzed model."
            (input-cache-context
              (and write?
                (make-input-cache-context
-                 (grove-store-directory) (project-cache? project)
+                 (string-append (grove-store-directory) "/input-cache") (project-cache? project)
                  (append prepared-sources (project-extra-sources project)
                          (runtime-inputs)))))
            (inputs

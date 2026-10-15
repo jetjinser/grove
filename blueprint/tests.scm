@@ -79,6 +79,7 @@
     "unit/grove/relation.scm"
     "unit/grove/relation-dsl.scm"
     "unit/grove/output.scm"
+    "unit/grove/artifact-store.scm"
     "unit/grove/static.scm"
     "unit/grove/project.scm"
     "unit/grove/project-check.scm"

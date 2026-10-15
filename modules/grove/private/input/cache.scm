@@ -79,7 +79,7 @@
       ;;     a per-output directory: its keys are content-derived, so
       ;;     concurrent checkouts and worktrees share one set of
       ;;     entries instead of recomputing identical analyses.
-      (list (grove-store-directory)
+      (list (string-append (grove-store-directory) "/input-cache")
             enabled? dependencies (make-hash-table) globals
             (or (current-project-key) "")))))
 

@@ -3,9 +3,9 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove build state)
-  #:use-module (gcrypt hash)
-  #:use-module (ice-9 binary-ports)
   #:use-module (grove output)
+  #:use-module (grove private fingerprint)
+  #:re-export (content-fingerprint file-fingerprint)
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
   #:export (build-state-name
@@ -21,8 +21,6 @@
             build-state-artifact-sources
             build-state-artifact-renderer
             build-state-artifact-kind
-            content-fingerprint
-            file-fingerprint
             read-build-state
             write-build-state))
 
@@ -44,31 +42,6 @@
 (define-inlinable (build-state-artifact-sources entry) (list-ref entry 2))
 (define-inlinable (build-state-artifact-renderer entry) (list-ref entry 3))
 (define-inlinable (build-state-artifact-kind entry) (list-ref entry 4))
-
-(define (fingerprint-bytes bytes)
-  (let ((digest (sha256 bytes))
-        (digits "0123456789abcdef"))
-    (list->string
-     (append-map
-      (lambda (index)
-        (let ((byte (bytevector-u8-ref digest index)))
-          (list (string-ref digits (quotient byte 16))
-                (string-ref digits (modulo byte 16)))))
-      (iota (bytevector-length digest))))))
-
-(define (content-fingerprint content)
-  (cond
-   ((string? content) (fingerprint-bytes (string->utf8 content)))
-   ((bytevector? content) (fingerprint-bytes content))
-   (else (error "content fingerprint requires text or bytes" content))))
-
-(define (file-fingerprint path)
-  (let ((port (open-file path "rb")))
-    (dynamic-wind
-      (lambda () #t)
-      (lambda ()
-        (fingerprint-bytes (get-bytevector-all port)))
-      (lambda () (close-port port)))))
 
 (define (distinct-paths? entries path-of)
   (let ((paths (map path-of entries)))
