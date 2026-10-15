@@ -109,7 +109,8 @@ verified bytes."
                           #:binary #t)
                         (rename-file temp output))
                       #t)))))
-         (lambda args #f))))
+         (lambda args
+           #f))))
 
 (define (publish-output! key output)
   "Store the bytes of OUTPUT under KEY.  Best effort: failures leave
@@ -130,8 +131,8 @@ the store without the blob, and the build simply remains local."
                      (put-bytevector port chunk)
                      (loop (get-bytevector-some input))))))
              #:binary #t)
-         (rename-file temp path))
-       #t))))
+          (rename-file temp path))
+       #t)))))
 
 ;;; The key override: content digests and compiler identity instead
 ;;; of checkout-local absolute paths.
@@ -153,7 +154,7 @@ the store without the blob, and the build simply remains local."
                      context
                      (this <guile-module>))
   (let* ((key (content-key this))
-         (output (first (slot* this '%buildable-outputs)))
+         (output (car (slot* this '%buildable-outputs)))
          (restored (restore-output! key output)))
     (when restored
       ;;     Record the key so BLUE's base method - reached through
@@ -172,6 +173,5 @@ the store without the blob, and the build simply remains local."
   (lambda (buildable)
     (when (is-a? buildable <guile-module>)
       (publish-output! (content-key buildable)
-                       (first (slot* buildable
-                                        '%buildable-outputs))))))
-)
+                       (car (slot* buildable
+                                      '%buildable-outputs))))))
