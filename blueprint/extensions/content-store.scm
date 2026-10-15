@@ -108,9 +108,9 @@ verified bytes."
                             (put-bytevector out bytes))
                           #:binary #t)
                         (rename-file temp output))
-                      #t)))))
+                      #t))))
          (lambda args
-           #f))))
+           #f)))))
 
 (define (publish-output! key output)
   "Store the bytes of OUTPUT under KEY.  Best effort: failures leave
