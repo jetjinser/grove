@@ -23,6 +23,12 @@
 ;;; bytes are published into the store, so another checkout with the
 ;;; same definition - or this checkout after deleting its build
 ;;; directory - restores them instead of compiling.
+;;;
+;;; The sharing wants BLUE's own store to be shared too: the stage-1
+;;; outputs live inside it and their paths are part of the keys, so
+;;; point every checkout at one store (the --store-directory option,
+;;; or a preferences file entry).  A checkout-local store only shares
+;;; the final modules, not the stage-1 artifacts.
 
 (define-module (blueprint extensions content-store)
   #:use-module (oop goops)
@@ -33,6 +39,8 @@
   #:use-module (blue utils hash)
   #:use-module (blue file-system directory)
   #:use-module (ice-9 binary-ports)
+  #:use-module (ice-9 textual-ports)
+  #:use-module (srfi srfi-13)
   #:use-module (rnrs bytevectors)
   #:export (file-digest))
 
@@ -75,65 +83,75 @@
             (string-append (or (getenv "HOME") "/tmp") "/.cache"))
         "/blue/content")))
 
-(define (blob-path key)
-  (string-append (content-root) "/artifacts/"
-                 (bytes-fnv-hex (string->utf8 (number->string key)))))
+(define (key-hex key)
+  (bytes-fnv-hex (string->utf8 (number->string key))))
+
+(define (key-index-path key)
+  (string-append (content-root) "/keys/" (key-hex key)))
+
+(define (blob-path content)
+  (string-append (content-root) "/artifacts/" content))
+
+(define (read-file-bytes path)
+  (call-with-input-file path
+    (lambda (port)
+      (get-bytevector-all port))
+    #:binary #t))
+
+(define (write-file-bytes! path bytes)
+  (let ((temp (string-append path ".tmp-" (number->string (getpid)))))
+    (call-with-output-file temp
+      (lambda (port)
+        (put-bytevector port bytes))
+      #:binary #t)
+    (rename-file temp path)))
 
 (define (restore-output! key output)
-  "Restore the bytes stored under KEY into OUTPUT.  The blob is
-re-hashed before use: a corrupt or truncated entry is a cache miss,
-never a source of wrong bytes.  Return #t when the output now holds
-verified bytes."
-  (let ((path (blob-path key)))
-    (and (file-exists? path)
-         (not (file-is-directory? path))
+  "Restore the bytes recorded for KEY into OUTPUT.  The blob the key
+index names is re-hashed before use: a corrupt, truncated, or missing
+entry is a cache miss, never a source of wrong bytes.  Return #t when
+the output now holds verified bytes."
+  (let ((index (key-index-path key)))
+    (and (file-exists? index)
          (catch #t
            (lambda ()
-             (let* ((bytes
-                      (call-with-input-file path
-                        (lambda (port)
-                          (get-bytevector-all port))
-                        #:binary #t))
-                    (digest (bytes-fnv-hex bytes)))
-               (and (string=? digest
-                              (bytes-fnv-hex (string->utf8
-                                               (number->string key))))
-                    (begin
-                      (mkdir-p (dirname output))
-                      (let ((temp (string-append output
-                                                 ".restore-tmp-"
-                                                 (number->string (getpid)))))
-                        (call-with-output-file temp
-                          (lambda (out)
-                            (put-bytevector out bytes))
-                          #:binary #t)
-                        (rename-file temp output))
-                      #t))))
-         (lambda args
-           #f)))))
+             (let* ((content
+                      (string-trim
+                       (call-with-input-file index
+                         (lambda (port)
+                           (set-port-encoding! port "UTF-8")
+                           (get-string-all port)))))
+                    (blob (blob-path content)))
+               (and (file-exists? blob)
+                    (let ((bytes (read-file-bytes blob)))
+                      (and (string=? (bytes-fnv-hex bytes) content)
+                           (begin
+                             (mkdir-p (dirname output))
+                             (write-file-bytes! output bytes)
+                             #t))))))
+           (lambda args #f)))))
 
 (define (publish-output! key output)
-  "Store the bytes of OUTPUT under KEY.  Best effort: failures leave
-the store without the blob, and the build simply remains local."
+  "Record the bytes of OUTPUT under KEY: a content-addressed blob
+plus a key index entry pointing at it.  Best effort: failures leave
+the store without the entry and the build simply remains local."
   (false-if-exception
-   (let* ((path (blob-path key))
-          (root (dirname path)))
-     (unless (file-exists? root)
-       (mkdir-p root))
-     (unless (file-exists? path)
-       (let ((temp (string-append path ".tmp-" (number->string (getpid)))))
+   (let* ((bytes (read-file-bytes output))
+          (content (bytes-fnv-hex bytes))
+          (blob (blob-path content))
+          (index (key-index-path key)))
+     (mkdir-p (dirname blob))
+     (unless (file-exists? blob)
+       (write-file-bytes! blob bytes))
+     (mkdir-p (dirname index))
+     (unless (file-exists? index)
+       (let ((temp (string-append index ".tmp-" (number->string (getpid)))))
          (call-with-output-file temp
            (lambda (port)
-             (call-with-input-file output
-               (lambda (input)
-                 (let loop ((chunk (get-bytevector-some input)))
-                   (unless (eof-object? chunk)
-                     (put-bytevector port chunk)
-                     (loop (get-bytevector-some input)))))
-               #:binary #t))
-           #:binary #t)
-         (rename-file temp path))
-       #t))))
+             (set-port-encoding! port "UTF-8")
+             (display content port)))
+         (rename-file temp index)))
+     #t)))
 
 ;;; The key override: content digests and compiler identity instead
 ;;; of checkout-local absolute paths.
