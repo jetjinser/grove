@@ -142,12 +142,19 @@ Document entries live in the machine-global content store,
 every project this user builds. Keys are content-derived — the project
 file's digest plus the project-relative document path — and tracked
 paths are normalized project-relative, so two checkouts of one project
-share document analyses. The build state and artifact manifest live in
-a per-output directory keyed by the output path, so the output
-directory stays deployable as-is. Every build process that targets an
-output directory — manual builds and serve workers alike — uses the
-same cache and store locations, so a manual build over a serve-written
-output stays incremental (the build lock serializes the writers). Only
+share document analyses. Rendered artifacts join the same store under
+`artifacts/`: every build publishes the bytes it rendered under their
+content fingerprint, and builds restore missing output files from the
+store instead of re-rendering them, so deleting a build directory is
+cheap and parallel checkouts share rendering output. The build state
+and artifact manifest live in a per-output directory keyed by the
+output path, so the output directory stays deployable as-is. Every
+build process that targets an output directory — manual builds and
+serve workers alike — uses the same cache and store locations, so a
+manual build over a serve-written output stays incremental (the build
+lock serializes the writers). `guix shell --container --pure` runs
+with a throwaway home, so point `GROVE_STORE_DIR` and `GROVE_CACHE_DIR`
+at a host directory when caching should survive the shell. Only
 data-only Content IR is
 saved, including styles and source locations. Closures, unsupported records,
 and cyclic data are re-evaluated. Corruption is a miss; successful builds
