@@ -66,7 +66,7 @@
 
 (define (content-key buildable)
   (hash (list (ask-build-key buildable)
-              (slot* buildable '%buildable-outputs))))
+              (slot* buildable 'outputs))))
 
 (define (content-root)
   (or (getenv "BLUE_CONTENT_STORE_DIR")
@@ -138,13 +138,13 @@ the store without the blob, and the build simply remains local."
 ;;; of checkout-local absolute paths.
 (define-blue-method (ask-build-key (this <guile-module>))
   (vector
-   (slot* this '%buildable-outputs)
+   (slot* this 'outputs)
    (slot* this 'toolchain)
    (slot* this 'warnings)
    (slot* this 'warning-level)
    (slot* this 'optimizations)
    (slot* this 'optimization-level)
-   (map file-digest (slot* this '%buildable-inputs))
+   (map file-digest (slot* this 'inputs))
    (effective-version)))
 
 (define-blue-method (shareable-output? (this <guile-module>))
@@ -154,7 +154,7 @@ the store without the blob, and the build simply remains local."
                      context
                      (this <guile-module>))
   (let* ((key (content-key this))
-         (output (car (slot* this '%buildable-outputs)))
+         (output (car (slot* this 'outputs)))
          (restored (restore-output! key output)))
     (when restored
       ;;     Record the key so BLUE's base method - reached through
@@ -174,4 +174,4 @@ the store without the blob, and the build simply remains local."
     (when (is-a? buildable <guile-module>)
       (publish-output! (content-key buildable)
                        (car (slot* buildable
-                                      '%buildable-outputs))))))
+                                      'outputs))))))
