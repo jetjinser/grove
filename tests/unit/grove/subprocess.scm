@@ -16,7 +16,13 @@
 
 (define (prepare-subprocess directory)
   (setenv "GROVE_TEST_COVERAGE_RUN" (number->string (getpid)))
-  (let ((path directory))
+  ;;     The compiled helper lives under the cache directory, outside
+  ;;     the watched project tree: a compiled-path root at the project
+  ;;     directory turns every lazily auto-compiled module load into a
+  ;;     project edit for the serve watcher.
+  (let* ((cache (string-append directory "/.cache"))
+         (path cache))
+    (unless (file-exists? cache) (mkdir cache))
     (for-each (lambda (name)
                 (set! path (string-append path "/" name))
                 (mkdir path)) '("tests" "unit" "grove"))

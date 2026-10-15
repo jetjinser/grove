@@ -261,17 +261,31 @@ that loaded them."
                         (let* ((before (accept-result! payload))
                                (after (watch-snapshot roots files output))
                                (valid-paths (map car (append before after))))
-                          ;; Re-evaluate with the worker's actual output directory:
-                          ;; newly created output files must not trigger rebuilds.
-                          ;; Additions to the watch set itself (modules and store
-                          ;; objects first recorded by this build) are not edits
-                          ;; either - counting them made every serve start spend
-                          ;; one full rebuild on nothing.
+                          ;;     Re-evaluate with the worker's actual
+                          ;;     output directory and watch set: newly
+                          ;;     created outputs must not trigger
+                          ;;     rebuilds, and additions to the watch
+                          ;;     set (modules and store objects first
+                          ;;     recorded by this build) are not edits
+                          ;;     either.  Stamp changes on paths both
+                          ;;     snapshots knew are the periodic scan's
+                          ;;     business - its baseline is fresher than
+                          ;;     the request-time snapshot, and spanning
+                          ;;     the build window here requeued a rebuild
+                          ;;     for every file the build itself wrote.
+                          ;;     Watch-set removals still count: a
+                          ;;     source this build dropped from its set
+                          ;;     is invisible to the periodic scan.
                           (set! pending
                             (delete-duplicates
-                              (append (filter (lambda (path) (member path valid-paths string=?)) pending)
-                                      (snapshot-changes before after
-                                                        #:ignore-additions? #t))
+                              (append (filter (lambda (path)
+                                                (member path valid-paths string=?))
+                                              pending)
+                                      (filter-map (lambda (entry)
+                                                    (and (assoc (car entry) before)
+                                                         (not (assoc (car entry) after))
+                                                         (car entry)))
+                                                  before))
                               string=?))
                           (set! current after)
                           (set! active-serial #f))

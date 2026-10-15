@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit grove serve)
+  #:use-module (ice-9 binary-ports)
   #:use-module (ice-9 ftw)
   #:use-module (ice-9 textual-ports)
   #:use-module (rnrs bytevectors)
@@ -12,7 +13,8 @@
   #:use-module (web client)
   #:use-module (web response))
 
-(define root (format #f "/tmp/grove-serve-test-~a" (getpid)))
+(define root
+  (format #f "~a/grove-serve-test-~a" (or (getenv "TMPDIR") "/tmp") (getpid)))
 (define external (string-append root "-external"))
 (define inputs (string-append root "-inputs"))
 (define config (string-append root "/project.scm"))
@@ -37,6 +39,21 @@
 (define (read-file path) (call-with-input-file path get-string-all))
 (define (helper-text label)
   (format #f "(define-module (probe helper) #:export (label))\n(define label ~s)\n" label))
+(define (rebuild-count)
+  ;;     Serve names the changed paths that trigger each rebuild on
+  ;;     stderr; the churn assertions below assert on the count.
+  (let ((text (read-file (string-append root "/.stderr"))))
+    (let loop ((start 0) (count 0))
+      (let ((found (string-contains text "Rebuilding" start)))
+        (if found (loop (+ found 1) (+ count 1)) count)))))
+(define (touch-rewrite path)
+  ;;     Same bytes through a fresh file: identity stamps change,
+  ;;     contents do not, so neither caching nor compilation may care.
+  ;;     Byte ports only - compiled files are binary.
+  (let ((bytes (call-with-input-file path get-bytevector-all)))
+    (call-with-output-file (string-append path ".churn")
+      (lambda (output) (put-bytevector output bytes)))
+    (rename-file (string-append path ".churn") path)))
 (define (wait-for thunk)
   ;; Instruction tracing also runs inside rebuild workers. Keep the ordinary
   ;; responsiveness bound, but allow its instrumentation overhead in coverage.
@@ -85,7 +102,7 @@
                   (append (list "guile" "--no-auto-compile"
                                 "-L" (dirname sources) "-L" sources
                                 "-C" (string-append (dirname sources) "/build")
-                                "-C" root
+                                "-C" (string-append root "/.cache")
                                 (string-append root "/.entry.scm") "serve"
                                 "--project" config "--port" (number->string port)) options)
                   #:input input #:output output #:error error
@@ -116,7 +133,7 @@
             (append (list "guile" "--no-auto-compile"
                           "-L" (dirname sources) "-L" sources
                           "-C" (string-append (dirname sources) "/build")
-                          "-C" root
+                          "-C" (string-append root "/.cache")
                           (string-append root "/.entry.scm"))
                     arguments)
             #:input input #:output stdout #:error stdout
@@ -156,7 +173,11 @@
         "(add-to-load-path \"modules\")
 (use-modules (grove project) (grove build) (grove output) (probe helper)
              (ice-9 ftw) (ice-9 textual-ports) (srfi srfi-13) (rnrs bytevectors))
-(call-with-output-file \".worker.pid\" (lambda (p) (write (getpid) p)))
+(unless (file-exists? \".cache\") (mkdir \".cache\"))
+;;     Test state lives under the cache directory, outside the watched
+;;     project tree: rewriting a project file on every load would
+;;     requeue one rebuild per cycle.
+(call-with-output-file \".cache/worker.pid\" (lambda (p) (write (getpid) p)))
 (define external ~s)
 (make-project
   #:source-directory \"sources\"
@@ -234,6 +255,24 @@
         (let ((summary (run-entry "build" "--project" config)))
           (or (string-contains summary "(0 affected)")
               (begin (display summary (current-error-port)) #f))))
+      ;;     Churn regression: stamps outside project content - store
+      ;;     items and grove's own compiled tree - must not requeue
+      ;;     rebuilds. The worker's load paths resolve into trees whose
+      ;;     stamps differ between resolutions; each flip used to chain
+      ;;     another full rebuild with no project edit behind it.
+      (let ((baseline-churn (rebuild-count)))
+        (for-each touch-rewrite
+                  (map (lambda (name)
+                         (string-append (dirname sources) "/build/grove/" name))
+                       '("build.go" "cli.go" "collect.go")))
+        (usleep 3000000)
+        (test-assert "rewriting grove's compiled tree does not rebuild"
+          (= baseline-churn (rebuild-count))))
+      (write-file (string-append external "/theme.txt") "css-3")
+      (test-assert "the watcher still answers real edits" (await-text "css-3"))
+      (let ((settled (rebuild-count)))
+        (usleep 3000000)
+        (test-assert "idle serve does not rebuild on its own" (= settled (rebuild-count))))
       (write-file control "slow")
       (wait-for (lambda () (file-exists? (string-append root "/.building"))))
       (let ((building (call-with-input-file (string-append root "/.building") read)))
@@ -245,7 +284,8 @@
       (test-assert "changes during a rebuild are picked up by the next build" (await-text "rapid-two|"))
       (write-file control "block")
       (wait-for (lambda () (file-exists? (string-append root "/.helper.pid"))))
-      (let ((worker (call-with-input-file (string-append root "/.worker.pid") read))
+      (let ((worker (call-with-input-file
+                      (string-append root "/.cache/worker.pid") read))
             (child (call-with-input-file (string-append root "/.helper.pid") read)))
         (test-equal "Ctrl-C exits with status 130" 130 (stop-server pid SIGINT))
         (test-assert "Ctrl-C stops the active build worker" (not (running? worker)))
@@ -297,7 +337,7 @@
             (let ((pid (call-with-input-file path read)))
               (when (running? pid)
                 (catch 'system-error (lambda () (kill (- pid) SIGKILL)) (lambda _ #f)))))))
-      '(".worker.pid" ".helper.pid"))
+      '(".cache/worker.pid" ".helper.pid"))
     (system* "rm" "-rf" root external inputs)))
 (test-subprocess-coverage '("grove/serve.scm" "grove/private/preview/worker.scm"))
 (test-end "serve lifecycle")
