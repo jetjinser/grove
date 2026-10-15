@@ -129,10 +129,11 @@ the store without the blob, and the build simply remains local."
                  (let loop ((chunk (get-bytevector-some input)))
                    (unless (eof-object? chunk)
                      (put-bytevector port chunk)
-                     (loop (get-bytevector-some input))))))
-             #:binary #t)
-          (rename-file temp path))
-       #t)))))
+                     (loop (get-bytevector-some input)))))
+               #:binary #t))
+           #:binary #t)
+         (rename-file temp path))
+       #t))))
 
 ;;; The key override: content digests and compiler identity instead
 ;;; of checkout-local absolute paths.
