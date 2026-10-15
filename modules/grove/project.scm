@@ -52,6 +52,7 @@
             check-project
             rebuild-from-forest
             last-build-model
+            project-renderer-identity
             analyze-project
             project-analysis?
             project-analysis-model

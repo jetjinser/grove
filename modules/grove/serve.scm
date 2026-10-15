@@ -81,7 +81,13 @@
 (define* (serve-project filename #:key (output-directory #f)
                                       (port 8080) (watch? #t) (debug? #f)
                                       (profile? #f))
-  "Build in fresh processes and preview the last successful artifact set on localhost."
+  "Build in a resident worker process and preview the last successful
+artifact set on localhost.  The worker stays alive across rebuilds and
+retains its analysis forest; requests and results travel through files
+in the workspace, numbered so both sides can tell stale from current.
+Only an edit to a Scheme module or the project file restarts the
+worker - its loaded modules and forest are only safe in the process
+that loaded them."
   (let* ((filename (call-with-project-stage 'load filename
                      (lambda () (canonicalize-path filename))))
          (override (and output-directory (absolute-path output-directory)))
@@ -96,43 +102,78 @@
          (listener #f)
          (server-started? #f)
          (idle? #f)
+         (serial 0)
+         (active-serial #f)
          (sigint #f) (sigterm #f) (sigpipe #f))
+    (define (request-path)
+      (string-append workspace "/request.scm"))
+    (define (result-path)
+      (string-append workspace "/result.scm"))
+    (define (stop-worker!)
+      ;; The worker owns its process group, including project subprocesses.
+      (when pid
+        (catch 'system-error (lambda () (kill (- pid) SIGKILL))
+          (lambda _ (catch 'system-error (lambda () (kill pid SIGKILL)) (lambda _ #f))))
+        (waitpid pid)
+        (set! pid #f)))
+    (define (reap-worker!)
+      ;; A worker that died between builds must not receive new requests.
+      (when pid
+        (let ((finished (call-with-blocked-asyncs
+                          (lambda () (waitpid pid WNOHANG)))))
+          (unless (zero? (car finished)) (set! pid #f)))))
+    (define (spawn-worker!)
+      (call-with-blocked-asyncs
+        (lambda ()
+          (set! pid
+            (call-with-input-file "/dev/null"
+              (lambda (input)
+                (spawn (string-append (assq-ref %guile-build-info 'bindir) "/guile")
+                  (list "guile" "--no-auto-compile"
+                        "-c" worker-code (request-path) (result-path))
+                  #:input input
+                  ;;     The worker inherits this environment, so it
+                  ;;     reads and writes the same per-project cache
+                  ;;     as a manual build: sharing the build state
+                  ;;     and artifact manifest is what keeps a manual
+                  ;;     build over a serve-written output
+                  ;;     incremental instead of fully re-rendering.
+                  ;;     The build lock serializes the writers, and
+                  ;;     cache writes land through temp-file renames.
+                  #:environment (worker-environment))))))))
     (define (start-build!)
-      (let ((request (string-append workspace "/request.scm"))
-            (result (string-append workspace "/result.scm")))
-        (when (file-exists? result) (delete-file result))
-        (call-with-output-file request
+      (set! serial (+ serial 1))
+      (reap-worker!)
+      (when (file-exists? (result-path)) (delete-file (result-path)))
+      (let ((request-tmp (string-append workspace "/request.scm.tmp")))
+        (call-with-output-file request-tmp
           (lambda (port)
-            (write (list filename override modules roots files debug? profile?)
+            (write (list serial filename override modules roots files
+                         debug? profile?)
                    port)))
-        (set! idle? #f)
-        (force-output)
-        (call-with-blocked-asyncs
-          (lambda ()
-            (set! pid
-              (call-with-input-file "/dev/null"
-                (lambda (input)
-                  (spawn (string-append (assq-ref %guile-build-info 'bindir) "/guile")
-                    (list "guile" "--no-auto-compile"
-                          "-c" worker-code request result)
-                    #:input input
-                    ;;     The worker inherits this environment, so it
-                    ;;     reads and writes the same per-project cache
-                    ;;     as a manual build: sharing the build state
-                    ;;     and artifact manifest is what keeps a manual
-                    ;;     build over a serve-written output
-                    ;;     incremental instead of fully re-rendering.
-                    ;;     The build lock serializes the writers, and
-                    ;;     cache writes land through temp-file renames.
-                    #:environment (worker-environment)))))))))
+        (rename-file request-tmp (request-path)))
+      (set! active-serial serial)
+      (set! idle? #f)
+      (force-output)
+      (unless pid (spawn-worker!)))
+    (define (worker-stuck-on-module? pending)
+      ;;     Module and project-file edits cannot be applied inside
+      ;;     the resident worker: Guile will not reload a module into
+      ;;     a running process, and the retained forest was built by
+      ;;     the modules the process loaded.  Such an edit restarts
+      ;;     the worker instead of becoming a request.
+      (any (lambda (path)
+             (or (string=? path filename)
+                 (member path modules string=?)))
+           pending))
     (define (start-http!)
       (listen listener 128)
       (set! server-started? #t)
       (print-cli-status "Serving" (format #f "http://127.0.0.1:~a/" port))
       (force-output))
-    (define (accept-result!)
-      (match (call-with-input-file (string-append workspace "/result.scm") read)
-        (('preview new-output new-roots new-files new-modules before data)
+    (define (accept-result! payload)
+      (match payload
+        (('preview echoed new-output new-roots new-files new-modules before data)
          (let ((table
                  (artifact-table
                    (map (lambda (entry)
@@ -148,13 +189,30 @@
            (unless server-started? (start-http!))
            before))
         (_ (error "invalid preview worker result"))))
-    (define (cleanup!)
+    (define (build-result-matches? payload)
+      ;;     A build is in flight from start-build! until its result
+      ;;     appears or the worker dies.  The result file only ever
+      ;;     holds a complete generation - the worker renames it into
+      ;;     place - so the serial match tells stale from current.
+      (match payload
+        (('preview (? (lambda (n) (and (integer? n) (= n active-serial)))) rest ...) #t)
+        (_ #f)))
+    (define (reap-failed-build!)
       (when pid
-        ;; The worker owns its process group, including project subprocesses.
-        (catch 'system-error (lambda () (kill (- pid) SIGKILL))
-          (lambda _ (catch 'system-error (lambda () (kill pid SIGKILL)) (lambda _ #f))))
-        (waitpid pid)
-        (set! pid #f))
+        (let ((finished
+                (call-with-blocked-asyncs
+                  (lambda () (waitpid pid WNOHANG)))))
+          (unless (zero? (car finished))
+            (set! pid #f)
+            (set! active-serial #f)
+            (cond
+              ((not snapshot) (error "initial preview build failed"))
+              (else
+               (display "Build failed; serving the last successful outputs.\n"
+                        (current-error-port))
+               (force-output (current-error-port))))))))
+    (define (cleanup!)
+      (stop-worker!)
       (when (and listener (not (port-closed? listener))) (close-port listener))
       (when workspace (remove-workspace workspace))
       (when live-port (close-port live-port))
@@ -174,7 +232,9 @@
                                                    "/.grove-preview-XXXXXX")))
             ;;     The .live lock says this workspace has a live
             ;;     serve: the startup sweep takes it without blocking
-            ;;     to tell leftovers from sessions like this one.
+            ;;     to tell leftovers from sessions like this one, and
+            ;;     the resident worker polls it to learn that its
+            ;;     serve is gone.
             (set! live-port
               (open-file (string-append workspace "/.live") "a"))
             (lock-port-exclusive live-port)
@@ -193,38 +253,30 @@
                      (changes (snapshot-changes baseline current))
                      (pending (delete-duplicates (append pending changes) string=?))
                      (deadline (if (null? changes) deadline (+ now 200))))
-                (when pid
-                  (let ((finished
-                          (call-with-blocked-asyncs
-                            (lambda ()
-                              (let ((status (waitpid pid WNOHANG)))
-                                (unless (zero? (car status)) (set! pid #f))
-                                status)))))
-                    (unless (zero? (car finished))
-                      (cond
-                        ((equal? (status:exit-val (cdr finished)) 0)
-                         (let* ((before (accept-result!))
-                                (after (watch-snapshot roots files output))
-                                (valid-paths (map car (append before after))))
-                           ;; Re-evaluate with the worker's actual output directory:
-                           ;; newly created output files must not trigger rebuilds.
-                           ;; Additions to the watch set itself (modules and store
-                           ;; objects first recorded by this build) are not edits
-                           ;; either - counting them made every serve start spend
-                           ;; one full rebuild on nothing.
-                           (set! pending
-                             (delete-duplicates
-                               (append (filter (lambda (path) (member path valid-paths string=?)) pending)
-                                       (snapshot-changes before after
-                                                         #:ignore-additions? #t))
-                               string=?))
-                           (set! current after)))
-                        ((not snapshot) (error "initial preview build failed"))
-                        (else
-                         (display "Build failed; serving the last successful outputs.\n"
-                                  (current-error-port))
-                         (force-output (current-error-port)))))))
-                (when (and watch? (not pid) (pair? pending) (>= now deadline))
+                (when active-serial
+                  (let ((payload (false-if-exception
+                                   (and (file-exists? (result-path))
+                                        (call-with-input-file (result-path) read)))))
+                    (if (build-result-matches? payload)
+                        (let* ((before (accept-result! payload))
+                               (after (watch-snapshot roots files output))
+                               (valid-paths (map car (append before after))))
+                          ;; Re-evaluate with the worker's actual output directory:
+                          ;; newly created output files must not trigger rebuilds.
+                          ;; Additions to the watch set itself (modules and store
+                          ;; objects first recorded by this build) are not edits
+                          ;; either - counting them made every serve start spend
+                          ;; one full rebuild on nothing.
+                          (set! pending
+                            (delete-duplicates
+                              (append (filter (lambda (path) (member path valid-paths string=?)) pending)
+                                      (snapshot-changes before after
+                                                        #:ignore-additions? #t))
+                              string=?))
+                          (set! current after)
+                          (set! active-serial #f))
+                        (reap-failed-build!))))
+                (when (and watch? (not active-serial) (pair? pending) (>= now deadline))
                   ;;     Name the triggers: chained rebuilds - a build's
                   ;;     own writes re-triggering the watcher - are
                   ;;     indistinguishable from real edits without this.
@@ -238,9 +290,11 @@
                     (take (sort pending string<?)
                           (min 12 (length pending))))
                   (force-output (current-error-port))
+                  (when (worker-stuck-on-module? pending) (stop-worker!))
                   (start-build!)
                   (set! pending '()))
-                (when (and watch? server-started? (not pid) (null? pending) (not idle?))
+                (when (and watch? server-started? (not active-serial)
+                           (null? pending) (not idle?))
                   (print-cli-status "Watching" "for changes (Ctrl-C to stop)" (current-error-port))
                   (set! idle? #t))
                 (if server-started?

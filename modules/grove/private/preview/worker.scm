@@ -4,6 +4,7 @@
 (define-module (grove private preview worker)
   #:use-module (grove project)
   #:use-module (grove project load)
+  #:use-module (grove private cache-dir)
   #:use-module (grove private cli progress)
   #:use-module (grove private input cache)
   #:use-module (grove project diagnostic)
@@ -14,6 +15,7 @@
   #:use-module (ice-9 format)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-11)
   #:use-module (srfi srfi-13)
   #:export (worker-main))
 
@@ -48,9 +50,69 @@
                         roots)))
             roots)))
 
-(define (build-preview request result-path)
+;;     The resident worker's own record of what the world looked like
+;;     after its last successful build is what turns a rebuild request
+;;     into forest reuse or a fresh analysis.  Stamps are file
+;;     signatures, so reverted edits and same-size writes are caught.
+(define (diff-known-stamps known paths)
+  (let loop ((paths (delete-duplicates paths string=?))
+             (changed '()) (removed '()))
+    (if (null? paths)
+        (list (reverse changed) (reverse removed))
+        (let* ((path (car paths))
+               (previous (assoc path known))
+               (current (file-stamp path)))
+          (cond
+            ((equal? previous current)
+             (loop (cdr paths) changed removed))
+            (current
+             (loop (cdr paths) (cons path changed) removed))
+            (previous
+             (loop (cdr paths) changed (cons path removed)))
+            (else
+             (loop (cdr paths) changed removed)))))))
+
+(define (forest-reusable? project forest retained-state changed removed)
+  ;;     Only load-time assets may ride the retained forest: a source
+  ;;     document needs analysis, a removal needs the manifest
+  ;;     maintenance of a full build, and anything outside the declared
+  ;;     extra sources is not understood well enough to shortcut.  The
+  ;;     identity check keeps projects that bake extra-source values
+  ;;     into renderer configurations on the full path - a mismatch is
+  ;;     exactly what execute-project would treat as a full re-render.
+  (and forest retained-state
+       (null? removed)
+       (every (lambda (path)
+                (member path
+                        (map absolute-path (project-extra-sources project))
+                        string=?))
+              changed)
+       (equal? (project-renderer-identity project forest)
+               (build-state-identity retained-state))))
+
+(define (worker-state-path output)
+  (string-append (grove-cache-directory output) "/" build-state-name))
+
+(define (write-result! result-path payload)
+  ;;     Serve polls this file while the worker is alive, so the
+  ;;     write lands through a temp file and an atomic rename: a
+  ;;     partially written result would be read as garbage.
+  (let ((temporary (string-append result-path ".tmp")))
+    (call-with-output-file temporary
+      (lambda (port)
+        (write payload port)
+        (newline port)))
+    (rename-file temporary result-path)))
+
+(define (build-once request forest retained-state known result-path)
+  ;;     Run one build request against the current generation.  The
+  ;;     project is loaded fresh - renderers and load-time assets are
+  ;;     per-request - but analysis comes from the retained forest
+  ;;     whenever nothing analysis-visible changed.  Returns three
+  ;;     values for the next generation: forest, build state, stamps.
   (match request
-    ((filename output previous-modules previous-roots previous-files debug? profile?)
+    ((request-serial filename output previous-modules previous-roots
+                     previous-files debug? profile?)
      (let ((started (cli-seconds))
            (loaded '()) (loaded-stamps '()) (old-hook %load-hook))
        (dynamic-wind
@@ -76,53 +138,111 @@
                                        (watch-roots filename project files modules))
                                string=?))
                       (before (watch-snapshot roots files output))
+                      ;;     The diff set must see additions and
+                      ;;     removals alike: the walked snapshot finds
+                      ;;     newly created sources the last analysis
+                      ;;     never named, while the serve-provided
+                      ;;     file list keeps deleted sources visible
+                      ;;     after they drop out of the tree.  Grove's
+                      ;;     own module tree stays out - worker loads
+                      ;;     are not project edits.
+                      (watched
+                       (filter
+                         (lambda (path)
+                           (not (string-prefix?
+                                  (dirname (dirname (dirname
+                                    (%search-load-path
+                                      "grove/private/preview/worker.scm"))))
+                                  path)))
+                         (delete-duplicates
+                           (append files (list filename) (map car before))
+                           string=?)))
+                      (changes (diff-known-stamps known watched))
+                      (changed (car changes))
+                      (removed (cadr changes))
+                      (reuse? (forest-reusable? configured forest
+                                                retained-state changed removed))
                       (profile-timings (and profile? (make-hash-table)))
                       (report
                         (parameterize ((current-input-cache-timings
                                          profile-timings))
                           (call-with-cli-progress "Building" filename
                             (lambda (progress)
-                              (build-project/report configured
-                                #:progress progress)))))
+                              (if reuse?
+                                  (rebuild-from-forest configured forest
+                                                       retained-state
+                                                       changed removed
+                                                       #:progress progress)
+                                  (build-project/report configured
+                                                        #:progress progress))))))
                       (modules (existing-files (append modules loaded)))
                       (files (delete-duplicates
                                (append (map absolute-path (build-report-sources report)) modules)
                                string=?))
                       (roots (watch-roots filename project files modules)))
                  ;; This is a private process protocol, not a second artifact API.
-                 (call-with-output-file result-path
-                   (lambda (port)
-                     (write
-                       (list 'preview output roots files modules
+                 (write-result! result-path
+                   (list 'preview request-serial output roots files modules
                          (delete-duplicates (append before loaded-stamps)
                            (lambda (left right) (string=? (car left) (car right))))
                          (map (lambda (artifact)
                                 (list (artifact-path artifact) (artifact-content artifact)))
-                              (build-report-artifacts report)))
-                       port)
-                     (newline port)))
-                 (begin
-                   (print-cli-summary report (- (cli-seconds) started) #:output output)
-                   ;;     Profile mode: the cache-hit cost split lands on
-                   ;;     stderr after the summary - the split that says
-                   ;;     whether warm builds pay for verification or
-                   ;;     materialization.
-                   (when profile-timings
-                     (report-profile (current-error-port) profile-timings)))))
-              #:output-directory output))
+                              (build-report-artifacts report))))
+                 (print-cli-summary report (- (cli-seconds) started) #:output output)
+                 ;;     Profile mode: the cost split lands on stderr
+                 ;;     after the summary; a reuse build shows the
+                 ;;     analysis it skipped by having nothing to split.
+                 (when profile-timings
+                   (report-profile (current-error-port) profile-timings))
+                 (values (if reuse? forest (last-build-model))
+                         (read-build-state (worker-state-path output))
+                         ;;     Keep the pre-build snapshot as the
+                         ;;     next diff's baseline: edits that land
+                         ;;     while a build runs were not in its
+                         ;;     analysis, and a post-build snapshot
+                         ;;     would silently absorb them.
+                         before)))
+             #:output-directory output))
          (lambda () (set! %load-hook old-hook)))))
-    (_ (error "invalid preview worker request" request))))
+    (unexpected (error "invalid preview worker request" unexpected))))
+
+(define (await-request request-path last-serial live-path)
+  ;;     The worker lives as long as its serve does: the workspace's
+  ;;     .live lock is the tie - when the workspace is gone (serve
+  ;;     stopped, hard-killed, or swept), so is this process.
+  (let poll ()
+    (if (not (file-exists? live-path))
+        (exit 0)
+        (let ((request (false-if-exception
+                         (call-with-input-file request-path read))))
+          (match request
+            (((? (lambda (candidate)
+                   (and (integer? candidate) (> candidate last-serial))))
+              rest ...)
+             request)
+            (_ (usleep 50000) (poll)))))))
 
 (define (worker-main arguments)
   (match arguments
     ((request-path result-path)
-     (let ((request (call-with-input-file request-path read)))
-       (catch 'grove-project-error
-         (lambda ()
-           (call-with-project-stage 'build #f
-             (lambda () (build-preview request result-path)))
-           0)
-         (lambda (_ error)
-           (print-project-error error (list-ref request 5))
-           1))))
-    (_ (error "invalid preview worker arguments" arguments))))
+     (let ((live-path (string-append (dirname request-path) "/.live")))
+       (let loop ((serial 0) (forest #f) (retained-state #f) (known '()))
+         (let ((request (await-request request-path serial live-path)))
+           (match request
+             ((request-serial filename output previous-modules previous-roots
+                              previous-files debug? profile?)
+              (catch 'grove-project-error
+                (lambda ()
+                  (call-with-project-stage 'build #f
+                    (lambda ()
+                      (let-values (((next-forest next-state next-known)
+                                    (build-once request forest retained-state
+                                                known result-path)))
+                        (loop request-serial next-forest next-state
+                              next-known)))))
+                (lambda (unexpected error)
+                  (print-project-error error profile?)
+                  1)))
+             (unexpected
+              (error "invalid preview worker request" unexpected)))))))
+    (other (error "invalid preview worker arguments" other))))
