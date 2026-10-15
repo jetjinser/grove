@@ -51,6 +51,7 @@
             build-project
             check-project
             rebuild-from-forest
+            render-with-cache
             last-build-model
             project-renderer-identity
             analyze-project
@@ -399,8 +400,19 @@
                                (cons (artifact-path artifact) index))
                              generated)))))))
 
-(define (render-with-cache model renderers previous-entries cached-artifacts
-                           previous-sources changed progress)
+(define* (render-with-cache model renderers previous-entries cached-artifacts
+                            previous-sources changed progress
+                            #:key (model-retained? #f))
+  ;;     MODEL-RETAINED? promises that MODEL is the same analysis the
+  ;;     previous-entries were rendered from (the retained forest) and
+  ;;     that renderer configurations are unchanged (identity checked
+  ;;     by the caller).  render-model is then a pure function of
+  ;;     unchanged inputs for every artifact whose recorded sources did
+  ;;     not change, so a renderer without an incremental callback can
+  ;;     keep its whole previous output instead of re-rendering it -
+  ;;     but only when every one of its artifacts recorded sources:
+  ;;     undeclared render-time file reads are not visible here, and
+  ;;     such renderers conservatively re-run in full.
   (let loop ((renderers renderers)
              (index 0)
              (artifacts '())
@@ -428,6 +440,22 @@
                                        (integer?
                                          (build-state-artifact-renderer entry)))
                                      old-entries)))
+               (reusable?
+                 (and model-retained?
+                      (pair? old-entries)
+                      (not partial?)
+                      ;;     Every artifact must have recorded sources:
+                      ;;     a renderer that reads files at render time
+                      ;;     without declaring them is not a pure
+                      ;;     function of the retained model, so its
+                      ;;     output can only be trusted as unchanged
+                      ;;     when its declared sources did not change.
+                      (every build-state-artifact-sources old-entries)
+                      (not (any (lambda (entry)
+                                  (paths-intersect?
+                                    (build-state-artifact-sources entry)
+                                    changed))
+                                old-entries))))
                (dirty-entries
                  (filter (lambda (entry)
                            (or (any (lambda (path)
@@ -446,15 +474,17 @@
                           (changed-proc model changed dirty-paths old-artifacts)))))
                (rendered-fully? (or (not partial?) (not generated)))
                (new-artifacts
-                 (call-with-project-stage 'render #f
-                   (lambda ()
-                     (if rendered-fully?
-                         (render-model model (list renderer))
-                         (begin
-                           (unless (and (list? generated) (every artifact? generated))
-                             (error "incremental renderer must return artifacts or #f"
-                                    generated))
-                           generated)))))
+                 (if reusable?
+                     old-artifacts
+                     (call-with-project-stage 'render #f
+                       (lambda ()
+                         (if rendered-fully?
+                             (render-model model (list renderer))
+                             (begin
+                               (unless (and (list? generated) (every artifact? generated))
+                                 (error "incremental renderer must return artifacts or #f"
+                                        generated))
+                               generated))))))
                ;; An incremental callback returns the complete current output
                ;; set for its renderer. This lets it preserve unaffected
                ;; artifacts from OLD-ARTIFACTS and omit outputs that vanished.
@@ -697,7 +727,10 @@ watch and a manual build over one project must not run concurrently."
 ;;     forest of its last successful build and re-renders with a
 ;;     freshly loaded project when only load-time assets changed.
 ;;     Analysis is skipped wholesale; render-with-cache re-runs just
-;;     the renderers whose inputs changed, and the on-disk build state
+;;     the renderers whose inputs changed, and renderers without an
+;;     incremental callback keep their previous artifacts outright -
+;;     the retained forest and the identity-checked configurations
+;;     make their output byte-identical.  The on-disk build state
 ;;     is refreshed (with content fingerprints) so manual builds stay
 ;;     incremental.  Cache pruning is skipped here - the retained
 ;;     state carries no selection statuses, and pruning is hygiene.
@@ -712,21 +745,33 @@ analysis results - pages, relations, indexes - come from the forest."
   (with-build-lock (project-output-directory project)
     (lambda ()
       (let* ((cache-directory
-               (grove-cache-directory (project-output-directory project)))
+                (grove-cache-directory (project-output-directory project)))
              (state-path
-               (string-append cache-directory "/" build-state-name))
+                (string-append cache-directory "/" build-state-name))
              (state-temp-path
-               (string-append cache-directory "/" build-state-temp-name))
+                (string-append cache-directory "/" build-state-temp-name))
              (previous-sources (build-state-sources retained-state))
              (previous-artifacts (build-state-artifacts retained-state))
-             (cached (load-cached-artifacts
-                       (project-output-directory project) previous-artifacts))
+             (identity (project-renderer-identity project forest))
+             (config-equal?
+                (equal? identity (build-state-identity retained-state)))
              (render-result
-               (begin
-                 (progress 'render #f)
-                 (render-with-cache forest (project-renderers project)
-                                    previous-artifacts cached
-                                    previous-sources changed progress)))
+                (begin
+                  (progress 'render #f)
+                  (if config-equal?
+                      (render-with-cache forest (project-renderers project)
+                                         previous-artifacts
+                                         (load-cached-artifacts
+                                           (project-output-directory project)
+                                           previous-artifacts)
+                                         previous-sources changed progress
+                                         #:model-retained? #t)
+                      ;;     A configuration baked an extra-source value
+                      ;;     that just changed: every artifact may differ,
+                      ;;     so render everything with the fresh configs
+                      ;;     - but the analysis still comes from the
+                      ;;     retained forest.
+                      (render-all forest (project-renderers project) progress))))
              (artifacts (car render-result))
              (owners (cadr render-result))
              (affected (affected-artifacts artifacts previous-artifacts changed))
@@ -735,38 +780,37 @@ analysis results - pages, relations, indexes - come from the forest."
              ;;     drift detection, and deleted sources leave the
              ;;     manifest.
              (current-sources
-               (filter-map
-                 (lambda (source)
-                   (let ((digest (false-if-exception
-                                   (file-fingerprint
-                                     (build-state-source-path source)))))
-                     (and digest
-                          (list (build-state-source-path source)
-                                digest
-                                (build-state-source-kind source)))))
-                 previous-sources))
+                (filter-map
+                  (lambda (source)
+                    (let ((digest (false-if-exception
+                                    (file-fingerprint
+                                      (build-state-source-path source)))))
+                      (and digest
+                           (list (build-state-source-path source)
+                                 digest
+                                 (build-state-source-kind source)))))
+                  previous-sources))
              (kept (map build-state-source-path current-sources))
              (report-removed
-               (filter (lambda (p) (not (member p changed string=?))) removed)))
-        (call-with-project-stage 'validate #f
-          (lambda ()
-            (progress 'validate #f)
-            (validate-artifacts artifacts)))
-        (call-with-project-stage 'write (project-output-directory project)
-          (lambda ()
-            (progress 'write (project-output-directory project))
-            (write-artifacts (project-output-directory project) artifacts)
-            (write-build-state state-path state-temp-path current-sources
-                               artifacts owners
-                               (build-state-identity retained-state))))
-        (%make-build-report
-          (map build-state-source-path current-sources)
-          artifacts
-          '()
-          changed
-          report-removed
-          affected
-          #t)))))
+                (filter (lambda (p) (not (member p changed string=?))) removed)))
+         (call-with-project-stage 'validate #f
+           (lambda ()
+             (progress 'validate #f)
+             (validate-artifacts artifacts)))
+         (call-with-project-stage 'write (project-output-directory project)
+           (lambda ()
+             (progress 'write (project-output-directory project))
+             (write-artifacts (project-output-directory project) artifacts)
+             (write-build-state state-path state-temp-path current-sources
+                                artifacts owners identity)))
+         (%make-build-report
+           (map build-state-source-path current-sources)
+           artifacts
+           '()
+           changed
+           report-removed
+           affected
+           #t)))))
 
 (define* (check-project project #:key (progress (lambda (stage path) #t)))
   "Read, analyze, render, and validate PROJECT without accessing output state."

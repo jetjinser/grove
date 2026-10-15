@@ -76,19 +76,18 @@
   ;;     Only load-time assets may ride the retained forest: a source
   ;;     document needs analysis, a removal needs the manifest
   ;;     maintenance of a full build, and anything outside the declared
-  ;;     extra sources is not understood well enough to shortcut.  The
-  ;;     identity check keeps projects that bake extra-source values
-  ;;     into renderer configurations on the full path - a mismatch is
-  ;;     exactly what execute-project would treat as a full re-render.
+  ;;     extra sources is not understood well enough to shortcut.
+  ;;     Renderer configurations are checked later, by
+  ;;     rebuild-from-forest: the forest is analysis output and stays
+  ;;     valid even when a configuration baked an extra-source value
+  ;;     that just changed - only the render side must re-run then.
   (and forest retained-state
        (null? removed)
        (every (lambda (path)
                 (member path
                         (map absolute-path (project-extra-sources project))
                         string=?))
-              changed)
-       (equal? (project-renderer-identity project forest)
-               (build-state-identity retained-state))))
+              changed)))
 
 (define (worker-state-path output)
   (string-append (grove-cache-directory output) "/" build-state-name))
@@ -138,30 +137,26 @@
                                        (watch-roots filename project files modules))
                                string=?))
                       (before (watch-snapshot roots files output))
-                      ;;     The diff set must see additions and
-                      ;;     removals alike: the walked snapshot finds
-                      ;;     newly created sources the last analysis
-                      ;;     never named, while the serve-provided
-                      ;;     file list keeps deleted sources visible
-                      ;;     after they drop out of the tree.  Grove's
-                      ;;     own module tree stays out - worker loads
-                      ;;     are not project edits.
-                      (watched
-                       (filter
-                         (lambda (path)
-                           (not (string-prefix?
-                                  (dirname (dirname (dirname
-                                    (%search-load-path
-                                      "grove/private/preview/worker.scm"))))
-                                  path)))
-                         (delete-duplicates
-                           (append files (list filename) (map car before))
-                           string=?)))
+                       ;;     The diff set must see additions and
+                       ;;     removals alike: the walked snapshot finds
+                       ;;     newly created sources the last analysis
+                       ;;     never named, while the serve-provided
+                       ;;     file list keeps deleted sources visible
+                       ;;     after they drop out of the tree.  Grove's
+                       ;;     own tree and store paths stay out - worker
+                       ;;     loads and environment resolutions are not
+                       ;;     project edits.
+                       (watched
+                        (filter
+                          (lambda (path) (not (unwatched-path? path)))
+                          (delete-duplicates
+                            (append files (list filename) (map car before))
+                            string=?)))
                       (changes (diff-known-stamps known watched))
                       (changed (car changes))
                       (removed (cadr changes))
-                      (reuse? (forest-reusable? configured forest
-                                                retained-state changed removed))
+                       (reuse? (forest-reusable? configured forest
+                                                 retained-state changed removed))
                       (profile-timings (and profile? (make-hash-table)))
                       (report
                         (parameterize ((current-input-cache-timings
@@ -180,11 +175,21 @@
                                (append (map absolute-path (build-report-sources report)) modules)
                                string=?))
                       (roots (watch-roots filename project files modules)))
-                 ;; This is a private process protocol, not a second artifact API.
-                 (write-result! result-path
-                   (list 'preview request-serial output roots files modules
-                         (delete-duplicates (append before loaded-stamps)
-                           (lambda (left right) (string=? (car left) (car right))))
+                  ;; This is a private process protocol, not a second artifact API.
+                  (write-result! result-path
+                    (list 'preview request-serial output roots files modules
+                          ;;     Loaded stamps may name grove's own and
+                          ;;     dependency modules under store prefixes;
+                          ;;     the serve side diffs this snapshot
+                          ;;     against its own, so foreign paths must
+                          ;;     stay out or every resolution difference
+                          ;;     turns into a rebuild.
+                          (delete-duplicates
+                            (append before
+                                    (filter (lambda (entry)
+                                              (not (unwatched-path? (car entry))))
+                                            loaded-stamps))
+                            (lambda (left right) (string=? (car left) (car right))))
                          (map (lambda (artifact)
                                 (list (artifact-path artifact) (artifact-content artifact)))
                               (build-report-artifacts report))))
