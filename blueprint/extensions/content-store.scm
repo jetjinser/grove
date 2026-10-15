@@ -24,11 +24,9 @@
 ;;; same definition - or this checkout after deleting its build
 ;;; directory - restores them instead of compiling.
 ;;;
-;;; The sharing wants BLUE's own store to be shared too: the stage-1
-;;; outputs live inside it and their paths are part of the keys, so
-;;; point every checkout at one store (the --store-directory option,
-;;; or a preferences file entry).  A checkout-local store only shares
-;;; the final modules, not the stage-1 artifacts.
+;;; Stage-1 outputs live inside BLUE's store, whose path differs per
+;;; checkout; the key keeps only the artifact below "stencils/" so a
+;;; checkout-local store still shares them.
 
 (define-module (blueprint extensions content-store)
   #:use-module (oop goops)
@@ -72,9 +70,17 @@
 (define (shareable? buildable)
   (is-a? buildable <guile-module>))
 
+;;; The key must not see checkout-local store prefixes: stage-1
+;;; outputs live inside BLUE's store, whose path differs between
+;;; checkouts, while the artifact below "stencils/" is the same.
+(define (key-output-name output)
+  (let ((mark (and (string? output)
+                   (string-contains output "/stencils/"))))
+    (if mark (substring output (+ mark 1)) output)))
+
 (define (content-key buildable)
   (hash (list (ask-build-key buildable)
-              (slot* buildable 'outputs))))
+              (map key-output-name (slot* buildable 'outputs)))))
 
 (define (content-root)
   (or (getenv "BLUE_CONTENT_STORE_DIR")
@@ -157,7 +163,7 @@ the store without the entry and the build simply remains local."
 ;;; of checkout-local absolute paths.
 (define-blue-method (ask-build-key (this <guile-module>))
   (vector
-   (slot* this 'outputs)
+   (map key-output-name (slot* this 'outputs))
    (slot* this 'toolchain)
    (slot* this 'warnings)
    (slot* this 'warning-level)
