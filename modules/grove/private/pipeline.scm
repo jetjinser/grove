@@ -12,7 +12,11 @@
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
   #:export (run-asset-pipelines
-            merge-pipeline-artifacts))
+            merge-pipeline-artifacts
+            read-boundary-index
+            write-boundary-index
+            restore-boundary-bytes
+            publish-boundary-bytes))
 
 ;;     Pipeline outputs shadow same-path artifacts from renderers and
 ;;     the previous state, and outputs retired from a pipeline's
@@ -63,7 +67,7 @@
                     (and (char>=? character #\a) (char<=? character #\f))))
               (string->list value))))
 
-(define (read-index identity)
+(define (read-boundary-index identity)
   ;;     The index has no self-verifying content hash; the worst a
   ;;     corrupted one can do is read as garbage (a miss) or name
   ;;     blobs that fail their own verification (also a miss).
@@ -83,13 +87,13 @@
                         index)))))))
     (lambda args #f)))
 
-(define (write-index identity entries)
+(define (write-boundary-index identity entries)
   (publish-artifact-blob! identity
     (lambda (port)
       (write (map (lambda (entry) (cons (car entry) (cdr entry))) entries)
              port))))
 
-(define (restore-bytes fingerprint)
+(define (restore-boundary-bytes fingerprint)
   (catch #t
     (lambda ()
       (let ((path (artifact-blob-path fingerprint)))
@@ -100,13 +104,13 @@
     (lambda args #f)))
 
 (define (restore-pipeline-artifacts identity inputs)
-  (let ((index (read-index identity)))
+  (let ((index (read-boundary-index identity)))
     (and index
          (let loop ((entries index) (artifacts '()))
            (if (null? entries)
                (reverse artifacts)
                (let* ((entry (car entries))
-                      (bytes (restore-bytes (cdr entry))))
+                      (bytes (restore-boundary-bytes (cdr entry))))
                  (and bytes
                       (loop (cdr entries)
                             (cons (make-byte-artifact
@@ -144,7 +148,7 @@
       (unless (pair? entry-list)
         (error "asset pipeline emitted no outputs"
                (asset-pipeline-name pipeline)))
-      (write-index identity entry-list)
+      (write-boundary-index identity entry-list)
       artifact-list)))
 
 (define (run-asset-pipelines pipelines project-key)
@@ -166,3 +170,24 @@ build state's renderer field."
           (loop (cdr pipelines)
                 (append (reverse produced) artifacts)
                 (append (reverse markers) owners))))))
+
+;;     Publish BYTES under their content fingerprint; return the
+;;     fingerprint for index bookkeeping.
+(define (publish-boundary-bytes bytes)
+  (let ((fingerprint (content-fingerprint bytes)))
+    (publish-artifact-blob! fingerprint
+      (lambda (port) (put-bytevector port bytes)))
+    fingerprint))
+
+;;     Pipeline outputs shadow same-path artifacts from renderers and
+;;     the previous state, and outputs retired from a pipeline's
+;;     current set must not resurrect from that state either.
+(define (merge-pipeline-artifacts pipeline-artifacts rendered retired-paths)
+  (if (and (null? pipeline-artifacts) (null? retired-paths))
+      rendered
+      (let ((shadowed (append (map artifact-path pipeline-artifacts)
+                              retired-paths)))
+        (append pipeline-artifacts
+                (remove (lambda (artifact)
+                          (member (artifact-path artifact) shadowed string=?))
+                        rendered)))))
