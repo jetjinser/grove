@@ -81,6 +81,7 @@
     "unit/grove/output.scm"
     "unit/grove/store-gc.scm"
     "unit/grove/artifact-store.scm"
+    "unit/grove/store-concurrency.scm"
     "unit/grove/static.scm"
     "unit/grove/project.scm"
     "unit/grove/project-check.scm"
