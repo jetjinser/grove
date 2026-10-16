@@ -6,6 +6,8 @@
   #:use-module (grove build)
   #:use-module (grove project new)
   #:use-module (grove serve)
+  #:use-module (grove private cache-dir)
+  #:use-module (grove private store-gc)
   #:use-module (grove private cli progress)
   #:use-module (grove project load)
   #:use-module (grove project diagnostic)
@@ -35,7 +37,12 @@
 
 ;;; Options are described once and drive parsing, validation, and help.
 
-(define command-names '("build" "check" "serve" "new" "browse" "ssh-keygen"))
+(define command-names '("build" "check" "serve" "new" "browse" "ssh-keygen" "store"))
+
+(define (validate-store-action action)
+  (unless (member action '("size" "gc"))
+    (usage-error "store requires an action: size or gc"))
+  action)
 
 (define* (option-spec flag #:key (key (string->symbol flag)) (arity 'flag)
                       (parse 'string) check (commands #f) help helps)
@@ -122,6 +129,11 @@ with HELP overrides keyed by command."
                  #:help "  --ssh-memory-limit BYTES Cap each worker's address space (browse --ssh).\n")
     (option-spec "--force" #:key 'force #:commands '(ssh-keygen)
                  #:help "  --force         Overwrite an existing host key.\n")
+    (option-spec "--dry-run" #:key 'dry-run #:commands '(store)
+                 #:help "  --dry-run       Report what store gc would remove, deleting nothing.\n")
+    (option-spec "--older-than" #:key 'older-than #:arity 'value
+                 #:parse 'integer #:check seconds-check #:commands '(store)
+                 #:help "  --older-than N  store gc prunes entries older than N days (default 30).\n")
     (option-spec "--debug" #:key 'debug)
     (option-spec "--help" #:key 'help)
     (option-spec "-h" #:key 'help)
@@ -195,6 +207,11 @@ with HELP overrides keyed by command."
          ((and (equal? command "new") (not (string-prefix? "-" argument)))
           (when (assq 'prefix options) (usage-error "new accepts one prefix"))
           (loop rest command (acons 'prefix argument options)))
+         ((and (equal? command "store") (not (string-prefix? "-" argument)))
+          (when (assq 'store-action options)
+            (usage-error "store accepts one action"))
+          (loop rest command
+                (acons 'store-action (validate-store-action argument) options)))
          (else (usage-error "unknown command or option: ~a" argument)))))))
 
 (define command-synopses
@@ -203,10 +220,11 @@ with HELP overrides keyed by command."
     ("check" . "Usage: grove check [OPTIONS]\n\nRead, analyze, render, and validate without writing outputs.\n")
     ("serve" . "Usage: grove serve [OPTIONS]\n\nServe successful build outputs on localhost and watch for changes.\n")
     ("browse" . "Usage: grove browse [OPTIONS]\n\nRead and analyze the project, then browse its model in the terminal.\n")
-    ("ssh-keygen" . "Usage: grove ssh-keygen --host-key PATH [OPTIONS]\n\nGenerate an RSA host key for 'grove browse --ssh'.\n")))
+    ("ssh-keygen" . "Usage: grove ssh-keygen --host-key PATH [OPTIONS]\n\nGenerate an RSA host key for 'grove browse --ssh'.\n")
+    ("store" . "Usage: grove store (size|gc) [OPTIONS]\n\nReport the size of the machine-global store, or prune stale entries.\n")))
 
 (define general-synopsis
-  "Usage: grove COMMAND [OPTIONS]\n\nCommands:\n  build       Build the project and update its outputs.\n  check       Validate the complete pipeline without writing outputs.\n  serve       Preview on localhost and rebuild when inputs change.\n  browse      Analyze the project and browse its model in the terminal.\n  ssh-keygen  Generate an RSA host key for --ssh.\n  new         Create a tree with an increasing base36 ID.\n")
+  "Usage: grove COMMAND [OPTIONS]\n\nCommands:\n  build       Build the project and update its outputs.\n  check       Validate the complete pipeline without writing outputs.\n  serve       Preview on localhost and rebuild when inputs change.\n  browse      Analyze the project and browse its model in the terminal.\n  ssh-keygen  Generate an RSA host key for --ssh.\n  new         Create a tree with an increasing base36 ID.\n  store       Report the size of the shared content store or prune it.\n")
 
 (define (print-help command)
   (display (or (and command (assq-ref command-synopses command)) general-synopsis))
@@ -246,6 +264,29 @@ with HELP overrides keyed by command."
   (let ((filename (or (assq-ref options 'project)
                       (discover-project-filename))))
     (cond
+      ((string=? command "store")
+       (let* ((action (validate-store-action
+                       (or (assq-ref options 'store-action) "")))
+              (root (grove-store-directory))
+              (dry-run (assq-ref options 'dry-run))
+              (days (or (assq-ref options 'older-than) 30))
+              (report (lambda (count bytes)
+                        (format #t "~a ~a entries (~a)\n"
+                                (if dry-run "Would remove" "Removed")
+                                count (format-bytes bytes)))))
+         (cond ((string=? action "size")
+                (format #t "Store ~a\n" root)
+                (for-each
+                  (lambda (entry)
+                    (format #t "  ~a ~a entries ~a\n"
+                            (car entry) (cadr entry)
+                            (format-bytes (caddr entry))))
+                  (store-summary root)))
+               (else
+                (call-with-values
+                    (lambda () (store-prune root days dry-run))
+                  report)
+                0))))
       ((string=? command "ssh-keygen")
        (let* ((invocation (getcwd))
               (path (assq-ref options 'host-key))
