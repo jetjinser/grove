@@ -154,7 +154,16 @@ serve workers alike — uses the same cache and store locations, so a
 manual build over a serve-written output stays incremental (the build
 lock serializes the writers). `guix shell --container --pure` runs
 with a throwaway home, so point `GROVE_STORE_DIR` and `GROVE_CACHE_DIR`
-at a host directory when caching should survive the shell. Only
+at a host directory when caching should survive the shell.
+
+`grove store size` reports entry counts and byte totals per store
+subtree; `grove store gc [--dry-run] [--older-than=N]` prunes entries
+whose mtime is older than N days (default 30) and sweeps directories
+left empty. Every store subtree is a pure content-addressed or
+content-verified cache, so pruning is always safe — it can only cost
+recomputation. The BLUE content store lives outside this tree by
+default; point `BLUE_CONTENT_STORE_DIR` inside `GROVE_STORE_DIR` to
+have `grove store` cover it too. Only
 data-only Content IR is
 saved, including styles and source locations. Closures, unsupported records,
 and cyclic data are re-evaluated. Corruption is a miss; successful builds
