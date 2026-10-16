@@ -564,30 +564,54 @@ to the lane, and an in-place numbered marker links to it."
                              (backmatter-details? #f) (html-attributes '())
                              (head '()) (site-nav '()) (home-link #f)
                              (metadata-items default-metadata-items)
-                             (side-lane '()))
+                             (side-lane '())
+                             (dirty-paths '()))
   (set! routes (resolve-html-routes forest routes))
   (check-html-input forest style routes mathjax-src)
-  (let* ((route-table
-           (html-route-table routes (map site-page-id (pages forest))))
-         (page-artifacts
-           (map (lambda (page)
-                  (let* ((path (cdr (assoc (site-page-id page) route-table)))
-                         (sources (page-source-paths forest page)))
-                    (reuse-artifact path sources old-artifacts changed
-                      (lambda ()
-                        (page-html forest page style routes mathjax-src
-                                   backmatter labels reference-taxon-id #f highlighters
-                                   #:title-decoration title-decoration
-                                   #:article? article?
-                                   #:backmatter-details? backmatter-details?
-                                   #:html-attributes html-attributes
-                                   #:head head
-                                   #:site-nav site-nav
-                                   #:home-link home-link
-                                   #:metadata-items metadata-items
-                                   #:side-lane side-lane)))))
-                (pages forest))))
-    (append (html-style-artifacts style) page-artifacts)))
+  (let ((style-artifacts (html-style-artifacts style)))
+    (let ((style-paths (map artifact-path style-artifacts)))
+      (let ((old-page-artifacts
+             (filter (lambda (artifact)
+                       (not (member (artifact-path artifact) style-paths string=?)))
+                     old-artifacts)))
+        (if (and (every (lambda (path)
+                          ;;     Only load-time style artifacts are
+                          ;;     dirty: their bytes feed the @font-face
+                          ;;     and <link> chrome, never a page body,
+                          ;;     so every page artifact keeps its
+                          ;;     previous bytes under the retained
+                          ;;     forest and the page walk is skipped -
+                          ;;     the difference between a seconds-long
+                          ;;     asset-only preview cycle and a full
+                          ;;     re-render.
+                          (member path style-paths string=?))
+                        dirty-paths)
+                 ;;     Same page count: no page appeared or vanished,
+                 ;;     so a changed count falls back to the walk and
+                 ;;     new and removed pages still render.
+                 (= (length (pages forest)) (length old-page-artifacts)))
+            (append style-artifacts old-page-artifacts)
+            (let* ((route-table
+                     (html-route-table routes (map site-page-id (pages forest))))
+                   (page-artifacts
+                     (map (lambda (page)
+                            (let* ((path (cdr (assoc (site-page-id page) route-table)))
+                                   (sources (page-source-paths forest page)))
+                              (reuse-artifact path sources old-artifacts changed
+                                (lambda ()
+                                  (page-html forest page style routes mathjax-src
+                                             backmatter labels reference-taxon-id #f highlighters
+                                             #:title-decoration title-decoration
+                                             #:article? article?
+                                             #:backmatter-details? backmatter-details?
+                                             #:html-attributes html-attributes
+                                             #:head head
+                                             #:site-nav site-nav
+                                             #:home-link home-link
+                                             #:metadata-items metadata-items
+                                             #:side-lane side-lane)))))
+                          (pages forest))))
+              (append style-artifacts page-artifacts)))))))
 
 (define (resolve-html-routes forest routes)
   (if (html-home-page routes)
@@ -792,4 +816,5 @@ errors when the count outlives the list."
                                      #:site-nav site-nav
                                      #:home-link home-link
                                      #:metadata-items metadata-items
-                                     #:side-lane side-lane))))))
+                                     #:side-lane side-lane
+                                     #:dirty-paths dirty-paths))))))
