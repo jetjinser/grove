@@ -37,13 +37,30 @@
 (touch (string-append store "/input-cache/proj/dead") old)
 
 
+(define (basename path)
+  (let ((index (string-index-right path #\/)))
+    (if index (substring path (+ index 1)) path)))
+
 (define (store-entries-probe path)
-  "Local file listing for assertions: (BASENAME ...) per entry."
-  (map basename (map car (store-entries path))))
+  "Local file listing for assertions: (BASENAME ...) per entry.
+Broken symlinks and plain files count; directories and absent
+paths do not."
+  (if (file-exists? path)
+      (filter (lambda (name)
+                (not (file-is-directory? (string-append path "/" name))))
+              (scandir path (lambda (name)
+                              (not (member name '("." ".."))))))
+      '()))
 
 (define summary (store-summary store))
 (define (entry name)
   (find (lambda (e) (string=? (car e) name)) summary))
+
+;;     The total entry counts the store as it is NOW, not as the
+;;     pre-prune summary above recorded it.
+(define (fresh-total)
+  (cadr (find (lambda (e) (string=? (car e) "total"))
+              (store-summary store))))
 
 ;;     Three subtrees plus the total entry.
 (test-equal "summary counts every subtree"
@@ -70,7 +87,7 @@
     (>= bytes 3))
   (test-equal "dry run removes nothing"
     5
-    (cadr (entry "total")))))
+    (fresh-total)))
 
 ;;; Real run: the stale entries go, fresh ones stay.
 (let-values (((count bytes) (store-prune store 30 #f)))
@@ -88,13 +105,12 @@
     '("doc")
     (map basename (store-entries-probe (string-append store "/input-cache/proj")))))
 
-;;; Empty directories are swept after pruning.
+;;; Empty directories are swept after pruning: the store keeps only
+;;; the two fresh entries and the emptied keys subtree is gone.
 (test-equal "empty directories are swept"
-  1
-  (cadr (entry "total"))))
-
-(define (basename path)
-  (let ((index (string-index-right path #\/)))
-    (if index (substring path (+ index 1)) path)))
+  2
+  (fresh-total))
+(test-assert "the emptied keys subtree is swept"
+  (not (file-exists? (string-append store "/keys"))))
 
 (test-end "grove store gc")

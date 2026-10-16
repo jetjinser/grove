@@ -106,9 +106,11 @@
     (build-project (project #f))
     (test-equal "disabling project cache forces evaluation" 4 evaluations)
     (let* ((directory (grove-store-directory))
-           (entry (string-append directory "/"
-                    (car (scandir directory (lambda (name)
-                                              (not (member name '("." "..")))))))))
+           (cache-directory (string-append directory "/input-cache"))
+           (entry (string-append cache-directory "/"
+                    (car (scandir cache-directory
+                                  (lambda (name)
+                                    (not (member name '("." "..")))))))))
       (define (snapshot)
         (let ((info (stat entry)))
           (list (file-fingerprint entry) (stat:ino info) (stat:mtime info))))
@@ -120,9 +122,11 @@
     (build-project (project #t))
     (test-equal "check does not replace the stored entry" 5 evaluations)
     (let* ((directory (grove-store-directory))
-           (entry (string-append directory "/"
-                    (car (scandir directory (lambda (name)
-                                              (not (member name '("." "..")))))))))
+           (cache-directory (string-append directory "/input-cache"))
+           (entry (string-append cache-directory "/"
+                    (car (scandir cache-directory
+                                  (lambda (name)
+                                    (not (member name '("." "..")))))))))
       (put entry "malformed")
       (build-project (project #t))
       (test-equal "corrupt cache falls back to source evaluation" 6 evaluations))
@@ -288,8 +292,12 @@
         (build-project uncached)
         (test-equal "renderer opt-out forces rendering on every build" 4 renders)))
     (prune-input-cache! (make-input-cache-context output #t '()))
+    ;;     The prune owns the input-cache subtree: entries outside the
+    ;;   current selection go, while sibling subtrees (artifacts) are
+    ;;   the store GC's business.
     (test-equal "entries outside the current selection are removed"
-      '("." "..") (scandir (grove-store-directory)))
+      '("." "..") (scandir (string-append (grove-store-directory)
+                                          "/input-cache")))
     (test-error "input cache directory is reserved from artifacts" #t
       (validate-artifacts (list (make-artifact ".grove-input-cache/user" "x")))))
   (lambda () (system* "rm" "-rf" root)))
