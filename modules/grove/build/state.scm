@@ -76,7 +76,11 @@
                 (every string? (build-state-artifact-sources entry))))
        (or (not (build-state-artifact-renderer entry))
            (and (integer? (build-state-artifact-renderer entry))
-                (>= (build-state-artifact-renderer entry) 0)))
+                (>= (build-state-artifact-renderer entry) 0))
+           ;;     Asset pipelines mark their entries with the
+           ;;     pipeline's name instead of a renderer index.
+           (and (string? (build-state-artifact-renderer entry))
+                (not (string-null? (build-state-artifact-renderer entry)))))
        (memq (build-state-artifact-kind entry) '(text bytes))))
 
 (define (valid-build-state? state)

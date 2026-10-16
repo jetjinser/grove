@@ -21,6 +21,7 @@
                             read-page
                             (analyze (lambda (site) site))
                             (renderers '())
+                            (pipelines '())
                             output-directory
                              (cache? #t)
                              (default-prefix #f)
@@ -52,6 +53,7 @@
                               #:sources sources #:home home)))
         (analyze site)))
     #:renderers renderers
+    #:pipelines pipelines
     #:output-directory output-directory
     #:cache? cache?
     #:default-prefix default-prefix

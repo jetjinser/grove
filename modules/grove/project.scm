@@ -4,11 +4,13 @@
 
 (define-module (grove project)
   #:use-module (grove string-fun)
+  #:use-module (grove pipeline)
   #:use-module (grove private artifact-store)
   #:use-module (grove private cache-dir)
   #:use-module (grove private build-lock)
   #:use-module (grove private input cache)
   #:use-module (grove private input dependencies)
+  #:use-module (grove private pipeline)
   #:use-module (grove build)
   #:use-module (grove build state)
   #:use-module (grove collect)
@@ -27,6 +29,7 @@
             project-tree-template
             project-default-prefix
             project-renderers
+            project-pipelines
             collect-project-sources
             project-extra-sources
             project-output-directory
@@ -112,9 +115,13 @@
   (input-cache-context project-analysis-input-cache-context))
 
 (define-record-type <project>
+  ;;     New fields append at the end: compiled callers inline the
+  ;;     slot positions of the fields they read, so inserting in the
+  ;;     middle silently re-maps every later field for them.
   (%make-project source-directory source-filter collect-sources prepare
                  extra-sources read-source analyze renderers
-                 output-directory cache? default-prefix tree-template browse)
+                 output-directory cache? default-prefix tree-template browse
+                 pipelines)
   project?
   (source-directory project-source-directory)
   (source-filter project-source-filter)
@@ -128,7 +135,8 @@
   (cache? project-cache?)
   (default-prefix project-default-prefix)
   (tree-template project-tree-template)
-  (browse project-browse))
+  (browse project-browse)
+  (pipelines project-pipelines))
 
 (define* (make-project #:key
                        (source-directory #f)
@@ -140,6 +148,7 @@
                        read-source
                        (analyze (lambda (context) context))
                        (renderers '())
+                       (pipelines '())
                        output-directory
                        (cache? #t)
                        (default-prefix #f)
@@ -166,6 +175,8 @@
                       renderers))
     (error "project renderers must be procedures or cached renderers"
            renderers))
+  (unless (and (list? pipelines) (every asset-pipeline? pipelines))
+    (error "project pipelines must be asset pipelines" pipelines))
   (unless (string? output-directory)
     (error "project requires an output directory" output-directory))
   (unless (boolean? cache?)
@@ -181,7 +192,8 @@
                  (map (lambda (renderer)
                         (if (cached-renderer? renderer) renderer
                             (make-cached-renderer renderer))) renderers)
-                 output-directory cache? default-prefix tree-template browse))
+                 output-directory cache? default-prefix tree-template browse
+                 pipelines))
 
 (define* (project-with-options project
                                #:key
@@ -201,6 +213,7 @@
     #:read-source (project-read-source project)
     #:analyze (project-analyze project)
     #:renderers (project-renderers project)
+    #:pipelines (project-pipelines project)
     #:output-directory output-directory
     #:cache? cache?
     #:default-prefix (project-default-prefix project)
@@ -569,6 +582,21 @@ Return a project-analysis holding the analyzed model."
     (let ((analysis (analyze-project project #:write? #f #:progress progress)))
       (browse (project-analysis-model analysis) #:input input #:output output))))
 
+;;     Pipeline outputs that vanished from a pipeline's current set
+;;     must not resurrect from the previous build's state: previous
+;;     entries a pipeline owns (string renderer marker) whose paths the
+;;     current run no longer emits are retired.
+(define (retired-pipeline-paths pipeline-artifacts previous-artifacts)
+  (let ((current (map artifact-path pipeline-artifacts)))
+    (filter-map
+      (lambda (entry)
+        (let ((path (build-state-artifact-path entry))
+              (owner (build-state-artifact-renderer entry)))
+          (and (string? owner)
+               (not (member path current string=?))
+               path)))
+      previous-artifacts)))
+
 (define (execute-project project write? progress)
   (unless (project? project)
     (error "project execution requires a Grove project" project))
@@ -639,8 +667,19 @@ Return a project-analysis holding the analyzed model."
          (modified (cadr source-changes))
          (removed (caddr source-changes))
          (changed (append added modified removed))
-         (identity (project-renderer-identity project model))
-         (cache-ready?
+          (identity (project-renderer-identity project model))
+          ;;     Asset pipelines produce artifacts from declared inputs;
+          ;;     their identity covers the project file, so an edit
+          ;;     re-runs them.  Every output carries the inputs as its
+          ;;     sources, riding the ordinary invalidation machinery.
+          (pipeline-result
+            (parameterize ((current-input-fingerprints (make-hash-table)))
+              (run-asset-pipelines (project-pipelines project)
+                                   (current-project-key))))
+          (pipeline-artifacts (car pipeline-result))
+          (pipeline-owners (cdr pipeline-result))
+          (retired (retired-pipeline-paths pipeline-artifacts previous-artifacts))
+          (cache-ready?
            (and identity previous-state
                 (equal? identity previous-identity)
                 (load-cached-artifacts (project-output-directory project)
@@ -672,8 +711,9 @@ Return a project-analysis holding the analyzed model."
              (else
               (progress 'render #f)
               (render-all model (project-renderers project) progress))))
-         (artifacts (car render-result))
-         (owners (cadr render-result))
+          (artifacts (merge-pipeline-artifacts pipeline-artifacts
+                                               (car render-result) retired))
+          (owners (append pipeline-owners (cadr render-result)))
          (affected
            (cond
              (cache-hit? '())
@@ -760,9 +800,17 @@ analysis results - pages, relations, indexes - come from the forest."
                 (string-append cache-directory "/" build-state-name))
              (state-temp-path
                 (string-append cache-directory "/" build-state-temp-name))
-             (previous-sources (build-state-sources retained-state))
-             (previous-artifacts (build-state-artifacts retained-state))
-             (identity (project-renderer-identity project forest))
+              (previous-sources (build-state-sources retained-state))
+              (previous-artifacts (build-state-artifacts retained-state))
+              (pipeline-result
+               (parameterize ((current-input-fingerprints (make-hash-table)))
+                 (run-asset-pipelines (project-pipelines project)
+                                      (current-project-key))))
+              (pipeline-artifacts (car pipeline-result))
+              (pipeline-owners (cdr pipeline-result))
+              (retired (retired-pipeline-paths pipeline-artifacts
+                                               previous-artifacts))
+              (identity (project-renderer-identity project forest))
              (config-equal?
                 (equal? identity (build-state-identity retained-state)))
              (render-result
@@ -782,8 +830,9 @@ analysis results - pages, relations, indexes - come from the forest."
                       ;;     - but the analysis still comes from the
                       ;;     retained forest.
                       (render-all forest (project-renderers project) progress))))
-             (artifacts (car render-result))
-             (owners (cadr render-result))
+              (artifacts (merge-pipeline-artifacts pipeline-artifacts
+                                                   (car render-result) retired))
+              (owners (append pipeline-owners (cadr render-result)))
              (affected (affected-artifacts artifacts previous-artifacts changed))
              ;;     Content-refresh every retained source: the on-disk
              ;;     state must stay truthful for manual builds and for
@@ -813,14 +862,14 @@ analysis results - pages, relations, indexes - come from the forest."
              (write-artifacts (project-output-directory project) artifacts)
              (write-build-state state-path state-temp-path current-sources
                                 artifacts owners identity)))
-         (%make-build-report
-           (map build-state-source-path current-sources)
-           artifacts
-           '()
-           changed
-           report-removed
-           affected
-           #t)))))
+          (%make-build-report
+            (map build-state-source-path current-sources)
+            artifacts
+            '()
+            changed
+            report-removed
+            affected
+            #t)))))
 
 (define* (check-project project #:key (progress (lambda (stage path) #t)))
   "Read, analyze, render, and validate PROJECT without accessing output state."

@@ -1,0 +1,168 @@
+;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+;;;
+;;; SPDX-License-Identifier: GPL-3.0-or-later
+
+(define-module (grove private pipeline)
+  #:use-module (grove pipeline)
+  #:use-module (grove output)
+  #:use-module (grove private artifact-store)
+  #:use-module (grove private fingerprint)
+  #:use-module (grove private input dependencies)
+  #:use-module (ice-9 binary-ports)
+  #:use-module (rnrs bytevectors)
+  #:use-module (srfi srfi-1)
+  #:export (run-asset-pipelines
+            merge-pipeline-artifacts))
+
+;;     Pipeline outputs shadow same-path artifacts from renderers and
+;;     the previous state, and outputs retired from a pipeline's
+;;     current set must not resurrect from that state either.
+(define (merge-pipeline-artifacts pipeline-artifacts rendered retired-paths)
+  (if (and (null? pipeline-artifacts) (null? retired-paths))
+      rendered
+      (let ((shadowed (append (map artifact-path pipeline-artifacts)
+                              retired-paths)))
+        (append pipeline-artifacts
+                (remove (lambda (artifact)
+                          (member (artifact-path artifact) shadowed string=?))
+                        rendered)))))
+
+;;     Run declared asset pipelines against the shared store.  Each
+;;     pipeline's identity is its name, version, the project file's
+;;     fingerprint, and its inputs' fingerprints; the outputs of one
+;;     identity are indexed under that key and every output blob is
+;;     content-addressed.  A hit materializes artifacts without
+;;     running the procedure at all; a miss - changed inputs, edited
+;;     project, corrupted or missing index - runs it.  Determinism
+;;     (same inputs, same bytes) is a protocol contract the content
+;;     addressing verifies in passing.
+
+(define (pipeline-input-table pipeline)
+  ;;     (declared path -> materialized path), registered so the
+  ;;     fingerprints memoize across the build.
+  (map (lambda (path) (cons path (depend-on! path)))
+       (asset-pipeline-inputs pipeline)))
+
+(define (pipeline-identity pipeline project-key input-table)
+  (content-fingerprint
+   (call-with-output-string
+    (lambda (port)
+      (write (list "grove-asset-pipeline"
+                   (asset-pipeline-name pipeline)
+                   (asset-pipeline-version pipeline)
+                   project-key
+                   (map (lambda (pair) (input-fingerprint (cdr pair)))
+                        input-table))
+             port)))))
+
+(define (pipeline-fingerprint? value)
+  (and (string? value)
+       (= (string-length value) 64)
+       (every (lambda (character)
+                (or (and (char>=? character #\0) (char<=? character #\9))
+                    (and (char>=? character #\a) (char<=? character #\f))))
+              (string->list value))))
+
+(define (read-index identity)
+  ;;     The index has no self-verifying content hash; the worst a
+  ;;     corrupted one can do is read as garbage (a miss) or name
+  ;;     blobs that fail their own verification (also a miss).
+  (catch #t
+    (lambda ()
+      (let ((path (artifact-blob-path identity)))
+        (and (file-exists? path)
+             (call-with-input-file path
+               (lambda (port)
+                 (let ((index (read port)))
+                   (and (list? index)
+                        (every (lambda (entry)
+                                 (and (pair? entry)
+                                      (artifact-path? (car entry))
+                                      (pipeline-fingerprint? (cdr entry))))
+                               index)
+                        index)))))))
+    (lambda args #f)))
+
+(define (write-index identity entries)
+  (publish-artifact-blob! identity
+    (lambda (port)
+      (write (map (lambda (entry) (cons (car entry) (cdr entry))) entries)
+             port))))
+
+(define (restore-bytes fingerprint)
+  (catch #t
+    (lambda ()
+      (let ((path (artifact-blob-path fingerprint)))
+        (and (file-exists? path)
+             (let ((bytes (call-with-input-file path get-bytevector-all)))
+               (and (string=? (fingerprint-bytes bytes) fingerprint)
+                    bytes)))))
+    (lambda args #f)))
+
+(define (restore-pipeline-artifacts identity inputs)
+  (let ((index (read-index identity)))
+    (and index
+         (let loop ((entries index) (artifacts '()))
+           (if (null? entries)
+               (reverse artifacts)
+               (let* ((entry (car entries))
+                      (bytes (restore-bytes (cdr entry))))
+                 (and bytes
+                      (loop (cdr entries)
+                            (cons (make-byte-artifact
+                                   (car entry) bytes (map cdr inputs))
+                                  artifacts)))))))))
+
+(define (run-pipeline-procedure pipeline identity inputs)
+  (let ((entries '()) (artifacts '()))
+    (define (emit path content)
+      (unless (or (string? content) (bytevector? content))
+        (error "asset pipelines emit strings or bytevectors" path content))
+      (unless (artifact-path? path)
+        (error "asset pipeline emitted an invalid artifact path" path))
+      (let ((fingerprint (content-fingerprint content)))
+        (publish-artifact-blob! fingerprint
+          (lambda (port)
+            (if (string? content)
+                (display content port)
+                (put-bytevector port content))))
+        (set! entries (cons (cons path fingerprint) entries))
+        (set! artifacts
+              (cons ((if (string? content) make-artifact make-byte-artifact)
+                     path content (map cdr inputs))
+                    artifacts))))
+    ;;     A procedure result is ignored on purpose: outputs reach
+    ;;     Grove only through emit, which keeps the content
+    ;;     addressing honest even when a tool wrote stray files.
+    ((asset-pipeline-procedure pipeline)
+     (lambda (declared)
+       (or (assoc-ref inputs declared)
+           (error "asset pipeline asked for an undeclared input" declared)))
+     emit)
+    (let ((entry-list (reverse entries))
+          (artifact-list (reverse artifacts)))
+      (unless (pair? entry-list)
+        (error "asset pipeline emitted no outputs"
+               (asset-pipeline-name pipeline)))
+      (write-index identity entry-list)
+      artifact-list)))
+
+(define (run-asset-pipelines pipelines project-key)
+  "Run every declared asset pipeline; return (artifacts . owners),
+where each owner maps the artifact path to the pipeline name for the
+build state's renderer field."
+  (let loop ((pipelines pipelines) (artifacts '()) (owners '()))
+    (if (null? pipelines)
+        (cons (reverse artifacts) (reverse owners))
+        (let* ((pipeline (car pipelines))
+               (name (asset-pipeline-name pipeline))
+               (inputs (pipeline-input-table pipeline))
+               (identity (pipeline-identity pipeline project-key inputs))
+               (produced (or (restore-pipeline-artifacts identity inputs)
+                             (run-pipeline-procedure pipeline identity inputs)))
+               (markers (map (lambda (artifact)
+                               (cons (artifact-path artifact) name))
+                             produced)))
+          (loop (cdr pipelines)
+                (append (reverse produced) artifacts)
+                (append (reverse markers) owners))))))
