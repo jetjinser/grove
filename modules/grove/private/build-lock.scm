@@ -4,18 +4,10 @@
 
 (define-module (grove private build-lock)
   #:use-module (grove private cache-dir)
+  #:use-module (grove private files)
   #:use-module (system foreign)
   #:export (with-build-lock try-exclusive-lock lock-port-exclusive
             release-lock))
-
-(define (ensure-directory directory)
-  (unless (or (string=? directory ".")
-              (string=? directory "/")
-              (file-exists? directory))
-    (let ((parent (dirname directory)))
-      (unless (string=? parent directory)
-        (ensure-directory parent)))
-    (mkdir directory)))
 
 ;;     glibc flock through the foreign function interface: Guile ships
 ;;     no file-lock binding of its own, and the kernel releases an

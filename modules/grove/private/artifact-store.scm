@@ -11,21 +11,13 @@
 
 (define-module (grove private artifact-store)
   #:use-module (grove private cache-dir)
+  #:use-module (grove private files)
   #:use-module (grove private fingerprint)
-  #:use-module (ice-9 ftw)
   #:use-module (ice-9 binary-ports)
   #:export (artifact-blob-path
             artifact-blob-exists?
             publish-artifact-blob!
             restore-artifact-blob!))
-
-
-(define (ensure-parent-directory directory)
-  (unless (or (string=? directory ".") (file-exists? directory))
-    (let ((parent (dirname directory)))
-      (unless (string=? parent directory)
-        (ensure-parent-directory parent))
-      (false-if-exception (mkdir directory)))))
 
 (define (artifact-blob-path fingerprint)
   (string-append (grove-store-directory) "/artifacts/" fingerprint))
@@ -36,21 +28,15 @@
          (not (file-is-directory? path)))))
 
 ;;     Write BYTES into the store under FINGERPRINT.  WRITE! receives
-;;     a binary port.  Best effort: failures leave the store without
+;;     the output port.  Best effort: failures leave the store without
 ;;     the blob and callers simply keep their own copy of the bytes.
 (define (publish-artifact-blob! fingerprint write!)
   (catch #t
     (lambda ()
-      (let* ((root (string-append (grove-store-directory) "/artifacts"))
-             (path (string-append root "/" fingerprint))
-             (temp (string-append path ".tmp-" (number->string (getpid)))))
-        (ensure-parent-directory root)
-        (call-with-output-file temp
-          (lambda (port)
-            (write! port)
-            (force-output port))
-          #:binary #t)
-        (rename-file temp path)
+      (let ((root (string-append (grove-store-directory) "/artifacts")))
+        (ensure-directory root)
+        (call-with-staging-file!
+         (string-append root "/" fingerprint) write!)
         #t))
     (lambda args #f)))
 
@@ -71,15 +57,9 @@
                         (get-bytevector-all port))
                       #:binary #t)))
              (and (string=? (fingerprint-bytes bytes) fingerprint)
-                  (begin
-                    (ensure-parent-directory (dirname output-path))
-                    (let ((temp (string-append output-path
-                                               ".restore-tmp-"
-                                               (number->string (getpid)))))
-                      (call-with-output-file temp
-                        (lambda (output)
-                          (put-bytevector output bytes))
-                        #:binary #t)
-                      (rename-file temp output-path))
-                    #t))))
+                  (ensure-directory (dirname output-path))
+                  (call-with-staging-file! output-path
+                    (lambda (staging)
+                      (put-bytevector staging bytes)))
+                  #t)))
          (lambda args #f))))

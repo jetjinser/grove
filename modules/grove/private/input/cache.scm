@@ -4,6 +4,8 @@
 (define-module (grove private input cache)
   #:use-module (grove ir)
   #:use-module (grove private cache-dir)
+  #:use-module (grove private files)
+  #:use-module (grove private fingerprint)
   #:use-module (grove private input dependencies)
   #:use-module (grove style)
   #:use-module (grove style html)
@@ -211,11 +213,6 @@
     (('datum datum) datum)
     (_ (error "invalid cached content"))))
 
-(define (ensure-directory directory)
-  (unless (file-exists? directory)
-    (ensure-directory (dirname directory))
-    (mkdir directory)))
-
 (define (read-entry path)
   (catch #t
     (lambda ()
@@ -227,17 +224,8 @@
     (lambda _ #f)))
 
 (define (save-entry path entry)
-  (let ((temporary (string-append path "." (number->string (getpid)) ".tmp")))
-    (dynamic-wind
-      (lambda () (ensure-directory (dirname path)))
-      (lambda ()
-        (call-with-output-file temporary
-          (lambda (port)
-            (set-port-encoding! port "UTF-8")
-            (write entry port)))
-        (rename-file temporary path))
-      (lambda ()
-        (when (file-exists? temporary) (delete-file temporary))))))
+  (ensure-directory (dirname path))
+  (call-with-staging-file! path (lambda (port) (write entry port))))
 
 (define* (cached-document path reader dependencies read-document status
                           #:optional (reuse? #t))

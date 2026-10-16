@@ -280,16 +280,19 @@
             2 analysis-count)
           (delete-file cache-output-path)
           (let ((missing-output (build-project/report cached-project)))
-            (test-equal "missing cached outputs are rendered again"
-              2 render-count)
+            (test-equal "missing cached outputs are restored without rendering"
+              1 render-count)
             (test-assert "missing cached output is restored"
               (file-exists? cache-output-path))
-            (test-assert "missing cached output reports rendering"
-              (build-report-rendered? missing-output)))
+            (test-equal "the restored output holds the rendered bytes"
+              "平方：2"
+              (call-with-input-file cache-output-path get-string-all))
+            (test-assert "a restored cache hit reports that rendering was skipped"
+              (not (build-report-rendered? missing-output))))
           (write-test-file cache-output-path "tampered")
           (let ((tampered-output (build-project/report cached-project)))
             (test-equal "modified cached outputs are rendered again"
-              3 render-count)
+              2 render-count)
             (test-equal "modified cached outputs are restored"
               "平方：2"
               (call-with-input-file cache-output-path get-string-all))
@@ -299,7 +302,7 @@
                            "cache source changed")
           (let ((changed-source (build-project/report cached-project)))
             (test-equal "changed source inputs invalidate renderer output"
-              4 render-count)
+              3 render-count)
             (test-equal "cached build report includes changed source paths"
               (list (string-append source-directory "/first.plant"))
               (build-report-modified-sources changed-source)))
@@ -312,7 +315,7 @@
               '("summary.txt")
               (build-report-affected-artifacts changed-external))
             (test-equal "extra source modifications rerun cached renderers"
-              5 render-count))
+              4 render-count))
           (let* ((changed-renderer
                    (make-cached-renderer
                      render #:configuration '(summary (precision . 2))))
@@ -332,7 +335,7 @@
                      #:output-directory cache-output-directory))
                  (key-change (build-project/report changed-project)))
             (test-equal "renderer configuration changes force rendering"
-              6 render-count)
+              5 render-count)
             (test-equal "renderer configuration changes invalidate its output"
               '("summary.txt")
               (build-report-affected-artifacts key-change))
@@ -355,7 +358,7 @@
                    (project-key-change
                      (build-project/report changed-project-key)))
               (test-equal "disabling project caching force rendering"
-                7 render-count)
+                6 render-count)
               (test-equal "disabling project caching invalidate its outputs"
                 '("summary.txt")
               (build-report-affected-artifacts project-key-change))))

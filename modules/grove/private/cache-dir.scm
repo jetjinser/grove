@@ -3,23 +3,8 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove private cache-dir)
-  #:use-module (gcrypt hash)
-  #:use-module (ice-9 binary-ports)
-  #:use-module (rnrs bytevectors)
-  #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
+  #:use-module (grove private fingerprint)
   #:export (cache-base grove-cache-directory grove-store-directory))
-
-(define (path-fingerprint text)
-  (let ((digest (sha256 (string->utf8 text)))
-        (digits "0123456789abcdef"))
-    (list->string
-     (append-map
-      (lambda (index)
-        (let ((byte (bytevector-u8-ref digest index)))
-          (list (string-ref digits (quotient byte 16))
-                (string-ref digits (modulo byte 16)))))
-      (iota (bytevector-length digest))))))
 
 (define (cache-base)
   (or (getenv "GROVE_CACHE_DIR")
@@ -41,7 +26,7 @@ back to the path as given."
                                (basename output-directory)))
               output-directory)))
     (string-append (cache-base) "/"
-                   (substring (path-fingerprint canonical) 0 16))))
+                   (substring (content-fingerprint canonical) 0 16))))
 
 (define (grove-store-directory)
   "The machine-global content store, shared by every checkout and

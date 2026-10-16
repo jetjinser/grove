@@ -5,6 +5,7 @@
 (define-module (grove output)
   #:use-module (grove private artifact-store)
   #:use-module (grove private cache-dir)
+  #:use-module (grove private files)
   #:use-module (grove private fingerprint)
   #:use-module (grove string-fun)
   #:use-module (ice-9 ftw)
@@ -23,8 +24,8 @@
             artifact-sources
             prefix-artifacts
             validate-artifacts
-            write-artifacts
-            ensure-directory))
+            write-artifacts)
+  #:re-export (ensure-directory))
 
 (define-record-type <artifact>
   (%make-artifact path content sources)
@@ -68,15 +69,6 @@
           (string-append prefix "/" (artifact-path artifact))
           (artifact-content artifact) (artifact-sources artifact)))
        artifacts))
-
-(define (ensure-directory directory)
-  (unless (or (string=? directory ".")
-              (string=? directory "/")
-              (file-exists? directory))
-    (let ((parent (dirname directory)))
-      (unless (string=? parent directory)
-        (ensure-directory parent))
-      (mkdir directory))))
 
 (define artifact-manifest-name ".grove-artifacts")
 (define artifact-manifest-temp-name ".grove-artifacts.tmp")
@@ -178,20 +170,14 @@
   artifacts)
 
 (define (write-artifact-bytes! path content)
-  ;;     Temp file plus rename: the artifact path may currently be a
-  ;;     hard link to a store blob, and in-place truncation would
+  ;;     Staged temp file plus rename: the artifact path may currently
+  ;;     be a hard link to a store blob, and in-place truncation would
   ;;     corrupt the shared inode.
-  (let ((temp (string-append path ".write-tmp-" (number->string (getpid)))))
-    (if (string? content)
-        (call-with-output-file temp
-          (lambda (port)
-            (set-port-encoding! port "UTF-8")
-            (display content port)))
-        (call-with-output-file temp
-          (lambda (port)
-            (put-bytevector port content))
-          #:binary #t))
-    (rename-file temp path)))
+  (call-with-staging-file! path
+    (lambda (port)
+      (if (string? content)
+          (display content port)
+          (put-bytevector port content)))))
 
 (define (write-artifacts directory artifacts)
   (validate-artifacts artifacts)

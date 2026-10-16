@@ -105,11 +105,14 @@
     #:binary #t))
 
 (define (write-file-bytes! path bytes)
-  (let ((temp (string-append path ".tmp-" (number->string (getpid)))))
-    (call-with-output-file temp
+  ;;     The staging file reserves a unique mkstemp! name (concurrent
+  ;;     writers of one path never share a temp path) and lands with
+  ;;     the umask-derived mode a plain write would have produced.
+  (let ((temp (string-append path ".tmp-XXXXXX")))
+    (call-with-port (mkstemp! temp)
       (lambda (port)
-        (put-bytevector port bytes))
-      #:binary #t)
+        (put-bytevector port bytes)))
+    (chmod temp (logand #o666 (lognot (umask))))
     (rename-file temp path)))
 
 (define (restore-output! key output)
@@ -151,11 +154,12 @@ the store without the entry and the build simply remains local."
        (write-file-bytes! blob bytes))
      (mkdir-p (dirname index))
      (unless (file-exists? index)
-       (let ((temp (string-append index ".tmp-" (number->string (getpid)))))
-         (call-with-output-file temp
+       (let ((temp (string-append index ".tmp-XXXXXX")))
+         (call-with-port (mkstemp! temp)
            (lambda (port)
              (set-port-encoding! port "UTF-8")
              (display content port)))
+         (chmod temp (logand #o666 (lognot (umask))))
          (rename-file temp index)))
      #t)))
 
