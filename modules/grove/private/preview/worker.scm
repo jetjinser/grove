@@ -5,6 +5,7 @@
   #:use-module (grove project)
   #:use-module (grove project load)
   #:use-module (grove private cache-dir)
+  #:use-module (grove private build-lock)
   #:use-module (grove private cli progress)
   #:use-module (grove private input cache)
   #:use-module (grove project diagnostic)
@@ -211,12 +212,70 @@
          (lambda () (set! %load-hook old-hook)))))
     (unexpected (error "invalid preview worker request" unexpected))))
 
-(define (await-request request-path last-serial live-path)
-  ;;     The worker lives as long as its serve does: the workspace's
-  ;;     .live lock is the tie - when the workspace is gone (serve
-  ;;     stopped, hard-killed, or swept), so is this process.
+(define (serve-gone? live-path)
+  ;;     The flock on .live names the live serve: the kernel frees it
+  ;;     when the holder dies, so taking it means the serve is gone
+  ;;     without having cleaned up.  A missing or unreadable file says
+  ;;     the same - cleanup removes the whole workspace.
+  (catch #t
+    (lambda ()
+      (or (not (file-exists? live-path))
+          (let ((port (open-file live-path "r")))
+            (dynamic-wind
+              (lambda () #t)
+              (lambda ()
+                (let ((gone? (try-exclusive-lock port)))
+                  (release-lock port)
+                  gone?))
+              (lambda () (close-port port))))))
+    (lambda _ #t)))
+
+(define (serve-watchdog worker-pid live-path)
+  ;;     Between requests the worker checks its serve itself; during a
+  ;;     build it cannot - a renderer blocked in a child wait never
+  ;;     returns to Scheme, and with it no thread or signal handler
+  ;;     does.  A forked watchdog can.  The worker leads the process
+  ;;     group its serve tears down, so when that serve disappears the
+  ;;     watchdog signals the group itself, project subprocesses
+  ;;     included.  The group check keeps a worker that never became a
+  ;;     group leader from signaling its launcher's group instead.
+  (let loop ()
+    (if (not (= (getppid) worker-pid))
+        (primitive-exit 0)
+        (if (serve-gone? live-path)
+            (begin
+              (when (= (getpgrp) worker-pid)
+                (catch #t
+                  (lambda () (kill (- (getpgrp)) SIGKILL))
+                  (lambda _ #t)))
+              (primitive-exit 0))
+            (begin (usleep 200000) (loop))))))
+
+(define (call-with-serve-watch live-path thunk)
+  (let ((watchdog (primitive-fork)))
+    (if (zero? watchdog)
+        (begin
+          (serve-watchdog (getppid) live-path)
+          (primitive-exit 0))
+        (dynamic-wind
+          (lambda () #t)
+          thunk
+          (lambda ()
+            (catch #t (lambda () (kill watchdog SIGKILL)) (lambda _ #t))
+            (catch #t (lambda () (waitpid watchdog 0)) (lambda _ #t)))))))
+
+(define (await-request request-path last-serial live-path serve-pid)
+  ;;     The worker lives exactly as long as its serve does, and two
+  ;;     ties can break first.  A serve that exits cleanly removes the
+  ;;     workspace, so the .live file disappears.  A serve that dies
+  ;;     without cleanup (SIGKILL, OOM) leaves it behind, but the
+  ;;     process relationship does not: the worker is reparented, and
+  ;;     getppid stops naming its serve.  Without that second check a
+  ;;     hard-killed session would leave this process polling a
+  ;;     workspace nobody owns.
   (let poll ()
-    (if (not (file-exists? live-path))
+    (if (or (not (file-exists? live-path))
+            (not (= (getppid) serve-pid)))
         (exit 0)
         (let ((request (false-if-exception
                          (call-with-input-file request-path read))))
@@ -230,24 +289,27 @@
 (define (worker-main arguments)
   (match arguments
     ((request-path result-path)
-     (let ((live-path (string-append (dirname request-path) "/.live")))
-       (let loop ((serial 0) (forest #f) (retained-state #f) (known '()))
-         (let ((request (await-request request-path serial live-path)))
-           (match request
-             ((request-serial filename output previous-modules previous-roots
-                              previous-files debug? profile?)
-              (catch 'grove-project-error
-                (lambda ()
-                  (call-with-project-stage 'build #f
+     (let ((live-path (string-append (dirname request-path) "/.live"))
+           (serve-pid (getppid)))
+       (call-with-serve-watch live-path
+         (lambda ()
+           (let loop ((serial 0) (forest #f) (retained-state #f) (known '()))
+             (let ((request (await-request request-path serial live-path serve-pid)))
+               (match request
+                 ((request-serial filename output previous-modules previous-roots
+                                  previous-files debug? profile?)
+                  (catch 'grove-project-error
                     (lambda ()
-                      (let-values (((next-forest next-state next-known)
-                                    (build-once request forest retained-state
-                                                known result-path)))
-                        (loop request-serial next-forest next-state
-                              next-known)))))
-                (lambda (unexpected error)
-                  (print-project-error error profile?)
-                  1)))
-             (unexpected
-              (error "invalid preview worker request" unexpected)))))))
+                      (call-with-project-stage 'build #f
+                        (lambda ()
+                          (let-values (((next-forest next-state next-known)
+                                        (build-once request forest retained-state
+                                                    known result-path)))
+                            (loop request-serial next-forest next-state
+                                  next-known)))))
+                    (lambda (unexpected error)
+                      (print-project-error error profile?)
+                      1)))
+                 (unexpected
+                  (error "invalid preview worker request" unexpected)))))))))
     (other (error "invalid preview worker arguments" other))))

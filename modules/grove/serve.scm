@@ -57,7 +57,14 @@
       (scandir parent (lambda (name) (string-prefix? ".grove-preview-" name))))))
 
 (define worker-code
-  "(setpgid 0 0) (use-modules (grove private preview worker)) (exit (worker-main (cdr (command-line))))")
+  ;;     The worker must own its process group before it loads anything:
+  ;;     teardown kills the group, and the group is where project
+  ;;     subprocesses stay. Failing here is fatal rather than serving in
+  ;;     the serve's group, where a group kill would be impossible.
+  "(setpgid 0 0)
+(unless (= (getpgrp) (getpid)) (exit 70))
+(use-modules (grove private preview worker))
+(exit (worker-main (cdr (command-line))))")
 
 (define (join-load-path paths)
   (string-join (map absolute-path paths) ":"))
@@ -97,6 +104,7 @@ that loaded them."
          (modules '())
          (snapshot #f)
          (pid #f)
+         (worker-group #f)
          (workspace #f)
          (live-port #f)
          (listener #f)
@@ -109,38 +117,59 @@ that loaded them."
       (string-append workspace "/request.scm"))
     (define (result-path)
       (string-append workspace "/result.scm"))
+    (define (kill-worker-group! group signal)
+      (catch 'system-error (lambda () (kill (- group) signal)) (lambda _ #f)))
     (define (stop-worker!)
-      ;; The worker owns its process group, including project subprocesses.
+      ;; The group is the worker and everything it spawned.  Kill it
+      ;; before reaping: the worker may already be gone while project
+      ;; subprocesses still run in the group it led, and only the
+      ;; retained group id can reach them then.
+      (when worker-group
+        (kill-worker-group! worker-group SIGKILL))
       (when pid
-        (catch 'system-error (lambda () (kill (- pid) SIGKILL))
-          (lambda _ (catch 'system-error (lambda () (kill pid SIGKILL)) (lambda _ #f))))
+        (catch 'system-error (lambda () (kill pid SIGKILL)) (lambda _ #f))
         (waitpid pid)
-        (set! pid #f)))
+        (set! pid #f))
+      (set! worker-group #f))
     (define (reap-worker!)
-      ;; A worker that died between builds must not receive new requests.
+      ;; A worker that died between builds must not receive new requests,
+      ;; and its group dies with it: leftovers must not outlive the
+      ;; worker that spawned them.  The group id is the worker's pid and
+      ;; stays valid while any member remains, leader or not.
       (when pid
         (let ((finished (call-with-blocked-asyncs
                           (lambda () (waitpid pid WNOHANG)))))
-          (unless (zero? (car finished)) (set! pid #f)))))
+          (unless (zero? (car finished))
+            (kill-worker-group! pid SIGKILL)
+            (set! pid #f)
+            (set! worker-group #f)))))
     (define (spawn-worker!)
       (call-with-blocked-asyncs
         (lambda ()
-          (set! pid
-            (call-with-input-file "/dev/null"
-              (lambda (input)
-                (spawn (string-append (assq-ref %guile-build-info 'bindir) "/guile")
-                  (list "guile" "--no-auto-compile"
-                        "-c" worker-code (request-path) (result-path))
-                  #:input input
-                  ;;     The worker inherits this environment, so it
-                  ;;     reads and writes the same per-project cache
-                  ;;     as a manual build: sharing the build state
-                  ;;     and artifact manifest is what keeps a manual
-                  ;;     build over a serve-written output
-                  ;;     incremental instead of fully re-rendering.
-                  ;;     The build lock serializes the writers, and
-                  ;;     cache writes land through temp-file renames.
-                  #:environment (worker-environment))))))))
+          (let ((child
+                  (call-with-input-file "/dev/null"
+                    (lambda (input)
+                      (spawn (string-append (assq-ref %guile-build-info 'bindir) "/guile")
+                        (list "guile" "--no-auto-compile"
+                              "-c" worker-code (request-path) (result-path))
+                        #:input input
+                        ;;     The worker inherits this environment, so it
+                        ;;     reads and writes the same per-project cache
+                        ;;     as a manual build: sharing the build state
+                        ;;     and artifact manifest is what keeps a manual
+                        ;;     build over a serve-written output
+                        ;;     incremental instead of fully re-rendering.
+                        ;;     The build lock serializes the writers, and
+                        ;;     cache writes land through temp-file renames.
+                        #:environment (worker-environment))))))
+            ;;     worker-code sets the worker's group to its own pid
+            ;;     before anything else; record it now so teardown can
+            ;;     reach the group even after the leader is gone.  A
+            ;;     group kill in the window before the worker creates
+            ;;     its group fails harmlessly and falls back to the
+            ;;     leader, which cannot have spawned anything yet.
+            (set! pid child)
+            (set! worker-group child)))))
     (define (start-build!)
       (set! serial (+ serial 1))
       (reap-worker!)
@@ -203,7 +232,12 @@ that loaded them."
                 (call-with-blocked-asyncs
                   (lambda () (waitpid pid WNOHANG)))))
           (unless (zero? (car finished))
+            ;;     A build that dies with its worker leaves project
+            ;;     subprocesses in the group the worker led; teardown
+            ;;     owns that group, not just the leader.
+            (kill-worker-group! pid SIGKILL)
             (set! pid #f)
+            (set! worker-group #f)
             (set! active-serial #f)
             (cond
               ((not snapshot) (error "initial preview build failed"))

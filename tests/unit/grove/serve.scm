@@ -197,7 +197,11 @@
                 ((string=? mode \"block\")
                  (let ((pid (spawn \"sleep\" (list \"sleep\" \"30\"))))
                    (call-with-output-file \".helper.pid\" (lambda (p) (write pid p)))
-                   (waitpid pid))))
+                   (waitpid pid)))
+                ((string=? mode \"orphan\")
+                 (let ((pid (spawn \"sleep\" (list \"sleep\" \"30\"))))
+                   (call-with-output-file \".orphan.pid\" (lambda (p) (write pid p)))
+                   (error \"renderer failure after spawning\"))))
               (append
                 (list (make-artifact \"index.html\"
                         (string-append
@@ -314,6 +318,46 @@
       (test-assert "serve honors the output override"
         (file-exists? (string-append root "/fixed/index.html")))
       (test-equal "SIGTERM shuts down with status 143" 143 (stop-server pid SIGTERM)))
+    ;;     A serve killed outright cannot run its teardown, and the
+    ;;     worker is blocked in a renderer child wait at this point, so
+    ;;     only its watchdog can react: worker and spawned subprocess
+    ;;     must both disappear.
+    (write-file control "block")
+    (when (file-exists? (string-append root "/.helper.pid"))
+      (delete-file (string-append root "/.helper.pid")))
+    (set! port (free-port))
+    (let ((pid (start-server)))
+      (wait-for (lambda () (file-exists? (string-append root "/.helper.pid"))))
+      (let ((worker (call-with-input-file
+                      (string-append root "/.cache/worker.pid") read))
+            (child (call-with-input-file
+                     (string-append root "/.helper.pid") read)))
+        (kill pid SIGKILL)
+        (await-exit pid)
+        (wait-for (lambda () (not (running? worker))))
+        (test-assert "a hard-killed serve cannot leave its worker behind"
+          (not (running? worker)))
+        (wait-for (lambda () (not (running? child))))
+        (test-assert "a hard-killed serve cannot leave project subprocesses"
+          (not (running? child)))))
+    ;;     A worker that dies mid-build still owns its group: the
+    ;;     project subprocess it spawned must be reaped with it, and
+    ;;     the serve keeps answering from its last snapshot.
+    (write-file control "fast")
+    (set! port (free-port))
+    (let ((pid (start-server)))
+      (test-assert "serve recovers between hard kills" (await-text "fixed-new|"))
+      (write-file control "orphan")
+      (wait-for (lambda () (file-exists? (string-append root "/.orphan.pid"))))
+      (let ((child (call-with-input-file
+                     (string-append root "/.orphan.pid") read)))
+        (wait-for (lambda () (not (running? child))))
+        (test-assert "a crashed worker's subprocesses are reaped with it"
+          (not (running? child))))
+      (wait-for (lambda ()
+                  (string-contains (read-file (string-append root "/.stderr"))
+                                   "Build failed")))
+      (write-file control "fast"))
     (write-file article "FAIL")
     (set! port (free-port))
     (let ((pid (start-server)))
@@ -337,7 +381,7 @@
             (let ((pid (call-with-input-file path read)))
               (when (running? pid)
                 (catch 'system-error (lambda () (kill (- pid) SIGKILL)) (lambda _ #f)))))))
-      '(".cache/worker.pid" ".helper.pid"))
+      '(".cache/worker.pid" ".helper.pid" ".orphan.pid"))
     (system* "rm" "-rf" root external inputs)))
 (test-subprocess-coverage '("grove/serve.scm" "grove/private/preview/worker.scm"))
 (test-end "serve lifecycle")

@@ -236,6 +236,11 @@ watched; editing one restarts the worker on purpose.
 
 Ctrl-C and SIGTERM stop the server and active worker process group, returning
 130 and 143 respectively. Detached project processes are outside that group.
+Teardown owns the whole group: a worker that dies mid-build takes the project
+subprocesses it spawned down with it. A serve killed outright (SIGKILL) runs
+no teardown at all - the worker's watchdog notices the dead serve and tears
+the group down itself, so a hard-killed session leaves no resident builder or
+subprocess behind.
 `--no-watch` serves the initial successful snapshot only.
 
 Scheme runners are silent unless given `#:progress`, a `(stage detail)` callback.
