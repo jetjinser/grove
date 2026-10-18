@@ -78,6 +78,17 @@ suites are hit is random; the application code is not involved. Set
 paths under `/tmp` for comparison, and re-run the failing suite alone: it
 passes.
 
+Replacing blue's fork with Guile's `spawn` (the documented multi-threaded
+option) does not work here, and a patch attempt was reverted after testing:
+`apply-in-subprocess` passes the parent's module state to the child by
+inheritance, not by re-execution. The suite child relies on blue's redefinition
+of `primitive-load-path` (installed in the root module while the blueprint
+loads) to resolve modules; `spawn` starts a fresh Guile, which loses that
+redefinition and fails on the first module lookup. A working fix would have to
+make blue's module resolution independent of in-process state — upstream work,
+not a local patch. `popen`'s non-test users (`blue build`'s external commands)
+tolerate `spawn` fine; the obstacle is specifically `apply-in-subprocess`.
+
 Profile the polling watcher against a Flora-sized synthetic project (without
 starting a server or touching Flora):
 
