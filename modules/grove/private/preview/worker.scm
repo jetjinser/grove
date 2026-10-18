@@ -73,22 +73,56 @@
             (else
              (loop (cdr paths) changed removed)))))))
 
-(define (forest-reusable? project forest retained-state changed removed)
-  ;;     Only load-time assets may ride the retained forest: a source
-  ;;     document needs analysis, a removal needs the manifest
-  ;;     maintenance of a full build, and anything outside the declared
-  ;;     extra sources is not understood well enough to shortcut.
-  ;;     Renderer configurations are checked later, by
-  ;;     rebuild-from-forest: the forest is analysis output and stays
-  ;;     valid even when a configuration baked an extra-source value
-  ;;     that just changed - only the render side must re-run then.
+(define (forest-reusable? project forest retained-state changed removed restart-paths)
+  ;;     The forest is the analysis output, so it survives exactly the
+  ;;     changes analysis cannot see.  Three questions, in order:
+  ;;
+  ;;     - A removal needs the manifest maintenance of a full build,
+  ;;       whatever kind of file it was.
+  ;;     - Documents (the collector's set) are what analysis reads
+  ;;       page-wise; an edit - and equally a newly added document,
+  ;;       which shows up as a change - must re-analyze.
+  ;;     - Anything else analysis read beyond the documents - prepared
+  ;;       outputs, analyzer-time includes, module resolutions - lands
+  ;;       in the retained analysis inputs; a change there invalidates
+  ;;       the forest too.  Load-time extra sources are excluded from
+  ;;       that set on purpose: they ride the forest, and the render
+  ;;       side plus the configuration identity check handle them.
+  ;;
+  ;;     Everything else - assets, undeclared render-time reads - only
+  ;;     invalidates render output, which rebuild-from-forest refreshes
+  ;;     against the retained forest.  Restart paths (the project file,
+  ;;     modules) never reach a build request, but a forest is never
+  ;;     trusted across them anyway.  A failing collector is a real
+  ;;     build problem: refuse reuse and let the full path report it.
   (and forest retained-state
        (null? removed)
-       (every (lambda (path)
-                (member path
-                        (map absolute-path (project-extra-sources project))
-                        string=?))
-              changed)))
+       ;;     The watch diff and the collector can name the same file
+       ;;     differently - a symlinked source directory resolves in
+       ;;     the walk but not in the collector - and a deleted file
+       ;;     cannot be canonicalized at all: the walk spells it
+       ;;     canonically while the file list keeps the collector's
+       ;;     spelling, so such removals surface as changes with no
+       ;;     file behind them.  Both cases must re-analyze, so
+       ;;     compare canonical spellings and refuse reuse for any
+       ;;     changed path that no longer exists.
+       (let* ((canonical
+                (lambda (path)
+                  (or (false-if-exception (canonicalize-path path)) path)))
+              (documents (false-if-exception
+                          (collect-project-sources project)))
+              (analysis (last-analysis-inputs)))
+         (and documents
+              (let ((documents (map canonical documents))
+                    (analysis (and analysis (map canonical analysis))))
+                (not (any (lambda (path)
+                            (let ((spelling (canonical path)))
+                              (or (member path restart-paths string=?)
+                                  (not (file-exists? path))
+                                  (member spelling documents string=?)
+                                  (and analysis
+                                       (member spelling analysis string=?)))))
+                          changed)))))))
 
 (define (worker-state-path output)
   (string-append (grove-cache-directory output) "/" build-state-name))
@@ -156,8 +190,13 @@
                       (changes (diff-known-stamps known watched))
                       (changed (car changes))
                       (removed (cadr changes))
+                       ;;     Restart paths never reach a request in
+                       ;;     normal operation - serve restarts the
+                       ;;     worker for them first - but a forest is
+                       ;;     never trusted across one anyway.
                        (reuse? (forest-reusable? configured forest
-                                                 retained-state changed removed))
+                                                 retained-state changed removed
+                                                 (cons filename modules)))
                       (profile-timings (and profile? (make-hash-table)))
                       (report
                         (parameterize ((current-input-cache-timings

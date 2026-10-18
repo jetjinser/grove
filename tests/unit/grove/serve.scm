@@ -164,6 +164,7 @@
     (mkdir (string-append root "/modules/probe"))
     (write-file article "one")
     (write-file control "fast")
+    (write-file (string-append root "/asset.txt") "asset-1")
     (write-file (string-append external "/theme.txt") "css-1")
     (write-file helper (helper-text "module-1"))
     (write-file (string-append root "/.entry.scm")
@@ -179,6 +180,7 @@
 ;;     requeue one rebuild per cycle.
 (call-with-output-file \".cache/worker.pid\" (lambda (p) (write (getpid) p)))
 (define external ~s)
+(define asset ~s)
 (make-project
   #:source-directory \"sources\"
   #:extra-sources (list external \"control\")
@@ -186,6 +188,14 @@
                  (let ((text (call-with-input-file path get-string-all)))
                    (when (string-contains text \"FAIL\") (error \"article failure\"))
                    text))
+  #:analyze (lambda (context)
+             ;;     Analysis counter: the retained-forest contract is
+             ;;     observable here - asset edits re-render without
+             ;;     analysis, document edits re-analyze.
+             (let ((port (open-file \".cache/analyze.count\" \"a\")))
+               (display \"x\" port)
+               (close-port port))
+             context)
   #:renderers
   (list (make-cached-renderer
           (lambda (context)
@@ -206,14 +216,16 @@
                 (list (make-artifact \"index.html\"
                         (string-append
                           (string-join (map project-input-value (project-context-inputs context)) \",\")
-                          \"|\" label \"|\" (call-with-input-file external get-string-all)))
+                          \"|\" label \"|\" (call-with-input-file external get-string-all)
+                          \"|\" (call-with-input-file asset get-string-all)))
                       (make-byte-artifact \"blob.bin\" (u8-list->bytevector '(0 255 128))))
                 (map (lambda (input)
                        (make-artifact (string-append (basename (project-input-path input)) \".html\")
                                       (project-input-value input)))
                      (project-context-inputs context)))))))
   #:output-directory \"output\")\n"
-        (string-append external "/theme.txt"))))
+        (string-append external "/theme.txt")
+        (string-append root "/asset.txt"))))
   (lambda ()
     (set! port (free-port))
     (let ((pid (start-server)))
@@ -239,6 +251,25 @@
       (wait-for (lambda () (let ((body (page))) (and body (string-prefix? "two|" body)))))
       (test-equal "deleted source artifacts disappear from HTTP snapshot" 404
         (response-code (car (request "/new.txt.html"))))
+      ;;     Analysis is the retained forest's only customer: an asset
+      ;;     analysis never read - here an undeclared file under the
+      ;;     project root - must re-render the output without
+      ;;     re-running analysis.  A document edit is the opposite
+      ;;     bound: the forest must go.  The counter saw five analyses
+      ;;     so far: the initial build, the article edit, the worker
+      ;;     restart on the module edit, and the added and deleted
+      ;;     source.
+      (write-file (string-append root "/asset.txt") "asset-2")
+      (test-assert "undeclared asset edits rebuild without analysis"
+        (await-text "asset-2"))
+      (test-equal "asset edits skip analysis" 5
+        (string-length (read-file (string-append root "/.cache/analyze.count"))))
+      (write-file article "three")
+      (test-assert "document edits re-analyze" (await-text "three|"))
+      (test-equal "document edits re-run analysis" 6
+        (string-length (read-file (string-append root "/.cache/analyze.count"))))
+      (write-file article "two")
+      (wait-for (lambda () (let ((body (page))) (and body (string-prefix? "two|" body)))))
       (let ((before (page)))
         (write-file article "FAIL")
         (wait-for (lambda () (string-contains (read-file (string-append root "/.stderr"))

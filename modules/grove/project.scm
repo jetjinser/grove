@@ -57,6 +57,7 @@
             rebuild-from-forest
             render-with-cache
             last-build-model
+            last-analysis-inputs
             project-renderer-identity
             analyze-project
             project-analysis?
@@ -77,6 +78,17 @@
 ;; one-shot builds never read it back.
 (define %last-build-model #f)
 (define (last-build-model) %last-build-model)
+
+;;     What the most recent build's analysis actually read - the
+;;     document set plus prepared outputs, analyzer-time reads and
+;;     module resolutions, with load-time extra sources excluded:
+;;     those ride the retained forest by design, and the render side
+;;     plus the configuration identity check handle their changes.
+;;     Paired with the retained forest, this is what lets a worker
+;;     tell an asset-only change (analysis holds, re-render) from a
+;;     document change (re-analyze).  Purely advisory, like the model.
+(define %last-analysis-inputs #f)
+(define (last-analysis-inputs) %last-analysis-inputs)
 
 (define-record-type <project-input>
   (make-project-input path value)
@@ -739,6 +751,12 @@ Return a project-analysis holding the analyzed model."
     ;;     a resident worker re-renders from this forest when only
     ;;     load-time assets changed.
     (set! %last-build-model model)
+    (set! %last-analysis-inputs
+      (let ((context (project-analysis-input-cache-context analysis)))
+        (and context
+             (lset-difference string=?
+                              (input-cache-dependencies context)
+                              (project-extra-sources project)))))
     (call-with-project-stage 'validate #f
       (lambda ()
         (progress 'validate #f)
