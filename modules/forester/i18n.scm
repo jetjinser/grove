@@ -235,7 +235,9 @@ hint. Parallel mode shows every lane as before."
 
 ;; Handlers that mark each language lane when rendering to text. A folded pair
 ;; keeps the reader lane (the summary) and the folded lanes; the trailing hint
-;; is decoration and is dropped.
+;; is decoration and is dropped.  Plain document summaries carry no language
+;; and pass through unlabeled - `summary' is a shared content kind, and only
+;; the bilingual lowering attaches a lang property.
 (define bilingual-text-handlers
   `((bilingual . ,(lambda (element body) body))
     (bilingual-pair . ,(lambda (element body) (string-append body "\n")))
@@ -247,6 +249,8 @@ hint. Parallel mode shows every lane as before."
     (details . ,(lambda (element body) body))
     (summary
      . ,(lambda (element body)
-          (string-append "[" (content-element-property element 'lang) "] "
-                         body)))
+          (let ((lang (content-element-property element 'lang)))
+            (if lang
+                (string-append "[" lang "] " body)
+                body))))
     (bilingual-more . ,(lambda (element body) ""))))

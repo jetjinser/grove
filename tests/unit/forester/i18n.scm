@@ -260,6 +260,23 @@
   (content->text (make-content-document (list bilingual-block))
                  #:handlers bilingual-text-handlers))
 
+(test-equal "a plain summary renders unlabeled"
+  "Derivation"
+  (content->text
+    (make-content-document
+      (list (make-content-element 'summary (list "Derivation")
+                                  #:flow-kind 'block)))
+    #:handlers bilingual-text-handlers))
+
+(test-equal "a summary carrying a language keeps its label"
+  "[en] The grove is a small forest."
+  (content->text
+    (make-content-document
+      (list (make-content-element
+              'summary (list "The grove is a small forest.")
+              #:properties (list (cons 'lang "en") (cons 'dir "ltr")))))
+    #:handlers bilingual-text-handlers))
+
 ;;; Built-in renderers
 
 (define bilingual-page
