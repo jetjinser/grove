@@ -122,8 +122,12 @@
        #:load-compiled-path (list #%?builddir)
        #:enable-coverage? (->bool (getenv "GROVE_TESTS_ENABLE_COVERAGE"))
        #:cov-filter-globs '("grove/*" "forester/*" "language/scribble/*")
+       ;;     Subprocess-heavy suites (preview, store sharing, ssh, cli)
+       ;;     legitimately approach a minute per suite while other
+       ;;     fixtures run beside them; a tighter default kills them
+       ;;     mid-suite and reports every remaining test as failed.
        #:time-limit (or (and=> (getenv "GROVE_TESTS_TIME_LIMIT") string->number)
-                        60)))
+                        120)))
 
 (define grove-tests
   (map

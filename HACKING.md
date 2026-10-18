@@ -57,6 +57,14 @@ blue check
 reuse --no-multiprocessing lint
 ```
 
+Each suite runs under a wall-clock limit (two minutes by default; set
+`GROVE_TESTS_TIME_LIMIT` to override). The subprocess-heavy suites — preview,
+store sharing, ssh, cli — approach that limit while other fixtures run beside
+them, so a full parallel `blue check tests/unit` can report cascading suite
+failures that vanish when the suite runs alone. Suspect the limit, not the
+code, and reach for `blue -j 1 check` when diagnosing interference between
+parallel fixtures.
+
 Profile the polling watcher against a Flora-sized synthetic project (without
 starting a server or touching Flora):
 
