@@ -1,3 +1,6 @@
+;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+;;; SPDX-License-Identifier: GPL-3.0-or-later
+
 (define-module (tests unit grove store-gc)
   #:use-module (grove private store-gc)
   #:use-module (grove private cache-dir)

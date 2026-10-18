@@ -1,3 +1,7 @@
+;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+;;;
+;;; SPDX-License-Identifier: GPL-3.0-or-later
+
 (list (channel
        (name 'guix)
        (url "https://mirror.nju.edu.cn/git/guix.git")
