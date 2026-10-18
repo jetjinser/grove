@@ -67,6 +67,17 @@ suite run alone, or the whole tree with `blue -j 1 check tests/unit`, is the
 authoritative signal; suspect the harness before the code, and reach for
 `-j 1` when diagnosing interference between parallel fixtures.
 
+The module-resolution errors have a known mechanism. Blue forks each suite
+subprocess out of its multi-threaded fibers scheduler, and on the Guile 3.0.11
+this project pins, that fork runs under a GC-disable workaround that blue
+itself documents as undefined behavior; suite children can therefore die at
+startup (empty logs, empty suite error messages) or fail resolving modules
+they resolved in earlier runs — with a different suite set each time. Which
+suites are hit is random; the application code is not involved. Set
+`GROVE_TEST_CHILD_DEBUG=1` to make every spawned subprocess dump its load
+paths under `/tmp` for comparison, and re-run the failing suite alone: it
+passes.
+
 Profile the polling watcher against a Flora-sized synthetic project (without
 starting a server or touching Flora):
 

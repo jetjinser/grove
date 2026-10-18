@@ -14,8 +14,31 @@
   #:use-module (blue debugging coverage)
   #:export (cli-entry prepare-subprocess test-subprocess-coverage))
 
+(define (dump-child-environment tag)
+  ;;     Diagnostics for the parallel-run interference documented in
+  ;;     HACKING: spawned guile subprocesses can fail to resolve modules
+  ;;     nondeterministically, so GROVE_TEST_CHILD_DEBUG dumps each
+  ;;     child's view of the load paths to /tmp for comparison.
+  (when (equal? (getenv "GROVE_TEST_CHILD_DEBUG") "1")
+    (catch #t
+      (lambda ()
+        (call-with-output-file
+            (format #f "/tmp/grove-child-debug-~a-~a" tag (getpid))
+          (lambda (port)
+            (write (list 'tag tag
+                         'pid (getpid)
+                         'ppid (getppid)
+                         'GUILE_LOAD_PATH (getenv "GUILE_LOAD_PATH")
+                         'GUILE_LOAD_COMPILED_PATH
+                         (getenv "GUILE_LOAD_COMPILED_PATH")
+                         '%load-path %load-path
+                         '%load-compiled-path %load-compiled-path)
+                   port))))
+      (lambda _ #t))))
+
 (define (prepare-subprocess directory)
   (setenv "GROVE_TEST_COVERAGE_RUN" (number->string (getpid)))
+  (dump-child-environment "suite")
   ;;     The compiled helper lives under the cache directory, outside
   ;;     the watched project tree: a compiled-path root at the project
   ;;     directory turns every lazily auto-compiled module load into a
@@ -107,8 +130,14 @@
           options)))))
 
 (define (cli-entry arguments)
-  (resolve-interface '(grove cli))
-  (when (coverage-enabled?) (cover-workers!))
-  (covered-call
+  (dump-child-environment "entry")
+  (catch #t
     (lambda ()
-      ((module-ref (resolve-module '(grove cli)) 'main) arguments))))
+      (resolve-interface '(grove cli))
+      (when (coverage-enabled?) (cover-workers!))
+      (covered-call
+        (lambda ()
+          ((module-ref (resolve-module '(grove cli)) 'main) arguments))))
+    (lambda args
+      (dump-child-environment "failure")
+      (apply throw args))))
