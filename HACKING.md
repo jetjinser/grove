@@ -88,8 +88,7 @@ guile --no-auto-compile -L modules -C build tests/perf/serve-watch.scm
 ```
 
 Build before testing CLI changes: subprocess tests load compiled modules.
-The preview tests require permission to bind localhost sockets. Use
-`blue -j 1 check` when diagnosing interference between parallel fixtures.
+The preview tests require permission to bind localhost sockets.
 For installation changes, verify the installed launcher in an empty environment.
 
 Keep repository examples small and focused. Flora is a separate consumer and
