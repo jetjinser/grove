@@ -90,6 +90,18 @@
     (let ((port (sockaddr:port (getsockname socket))))
       (close-port socket)
       port)))
+(define (instrumentation-load-path)
+  ;;     Coverage wraps the worker's -c code in a module that imports
+  ;;     (blue debugging coverage), and that module resolves through the
+  ;;     serve process's load path.  The test process finds blue through
+  ;;     the launcher's own path entries, which are not exported in the
+  ;;     environment the spawned serve inherits, so pass the directory
+  ;;     explicitly.
+  (let ((path (search-path %load-path "blue/subprocess.scm")))
+    (if path
+        (list "-L" (dirname (dirname path)))
+        '())))
+
 (define (start-server . options)
   (let ((output (open-output-file (string-append root "/.stdout")))
         (error (open-output-file (string-append root "/.stderr")))
@@ -102,9 +114,11 @@
                   (append (list "guile" "--no-auto-compile"
                                 "-L" (dirname sources) "-L" sources
                                 "-C" (string-append (dirname sources) "/build")
-                                "-C" (string-append root "/.cache")
-                                (string-append root "/.entry.scm") "serve"
-                                "--project" config "--port" (number->string port)) options)
+                                "-C" (string-append root "/.cache"))
+                          (instrumentation-load-path)
+                          (list (string-append root "/.entry.scm") "serve"
+                                "--project" config "--port" (number->string port))
+                          options)
                   #:input input #:output output #:error error
                   #:environment
                   (cons (string-append "XDG_CACHE_HOME=" root "/.cache")
@@ -133,8 +147,9 @@
             (append (list "guile" "--no-auto-compile"
                           "-L" (dirname sources) "-L" sources
                           "-C" (string-append (dirname sources) "/build")
-                          "-C" (string-append root "/.cache")
-                          (string-append root "/.entry.scm"))
+                          "-C" (string-append root "/.cache"))
+                    (instrumentation-load-path)
+                    (list (string-append root "/.entry.scm"))
                     arguments)
             #:input input #:output stdout #:error stdout
             #:environment
