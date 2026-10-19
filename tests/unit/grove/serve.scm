@@ -96,9 +96,8 @@
   ;;     the launcher's path entries, which the spawned serve does not
   ;;     inherit, so pass the directory explicitly.
   (let ((path (search-path %load-path "blue/subprocess.scm")))
-    (if path
-        (list "-L" (dirname (dirname path)))
-        '())))
+    (unless path (error "blue is not on the load path"))
+    (list "-L" (dirname (dirname path)))))
 
 (define (entry-arguments)
   ;;     Search paths shared by the serve process and a synchronous CLI
