@@ -94,12 +94,10 @@ external commands) tolerate `spawn` fine; the obstacle is specifically
 
 Coverage runs (`GROVE_TESTS_ENABLE_COVERAGE=1`) execute the preview worker
 under Guile's debug VM, which is roughly two orders of magnitude slower per
-build; the serve suite's many rebuilds then exceed its own wait budgets and
-the suite exits early with a bare `THUNK invocation failed`.  The suite passes
-without coverage, and the preview worker's coverage is not the reason to run
-it.  `tests/unit/grove/serve.scm` passes blue's module directory to the
-spawned serve explicitly (`instrumentation-load-path`) so the wrapped worker
-can resolve `(blue debugging coverage)` at all.
+build than normal execution. Give those runs a generous limit
+(`GROVE_TESTS_TIME_LIMIT=900` covers the subprocess-heavy suites) and prefer
+`-j 1` for them: the suites pass, but their subprocess bursts starve each
+other when run in parallel.
 
 Profile the polling watcher against a Flora-sized synthetic project (without
 starting a server or touching Flora):

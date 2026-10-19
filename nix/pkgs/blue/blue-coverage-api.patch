@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+# SPDX-License-Identifier: LGPL-3.0-or-later
+
 --- a/blue/stencils/guile/test-driver.scm
 +++ b/blue/stencils/guile/test-driver.scm
 @@ -260,12 +260,12 @@
