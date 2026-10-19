@@ -1,0 +1,36 @@
+--- a/blue/build.scm
++++ b/blue/build.scm
+@@ -956,6 +956,13 @@
+          (make-exception-with-message
+           "Waiting for sub-process yield a foreign PID"))))))
+ 
++  ;;     STOPPED is signalled once the sandman fiber has left its loop.
++  ;;     STOP-SANDMAN must not read the self-pipe itself: fibers allow a
++  ;;     single waiter per file descriptor, and the sandman already waits
++  ;;     on the read end.  A second reader corrupts the scheduler's
++  ;;     descriptor bookkeeping and leaves shutdown hanging.
++  (define stopped (make-channel))
++
+   (spawn-fiber
+    (lambda ()
+      (let loop ()
+@@ -967,7 +974,8 @@
+              ((and (pid . status) stask)
+               (wake-up-task pid status)
+               (drain))))
+-         (loop)))))
++         (loop)))
++     (put-message stopped 'stopped)))
+ 
+   (define (wait-sandman~ pid scheduler k)
+     (hash-set! pid-table pid (cons scheduler k)))
+@@ -977,8 +985,7 @@
+ 
+   (define (stop-sandman)
+     (self-pipe 0)
+-    ;; Wait for the pipe to be closed by the sandman.
+-    (self-pipe))
++    (get-message stopped))
+ 
+   (values
+    wait-sandman~

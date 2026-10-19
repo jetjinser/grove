@@ -78,6 +78,16 @@ suites are hit is random; the application code is not involved. Set
 paths under `/tmp` for comparison, and re-run the failing suite alone: it
 passes.
 
+Blue's scheduler shutdown has a second defect, patched here in
+`nix/pkgs/blue/blue-sandman-shutdown.patch`. `stop-sandman` used to write the
+termination byte and then read the same self-pipe that the sandman fiber was
+already waiting on. Fibers allow a single waiter per descriptor, so the second
+reader corrupts the scheduler's descriptor bookkeeping: shutdown either hangs
+silently (the reported symptom: the last suite's tests print, then nothing) or
+the corrupted scheduler fails unrelated suites with empty errors. The patch
+replaces the second read with a channel message from the sandman fiber, and
+the patch is in both the Guix manifest and the Nix package.
+
 Replacing blue's fork with Guile's `spawn` (the documented multi-threaded
 option) does not work here, and a patch attempt was reverted after testing:
 `apply-in-subprocess` passes the parent's module state to the child by
