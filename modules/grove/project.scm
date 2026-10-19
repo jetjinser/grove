@@ -79,14 +79,11 @@
 (define %last-build-model #f)
 (define (last-build-model) %last-build-model)
 
-;;     What the most recent build's analysis actually read - the
-;;     document set plus prepared outputs, analyzer-time reads and
-;;     module resolutions, with load-time extra sources excluded:
-;;     those ride the retained forest by design, and the render side
-;;     plus the configuration identity check handle their changes.
-;;     Paired with the retained forest, this is what lets a worker
-;;     tell an asset-only change (analysis holds, re-render) from a
-;;     document change (re-analyze).  Purely advisory, like the model.
+;;     What the most recent analysis read, with load-time extra sources
+;;     excluded: those ride the retained forest by design.  Paired with
+;;     the forest, this lets a resident worker tell an asset-only change
+;;     (re-render) from a document change (re-analyze).  Advisory, like
+;;     the model.
 (define %last-analysis-inputs #f)
 (define (last-analysis-inputs) %last-analysis-inputs)
 

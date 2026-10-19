@@ -90,17 +90,30 @@
     (let ((port (sockaddr:port (getsockname socket))))
       (close-port socket)
       port)))
-(define (instrumentation-load-path)
+(define (blue-load-path)
   ;;     Coverage wraps the worker's -c code in a module that imports
-  ;;     (blue debugging coverage), and that module resolves through the
-  ;;     serve process's load path.  The test process finds blue through
-  ;;     the launcher's own path entries, which are not exported in the
-  ;;     environment the spawned serve inherits, so pass the directory
-  ;;     explicitly.
+  ;;     (blue debugging coverage).  The test process finds blue through
+  ;;     the launcher's path entries, which the spawned serve does not
+  ;;     inherit, so pass the directory explicitly.
   (let ((path (search-path %load-path "blue/subprocess.scm")))
     (if path
         (list "-L" (dirname (dirname path)))
         '())))
+
+(define (entry-arguments)
+  ;;     Search paths shared by the serve process and a synchronous CLI
+  ;;     run; both use the per-project cache, so a manual build over a
+  ;;     served output stays incremental.
+  (append (list "guile" "--no-auto-compile"
+                "-L" (dirname sources) "-L" sources
+                "-C" (string-append (dirname sources) "/build")
+                "-C" (string-append root "/.cache"))
+          (blue-load-path)))
+
+(define (entry-environment)
+  (cons (string-append "XDG_CACHE_HOME=" root "/.cache")
+        (filter (lambda (entry) (not (string-prefix? "XDG_CACHE_HOME=" entry)))
+                (environ))))
 
 (define (start-server . options)
   (let ((output (open-output-file (string-append root "/.stdout")))
@@ -111,19 +124,12 @@
       (lambda ()
         (let ((pid
                 (spawn "guile"
-                  (append (list "guile" "--no-auto-compile"
-                                "-L" (dirname sources) "-L" sources
-                                "-C" (string-append (dirname sources) "/build")
-                                "-C" (string-append root "/.cache"))
-                          (instrumentation-load-path)
+                  (append (entry-arguments)
                           (list (string-append root "/.entry.scm") "serve"
                                 "--project" config "--port" (number->string port))
                           options)
                   #:input input #:output output #:error error
-                  #:environment
-                  (cons (string-append "XDG_CACHE_HOME=" root "/.cache")
-                        (filter (lambda (entry) (not (string-prefix? "XDG_CACHE_HOME=" entry)))
-                                (environ))))))
+                  #:environment (entry-environment))))
           (set! processes (cons pid processes))
           pid))
       (lambda () (close-port input) (close-port output) (close-port error)))))
@@ -134,9 +140,6 @@
     (set! processes (delv pid processes))
     status))
 (define (run-entry . arguments)
-  ;;     One synchronous CLI run in the same environment the serve
-  ;;     process gets: if the serve worker and this run do not share
-  ;;     the per-project cache, the assertions below see a full render.
   (let ((stdout (open-output-file (string-append root "/.entry.out")))
         (input (open-input-file "/dev/null")))
     (dynamic-wind
@@ -144,18 +147,11 @@
       (lambda ()
         (waitpid
           (spawn "guile"
-            (append (list "guile" "--no-auto-compile"
-                          "-L" (dirname sources) "-L" sources
-                          "-C" (string-append (dirname sources) "/build")
-                          "-C" (string-append root "/.cache"))
-                    (instrumentation-load-path)
+            (append (entry-arguments)
                     (list (string-append root "/.entry.scm"))
                     arguments)
             #:input input #:output stdout #:error stdout
-            #:environment
-            (cons (string-append "XDG_CACHE_HOME=" root "/.cache")
-                  (filter (lambda (entry) (not (string-prefix? "XDG_CACHE_HOME=" entry)))
-                          (environ)))))
+            #:environment (entry-environment)))
         (read-file (string-append root "/.entry.out")))
       (lambda () (close-port input) (close-port stdout)))))
 (define (stop-server pid signal)
@@ -266,14 +262,10 @@
       (wait-for (lambda () (let ((body (page))) (and body (string-prefix? "two|" body)))))
       (test-equal "deleted source artifacts disappear from HTTP snapshot" 404
         (response-code (car (request "/new.txt.html"))))
-      ;;     Analysis is the retained forest's only customer: an asset
-      ;;     analysis never read - here an undeclared file under the
-      ;;     project root - must re-render the output without
-      ;;     re-running analysis.  A document edit is the opposite
-      ;;     bound: the forest must go.  The counter saw five analyses
-      ;;     so far: the initial build, the article edit, the worker
-      ;;     restart on the module edit, and the added and deleted
-      ;;     source.
+      ;;     An asset analysis never read must re-render without
+      ;;     re-running analysis; a document edit must re-analyze.  The
+      ;;     counter stands at five: the initial build, the article
+      ;;     edit, the worker restart, and the added and deleted source.
       (write-file (string-append root "/asset.txt") "asset-2")
       (test-assert "undeclared asset edits rebuild without analysis"
         (await-text "asset-2"))

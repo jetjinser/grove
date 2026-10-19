@@ -15,10 +15,9 @@
   #:export (cli-entry prepare-subprocess test-subprocess-coverage))
 
 (define (dump-child-environment tag)
-  ;;     Diagnostics for the parallel-run interference documented in
-  ;;     HACKING: spawned guile subprocesses can fail to resolve modules
-  ;;     nondeterministically, so GROVE_TEST_CHILD_DEBUG dumps each
-  ;;     child's view of the load paths to /tmp for comparison.
+  ;;     With GROVE_TEST_CHILD_DEBUG=1 every spawned subprocess records
+  ;;     its view of the load paths under /tmp, so a child that fails to
+  ;;     resolve modules can be compared with one that succeeded.
   (when (equal? (getenv "GROVE_TEST_CHILD_DEBUG") "1")
     (catch #t
       (lambda ()

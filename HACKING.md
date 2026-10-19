@@ -59,45 +59,26 @@ reuse --no-multiprocessing lint
 
 Each suite runs under a wall-clock limit (two minutes by default; set
 `GROVE_TESTS_TIME_LIMIT` to override), and blue runs the suites in parallel by
-default. The subprocess-heavy suites — preview, store sharing, ssh, cli — are
-the slowest, so when a full parallel `blue check tests/unit` run reports
-cascading failures, suspect the harness before the code: re-run the failing
-suite alone, and reach for `blue -j 1 check tests/unit` when diagnosing
-interference between parallel fixtures.
+default. When a full run reports failures, re-run the failing suite alone
+before looking at the code; `blue -j 1 check tests/unit` separates harness
+interference from real failures. `GROVE_TEST_CHILD_DEBUG=1` makes every
+spawned subprocess record its load paths under `/tmp` for comparison.
 
-Blue's scheduler shutdown used to corrupt the harness this way. `stop-sandman`
-wrote the termination byte and then read the same self-pipe the sandman fiber
-was already waiting on; fibers allow a single waiter per descriptor, so the
-second reader corrupted the scheduler's descriptor bookkeeping. The result was
-either a silent hang (the last suite's tests print, then nothing, with no
-error) or dozens of unrelated suites failing with empty error messages. The
-fix is `nix/pkgs/blue/blue-sandman-shutdown.patch`: the sandman fiber now
-signals a channel when it leaves its loop and `stop-sandman` waits on that
-message instead of reading the descriptor. The patch is in both the Guix
-manifest and the Nix package; with it, repeated full parallel runs are stable.
-If a hang or a cascade of empty suite errors reappears, check that the patch
-still applies to the blue pin before looking at the code under test. Set
-`GROVE_TEST_CHILD_DEBUG=1` to make every spawned subprocess dump its load
-paths under `/tmp` for comparison.
+The tree pins blue with patches under `nix/pkgs/blue/`, applied by both
+`manifest.scm` and the Nix package. Two are load-bearing for the harness.
+`blue-sandman-shutdown.patch` keeps a single reader on the scheduler's
+self-pipe; without it, shutdown can hang after the last suite, or unrelated
+suites can fail with empty errors. `blue-coverage-api.patch` drops a
+`coverage-data->lcov` keyword this Guile rejects; without it, every coverage
+run dies before writing a report. If either symptom returns, check that the
+patches still apply to the blue pin before suspecting the code under test.
+Do not replace blue's fork with `spawn`: the suite child relies on blue's
+`primitive-load-path` redefinition, which a freshly exec'd process loses.
 
-Two other mechanisms were investigated and are not the cause. Blue's suite
-subprocesses are forked out of a multi-threaded fibers scheduler under a
-GC-disable workaround that blue documents as undefined behavior on Guile
-3.0.11, but no failures have reproduced since the shutdown fix. Replacing that
-fork with Guile's `spawn` does not work: `apply-in-subprocess` passes module
-state to the child by inheritance, and the suite child relies on blue's
-redefinition of `primitive-load-path` (installed in the root module while the
-blueprint loads); `spawn` starts a fresh Guile, which loses the redefinition
-and fails on the first module lookup. `popen`'s non-test users (`blue build`'s
-external commands) tolerate `spawn` fine; the obstacle is specifically
-`apply-in-subprocess`.
-
-Coverage runs (`GROVE_TESTS_ENABLE_COVERAGE=1`) execute the preview worker
-under Guile's debug VM, which is roughly two orders of magnitude slower per
-build than normal execution. Give those runs a generous limit
-(`GROVE_TESTS_TIME_LIMIT=900` covers the subprocess-heavy suites) and prefer
-`-j 1` for them: the suites pass, but their subprocess bursts starve each
-other when run in parallel.
+Coverage runs (`GROVE_TESTS_ENABLE_COVERAGE=1`) execute under Guile's debug
+VM, which is far slower per build: give them `GROVE_TESTS_TIME_LIMIT=900` or
+more, and prefer `-j 1`; their subprocess bursts starve each other in
+parallel.
 
 Profile the polling watcher against a Flora-sized synthetic project (without
 starting a server or touching Flora):

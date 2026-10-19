@@ -75,54 +75,36 @@
 
 (define (forest-reusable? project forest retained-state changed removed restart-paths)
   ;;     The forest is the analysis output, so it survives exactly the
-  ;;     changes analysis cannot see.  Three questions, in order:
-  ;;
-  ;;     - A removal needs the manifest maintenance of a full build,
-  ;;       whatever kind of file it was.
-  ;;     - Documents (the collector's set) are what analysis reads
-  ;;       page-wise; an edit - and equally a newly added document,
-  ;;       which shows up as a change - must re-analyze.
-  ;;     - Anything else analysis read beyond the documents - prepared
-  ;;       outputs, analyzer-time includes, module resolutions - lands
-  ;;       in the retained analysis inputs; a change there invalidates
-  ;;       the forest too.  Load-time extra sources are excluded from
-  ;;       that set on purpose: they ride the forest, and the render
-  ;;       side plus the configuration identity check handle them.
-  ;;
-  ;;     Everything else - assets, undeclared render-time reads - only
-  ;;     invalidates render output, which rebuild-from-forest refreshes
-  ;;     against the retained forest.  Restart paths (the project file,
-  ;;     modules) never reach a build request, but a forest is never
-  ;;     trusted across them anyway.  A failing collector is a real
-  ;;     build problem: refuse reuse and let the full path report it.
+  ;;     changes analysis cannot see: documents (the collector's set,
+  ;;     including newly added ones) and anything else analysis read -
+  ;;     prepared outputs, analyzer-time includes, module resolutions.
+  ;;     Load-time extra sources ride the forest by design; removals and
+  ;;     restart paths need the full path.  Everything else only
+  ;;     invalidates render output, which rebuild-from-forest refreshes.
   (and forest retained-state
        (null? removed)
-       ;;     The watch diff and the collector can name the same file
-       ;;     differently - a symlinked source directory resolves in
-       ;;     the walk but not in the collector - and a deleted file
-       ;;     cannot be canonicalized at all: the walk spells it
-       ;;     canonically while the file list keeps the collector's
-       ;;     spelling, so such removals surface as changes with no
-       ;;     file behind them.  Both cases must re-analyze, so
-       ;;     compare canonical spellings and refuse reuse for any
-       ;;     changed path that no longer exists.
+       ;;     The watch walk and the collector can spell one file two
+       ;;     ways through a symlinked source directory, and a deleted
+       ;;     file cannot be canonicalized at all: it surfaces as a
+       ;;     change with no file behind it.  Compare canonical
+       ;;     spellings and refuse reuse for vanished paths.
        (let* ((canonical
                 (lambda (path)
                   (or (false-if-exception (canonicalize-path path)) path)))
               (documents (false-if-exception
                           (collect-project-sources project)))
-              (analysis (last-analysis-inputs)))
+              (analysis (last-analysis-inputs))
+              (document-spellings (and documents (map canonical documents)))
+              (analysis-spellings (and analysis (map canonical analysis))))
          (and documents
-              (let ((documents (map canonical documents))
-                    (analysis (and analysis (map canonical analysis))))
-                (not (any (lambda (path)
-                            (let ((spelling (canonical path)))
-                              (or (member path restart-paths string=?)
-                                  (not (file-exists? path))
-                                  (member spelling documents string=?)
-                                  (and analysis
-                                       (member spelling analysis string=?)))))
-                          changed)))))))
+              (not (any (lambda (path)
+                          (let ((spelling (canonical path)))
+                            (or (member path restart-paths string=?)
+                                (not (file-exists? path))
+                                (member spelling document-spellings string=?)
+                                (and analysis-spellings
+                                     (member spelling analysis-spellings string=?)))))
+                        changed))))))
 
 (define (worker-state-path output)
   (string-append (grove-cache-directory output) "/" build-state-name))
@@ -190,11 +172,11 @@
                       (changes (diff-known-stamps known watched))
                       (changed (car changes))
                       (removed (cadr changes))
-                       ;;     Restart paths never reach a request in
-                       ;;     normal operation - serve restarts the
-                       ;;     worker for them first - but a forest is
-                       ;;     never trusted across one anyway.
-                       (reuse? (forest-reusable? configured forest
+                      ;;     Restart paths never reach a request in
+                      ;;     normal operation - serve restarts the
+                      ;;     worker for them first - but a forest is
+                      ;;     never trusted across one anyway.
+                      (reuse? (forest-reusable? configured forest
                                                  retained-state changed removed
                                                  (cons filename modules)))
                       (profile-timings (and profile? (make-hash-table)))
@@ -270,14 +252,11 @@
     (lambda _ #t)))
 
 (define (serve-watchdog worker-pid live-path)
-  ;;     Between requests the worker checks its serve itself; during a
-  ;;     build it cannot - a renderer blocked in a child wait never
-  ;;     returns to Scheme, and with it no thread or signal handler
-  ;;     does.  A forked watchdog can.  The worker leads the process
-  ;;     group its serve tears down, so when that serve disappears the
-  ;;     watchdog signals the group itself, project subprocesses
-  ;;     included.  The group check keeps a worker that never became a
-  ;;     group leader from signaling its launcher's group instead.
+  ;;     A renderer blocked in a child wait never returns to Scheme, so
+  ;;     the worker cannot check its serve during a build; a forked
+  ;;     watchdog can.  When the serve disappears it signals the worker's
+  ;;     group, project subprocesses included.  The group check keeps a
+  ;;     worker that never became a leader from signalling its launcher.
   (let loop ()
     (if (not (= (getppid) worker-pid))
         (primitive-exit 0)
@@ -304,14 +283,9 @@
             (catch #t (lambda () (waitpid watchdog 0)) (lambda _ #t)))))))
 
 (define (await-request request-path last-serial live-path serve-pid)
-  ;;     The worker lives exactly as long as its serve does, and two
-  ;;     ties can break first.  A serve that exits cleanly removes the
-  ;;     workspace, so the .live file disappears.  A serve that dies
-  ;;     without cleanup (SIGKILL, OOM) leaves it behind, but the
-  ;;     process relationship does not: the worker is reparented, and
-  ;;     getppid stops naming its serve.  Without that second check a
-  ;;     hard-killed session would leave this process polling a
-  ;;     workspace nobody owns.
+  ;;     A serve that exits cleanly removes the workspace; one that is
+  ;;     killed leaves it behind but reparents this process.  Either way
+  ;;     there is no one left to read a result, so stop.
   (let poll ()
     (if (or (not (file-exists? live-path))
             (not (= (getppid) serve-pid)))
