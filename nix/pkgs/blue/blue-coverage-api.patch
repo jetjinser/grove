@@ -1,0 +1,19 @@
+--- a/blue/stencils/guile/test-driver.scm
++++ b/blue/stencils/guile/test-driver.scm
+@@ -260,12 +260,12 @@
+                   (compile-file test-name #:output-file object)
+                   (set! compiled-test object)
+                   (let ((coverage-data (with-code-coverage run-tests)))
++                    ;;     This Guile version's coverage-data->lcov takes no
++                    ;;     module filter; the globs only trimmed the report,
++                    ;;     and consumers match the paths they care about.
+                     (call-with-output-file cov-file
+                       (lambda (cov-port)
+-                        (let ((globs (map compile-glob-pattern cov-filter-globs)))
+-                          (coverage-data->lcov coverage-data cov-port
+-                            #:match-modules?
+-                            (lambda (path) (find (cut <> path) globs))))))))
++                        (coverage-data->lcov coverage-data cov-port)))))
+                 (lambda () (delete-file object)))))
+            (else
+             (run-tests))))))

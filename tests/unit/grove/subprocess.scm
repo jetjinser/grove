@@ -71,9 +71,10 @@
                                  (getenv "GROVE_TEST_COVERAGE_RUN") "-"
                                  (number->string (getpid)) ".cov")
                   (lambda (port)
-                    (coverage-data->lcov data port
-                      #:match-modules?
-                      (lambda (path) (string-prefix? "grove/" path)))))
+                    ;;     This Guile's coverage-data->lcov takes no
+                    ;;     module filter: write every source and let the
+                    ;;     assertions match the paths they care about.
+                    (coverage-data->lcov data port)))
                 (apply values results))))
           (lambda () (set-vm-engine! engine))))))
 
@@ -133,10 +134,14 @@
   (dump-child-environment "entry")
   (catch #t
     (lambda ()
-      (resolve-interface '(grove cli))
-      (when (coverage-enabled?) (cover-workers!))
       (covered-call
         (lambda ()
+          ;;     Resolve the CLI and install the worker wrapper inside the
+          ;;     coverage window: (grove cli) imports (grove serve), and a
+          ;;     module loaded before the debug engine takes over is never
+          ;;     instrumented.
+          (resolve-interface '(grove cli))
+          (when (coverage-enabled?) (cover-workers!))
           ((module-ref (resolve-module '(grove cli)) 'main) arguments))))
     (lambda args
       (dump-child-environment "failure")

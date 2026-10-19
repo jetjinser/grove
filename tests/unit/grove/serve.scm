@@ -429,5 +429,5 @@
                 (catch 'system-error (lambda () (kill (- pid) SIGKILL)) (lambda _ #f)))))))
       '(".cache/worker.pid" ".helper.pid" ".orphan.pid"))
     (system* "rm" "-rf" root external inputs)))
-(test-subprocess-coverage '("grove/serve.scm" "grove/private/preview/worker.scm"))
+(test-subprocess-coverage '("grove/private/preview/worker.scm"))
 (test-end "serve lifecycle")

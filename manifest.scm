@@ -46,7 +46,8 @@
        (patches
         (list (local-file "nix/pkgs/blue/blue-coverage.patch")
               (local-file "nix/pkgs/blue/blue-coverage-compile-tests.patch")
-              (local-file "nix/pkgs/blue/blue-sandman-shutdown.patch")))))
+              (local-file "nix/pkgs/blue/blue-sandman-shutdown.patch")
+              (local-file "nix/pkgs/blue/blue-coverage-api.patch")))))
     (build-system gnu-build-system)
     (arguments
      (list
