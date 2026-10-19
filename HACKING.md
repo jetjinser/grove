@@ -60,44 +60,37 @@ reuse --no-multiprocessing lint
 Each suite runs under a wall-clock limit (two minutes by default; set
 `GROVE_TESTS_TIME_LIMIT` to override), and blue runs the suites in parallel by
 default. The subprocess-heavy suites — preview, store sharing, ssh, cli — are
-sensitive to that combination: full parallel `blue check tests/unit` runs can
-kill suites at the limit and surface nondeterministic module-resolution errors
-in spawned guile subprocesses, cascading into dozens of false failures. A
-suite run alone, or the whole tree with `blue -j 1 check tests/unit`, is the
-authoritative signal; suspect the harness before the code, and reach for
-`-j 1` when diagnosing interference between parallel fixtures.
+the slowest, so when a full parallel `blue check tests/unit` run reports
+cascading failures, suspect the harness before the code: re-run the failing
+suite alone, and reach for `blue -j 1 check tests/unit` when diagnosing
+interference between parallel fixtures.
 
-The module-resolution errors have a known mechanism. Blue forks each suite
-subprocess out of its multi-threaded fibers scheduler, and on the Guile 3.0.11
-this project pins, that fork runs under a GC-disable workaround that blue
-itself documents as undefined behavior; suite children can therefore die at
-startup (empty logs, empty suite error messages) or fail resolving modules
-they resolved in earlier runs — with a different suite set each time. Which
-suites are hit is random; the application code is not involved. Set
+Blue's scheduler shutdown used to corrupt the harness this way. `stop-sandman`
+wrote the termination byte and then read the same self-pipe the sandman fiber
+was already waiting on; fibers allow a single waiter per descriptor, so the
+second reader corrupted the scheduler's descriptor bookkeeping. The result was
+either a silent hang (the last suite's tests print, then nothing, with no
+error) or dozens of unrelated suites failing with empty error messages. The
+fix is `nix/pkgs/blue/blue-sandman-shutdown.patch`: the sandman fiber now
+signals a channel when it leaves its loop and `stop-sandman` waits on that
+message instead of reading the descriptor. The patch is in both the Guix
+manifest and the Nix package; with it, repeated full parallel runs are stable.
+If a hang or a cascade of empty suite errors reappears, check that the patch
+still applies to the blue pin before looking at the code under test. Set
 `GROVE_TEST_CHILD_DEBUG=1` to make every spawned subprocess dump its load
-paths under `/tmp` for comparison, and re-run the failing suite alone: it
-passes.
+paths under `/tmp` for comparison.
 
-Blue's scheduler shutdown has a second defect, patched here in
-`nix/pkgs/blue/blue-sandman-shutdown.patch`. `stop-sandman` used to write the
-termination byte and then read the same self-pipe that the sandman fiber was
-already waiting on. Fibers allow a single waiter per descriptor, so the second
-reader corrupts the scheduler's descriptor bookkeeping: shutdown either hangs
-silently (the reported symptom: the last suite's tests print, then nothing) or
-the corrupted scheduler fails unrelated suites with empty errors. The patch
-replaces the second read with a channel message from the sandman fiber, and
-the patch is in both the Guix manifest and the Nix package.
-
-Replacing blue's fork with Guile's `spawn` (the documented multi-threaded
-option) does not work here, and a patch attempt was reverted after testing:
-`apply-in-subprocess` passes the parent's module state to the child by
-inheritance, not by re-execution. The suite child relies on blue's redefinition
-of `primitive-load-path` (installed in the root module while the blueprint
-loads) to resolve modules; `spawn` starts a fresh Guile, which loses that
-redefinition and fails on the first module lookup. A working fix would have to
-make blue's module resolution independent of in-process state — upstream work,
-not a local patch. `popen`'s non-test users (`blue build`'s external commands)
-tolerate `spawn` fine; the obstacle is specifically `apply-in-subprocess`.
+Two other mechanisms were investigated and are not the cause. Blue's suite
+subprocesses are forked out of a multi-threaded fibers scheduler under a
+GC-disable workaround that blue documents as undefined behavior on Guile
+3.0.11, but no failures have reproduced since the shutdown fix. Replacing that
+fork with Guile's `spawn` does not work: `apply-in-subprocess` passes module
+state to the child by inheritance, and the suite child relies on blue's
+redefinition of `primitive-load-path` (installed in the root module while the
+blueprint loads); `spawn` starts a fresh Guile, which loses the redefinition
+and fails on the first module lookup. `popen`'s non-test users (`blue build`'s
+external commands) tolerate `spawn` fine; the obstacle is specifically
+`apply-in-subprocess`.
 
 Profile the polling watcher against a Flora-sized synthetic project (without
 starting a server or touching Flora):
