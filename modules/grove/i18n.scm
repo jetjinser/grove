@@ -22,7 +22,10 @@
             make-message-catalog
             message-catalog-default
             message-catalog-entries
-            message))
+            default-message-catalog
+            merge-message-catalogs
+            message
+            message-format))
 
 ;; Grove's i18n primitives are language tags and chrome messages. They carry no
 ;; document content; translated trees and their presentation live elsewhere.
@@ -175,3 +178,59 @@ then the key name."
     (or (lookup (locale-fallbacks locale))
         (lookup (locale-fallbacks (message-catalog-default catalog)))
         (symbol->string key))))
+
+;; Chrome messages for the renderers' navigation, skip link, tree labels,
+;; metadata, and backmatter headings.  Projects extend the catalog through
+;; the renderer's `#:messages' option.
+(define default-message-catalog
+  (make-message-catalog
+    '(("en" . ((nav-site . "Site")
+               (nav-contents . "Contents")
+               (skip-to-content . "Skip to content")
+               (tree-open-page . "Open tree ~a as a page")
+               (metadata-updated . "updated ~a")
+               (backmatter-context . "Context")
+               (backmatter-references . "References")
+               (backmatter-backlinks . "Backlinks")
+               (backmatter-related . "Related")))
+      ("zh-Hans" . ((nav-site . "站点导航")
+                    (nav-contents . "目录")
+                    (skip-to-content . "跳到正文")
+                    (tree-open-page . "将树 ~a 作为页面打开")
+                    (metadata-updated . "更新于 ~a")
+                    (backmatter-context . "上下文")
+                    (backmatter-references . "参考文献")
+                    (backmatter-backlinks . "反向链接")
+                    (backmatter-related . "相关"))))))
+
+(define* (message-format catalog key arguments
+                          #:optional (locale (message-catalog-default catalog)))
+  "Look up KEY in CATALOG for LOCALE and format its message with ARGUMENTS."
+  (unless (list? arguments)
+    (error "message-format requires an argument list" arguments))
+  (apply simple-format #f (message catalog key locale) arguments))
+
+(define (merge-messages base override)
+  (append override
+          (filter (lambda (entry)
+                    (not (assq (car entry) override)))
+                  base)))
+
+(define (merge-message-catalogs base override)
+  "Layer OVERRIDE over BASE per locale and key, so a partial project
+catalog keeps the built-in messages for everything it does not name."
+  (unless (and (message-catalog? base) (message-catalog? override))
+    (error "merge-message-catalogs requires two message catalogs" base override))
+  (let* ((base-entries (message-catalog-entries base))
+         (override-entries (message-catalog-entries override))
+         (locales (delete-duplicates
+                    (append (map car base-entries)
+                            (map car override-entries))
+                    string=?)))
+    (make-message-catalog
+      (map (lambda (locale)
+             (cons locale
+                   (merge-messages (or (assoc-ref base-entries locale) '())
+                                   (or (assoc-ref override-entries locale) '()))))
+           locales)
+      #:default (message-catalog-default override))))
