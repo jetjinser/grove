@@ -1,13 +1,10 @@
-;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
-;;;
-;;; SPDX-License-Identifier: GPL-3.0-or-later
-
 (define-module (forester render html)
   #:use-module (grove build)
   #:use-module (grove build state)
   #:use-module (grove i18n)
   #:use-module (grove string-fun)
   #:use-module (forester render artifact)
+  #:use-module (forester render labels)
   #:use-module (forester site)
   #:use-module (grove ir)
   #:use-module (grove output)
@@ -29,27 +26,9 @@
             default-metadata-items
             make-html-renderer))
 
-(define current-chrome-locale (make-parameter "en"))
-(define current-message-catalog (make-parameter default-message-catalog))
-
-(define (resolve-chrome-locale locale messages)
-  (cond
-    ((not locale) (message-catalog-default messages))
-    ((locale? locale) (locale-tag locale))
-    ((string? locale) (locale-tag (make-locale locale)))
-    (else (error "HTML renderer locale must be a locale, tag, or #f" locale))))
-
-(define (resolve-chrome-catalog messages)
-  (if (eq? messages default-message-catalog)
-      messages
-      (merge-message-catalogs default-message-catalog messages)))
-
-(define (chrome-message key)
-  (message (current-message-catalog) key (current-chrome-locale)))
-
-(define (chrome-message-format key arguments)
-  (message-format (current-message-catalog) key arguments
-                  (current-chrome-locale)))
+(define (chrome-date text)
+  (let ((locale (current-chrome-locale-object)))
+    (if locale (format-date locale text #:style 'long) text)))
 
 (define (link-url routes reference element)
   (let ((fragment (and element (content-element-property element 'fragment))))
@@ -177,12 +156,13 @@ hooks replace this wholesale; compose with it to extend."
         (updated (assq-ref (site-page-metadata page) 'updated)))
     `(,@(if published
             `((li (@ (class "meta-item"))
-                  (time (@ (datetime ,published)) ,published)))
+                  (time (@ (datetime ,published)) ,(chrome-date published))))
             '())
       ,@(if updated
             `((li (@ (class "meta-item"))
                   (time (@ (datetime ,updated))
-                        ,(chrome-message-format 'metadata-updated (list updated)))))
+                        ,(chrome-message-format
+                           'metadata-updated (list (chrome-date updated))))))
             '()))))
 
 (define (metadata-sxml items)
@@ -456,9 +436,15 @@ that navigation links can use this helper."
                        routes mathjax-src inline-stylesheets?
                        #:key (html-attributes '()) (head '()) (site-nav '())
                        (home-link #f) (scripts '()) (current-page #f))
-  (let ((site-nav (if (procedure? site-nav)
-                      (site-nav current-page)
-                      site-nav)))
+  (let* ((site-nav (if (procedure? site-nav)
+                       (site-nav current-page)
+                       site-nav))
+         (locale (current-chrome-locale-object))
+         (html-attributes
+           (if locale
+               (merge-html-attributes (locale-html-attributes locale)
+                                      html-attributes)
+               html-attributes)))
     `(html
      ,@(if (null? html-attributes)
            '()
@@ -618,8 +604,7 @@ to the lane, and an in-place numbered marker links to it."
   (set! labels
     (normalize-backmatter-labels
       labels
-      #:defaults (localized-backmatter-labels (current-message-catalog)
-                                              (current-chrome-locale))))
+      #:defaults (localized-backmatter-labels)))
   (set! routes (resolve-html-routes forest routes))
   (check-html-input forest style routes mathjax-src)
   (let ((style-artifacts (html-style-artifacts style)))
@@ -711,15 +696,12 @@ to the lane, and an in-place numbered marker links to it."
                        (side-lane '())
                        (locale #f)
                        (messages default-message-catalog))
-  (parameterize ((current-message-catalog (resolve-chrome-catalog messages))
-                 (current-chrome-locale
-                   (resolve-chrome-locale locale (resolve-chrome-catalog messages))))
+  (with-chrome-locale (locale messages)
     (validate-backmatter-sections backmatter)
     (set! backmatter-labels
       (normalize-backmatter-labels
         backmatter-labels
-        #:defaults (localized-backmatter-labels (current-message-catalog)
-                                                (current-chrome-locale))))
+        #:defaults (localized-backmatter-labels)))
     (check-reference-taxon-id reference-taxon-id)
     (set! routes (resolve-html-routes forest routes))
     (check-html-input forest style routes mathjax-src)
@@ -770,15 +752,12 @@ errors when the count outlives the list."
                              (side-lane '())
                              (locale #f)
                              (messages default-message-catalog))
-  (parameterize ((current-message-catalog (resolve-chrome-catalog messages))
-                 (current-chrome-locale
-                   (resolve-chrome-locale locale (resolve-chrome-catalog messages))))
+  (with-chrome-locale (locale messages)
     (validate-backmatter-sections backmatter)
     (set! backmatter-labels
       (normalize-backmatter-labels
         backmatter-labels
-        #:defaults (localized-backmatter-labels (current-message-catalog)
-                                                (current-chrome-locale))))
+        #:defaults (localized-backmatter-labels)))
     (check-reference-taxon-id reference-taxon-id)
     (set! routes (resolve-html-routes forest routes))
     (check-html-input forest style routes mathjax-src)
@@ -878,9 +857,7 @@ errors when the count outlives the list."
                                    (html-style-artifacts style))))
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
-            (parameterize ((current-message-catalog (resolve-chrome-catalog messages))
-                           (current-chrome-locale
-                             (resolve-chrome-locale locale (resolve-chrome-catalog messages))))
+            (with-chrome-locale (locale messages)
               (if (any (lambda (entry)
                          (any (lambda (path) (member path changed string=?))
                               (highlighter-inputs (cdr entry)))) highlighters)

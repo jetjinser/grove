@@ -340,4 +340,33 @@
   (list bilingual-stylesheet)
   (html-style-stylesheets default-bilingual-style))
 
+
+;;; Formatting
+
+(test-equal "English long dates"
+  "September 27, 2026" (format-date "en" "2026-09-27" #:style 'long))
+(test-equal "English medium dates"
+  "Sep 27, 2026" (format-date "en" "2026-09-27"))
+(test-equal "Chinese dates"
+  "2026年9月27日" (format-date "zh-Hans" "2026-09-27"))
+(test-equal "unsupported locales keep the ISO date"
+  "2026-09-27" (format-date "fr" "2026-09-27"))
+(test-equal "unparseable dates pass through"
+  "not-a-date" (format-date "en" "not-a-date"))
+(test-equal "numbers group by threes"
+  "1,234,567" (format-number "en" 1234567))
+(test-equal "negative numbers keep their sign"
+  "-1,234" (format-number "en" -1234))
+(test-equal "English singular"
+  "~a item" (plural "en" 1 '((one . "~a item") (other . "~a items"))))
+(test-equal "English plural"
+  "~a items" (plural "en" 2 '((one . "~a item") (other . "~a items"))))
+(test-equal "Chinese has a single plural form"
+  "~a 条" (plural "zh-Hans" 1 '((one . "~a 条") (other . "~a 条"))))
+
+(test-assert "text output localizes chrome labels"
+  (let ((text (assoc-ref (site->text bilingual-forest #:locale "zh-Hans")
+                         "hello")))
+    (and (string-contains text "首页")
+         (not (string-contains text "Home")))))
 (test-end "forester i18n")

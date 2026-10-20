@@ -11,6 +11,8 @@
   #:use-module (grove render text)
   #:use-module (forester render text routes)
   #:use-module (forester backmatter)
+  #:use-module (forester render labels)
+  #:use-module (grove i18n)
   #:use-module (forester i18n)
   #:use-module (grove site)
   #:use-module (srfi srfi-1)
@@ -92,7 +94,7 @@ HTML renderer so text and HTML address occurrences identically."
                  (entries target-id (string-append anchor "--") (string-append indent "  ")))))
            (tree-occurrences forest id) (iota (length (tree-occurrences forest id)) 1))))
   (let ((items (entries (site-page-id page) "" "")))
-    (if (string-null? items) "" (string-append (title-text "Contents") "\n" items "\n"))))
+    (if (string-null? items) "" (string-append (title-text (chrome-message 'nav-contents)) "\n" items "\n"))))
 
 (define (text-backlink-reference forest page-id routes reference indent)
   ;;     Title plus the anchored path; the citing context's alt text
@@ -193,7 +195,7 @@ HTML renderer so text and HTML address occurrences identically."
                 (char-set #\newline))))
     (string-append
       (title-text (site-page-title page))
-      "\nHome: "
+      "\n" (chrome-message 'home) ": "
       (text-relative-path page-path (text-index-path routes))
       "\n\n"
       (table-of-contents-text forest page)
@@ -244,52 +246,63 @@ HTML renderer so text and HTML address occurrences identically."
                      (routes (make-text-routes))
                      (backmatter default-backmatter-sections)
                      (backmatter-labels '())
-                     (reference-taxon-id default-reference-taxon-id))
-  (validate-backmatter-sections backmatter)
-  (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
-  (check-reference-taxon-id reference-taxon-id)
-  (unless (forest? forest)
-    (error "Forester text renderer requires a forest" forest))
-  (check-text-routes forest routes)
-  (let ((site (site forest)))
-    (cons (cons "index" (index->text forest routes))
-          (map (lambda (page)
-                 (cons (site-page-id page)
-                       (page->text forest page routes backmatter
-                                   backmatter-labels reference-taxon-id)))
-               (pages forest)))))
+                     (reference-taxon-id default-reference-taxon-id)
+                     (locale #f)
+                     (messages default-message-catalog))
+  (with-chrome-locale (locale messages)
+    (validate-backmatter-sections backmatter)
+    (set! backmatter-labels
+      (normalize-backmatter-labels backmatter-labels
+        #:defaults (localized-backmatter-labels)))
+    (check-reference-taxon-id reference-taxon-id)
+    (unless (forest? forest)
+      (error "Forester text renderer requires a forest" forest))
+    (check-text-routes forest routes)
+    (let ((site (site forest)))
+      (cons (cons "index" (index->text forest routes))
+            (map (lambda (page)
+                   (cons (site-page-id page)
+                         (page->text forest page routes backmatter
+                                     backmatter-labels reference-taxon-id)))
+                 (pages forest))))))
 
 (define* (render-text forest #:key
                       (routes (make-text-routes))
                       (backmatter default-backmatter-sections)
                       (backmatter-labels '())
-                      (reference-taxon-id default-reference-taxon-id))
-  (validate-backmatter-sections backmatter)
-  (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
-  (check-reference-taxon-id reference-taxon-id)
-  (let* ((site (site forest))
-         (sources (source-paths forest)))
-    (check-text-routes forest routes)
-    (cons
-      (make-artifact (text-index-path routes)
-                     (index->text forest routes)
-                     sources)
-      (map (lambda (page)
-             (make-artifact
-               (text-page-path routes (site-page-id page))
-               (page->text forest page routes backmatter backmatter-labels
-                           reference-taxon-id)
-               (page-source-paths forest page)))
-           (pages forest)))))
+                      (reference-taxon-id default-reference-taxon-id)
+                      (locale #f)
+                      (messages default-message-catalog))
+  (with-chrome-locale (locale messages)
+    (validate-backmatter-sections backmatter)
+    (set! backmatter-labels
+      (normalize-backmatter-labels backmatter-labels
+        #:defaults (localized-backmatter-labels)))
+    (check-reference-taxon-id reference-taxon-id)
+    (let* ((site (site forest))
+           (sources (source-paths forest)))
+      (check-text-routes forest routes)
+      (cons
+        (make-artifact (text-index-path routes)
+                       (index->text forest routes)
+                       sources)
+        (map (lambda (page)
+               (make-artifact
+                 (text-page-path routes (site-page-id page))
+                 (page->text forest page routes backmatter backmatter-labels
+                             reference-taxon-id)
+                 (page-source-paths forest page)))
+             (pages forest))))))
 
 (define* (make-text-renderer #:key (prefix #f)
                                       (routes (make-text-routes))
                                       (backmatter default-backmatter-sections)
                                       (backmatter-labels '())
                                       (reference-taxon-id default-reference-taxon-id)
+                                      (locale #f)
+                                      (messages default-message-catalog)
                                       (cache? #t))
   (validate-backmatter-sections backmatter)
-  (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
   (check-reference-taxon-id reference-taxon-id)
   (unless (or (not prefix) (artifact-path? prefix))
     (error "Forester text output prefix must be a relative path or #f" prefix))
@@ -302,7 +315,9 @@ HTML renderer so text and HTML address occurrences identically."
                                                 #:backmatter-labels
                                                 backmatter-labels
                                                 #:reference-taxon-id
-                                                reference-taxon-id)))
+                                                reference-taxon-id
+                                                #:locale locale
+                                                #:messages messages)))
                     (if prefix
                         (prefix-artifacts prefix artifacts)
                         artifacts)))))
@@ -311,9 +326,13 @@ HTML renderer so text and HTML address occurrences identically."
           (lambda (forest)
             (list 'text prefix (site-title (site forest)) (site-description (site forest))
                   (text-index-path routes)
-                  backmatter backmatter-labels reference-taxon-id))
+                  backmatter backmatter-labels reference-taxon-id
+                  (resolve-chrome-locale locale (resolve-chrome-catalog messages))
+                  (message-catalog-default (resolve-chrome-catalog messages))
+                  (message-catalog-entries (resolve-chrome-catalog messages))))
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
-            (render-text-changed forest prefix routes backmatter
-                                 backmatter-labels reference-taxon-id
-                                 changed old-artifacts)))))
+            (with-chrome-locale (locale messages)
+              (render-text-changed forest prefix routes backmatter
+                                   backmatter-labels reference-taxon-id
+                                   changed old-artifacts))))))

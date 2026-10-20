@@ -3,7 +3,6 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester backmatter)
-  #:use-module (grove i18n)
   #:use-module (grove string-fun)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
@@ -13,7 +12,6 @@
             default-reference-taxon-id
             validate-backmatter-sections
             normalize-backmatter-labels
-            localized-backmatter-labels
             check-reference-taxon-id))
 
 (define default-reference-taxon-id "reference")
@@ -50,16 +48,6 @@
            labels))
   (map (match-lambda [(a . b) (cons a (or (assq-ref labels a) b))])
        defaults))
-
-(define (localized-backmatter-labels catalog locale)
-  "Default backmatter headings from CATALOG for LOCALE."
-  (map (lambda (section)
-         (cons section
-               (message catalog
-                        (string->symbol
-                          (string-append "backmatter-" (symbol->string section)))
-                        locale)))
-       default-backmatter-sections))
 
 (define (check-reference-taxon-id id)
   (unless (non-empty-string? id)

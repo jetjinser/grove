@@ -9,6 +9,8 @@
   #:use-module (grove render text)
   #:use-module (forester render text routes)
   #:use-module (forester backmatter)
+  #:use-module (forester render labels)
+  #:use-module (grove i18n)
   #:use-module (forester i18n)
   #:use-module (forester site)
   #:use-module (grove site)
@@ -269,7 +271,7 @@
                      (text-relative-path
                        (text-page-path routes (site-page-id page))
                        (text-index-path routes)))
-                   "Home")
+                   (chrome-message 'home))
         "\n" body
         (page-backmatter forest page routes backmatter backmatter-labels
                          reference-taxon-id)
@@ -287,50 +289,61 @@
                         (routes (default-gemtext-routes))
                         (backmatter default-backmatter-sections)
                         (backmatter-labels '())
-                        (reference-taxon-id default-reference-taxon-id))
-  (validate-backmatter-sections backmatter)
-  (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
-  (check-reference-taxon-id reference-taxon-id)
-  (unless (forest? forest)
-    (error "Forester Gemtext renderer requires a forest" forest))
-  (check-routes forest routes)
-  (cons (cons "index" (index->gemtext forest routes))
-        (map (lambda (page)
-               (cons (site-page-id page)
-                     (page->gemtext forest routes page backmatter
-                                    backmatter-labels reference-taxon-id)))
-             (pages forest))))
+                        (reference-taxon-id default-reference-taxon-id)
+                        (locale #f)
+                        (messages default-message-catalog))
+  (with-chrome-locale (locale messages)
+    (validate-backmatter-sections backmatter)
+    (set! backmatter-labels
+      (normalize-backmatter-labels backmatter-labels
+        #:defaults (localized-backmatter-labels)))
+    (check-reference-taxon-id reference-taxon-id)
+    (unless (forest? forest)
+      (error "Forester Gemtext renderer requires a forest" forest))
+    (check-routes forest routes)
+    (cons (cons "index" (index->gemtext forest routes))
+          (map (lambda (page)
+                 (cons (site-page-id page)
+                       (page->gemtext forest routes page backmatter
+                                      backmatter-labels reference-taxon-id)))
+               (pages forest)))))
 
 (define* (render-gemtext forest #:key
                          (routes (default-gemtext-routes))
                          (backmatter default-backmatter-sections)
                          (backmatter-labels '())
-                         (reference-taxon-id default-reference-taxon-id))
-  (validate-backmatter-sections backmatter)
-  (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
-  (check-reference-taxon-id reference-taxon-id)
-  (unless (forest? forest)
-    (error "Forester Gemtext renderer requires a forest" forest))
-  (check-routes forest routes)
-  (cons (make-artifact (text-index-path routes)
-                       (index->gemtext forest routes)
-                       (source-paths forest))
-        (map (lambda (page)
-               (make-artifact
-                 (text-page-path routes (site-page-id page))
-                 (page->gemtext forest routes page backmatter
-                                backmatter-labels reference-taxon-id)
-                 (page-source-paths forest page)))
-             (pages forest))))
+                         (reference-taxon-id default-reference-taxon-id)
+                         (locale #f)
+                         (messages default-message-catalog))
+  (with-chrome-locale (locale messages)
+    (validate-backmatter-sections backmatter)
+    (set! backmatter-labels
+      (normalize-backmatter-labels backmatter-labels
+        #:defaults (localized-backmatter-labels)))
+    (check-reference-taxon-id reference-taxon-id)
+    (unless (forest? forest)
+      (error "Forester Gemtext renderer requires a forest" forest))
+    (check-routes forest routes)
+    (cons (make-artifact (text-index-path routes)
+                         (index->gemtext forest routes)
+                         (source-paths forest))
+          (map (lambda (page)
+                 (make-artifact
+                   (text-page-path routes (site-page-id page))
+                   (page->gemtext forest routes page backmatter
+                                  backmatter-labels reference-taxon-id)
+                   (page-source-paths forest page)))
+               (pages forest)))))
 
 (define* (make-gemtext-renderer #:key (prefix #f)
                                 (routes (default-gemtext-routes))
                                 (backmatter default-backmatter-sections)
                                 (backmatter-labels '())
                                 (reference-taxon-id default-reference-taxon-id)
+                                (locale #f)
+                                (messages default-message-catalog)
                                 (cache? #t))
   (validate-backmatter-sections backmatter)
-  (set! backmatter-labels (normalize-backmatter-labels backmatter-labels))
   (check-reference-taxon-id reference-taxon-id)
   (unless (text-routes? routes)
     (error "Gemtext renderer requires text routes" routes))
@@ -341,7 +354,9 @@
                                     #:routes routes
                                     #:backmatter backmatter
                                     #:backmatter-labels backmatter-labels
-                                    #:reference-taxon-id reference-taxon-id)))
+                                    #:reference-taxon-id reference-taxon-id
+                                    #:locale locale
+                                    #:messages messages)))
                     (if prefix (prefix-artifacts prefix artifacts) artifacts)))))
     (make-cached-renderer render #:cache? cache?
       #:configuration
@@ -353,4 +368,7 @@
                    (pages forest))
               (text-index-path routes)
               backmatter backmatter-labels reference-taxon-id
-              (site-title (site forest)) (site-description (site forest)))))))
+              (site-title (site forest)) (site-description (site forest))
+              (resolve-chrome-locale locale (resolve-chrome-catalog messages))
+              (message-catalog-default (resolve-chrome-catalog messages))
+              (message-catalog-entries (resolve-chrome-catalog messages)))))))

@@ -27,7 +27,8 @@ to them.
 ## Chrome labels
 
 Every built-in label (site navigation, contents, skip link, tree link,
-updated date, backmatter headings) comes from a message catalog.  The
+updated date, backmatter headings) comes from a message catalog; the text and
+Gemtext renderers use the same catalog for their Home and Contents labels.  The
 built-in catalog covers `en` and `zh-Hans`; select it with `#:locale` and
 extend it with `#:messages`:
 
@@ -45,8 +46,8 @@ headings; `#:backmatter-labels` remains available as an explicit override.
 
 ## What a project supplies
 
-- **Page language and direction**: pass `#:html-attributes` with `lang`
-  and `dir` (or rely on the locale once the renderer derives them).
+- **Page language and direction**: pass `#:locale` and the renderer derives
+  `lang`/`dir`; `#:html-attributes` entries override the derived values.
   Without `lang`, screen readers guess the pronunciation.
 - **Navigation**: build entries with `site-nav-link`, or add
   `aria-current` yourself.  The renderer cannot infer which project link

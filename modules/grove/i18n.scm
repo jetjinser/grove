@@ -8,6 +8,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
+  #:use-module (ice-9 format)
   #:use-module (ice-9 match)
   #:use-module (ice-9 unicode)
   #:export (locale?
@@ -25,7 +26,10 @@
             default-message-catalog
             merge-message-catalogs
             message
-            message-format))
+            message-format
+            format-date
+            format-number
+            plural))
 
 ;; Grove's i18n primitives are language tags and chrome messages. They carry no
 ;; document content; translated trees and their presentation live elsewhere.
@@ -187,6 +191,7 @@ then the key name."
     '(("en" . ((nav-site . "Site")
                (nav-contents . "Contents")
                (skip-to-content . "Skip to content")
+               (home . "Home")
                (tree-open-page . "Open tree ~a as a page")
                (metadata-updated . "updated ~a")
                (backmatter-context . "Context")
@@ -196,6 +201,7 @@ then the key name."
       ("zh-Hans" . ((nav-site . "站点导航")
                     (nav-contents . "目录")
                     (skip-to-content . "跳到正文")
+                    (home . "首页")
                     (tree-open-page . "将树 ~a 作为页面打开")
                     (metadata-updated . "更新于 ~a")
                     (backmatter-context . "上下文")
@@ -234,3 +240,80 @@ catalog keeps the built-in messages for everything it does not name."
                                    (or (assoc-ref override-entries locale) '()))))
            locales)
       #:default (message-catalog-default override))))
+
+(define english-months
+  '("January" "February" "March" "April" "May" "June"
+    "July" "August" "September" "October" "November" "December"))
+
+(define (parse-iso-date text)
+  (and (string? text)
+       (let ((parts (string-split text #\-)))
+         (and (= (length parts) 3)
+              (every (lambda (part)
+                       (and (not (string-null? part))
+                            (string-every char-set:digit part)))
+                     parts)
+              (map string->number parts)))))
+
+(define* (format-date locale date #:key (style 'medium))
+  "Format an ISO YYYY-MM-DD DATE for LOCALE.  Unparseable dates and
+locales without date data return DATE unchanged."
+  (let ((parts (parse-iso-date date)))
+    (if (not parts)
+        date
+        (let* ((locale (if (locale? locale) locale (make-locale locale)))
+               (lang (locale-lang locale))
+               (year (car parts))
+               (month (cadr parts))
+               (day (caddr parts)))
+          (cond
+            ((string=? lang "zh")
+             (if (eq? style 'short)
+                 (format #f "~4,'0d-~2,'0d-~2,'0d" year month day)
+                 (format #f "~d年~d月~d日" year month day)))
+            ((string=? lang "en")
+             (cond
+               ((eq? style 'short)
+                (format #f "~4,'0d-~2,'0d-~2,'0d" year month day))
+               ((eq? style 'long)
+                (format #f "~a ~d, ~d"
+                        (list-ref english-months (1- month)) day year))
+               (else
+                (format #f "~a ~d, ~d"
+                        (substring (list-ref english-months (1- month)) 0 3)
+                        day year))))
+            (else date))))))
+
+(define (group-digits digits)
+  (let loop ((end (string-length digits)) (acc '()))
+    (if (<= end 3)
+        (string-concatenate (cons (substring digits 0 end) acc))
+        (loop (- end 3)
+              (cons (string-append "," (substring digits (- end 3) end)) acc)))))
+
+(define* (format-number locale number #:key (group? #t))
+  "Format an integer NUMBER with the locale's digit grouping.  Other
+number types pass through number->string."
+  (if (not (integer? number))
+      (number->string number)
+      (let* ((text (number->string number))
+             (negative? (string-prefix? "-" text))
+             (digits (if negative? (substring text 1) text))
+             (digits (if group? (group-digits digits) digits)))
+        (if negative? (string-append "-" digits) digits))))
+
+(define (plural-category lang count)
+  (cond
+    ((string=? lang "zh") 'other)
+    ((string=? lang "en") (if (= count 1) 'one 'other))
+    (else (if (= count 1) 'one 'other))))
+
+(define* (plural locale count forms)
+  "Choose the plural form for COUNT from FORMS, an alist of CLDR
+categories such as one and other.  The caller formats the chosen string."
+  (let* ((locale (if (locale? locale) locale (make-locale locale)))
+         (category (plural-category (locale-lang locale) count)))
+    (or (assq-ref forms category)
+        (assq-ref forms 'other)
+        (assq-ref forms 'one)
+        "")))

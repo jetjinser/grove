@@ -8,7 +8,9 @@
   #:use-module (srfi srfi-64)
   #:use-module (ice-9 textual-ports)
   #:use-module (forester backmatter)
+  #:use-module (forester render labels)
   #:use-module (forester render html)
+  #:use-module (forester render text)
   #:use-module (forester site)
   #:use-module (grove i18n)
   #:use-module (grove ir)
@@ -17,16 +19,21 @@
   #:use-module (tests unit forester fixtures))
 
 (test-begin "forester accessibility")
+
+(define (a11y-forest)
+  (make-forest
+    (make-site
+      (list (make-site-page
+              "root" "Root"
+              (evaluate-document
+                "@subtree{@title{Inline section}@paragraph{Body text.}}")
+              #:metadata '((published . "2026-09-27")
+                           (updated . "2026-09-28")))))))
+
 (define (render-site . options)
-  (let* ((root (make-site-page
-                 "root" "Root"
-                 (evaluate-document
-                   "@subtree{@title{Inline section}@paragraph{Body text.}}")
-                 #:metadata '((published . "2026-09-27")
-                              (updated . "2026-09-28"))))
-         (forest (make-forest (make-site (list root))))
-         (routes (make-html-routes #:home-page "root")))
-    (apply site->html forest #:routes routes #:mathjax-src #f options)))
+  (let ((routes (make-html-routes #:home-page "root")))
+    (apply site->html (a11y-forest)
+           #:routes routes #:mathjax-src #f options)))
 
 (define (render-page . options)
   (assoc-ref (apply render-site options) "root"))
@@ -51,12 +58,12 @@
          (string-contains page "aria-label=\"目录\"")))
   (test-assert "updated dates localize without losing the machine value"
     (string-contains page
-                     "<time datetime=\"2026-09-28\">更新于 2026-09-28</time>")))
+                     "<time datetime=\"2026-09-28\">更新于 2026年9月28日</time>")))
 
 (test-equal "backmatter headings localize"
   "参考文献"
-  (assq-ref (localized-backmatter-labels default-message-catalog "zh-Hans")
-            'references))
+  (with-chrome-locale ("zh-Hans" default-message-catalog)
+    (assq-ref (localized-backmatter-labels) 'references)))
 
 (let ((routes (make-html-routes #:home-page "root")))
   (test-assert "site navigation links mark the current page"
@@ -93,4 +100,19 @@
   (test-assert "default styles keep focus visible"
     (string-contains css ":focus-visible")))
 
+
+(let ((page (render-page #:locale "ar-EG")))
+  (test-assert "locale derives the document language and direction"
+    (string-contains page "<html lang=\"ar-EG\" dir=\"rtl\">")))
+
+(let ((page (render-page #:locale "zh-Hans"
+                         #:html-attributes '((lang . "zh-Hant")))))
+  (test-assert "explicit html attributes override the locale"
+    (and (string-contains page "lang=\"zh-Hant\"")
+         (string-contains page "dir=\"ltr\""))))
+
+(test-assert "text output localizes its chrome"
+  (let ((text (assoc-ref (site->text (a11y-forest) #:locale "zh-Hans") "root")))
+    (and (string-contains text "目录")
+         (string-contains text "首页"))))
 (test-end "forester accessibility")
