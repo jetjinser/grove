@@ -90,7 +90,13 @@
       "@use-modules[(tests unit forester linked commands)]\n@title{Unlinked}\n@paragraph{Standalone.}")
     (write-test-file
       (string-append source-directory "/orphan.plant")
-      "@use-modules[(tests unit forester linked commands)]\n@title{Orphan}\n@paragraph{Unreferenced.}"))
+      "@use-modules[(tests unit forester linked commands)]\n@title{Orphan}\n@paragraph{Unreferenced.}")
+    (write-test-file
+      (string-append source-directory "/unicode.plant")
+      "@use-modules[(tests unit forester linked commands)]\n@title{Unicode topics}\n@taxon[\"Straße\"]\n@paragraph{Unicode topics.}")
+    (write-test-file
+      (string-append source-directory "/unicode-accent.plant")
+      "@use-modules[(tests unit forester linked commands)]\n@title{Unicode accent}\n@taxon[\"café\"]\n@paragraph{Unicode accents.}"))
   (lambda ()
     (let* ((project
              (make-site-project
@@ -234,7 +240,11 @@
                      (list
                        (read-page (string-append source-directory "/algebra.plant"))
                        (read-page
-                         (string-append mathematics-directory "/limits.plant")))))))
+                         (string-append mathematics-directory "/limits.plant"))
+                       (read-page
+                         (string-append source-directory "/unicode.plant"))
+                       (read-page
+                         (string-append source-directory "/unicode-accent.plant")))))))
           (test-equal "miniKanren queries topic membership and labels"
             '(("algebra" "mathematics") ("limits" "mathematics"))
             (query (page-id label)
@@ -258,6 +268,26 @@
           (test-equal "topic queries can select tags separately from taxa"
             '("algebra")
             (topic-page-ids (content-node-relation forest) "algebra" 'tag))
+          (test-equal "topic selectors fold case across the full Unicode range"
+            '("unicode")
+            (topic-page-ids (content-node-relation forest) "STRASSE" 'taxon))
+          (test-equal "topic selectors match canonically equivalent spellings"
+            '("unicode-accent")
+            (topic-page-ids
+              (content-node-relation forest)
+              (string-append "cafe" (string (integer->char #x301)))
+              'taxon))
+          (test-equal "enumerated topics keep their canonical spellings"
+            '("straße")
+            (query (topic)
+              (fresh (label)
+                (topic-membero (content-node-relation forest) topic "unicode" label))))
+          (test-equal "enumerated accented topics keep composed spellings"
+            '("café")
+            (query (topic)
+              (fresh (label)
+                (topic-membero
+                  (content-node-relation forest) topic "unicode-accent" label))))
           (let* ((nodes (content-node-relation forest))
                  (page-data (page-relation forest))
                  (paragraph-ids
@@ -547,8 +577,11 @@
             (build-report-modified-sources changed-module))
           (test-equal "shared module changes affect all rendered pages"
             '("index.html" "notes/limits.html"
-              "notes/orphan.html" "notes/unlinked.html" "notes/quadratic-equations.html" "text/index.txt"
+              "notes/orphan.html" "notes/unicode-accent.html"
+              "notes/unicode.html" "notes/unlinked.html"
+              "notes/quadratic-equations.html" "text/index.txt"
               "text/algebra.txt" "text/limits.txt" "text/orphan.txt"
+              "text/unicode-accent.txt" "text/unicode.txt"
               "text/unlinked.txt" "text/quadratic-equations.txt")
             (build-report-affected-artifacts changed-module)))
         (delete-file (string-append source-directory "/orphan.plant"))

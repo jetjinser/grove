@@ -4,10 +4,12 @@
 
 (define-module (grove i18n)
   #:use-module (grove string-fun)
+  #:use-module ((scheme char) #:select (string-foldcase))
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
   #:use-module (ice-9 match)
+  #:use-module (ice-9 unicode)
   #:export (locale?
             make-locale
             locale-tag
@@ -15,6 +17,7 @@
             locale-dir
             locale-html-attributes
             locale-matches?
+            match-key
             message-catalog?
             make-message-catalog
             message-catalog-default
@@ -101,6 +104,16 @@ So a `zh' reader matches `zh-CN', but `zh-CN' does not match `zh-TW'."
     (error "locale-matches? requires two language tags" reader tag))
   (or (string-ci=? reader tag)
       (string-prefix-ci? (string-append reader "-") tag)))
+
+(define (match-key text)
+  "Return TEXT as a canonical caseless key for identity matching.
+
+Case folding and canonical composition make `STRASSE', `Straße', and a
+decomposed `e' plus combining acute compare equal to their canonical
+spellings."
+  (unless (string? text)
+    (error "match-key requires a string" text))
+  (string-normalize-nfc (string-foldcase (string-normalize-nfd text))))
 
 (define-record-type <message-catalog>
   (%make-message-catalog default entries)

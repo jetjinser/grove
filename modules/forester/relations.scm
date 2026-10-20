@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester relations)
+  #:use-module (grove i18n)
   #:use-module (grove relation dsl)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
@@ -169,9 +170,12 @@
 (define-relation (topic-ido relation node-id topic-id)
   (exists (stored-id)
     (node-propertyo relation node-id 'id stored-id)
-    ;; Ground selectors are case-insensitive; enumerated answers are canonical.
-    (project (topic-id)
-      (== stored-id (if (string? topic-id) (string-downcase topic-id) topic-id)))))
+    ;; Ground selectors match canonically caseless; enumerated answers
+    ;; stay canonical.
+    (project (stored-id topic-id)
+      (if (string? topic-id)
+          (== (match-key stored-id) (match-key topic-id))
+          (== stored-id topic-id)))))
 
 (define-relation (topic-membero relation topic-id page-id label)
   (exists (node-id kind)

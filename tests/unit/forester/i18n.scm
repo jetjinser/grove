@@ -56,6 +56,17 @@
 (test-error "locale tags reject empty strings" #t (make-locale ""))
 (test-error "locale tags reject non-strings" #t (make-locale 'en))
 
+;;; Matching keys
+
+(test-equal "matching keys fold case across the full Unicode range"
+  (match-key "STRASSE") (match-key "Straße"))
+(test-equal "matching keys compose canonically equivalent spellings"
+  (match-key "café")
+  (match-key (string-append "cafe" (string (integer->char #x301)))))
+(test-equal "matching keys keep the folded canonical spelling"
+  "strasse" (match-key "Straße"))
+(test-error "matching keys require strings" #t (match-key 'en))
+
 ;;; Message catalogs
 
 (define catalog
