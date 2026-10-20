@@ -380,4 +380,31 @@
 (test-equal "equal keys keep their input order"
   '("Straße" "STRASSE")
   (sort-strings '("Straße" "STRASSE")))
+
+;;; Locale-aware collation
+
+(test-equal "glibc locale names follow the primary language"
+  "fr_FR.UTF-8" (glibc-locale-name "fr-CA"))
+(test-equal "glibc locale names cover Chinese"
+  "zh_CN.UTF-8" (glibc-locale-name "zh-Hans"))
+(test-equal "unsupported locales have no glibc name"
+  #f (glibc-locale-name "xx"))
+(test-equal "French collation keeps accents with their base letter"
+  '("éclair" "Zebra")
+  (sort-strings '("Zebra" "éclair") #:locale "fr"))
+(test-equal "German collation keeps umlauts with their base letter"
+  '("Äpfel" "Zebra")
+  (sort-strings '("Zebra" "Äpfel") #:locale "de"))
+(test-equal "Chinese collation uses pinyin order"
+  '("阿" "波")
+  (sort-strings '("波" "阿") #:locale "zh-Hans"))
+(test-equal "unsupported locales fall back to folded code points"
+  '("Zebra" "éclair")
+  (sort-strings '("Zebra" "éclair") #:locale "xx"))
+(test-equal "a custom comparator overrides the locale"
+  '("b" "a")
+  (sort-strings '("a" "b") #:compare (lambda (a b) (string>? a b))))
+(test-equal "locale sorting keeps equal keys stable"
+  '("Straße" "STRASSE")
+  (sort-strings '("Straße" "STRASSE") #:locale "de"))
 (test-end "forester i18n")

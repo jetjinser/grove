@@ -11,6 +11,7 @@
   #:use-module (ice-9 format)
   #:use-module (ice-9 match)
   #:use-module (ice-9 unicode)
+  #:use-module ((ice-9 i18n) #:prefix glibc:)
   #:export (locale?
             make-locale
             locale-tag
@@ -31,6 +32,8 @@
             format-number
             plural
             locale-sort-key
+            glibc-locale-name
+            locale-collation-comparator
             sort-strings))
 
 ;; Grove's i18n primitives are language tags and chrome messages. They carry no
@@ -330,14 +333,76 @@ machines.  It is not a UCA collation key: accented letters sort by code
 point rather than by language-tailored rules."
   (match-key text))
 
-(define (sort-strings strings)
+;; glibc locale names for the languages whose collation Grove opts into.
+;; Regional variants fall back to the primary language's locale.
+(define glibc-locale-names
+  '(("en" . "en_US.UTF-8")
+    ("fr" . "fr_FR.UTF-8")
+    ("de" . "de_DE.UTF-8")
+    ("es" . "es_ES.UTF-8")
+    ("it" . "it_IT.UTF-8")
+    ("pt" . "pt_PT.UTF-8")
+    ("nl" . "nl_NL.UTF-8")
+    ("sv" . "sv_SE.UTF-8")
+    ("da" . "da_DK.UTF-8")
+    ("nb" . "nb_NO.UTF-8")
+    ("fi" . "fi_FI.UTF-8")
+    ("pl" . "pl_PL.UTF-8")
+    ("cs" . "cs_CZ.UTF-8")
+    ("tr" . "tr_TR.UTF-8")
+    ("ru" . "ru_RU.UTF-8")
+    ("el" . "el_GR.UTF-8")
+    ("ja" . "ja_JP.UTF-8")
+    ("ko" . "ko_KR.UTF-8")
+    ("zh" . "zh_CN.UTF-8")))
+
+(define* (glibc-locale-name locale)
+  "Return the glibc locale name for LOCALE, or #f when unsupported.
+
+LOCALE is a tag string or a locale object.  Regional variants fall back
+to their primary language, so `fr-CA' uses the `fr_FR' collation."
+  (let* ((locale (if (locale? locale) locale (make-locale locale)))
+         (tag (locale-tag locale))
+         (lang (locale-lang locale)))
+    (or (assoc-ref glibc-locale-names tag)
+        (assoc-ref glibc-locale-names lang))))
+
+(define* (locale-collation-comparator locale)
+  "Return a caseless collation comparator for LOCALE, or #f.
+
+The comparator uses the platform's locale collation data (glibc's
+ISO 14651 tables, not a full UCA/CLDR implementation).  It returns #f
+when the locale is unsupported or its data is missing, so callers can
+fall back to folded code-point order."
+  (let ((name (glibc-locale-name locale)))
+    (and name
+         (false-if-exception
+           (let ((loc (glibc:make-locale (list LC_ALL) name)))
+             ;;     A missing locale silently behaves like C, where
+             ;;     uppercase sorts first; use that as the probe.
+             (and (glibc:string-locale<? "a" "B" loc)
+                  (lambda (a b)
+                    (let ((ka (match-key a))
+                          (kb (match-key b)))
+                      (cond
+                        ((string=? ka kb) #f)
+                        ((glibc:string-locale<? ka kb loc) #t)
+                        (else #f))))))))))
+
+(define (folded-order a b)
+  (let ((ka (locale-sort-key a))
+        (kb (locale-sort-key b)))
+    (and (not (string=? ka kb))
+         (string<? ka kb))))
+
+(define* (sort-strings strings #:key (locale #f) (compare #f))
   "Stably sort STRINGS by locale-sort-key.
 
-Two strings with equal keys keep their input order.  Projects that need
-language-tailored ordering should supply their own comparator instead."
+With LOCALE, use the platform's collation data when it is available and
+fall back to folded code-point order otherwise.  COMPARE, a two-argument
+predicate, overrides both.  Two strings with equal keys keep their input
+order."
   (sort strings
-        (lambda (a b)
-          (let ((ka (locale-sort-key a))
-                (kb (locale-sort-key b)))
-            (and (not (string=? ka kb))
-                 (string<? ka kb))))))
+        (or compare
+            (and locale (locale-collation-comparator locale))
+            folded-order)))
