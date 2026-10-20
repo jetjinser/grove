@@ -120,7 +120,7 @@
         (newline port)))
     (rename-file temporary result-path)))
 
-(define (build-once request forest retained-state known result-path)
+(define (build-once request forest retained-state known result-path built?)
   ;;     Run one build request against the current generation.  The
   ;;     project is loaded fresh - renderers and load-time assets are
   ;;     per-request - but analysis comes from the retained forest
@@ -178,57 +178,65 @@
                       ;;     never trusted across one anyway.
                       (reuse? (forest-reusable? configured forest
                                                  retained-state changed removed
-                                                 (cons filename modules)))
-                      (profile-timings (and profile? (make-hash-table)))
-                      (report
-                        (parameterize ((current-input-cache-timings
-                                         profile-timings))
-                          (call-with-cli-progress "Building" filename
-                            (lambda (progress)
-                              (if reuse?
-                                  (rebuild-from-forest configured forest
-                                                       retained-state
-                                                       changed removed
-                                                       #:progress progress)
-                                  (build-project/report configured
-                                                        #:progress progress))))))
-                      (modules (existing-files (append modules loaded)))
-                      (files (delete-duplicates
-                               (append (map absolute-path (build-report-sources report)) modules)
-                               string=?))
-                      (roots (watch-roots filename project files modules)))
-                  ;; This is a private process protocol, not a second artifact API.
-                  (write-result! result-path
-                    (list 'preview request-serial output roots files modules
-                          ;;     Loaded stamps may name grove's own and
-                          ;;     dependency modules under store prefixes;
-                          ;;     the serve side diffs this snapshot
-                          ;;     against its own, so foreign paths must
-                          ;;     stay out or every resolution difference
-                          ;;     turns into a rebuild.
-                          (delete-duplicates
-                            (append before
-                                    (filter (lambda (entry)
-                                              (not (unwatched-path? (car entry))))
-                                            loaded-stamps))
-                            (lambda (left right) (string=? (car left) (car right))))
-                         (map (lambda (artifact)
-                                (list (artifact-path artifact) (artifact-content artifact)))
-                              (build-report-artifacts report))))
-                 (print-cli-summary report (- (cli-seconds) started) #:output output)
-                 ;;     Profile mode: the cost split lands on stderr
-                 ;;     after the summary; a reuse build shows the
-                 ;;     analysis it skipped by having nothing to split.
-                 (when profile-timings
-                   (report-profile (current-error-port) profile-timings))
-                 (values (if reuse? forest (last-build-model))
-                         (read-build-state (worker-state-path output))
-                         ;;     Keep the pre-build snapshot as the
-                         ;;     next diff's baseline: edits that land
-                         ;;     while a build runs were not in its
-                         ;;     analysis, and a post-build snapshot
-                         ;;     would silently absorb them.
-                         before)))
+                                                 (cons filename modules))))
+                  ;;     Analysis re-evaluates the project's module
+                  ;;     documents, and Guile cannot reload a module into
+                  ;;     a running process: a second analysis fails on
+                  ;;     module re-exports.  Ask serve for a fresh worker
+                  ;;     instead; its first build analyzes, so no work is
+                  ;;     lost.
+                  (when (and built? (not reuse?))
+                    (primitive-exit 75))
+                  (let* ((profile-timings (and profile? (make-hash-table)))
+                         (report
+                           (parameterize ((current-input-cache-timings
+                                            profile-timings))
+                             (call-with-cli-progress "Building" filename
+                               (lambda (progress)
+                                 (if reuse?
+                                     (rebuild-from-forest configured forest
+                                                          retained-state
+                                                          changed removed
+                                                          #:progress progress)
+                                     (build-project/report configured
+                                                           #:progress progress))))))
+                         (modules (existing-files (append modules loaded)))
+                         (files (delete-duplicates
+                                  (append (map absolute-path (build-report-sources report)) modules)
+                                  string=?))
+                         (roots (watch-roots filename project files modules)))
+                    ;; This is a private process protocol, not a second artifact API.
+                    (write-result! result-path
+                      (list 'preview request-serial output roots files modules
+                            ;;     Loaded stamps may name grove's own and
+                            ;;     dependency modules under store prefixes;
+                            ;;     the serve side diffs this snapshot
+                            ;;     against its own, so foreign paths must
+                            ;;     stay out or every resolution difference
+                            ;;     turns into a rebuild.
+                            (delete-duplicates
+                              (append before
+                                      (filter (lambda (entry)
+                                                (not (unwatched-path? (car entry))))
+                                              loaded-stamps))
+                              (lambda (left right) (string=? (car left) (car right))))
+                            (map (lambda (artifact)
+                                   (list (artifact-path artifact) (artifact-content artifact)))
+                                 (build-report-artifacts report))))
+                   (print-cli-summary report (- (cli-seconds) started) #:output output)
+                   ;;     Profile mode: the cost split lands on stderr
+                   ;;     after the summary; a reuse build shows the
+                   ;;     analysis it skipped by having nothing to split.
+                   (when profile-timings
+                     (report-profile (current-error-port) profile-timings))
+                   (values (if reuse? forest (last-build-model))
+                           (read-build-state (worker-state-path output))
+                           ;;     Keep the pre-build snapshot as the
+                           ;;     next diff's baseline: edits that land
+                           ;;     while a build runs were not in its
+                           ;;     analysis, and a post-build snapshot
+                           ;;     would silently absorb them.
+                           before))))
              #:output-directory output))
          (lambda () (set! %load-hook old-hook)))))
     (unexpected (error "invalid preview worker request" unexpected))))
@@ -306,7 +314,8 @@
            (serve-pid (getppid)))
        (call-with-serve-watch live-path
          (lambda ()
-           (let loop ((serial 0) (forest #f) (retained-state #f) (known '()))
+           (let loop ((serial 0) (forest #f) (retained-state #f) (known '())
+                      (built? #f))
              (let ((request (await-request request-path serial live-path serve-pid)))
                (match request
                  ((request-serial filename output previous-modules previous-roots
@@ -317,9 +326,9 @@
                         (lambda ()
                           (let-values (((next-forest next-state next-known)
                                         (build-once request forest retained-state
-                                                    known result-path)))
+                                                    known result-path built?)))
                             (loop request-serial next-forest next-state
-                                  next-known)))))
+                                  next-known #t)))))
                     (lambda (unexpected error)
                       (print-project-error error profile?)
                       1)))

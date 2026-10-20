@@ -210,20 +210,26 @@ that loaded them."
       (match payload
         (('preview (? (lambda (n) (and (integer? n) (= n active-serial)))) rest ...) #t)
         (_ #f)))
+    (define worker-restart-status 75)
     (define (reap-failed-build!)
       (when pid
         (let ((finished
                 (call-with-blocked-asyncs
                   (lambda () (waitpid pid WNOHANG)))))
           (unless (zero? (car finished))
-            (forget-worker!)
-            (set! active-serial #f)
-            (cond
-              ((not snapshot) (error "initial preview build failed"))
-              (else
-               (display "Build failed; serving the last successful outputs.\n"
-                        (current-error-port))
-               (force-output (current-error-port))))))))
+            (let ((exit-status (status:exit-val (cdr finished))))
+              (forget-worker!)
+              (set! active-serial #f)
+              (cond
+                ;;     The worker asks for a fresh process before
+                ;;     analysis; respawn it for the same build.
+                ((equal? exit-status worker-restart-status)
+                 (start-build!))
+                ((not snapshot) (error "initial preview build failed"))
+                (else
+                 (display "Build failed; serving the last successful outputs.\n"
+                          (current-error-port))
+                 (force-output (current-error-port)))))))))
     (define (cleanup!)
       (stop-worker!)
       (when (and listener (not (port-closed? listener))) (close-port listener))
