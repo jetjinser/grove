@@ -5,6 +5,7 @@
 (define-module (forester input scribble)
   #:use-module (ice-9 ftw)
   #:use-module (forester private date)
+  #:use-module (grove i18n)
   #:use-module (grove ir)
   #:use-module (grove string-fun)
   #:use-module (grove site)
@@ -13,7 +14,8 @@
   #:export (make-page-reader
             document->tree-page))
 
-(define metadata-kinds '(title summary published updated tag taxon))
+(define metadata-kinds
+  '(title summary published updated tag taxon locale translation))
 
 (define (metadata-element? child)
   (and (content-element? child)
@@ -48,6 +50,15 @@
     (when (and value (not (forester-date? value)))
       (error (format #f "Forester page date ~a in ~a must use YYYY-MM-DD: ~a"
                      kind path value)))
+    value))
+
+(define (locale-metadata elements kind path)
+  (let ((value (one-metadata-value elements kind path)))
+    (when value
+      (catch #t
+        (lambda () (make-locale value))
+        (lambda (key . args)
+          (error "Forester page locale must be a BCP 47 tag" path value))))
     value))
 
 (define (topic-metadata elements kind path)
@@ -87,7 +98,9 @@
          (tree-title (or title (one-metadata-value metadata-nodes 'title source #t)))
          (summary (one-metadata-value metadata-nodes 'summary source))
          (published (date-metadata metadata-nodes 'published source))
-         (updated (date-metadata metadata-nodes 'updated source)))
+         (updated (date-metadata metadata-nodes 'updated source))
+         (locale (locale-metadata metadata-nodes 'locale source))
+         (translation (one-metadata-value metadata-nodes 'translation source)))
     ;; Topics stay in the body, but validation is identical for every tree.
     (topic-metadata metadata-nodes 'tag source)
     (taxon-metadata metadata-nodes source)
@@ -97,7 +110,7 @@
         (remove (lambda (child)
                   (and (content-element? child)
                        (memq (content-element-kind child)
-                             '(title summary published updated))))
+                             '(title summary published updated locale translation))))
                 children)
         (content-document-source document))
       source
@@ -105,7 +118,9 @@
                          (filter cdr
                            (list (cons 'summary summary)
                                  (cons 'published published)
-                                 (cons 'updated updated)))))))
+                                 (cons 'updated updated)
+                                 (cons 'locale locale)
+                                 (cons 'translation translation)))))))
 
 (define (page-from-document path document)
   (let ((filename (basename path)))

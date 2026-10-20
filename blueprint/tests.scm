@@ -97,6 +97,7 @@
     "unit/grove/platform.scm"
     "unit/grove/test-registry.scm"
     "unit/forester/a11y.scm"
+    "unit/forester/i18n-routes.scm"
     "unit/forester/commands.scm"
     "unit/forester/composition.scm"
     "unit/forester/i18n.scm"

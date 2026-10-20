@@ -11,6 +11,7 @@
   #:export (html-routes?
             make-html-routes
             html-page-path
+            locale-page-path
             html-route-table
             html-index-path
             html-home-page
@@ -89,3 +90,21 @@
 
 (define (html-index-url routes)
   (html-asset-url routes (html-index-path routes)))
+
+(define* (locale-page-path locale-of #:key (default-locale #f))
+  "Return a page-path procedure that prefixes non-default locales.
+
+LOCALE-OF maps a page id to its locale tag or #f.  Pages without a
+locale, and pages in DEFAULT-LOCALE, keep the unprefixed path."
+  (unless (procedure? locale-of)
+    (error "Locale page path requires a procedure" locale-of))
+  (unless (or (not default-locale) (non-empty-string? default-locale))
+    (error "Locale page path default locale must be a string or #f"
+           default-locale))
+  (lambda (id)
+    (let ((locale (locale-of id)))
+      (unless (or (not locale) (non-empty-string? locale))
+        (error "Locale page path requires a locale tag or #f" id locale))
+      (if (or (not locale) (equal? locale default-locale))
+          (string-append id ".html")
+          (string-append locale "/" id ".html")))))

@@ -73,6 +73,14 @@
 (define-public (updated date)
   (make-content-element 'updated (list date) #:flow-kind 'block))
 
+(define-public (locale tag)
+  "Declare the page's language for the document and its translations."
+  (make-content-element 'locale (list tag) #:flow-kind 'block))
+
+(define-public (translation key)
+  "Group pages that translate one another under KEY."
+  (make-content-element 'translation (list key) #:flow-kind 'block))
+
 (define-public (forest-query query)
   "Record a query to run against the complete Forest after source analysis."
   (unless (procedure? query)

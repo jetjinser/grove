@@ -12,6 +12,8 @@ to them.
   starts with a skip link to `#main`.
 - The site header is a `<nav>` with an accessible name; the table of
   contents is a named `<nav>`; backmatter is an `<aside>`.
+- A language switcher, when enabled, is a named navigation whose current
+  language carries `aria-current="true"`.
 - The site navigation link to the current page carries
   `aria-current="page"`.  Use `site-nav-link` for project navigation, and
   pass `#:site-nav` a procedure of the current page id so it can mark the

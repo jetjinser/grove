@@ -30,6 +30,75 @@
   (let ((locale (current-chrome-locale-object)))
     (if locale (format-date locale text #:style 'long) text)))
 
+(define current-hreflang? (make-parameter #f))
+(define current-default-locale (make-parameter #f))
+(define current-language-switcher? (make-parameter #f))
+
+(define (page-locale page)
+  (assq-ref (site-page-metadata page) 'locale))
+
+(define current-translation-groups (make-parameter #f))
+
+(define (translation-groups forest)
+  (let ((groups (make-hash-table)))
+    (for-each
+      (lambda (page)
+        (let ((key (assq-ref (site-page-metadata page) 'translation)))
+          (when key
+            (hash-set! groups key
+                       (cons page (or (hash-ref groups key) '()))))))
+      (pages forest))
+    groups))
+
+(define (translation-group forest page)
+  (let ((key (assq-ref (site-page-metadata page) 'translation)))
+    (and key
+         (reverse (hash-ref (or (current-translation-groups)
+                                (translation-groups forest))
+                            key
+                            '())))))
+
+(define (hreflang-links forest page routes)
+  (let ((group (translation-group forest page)))
+    (if (or (not group) (< (length group) 2))
+        '()
+        (append
+          (map (lambda (other)
+                 `(link (@ (rel "alternate")
+                           (hreflang ,(or (page-locale other) "und"))
+                           (href ,(html-page-url routes (site-page-id other))))))
+               group)
+          (let ((default (and (current-default-locale)
+                              (find (lambda (other)
+                                      (equal? (page-locale other)
+                                              (current-default-locale)))
+                                    group))))
+            (if default
+                (list `(link (@ (rel "alternate")
+                                (hreflang "x-default")
+                                (href ,(html-page-url
+                                         routes (site-page-id default))))))
+                '()))))))
+
+(define (language-switcher-sxml forest page routes)
+  (let ((group (translation-group forest page)))
+    (if (or (not group) (< (length group) 2))
+        '()
+        `(nav (@ (class "language-switcher")
+                 (aria-label ,(chrome-message 'language)))
+              ,@(map (lambda (other)
+                       (let ((tag (or (page-locale other) "und")))
+                         `(a (@ (href ,(html-page-url
+                                         routes (site-page-id other)))
+                                (hreflang ,tag)
+                                (lang ,tag)
+                                ,@(if (string=? (site-page-id other)
+                                                (site-page-id page))
+                                      '((aria-current "true"))
+                                      '()))
+                             ,tag)))
+                     group)))))
+
 (define (link-url routes reference element)
   (let ((fragment (and element (content-element-property element 'fragment))))
     (string-append (html-page-url routes (reference-target-page-id reference))
@@ -435,7 +504,8 @@ that navigation links can use this helper."
 (define* (html-document title description body math? home-title style
                        routes mathjax-src inline-stylesheets?
                        #:key (html-attributes '()) (head '()) (site-nav '())
-                       (home-link #f) (scripts '()) (current-page #f))
+                       (home-link #f) (scripts '()) (current-page #f)
+                       (language-nav '()))
   (let* ((site-nav (if (procedure? site-nav)
                        (site-nav current-page)
                        site-nav))
@@ -476,14 +546,15 @@ that navigation links can use this helper."
        (a (@ (class "skip-link") (href "#main"))
           ,(chrome-message 'skip-to-content))
        (header
-         ,@(if (or home-title home-link (pair? site-nav))
+         ,@(if (or home-title home-link (pair? site-nav) (pair? language-nav))
                (list `(nav (@ (aria-label ,(chrome-message 'nav-site)))
                            ,@(cond
                                (home-link (list (home-link (html-index-url routes))))
                                (home-title (list `(a (@ (href ,(html-index-url routes)))
                                                     ,home-title)))
                                (else '()))
-                           ,@site-nav))
+                           ,@site-nav)
+                     language-nav)
                '()))
        (main (@ (id "main") (tabindex "-1"))
          ,@body)
@@ -548,6 +619,12 @@ to the lane, and an in-place numbered marker links to it."
                     (html-attributes '()) (head '()) (site-nav '()) (home-link #f)
                     (metadata-items default-metadata-items) (side-lane '()))
   (let* ((site (site forest))
+         (head (if (current-hreflang?)
+                   (append head (hreflang-links forest page routes))
+                   head))
+         (language-nav (if (current-language-switcher?)
+                           (language-switcher-sxml forest page routes)
+                           '()))
          (lane (and (pair? side-lane) (make-side-lane-collector)))
          (body (subtree-content-sxml forest routes page "" 1 highlighters
                                      #:title-decoration title-decoration
@@ -586,6 +663,7 @@ to the lane, and an in-place numbered marker links to it."
         #:html-attributes html-attributes
         #:head head
         #:site-nav site-nav
+        #:language-nav language-nav
         #:home-link home-link
         #:current-page (site-page-id page)
         #:scripts (if (null? backmatter)
@@ -695,31 +773,38 @@ to the lane, and an in-place numbered marker links to it."
                        (metadata-items default-metadata-items)
                        (side-lane '())
                        (locale #f)
-                       (messages default-message-catalog))
-  (with-chrome-locale (locale messages)
-    (validate-backmatter-sections backmatter)
-    (set! backmatter-labels
-      (normalize-backmatter-labels
-        backmatter-labels
-        #:defaults (localized-backmatter-labels)))
-    (check-reference-taxon-id reference-taxon-id)
-    (set! routes (resolve-html-routes forest routes))
-    (check-html-input forest style routes mathjax-src)
-    (map (lambda (page)
-           (cons (site-page-id page)
-                 (page-html forest page style routes mathjax-src
-                            backmatter backmatter-labels
-                            reference-taxon-id #t highlighters
-                            #:title-decoration title-decoration
-                            #:article? article?
-                            #:backmatter-details? backmatter-details?
-                            #:html-attributes html-attributes
-                            #:head head
-                            #:site-nav site-nav
-                            #:home-link home-link
-                            #:metadata-items metadata-items
-                            #:side-lane side-lane)))
-         (pages forest))))
+                       (messages default-message-catalog)
+                       (default-locale #f)
+                       (hreflang? #f)
+                       (language-switcher? #f))
+  (parameterize ((current-hreflang? hreflang?)
+                 (current-default-locale default-locale)
+                 (current-language-switcher? language-switcher?)
+                 (current-translation-groups (translation-groups forest)))
+    (with-chrome-locale (locale messages)
+      (validate-backmatter-sections backmatter)
+      (set! backmatter-labels
+        (normalize-backmatter-labels
+          backmatter-labels
+          #:defaults (localized-backmatter-labels)))
+      (check-reference-taxon-id reference-taxon-id)
+      (set! routes (resolve-html-routes forest routes))
+      (check-html-input forest style routes mathjax-src)
+      (map (lambda (page)
+             (cons (site-page-id page)
+                   (page-html forest page style routes mathjax-src
+                              backmatter backmatter-labels
+                              reference-taxon-id #t highlighters
+                              #:title-decoration title-decoration
+                              #:article? article?
+                              #:backmatter-details? backmatter-details?
+                              #:html-attributes html-attributes
+                              #:head head
+                              #:site-nav site-nav
+                              #:home-link home-link
+                              #:metadata-items metadata-items
+                              #:side-lane side-lane)))
+           (pages forest)))))
 
 (define (split-into-chunks entries chunk-size)
   "Split ENTRIES into consecutive groups of at most CHUNK-SIZE entries,
@@ -751,44 +836,51 @@ errors when the count outlives the list."
                              (metadata-items default-metadata-items)
                              (side-lane '())
                              (locale #f)
-                             (messages default-message-catalog))
-  (with-chrome-locale (locale messages)
-    (validate-backmatter-sections backmatter)
-    (set! backmatter-labels
-      (normalize-backmatter-labels
-        backmatter-labels
-        #:defaults (localized-backmatter-labels)))
-    (check-reference-taxon-id reference-taxon-id)
-    (set! routes (resolve-html-routes forest routes))
-    (check-html-input forest style routes mathjax-src)
-    (append
-      (html-style-artifacts style)
-      (let* ((report (current-render-progress))
-             (forest-pages (pages forest))
-             (total (length forest-pages))
-             (route-table (html-route-table routes
-                                            (map site-page-id forest-pages))))
-        ;;     Pages render independently against the shared forest. The
-        ;;     entry list is zipped with an explicit named let: the
-        ;;     multi-list map on load paths that pull in
-        ;;     faster-minikanren's rnrs override is unreliable.
-        (map (lambda (page index)
-               (make-artifact
-                 (cdr (assoc (site-page-id page) route-table))
-                 (page-html forest page style routes mathjax-src backmatter
-                            backmatter-labels reference-taxon-id #f highlighters
-                            #:title-decoration title-decoration
-                            #:article? article?
-                            #:backmatter-details? backmatter-details?
-                            #:html-attributes html-attributes
-                            #:head head
-                            #:site-nav site-nav
-                            #:home-link home-link
-                            #:metadata-items metadata-items
-                            #:side-lane side-lane)
-                 (page-source-paths forest page)))
-             forest-pages
-             (iota total 1))))))
+                             (messages default-message-catalog)
+                             (default-locale #f)
+                             (hreflang? #f)
+                             (language-switcher? #f))
+  (parameterize ((current-hreflang? hreflang?)
+                 (current-default-locale default-locale)
+                 (current-language-switcher? language-switcher?)
+                 (current-translation-groups (translation-groups forest)))
+    (with-chrome-locale (locale messages)
+      (validate-backmatter-sections backmatter)
+      (set! backmatter-labels
+        (normalize-backmatter-labels
+          backmatter-labels
+          #:defaults (localized-backmatter-labels)))
+      (check-reference-taxon-id reference-taxon-id)
+      (set! routes (resolve-html-routes forest routes))
+      (check-html-input forest style routes mathjax-src)
+      (append
+        (html-style-artifacts style)
+        (let* ((report (current-render-progress))
+               (forest-pages (pages forest))
+               (total (length forest-pages))
+               (route-table (html-route-table routes
+                                              (map site-page-id forest-pages))))
+          ;;     Pages render independently against the shared forest. The
+          ;;     entry list is zipped with an explicit named let: the
+          ;;     multi-list map on load paths that pull in
+          ;;     faster-minikanren's rnrs override is unreliable.
+          (map (lambda (page index)
+                 (make-artifact
+                   (cdr (assoc (site-page-id page) route-table))
+                   (page-html forest page style routes mathjax-src backmatter
+                              backmatter-labels reference-taxon-id #f highlighters
+                              #:title-decoration title-decoration
+                              #:article? article?
+                              #:backmatter-details? backmatter-details?
+                              #:html-attributes html-attributes
+                              #:head head
+                              #:site-nav site-nav
+                              #:home-link home-link
+                              #:metadata-items metadata-items
+                              #:side-lane side-lane)
+                   (page-source-paths forest page)))
+               forest-pages
+               (iota total 1)))))))
 (define* (make-html-renderer #:key
                                       (style default-html-style)
                                       (highlighters (default-highlighters))
@@ -808,6 +900,9 @@ errors when the count outlives the list."
                                       (side-lane '())
                                       (locale #f)
                                       (messages default-message-catalog)
+                                      (default-locale #f)
+                                      (hreflang? #f)
+                                      (language-switcher? #f)
                                       (cache? #t))
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
@@ -831,7 +926,10 @@ errors when the count outlives the list."
                                       #:metadata-items metadata-items
                                       #:side-lane side-lane
                                       #:locale locale
-                                      #:messages messages))))
+                                      #:messages messages
+                                      #:default-locale default-locale
+                                      #:hreflang? hreflang?
+                                      #:language-switcher? language-switcher?))))
     (make-cached-renderer render #:cache? cache?
           #:configuration
           (lambda (forest)
@@ -841,6 +939,7 @@ errors when the count outlives the list."
                   mathjax-src backmatter backmatter-labels reference-taxon-id
                   article? backmatter-details? html-attributes head site-nav
                   side-lane (resolve-chrome-locale locale (resolve-chrome-catalog messages))
+                  default-locale hreflang? language-switcher?
                   (message-catalog-default (resolve-chrome-catalog messages))
                   (message-catalog-entries (resolve-chrome-catalog messages))
                   (map (lambda (entry)
@@ -857,21 +956,26 @@ errors when the count outlives the list."
                                    (html-style-artifacts style))))
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
-            (with-chrome-locale (locale messages)
-              (if (any (lambda (entry)
-                         (any (lambda (path) (member path changed string=?))
-                              (highlighter-inputs (cdr entry)))) highlighters)
-                  (render forest)
-                  (render-html-changed forest style routes mathjax-src backmatter
-                                       backmatter-labels reference-taxon-id
-                                       changed old-artifacts highlighters
-                                       #:title-decoration title-decoration
-                                       #:article? article?
-                                       #:backmatter-details? backmatter-details?
-                                       #:html-attributes html-attributes
-                                       #:head head
-                                       #:site-nav site-nav
-                                       #:home-link home-link
-                                       #:metadata-items metadata-items
-                                       #:side-lane side-lane
-                                       #:dirty-paths dirty-paths)))))))
+            (parameterize ((current-hreflang? hreflang?)
+                           (current-default-locale default-locale)
+                           (current-language-switcher? language-switcher?)
+                           (current-translation-groups
+                             (translation-groups forest)))
+              (with-chrome-locale (locale messages)
+                (if (any (lambda (entry)
+                           (any (lambda (path) (member path changed string=?))
+                                (highlighter-inputs (cdr entry)))) highlighters)
+                    (render forest)
+                    (render-html-changed forest style routes mathjax-src backmatter
+                                         backmatter-labels reference-taxon-id
+                                         changed old-artifacts highlighters
+                                         #:title-decoration title-decoration
+                                         #:article? article?
+                                         #:backmatter-details? backmatter-details?
+                                         #:html-attributes html-attributes
+                                         #:head head
+                                         #:site-nav site-nav
+                                         #:home-link home-link
+                                         #:metadata-items metadata-items
+                                         #:side-lane side-lane
+                                         #:dirty-paths dirty-paths))))))))

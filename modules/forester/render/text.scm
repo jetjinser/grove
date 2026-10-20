@@ -220,6 +220,9 @@ HTML renderer so text and HTML address occurrences identically."
 (define (render-text-changed forest prefix routes backmatter backmatter-labels
                              reference-taxon-id
                              changed old-artifacts)
+  (set! backmatter-labels
+    (normalize-backmatter-labels backmatter-labels
+      #:defaults (localized-backmatter-labels)))
   (check-text-routes forest routes)
   (let* ((site (site forest))
          (index-path (output-path prefix (text-index-path routes)))
