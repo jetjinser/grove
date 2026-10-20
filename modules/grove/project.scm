@@ -828,6 +828,21 @@ analysis results - pages, relations, indexes - come from the forest."
               (identity (project-renderer-identity project forest))
              (config-equal?
                 (equal? identity (build-state-identity retained-state)))
+             ;;     Capture content before rendering: the retained forest
+             ;;     reflects these bytes, and a source edited during the
+             ;;     render must not enter the state as if the render had
+             ;;     seen it.
+             (current-sources
+                (filter-map
+                  (lambda (source)
+                    (let ((digest (false-if-exception
+                                    (file-fingerprint
+                                      (build-state-source-path source)))))
+                      (and digest
+                           (list (build-state-source-path source)
+                                 digest
+                                 (build-state-source-kind source)))))
+                  previous-sources))
              (render-result
                 (begin
                   (progress 'render #f)
@@ -849,21 +864,6 @@ analysis results - pages, relations, indexes - come from the forest."
                                                    (car render-result) retired))
               (owners (append pipeline-owners (cadr render-result)))
              (affected (affected-artifacts artifacts previous-artifacts changed))
-             ;;     Content-refresh every retained source: the on-disk
-             ;;     state must stay truthful for manual builds and for
-             ;;     drift detection, and deleted sources leave the
-             ;;     manifest.
-             (current-sources
-                (filter-map
-                  (lambda (source)
-                    (let ((digest (false-if-exception
-                                    (file-fingerprint
-                                      (build-state-source-path source)))))
-                      (and digest
-                           (list (build-state-source-path source)
-                                 digest
-                                 (build-state-source-kind source)))))
-                  previous-sources))
              (kept (map build-state-source-path current-sources))
              (report-removed
                 (filter (lambda (p) (not (member p changed string=?))) removed)))
@@ -876,7 +876,18 @@ analysis results - pages, relations, indexes - come from the forest."
              (progress 'write (project-output-directory project))
              (write-artifacts (project-output-directory project) artifacts)
              (write-build-state state-path state-temp-path current-sources
-                                artifacts owners identity)))
+                                artifacts owners identity)
+             ;;     A source edited during the render is not in the
+             ;;     retained forest; dropping the state forces the next
+             ;;     build to analyze instead of trusting a cache hit.
+             (let ((drifted?
+                     (any (lambda (entry)
+                            (not (equal? (cadr entry)
+                                         (false-if-exception
+                                           (file-fingerprint (car entry))))))
+                          current-sources)))
+               (when drifted?
+                 (delete-file state-path)))))
           (%make-build-report
             (map build-state-source-path current-sources)
             artifacts
