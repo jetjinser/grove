@@ -17,8 +17,8 @@ to them.
   starts with a skip link to `#main`.
 - The site header is a `<nav>` with an accessible name; the table of
   contents is a named `<nav>`; backmatter is an `<aside>`.
-- A language switcher, when enabled, is a named navigation whose current
-  language carries `aria-current="true"`.
+- A language switcher is on by default when a page has translations; it is a
+  named navigation whose current language carries `aria-current="true"`.
 - The site navigation link to the current page carries
   `aria-current="page"`.  Use `site-nav-link` for project navigation, and
   pass `#:site-nav` a procedure of the current page id so it can mark the
@@ -28,6 +28,10 @@ to them.
 - Collapsible trees and backmatter use native `<details>/<summary>`, so
   keyboard operation and expanded state come from the browser.
 - Dates render as `<time datetime="…">` with a human-readable label.
+- Documents carry a viewport meta tag, Open Graph title/description/type, and
+  `article:published_time` when the page has a publication date.  A
+  `#:site-url` adds the canonical link and `og:url`; without it no absolute
+  URL is invented.
 - The default stylesheet hides the skip link until it is focused and keeps
   `:focus-visible` outlines visible.
 
@@ -36,8 +40,9 @@ to them.
 Every built-in label (site navigation, contents, skip link, tree link,
 updated date, backmatter headings) comes from a message catalog; the text and
 Gemtext renderers use the same catalog for their Home and Contents labels.  The
-built-in catalog covers `en` and `zh-Hans`; select it with `#:locale` and
-extend it with `#:messages`:
+built-in catalog covers `en` and `zh-Hans`; a page's `@locale` selects
+it, with `#:locale` as the site fallback, and projects extend it with
+`#:messages`:
 
 ```scheme
 (make-html-renderer

@@ -34,9 +34,10 @@
   (let ((locale (current-chrome-locale-object)))
     (if locale (format-date locale text #:style 'long) text)))
 
-(define current-hreflang? (make-parameter #f))
+(define current-hreflang? (make-parameter #t))
 (define current-default-locale (make-parameter #f))
-(define current-language-switcher? (make-parameter #f))
+(define current-site-url (make-parameter #f))
+(define current-language-switcher? (make-parameter #t))
 
 (define (page-locale page)
   (assq-ref (site-page-metadata page) 'locale))
@@ -509,7 +510,7 @@ that navigation links can use this helper."
                        routes mathjax-src inline-stylesheets?
                        #:key (html-attributes '()) (head '()) (site-nav '())
                        (home-link #f) (scripts '()) (current-page #f)
-                       (language-nav '()))
+                       (language-nav '()) (article? #f) (published #f))
   (let* ((site-nav (if (procedure? site-nav)
                        (site-nav current-page)
                        site-nav))
@@ -518,7 +519,13 @@ that navigation links can use this helper."
            (if locale
                (merge-html-attributes (locale-html-attributes locale)
                                       html-attributes)
-               html-attributes)))
+               html-attributes))
+         (site-url (current-site-url))
+         (page-url (and site-url current-page
+                        (html-page-url routes current-page)))
+         (absolute-url (and page-url
+                            (string-append (string-trim-right site-url #\/)
+                                           page-url))))
     `(html
      ,@(if (null? html-attributes)
            '()
@@ -527,9 +534,26 @@ that navigation links can use this helper."
                                html-attributes))))
      (head
        (meta (@ (charset "utf-8")))
+       (meta (@ (name "viewport")
+                (content "width=device-width, initial-scale=1")))
        (title ,title)
        ,@(if description
              (list `(meta (@ (name "description") (content ,description))))
+             '())
+       (meta (@ (property "og:title") (content ,title)))
+       ,@(if description
+             (list `(meta (@ (property "og:description")
+                             (content ,description))))
+             '())
+       (meta (@ (property "og:type")
+                (content ,(if article? "article" "website"))))
+       ,@(if absolute-url
+             (list `(link (@ (rel "canonical") (href ,absolute-url)))
+                   `(meta (@ (property "og:url") (content ,absolute-url))))
+             '())
+       ,@(if (and article? published)
+             (list `(meta (@ (property "article:published_time")
+                             (content ,published))))
              '())
        ,@head
        ,@(if inline-stylesheets?
@@ -564,10 +588,6 @@ that navigation links can use this helper."
          ,@body)
        ,@(map (lambda (script) `(script ,script)) scripts)
        (script ,fragment-reveal-script)))))
-
-(define (serialize-html-document sxml)
-  (string-append "<!DOCTYPE html>\n" (sxml->html sxml)))
-
 (define (make-side-lane-collector)
   ;;     Accumulates lifted elements in document order; the in-place
   ;;     marker and the lane item share the sequence number.
@@ -616,63 +636,80 @@ to the lane, and an in-place numbered marker links to it."
                                 ,@children)))
                          items))))))
 
+(define (serialize-html-document sxml)
+  (string-append "<!DOCTYPE html>\n" (sxml->html sxml)))
+
 (define* (page-html forest page style routes mathjax-src backmatter labels
                     reference-taxon-id
                     #:optional (inline-stylesheets? #f) (highlighters '())
                     #:key (title-decoration #f) (article? #f) (backmatter-details? #f)
                     (html-attributes '()) (head '()) (site-nav '()) (home-link #f)
                     (metadata-items default-metadata-items) (side-lane '()))
-  (let* ((site (site forest))
-         (head (if (current-hreflang?)
-                   (append head (hreflang-links forest page routes))
-                   head))
-         (language-nav (if (current-language-switcher?)
-                           (language-switcher-sxml forest page routes)
-                           '()))
-         (lane (and (pair? side-lane) (make-side-lane-collector)))
-         (body (subtree-content-sxml forest routes page "" 1 highlighters
-                                     #:title-decoration title-decoration
-                                     #:metadata-items metadata-items
-                                     #:extra-handlers
-                                     (if lane
-                                         (side-lane-handlers side-lane lane)
-                                         '())))
-         (tree (tree-block-sxml
-                 "page-tree" (site-page-id page) (site-page-title page)
-                 (html-page-url routes (site-page-id page)) body
-                 #:anchor (string-append "tree-root-" (site-page-id page))
-                 #:depth 1
-                 #:metadata-items (metadata-items page)
-                 #:title-decoration (if title-decoration
-                                        (title-decoration forest page)
-                                        '())))
-         (article (append (list tree)
-                          (if lane (side-lane-sxml lane) '())
-                          (backmatter-sxml forest page routes backmatter
-                                           labels reference-taxon-id
-                                           backmatter-details?
-                                           #:metadata-items metadata-items))))
-    (serialize-html-document
-      (html-document
-        (site-page-title page)
-        (page-description site page)
-        (append (table-of-contents-sxml forest page #:title-decoration title-decoration)
-                (list (if article? (cons 'article article) article)))
-        (content-has-tex-math? (site-page-document page))
-        (site-title site)
-        style
-        routes
-        mathjax-src
-        inline-stylesheets?
-        #:html-attributes html-attributes
-        #:head head
-        #:site-nav site-nav
-        #:language-nav language-nav
-        #:home-link home-link
-        #:current-page (site-page-id page)
-        #:scripts (if (null? backmatter)
-                      '()
-                      (list backmatter-fetch-script))))))
+  (let ((page-locale (page-locale page)))
+    (parameterize ((current-chrome-locale
+                     (or page-locale (current-chrome-locale)))
+                   (current-chrome-locale-object
+                     (if page-locale
+                         (make-locale page-locale)
+                         (current-chrome-locale-object))))
+      (set! labels
+        (normalize-backmatter-labels
+          labels
+          #:defaults (localized-backmatter-labels)))
+      (let* ((site (site forest))
+             (head (if (current-hreflang?)
+                       (append head (hreflang-links forest page routes))
+                       head))
+             (language-nav (if (current-language-switcher?)
+                               (language-switcher-sxml forest page routes)
+                               '()))
+             (lane (and (pair? side-lane) (make-side-lane-collector)))
+             (body (subtree-content-sxml forest routes page "" 1 highlighters
+                                         #:title-decoration title-decoration
+                                         #:metadata-items metadata-items
+                                         #:extra-handlers
+                                         (if lane
+                                             (side-lane-handlers side-lane lane)
+                                             '())))
+             (tree (tree-block-sxml
+                     "page-tree" (site-page-id page) (site-page-title page)
+                     (html-page-url routes (site-page-id page)) body
+                     #:anchor (string-append "tree-root-" (site-page-id page))
+                     #:depth 1
+                     #:metadata-items (metadata-items page)
+                     #:title-decoration (if title-decoration
+                                            (title-decoration forest page)
+                                            '())))
+             (article (append (list tree)
+                              (if lane (side-lane-sxml lane) '())
+                              (backmatter-sxml forest page routes backmatter
+                                               labels reference-taxon-id
+                                               backmatter-details?
+                                               #:metadata-items metadata-items))))
+        (serialize-html-document
+          (html-document
+            (site-page-title page)
+            (page-description site page)
+            (append (table-of-contents-sxml forest page
+                                            #:title-decoration title-decoration)
+                    (list (if article? (cons 'article article) article)))
+            (content-has-tex-math? (site-page-document page))
+            (site-title site)
+            style
+            routes
+            mathjax-src
+            inline-stylesheets?
+            #:html-attributes html-attributes
+            #:head head
+            #:site-nav site-nav
+            #:language-nav language-nav
+            #:home-link home-link
+            #:current-page (site-page-id page)
+            #:article? article?
+            #:published (assq-ref (site-page-metadata page) 'published)
+            #:scripts (if (null? backmatter)
+                          '()
+                          (list backmatter-fetch-script))))))))
 
 (define* (render-html-changed forest style routes mathjax-src backmatter labels
                              reference-taxon-id
@@ -683,10 +720,6 @@ to the lane, and an in-place numbered marker links to it."
                              (metadata-items default-metadata-items)
                              (side-lane '())
                              (dirty-paths '()))
-  (set! labels
-    (normalize-backmatter-labels
-      labels
-      #:defaults (localized-backmatter-labels)))
   (set! routes (resolve-html-routes forest routes))
   (check-html-input forest style routes mathjax-src)
   (let ((style-artifacts (html-style-artifacts style)))
@@ -779,18 +812,16 @@ to the lane, and an in-place numbered marker links to it."
                        (locale #f)
                        (messages default-message-catalog)
                        (default-locale #f)
-                       (hreflang? #f)
-                       (language-switcher? #f))
+                       (site-url #f)
+                       (hreflang? #t)
+                       (language-switcher? #t))
   (parameterize ((current-hreflang? hreflang?)
                  (current-default-locale default-locale)
+                 (current-site-url site-url)
                  (current-language-switcher? language-switcher?)
                  (current-translation-groups (translation-groups forest)))
     (with-chrome-locale (locale messages)
       (validate-backmatter-sections backmatter)
-      (set! backmatter-labels
-        (normalize-backmatter-labels
-          backmatter-labels
-          #:defaults (localized-backmatter-labels)))
       (check-reference-taxon-id reference-taxon-id)
       (set! routes (resolve-html-routes forest routes))
       (check-html-input forest style routes mathjax-src)
@@ -842,18 +873,16 @@ errors when the count outlives the list."
                              (locale #f)
                              (messages default-message-catalog)
                              (default-locale #f)
-                             (hreflang? #f)
-                             (language-switcher? #f))
+                             (site-url #f)
+                             (hreflang? #t)
+                             (language-switcher? #t))
   (parameterize ((current-hreflang? hreflang?)
                  (current-default-locale default-locale)
+                 (current-site-url site-url)
                  (current-language-switcher? language-switcher?)
                  (current-translation-groups (translation-groups forest)))
     (with-chrome-locale (locale messages)
       (validate-backmatter-sections backmatter)
-      (set! backmatter-labels
-        (normalize-backmatter-labels
-          backmatter-labels
-          #:defaults (localized-backmatter-labels)))
       (check-reference-taxon-id reference-taxon-id)
       (set! routes (resolve-html-routes forest routes))
       (check-html-input forest style routes mathjax-src)
@@ -905,8 +934,9 @@ errors when the count outlives the list."
                                       (locale #f)
                                       (messages default-message-catalog)
                                       (default-locale #f)
-                                      (hreflang? #f)
-                                      (language-switcher? #f)
+                                      (site-url #f)
+                                      (hreflang? #t)
+                                      (language-switcher? #t)
                                       (cache? #t))
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
@@ -932,6 +962,7 @@ errors when the count outlives the list."
                                       #:locale locale
                                       #:messages messages
                                       #:default-locale default-locale
+                                      #:site-url site-url
                                       #:hreflang? hreflang?
                                       #:language-switcher? language-switcher?))))
     (make-cached-renderer render #:cache? cache?
@@ -943,7 +974,7 @@ errors when the count outlives the list."
                   mathjax-src backmatter backmatter-labels reference-taxon-id
                   article? backmatter-details? html-attributes head site-nav
                   side-lane (resolve-chrome-locale locale (resolve-chrome-catalog messages))
-                  default-locale hreflang? language-switcher?
+                  default-locale site-url hreflang? language-switcher?
                   (message-catalog-default (resolve-chrome-catalog messages))
                   (message-catalog-entries (resolve-chrome-catalog messages))
                   (map (lambda (entry)
@@ -962,6 +993,7 @@ errors when the count outlives the list."
           (lambda (forest changed dirty-paths old-artifacts)
             (parameterize ((current-hreflang? hreflang?)
                            (current-default-locale default-locale)
+                           (current-site-url site-url)
                            (current-language-switcher? language-switcher?)
                            (current-translation-groups
                              (translation-groups forest)))

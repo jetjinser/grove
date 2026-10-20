@@ -91,20 +91,28 @@
 (define (html-index-url routes)
   (html-asset-url routes (html-index-path routes)))
 
-(define* (locale-page-path locale-of #:key (default-locale #f))
-  "Return a page-path procedure that prefixes non-default locales.
+(define* (locale-page-path locale-of #:optional (build #f)
+                           #:key (default-locale #f))
+  "Return a page-path procedure that localizes page paths.
 
-LOCALE-OF maps a page id to its locale tag or #f.  Pages without a
-locale, and pages in DEFAULT-LOCALE, keep the unprefixed path."
+LOCALE-OF maps a page id to its locale tag or #f.  BUILD, an optional
+`(locale id) -> path' procedure, decides the path; the default keeps
+Forester's flat layout with a locale suffix (`guide.zh-Hans.html').
+Pages without a locale, and pages in DEFAULT-LOCALE, use `id.html'."
   (unless (procedure? locale-of)
     (error "Locale page path requires a procedure" locale-of))
+  (unless (or (not build) (procedure? build))
+    (error "Locale page path builder must be a procedure or #f" build))
   (unless (or (not default-locale) (non-empty-string? default-locale))
     (error "Locale page path default locale must be a string or #f"
            default-locale))
-  (lambda (id)
-    (let ((locale (locale-of id)))
-      (unless (or (not locale) (non-empty-string? locale))
-        (error "Locale page path requires a locale tag or #f" id locale))
-      (if (or (not locale) (equal? locale default-locale))
-          (string-append id ".html")
-          (string-append locale "/" id ".html")))))
+  (let ((build (or build
+                   (lambda (locale id)
+                     (if locale
+                         (string-append id "." locale ".html")
+                         (string-append id ".html"))))))
+    (lambda (id)
+      (let ((locale (locale-of id)))
+        (unless (or (not locale) (non-empty-string? locale))
+          (error "Locale page path requires a locale tag or #f" id locale))
+        (build (and (not (equal? locale default-locale)) locale) id)))))

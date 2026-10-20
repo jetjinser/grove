@@ -41,29 +41,44 @@
 
 (test-equal "locale page paths leave default locales unprefixed"
   "guide.html" (html-page-path routes "guide"))
-(test-equal "locale page paths prefix other locales"
-  "zh-Hans/guide-zh.html" (html-page-path routes "guide-zh"))
+(test-equal "locale page paths suffix other locales"
+  "guide-zh.zh-Hans.html" (html-page-path routes "guide-zh"))
+(test-equal "custom locale path builders keep directory layouts"
+  "zh-Hans/guide-zh.html"
+  (html-page-path
+    (make-html-routes
+      #:home-page "home"
+      #:page-path (locale-page-path
+                    locale-of
+                    (lambda (locale id)
+                      (if locale
+                          (string-append locale "/" id ".html")
+                          (string-append id ".html")))
+                    #:default-locale "en"))
+    "guide-zh"))
 
 (let ((page (assoc-ref (site->html forest #:routes routes #:mathjax-src #f
-                                   #:hreflang? #t #:default-locale "en"
-                                   #:language-switcher? #t)
+                                   #:default-locale "en")
                        "guide")))
-  (test-assert "translated pages emit hreflang alternates"
+  (test-assert "translated pages emit hreflang alternates by default"
     (and (string-contains page
                           "rel=\"alternate\" hreflang=\"en\" href=\"/guide.html\"")
          (string-contains page
-                          "hreflang=\"zh-Hans\" href=\"/zh-Hans/guide-zh.html\"")
+                          "hreflang=\"zh-Hans\" href=\"/guide-zh.zh-Hans.html\"")
          (string-contains page
                           "hreflang=\"x-default\" href=\"/guide.html\"")))
-  (test-assert "language switcher marks the current page"
+  (test-assert "language switcher is on by default and marks the current page"
     (and (string-contains
            page "<nav class=\"language-switcher\" aria-label=\"Language\">")
          (string-contains page "aria-current=\"true\""))))
 
-(let ((page (assoc-ref (site->html forest #:routes routes #:mathjax-src #f)
+(let ((page (assoc-ref (site->html forest #:routes routes #:mathjax-src #f
+                                   #:hreflang? #f #:language-switcher? #f)
                        "guide")))
-  (test-assert "alternates stay off by default"
-    (not (string-contains page "rel=\"alternate\""))))
+  (test-assert "alternates can be disabled"
+    (not (string-contains page "rel=\"alternate\"")))
+  (test-assert "the language switcher can be disabled"
+    (not (string-contains page "language-switcher"))))
 
 (let ((sitemap (artifact-content
                  (car (render-sitemap forest #:site-url "https://example.org"

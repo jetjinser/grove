@@ -27,7 +27,8 @@
               "root" "Root"
               (evaluate-document
                 "@subtree{@title{Inline section}@paragraph{Body text.}}")
-              #:metadata '((published . "2026-09-27")
+              #:metadata '((summary . "Body text.")
+                           (published . "2026-09-27")
                            (updated . "2026-09-28")))))))
 
 (define (render-site . options)
@@ -48,8 +49,20 @@
     (string-contains page "<nav aria-label=\"Site\">"))
   (test-assert "dates stay machine-readable in time elements"
     (string-contains page
-                     "<time datetime=\"2026-09-27\">2026-09-27</time>")))
+                     "<time datetime=\"2026-09-27\">2026-09-27</time>"))
+  (test-assert "documents carry a viewport meta tag"
+    (string-contains page "<meta name=\"viewport\""))
+  (test-assert "documents carry Open Graph defaults"
+    (and (string-contains page "property=\"og:title\"")
+         (string-contains page "property=\"og:description\"")
+         (string-contains page "property=\"og:type\" content=\"website\""))))
 
+(let ((page (render-page #:article? #t)))
+  (test-assert "article pages expose their publication time"
+    (and (string-contains page "property=\"og:type\" content=\"article\"")
+         (string-contains
+           page
+           "property=\"article:published_time\" content=\"2026-09-27\""))))
 (let ((page (render-page #:locale "zh-Hans")))
   (test-assert "skip link localizes"
     (string-contains page "跳到正文"))
@@ -100,7 +113,6 @@
   (test-assert "default styles keep focus visible"
     (string-contains css ":focus-visible")))
 
-
 (let ((page (render-page #:locale "ar-EG")))
   (test-assert "locale derives the document language and direction"
     (string-contains page "<html lang=\"ar-EG\" dir=\"rtl\">")))
@@ -115,4 +127,33 @@
   (let ((text (assoc-ref (site->text (a11y-forest) #:locale "zh-Hans") "root")))
     (and (string-contains text "目录")
          (string-contains text "首页"))))
+
+(let ((page (render-page #:site-url "https://example.org")))
+  (test-assert "a site URL enables canonical and og:url"
+    (and (string-contains
+           page "<link rel=\"canonical\" href=\"https://example.org/index.html\"")
+         (string-contains
+           page "property=\"og:url\" content=\"https://example.org/index.html\""))))
+
+(let ((page (render-page)))
+  (test-assert "no canonical URL is invented without a site URL"
+    (not (string-contains page "rel=\"canonical\""))))
+
+(let* ((root (make-site-page
+               "root" "Root"
+               (evaluate-document "@paragraph{Body.}")
+               #:metadata '((locale . "zh-Hans")
+                            (published . "2026-09-27"))))
+       (forest (make-forest (make-site (list root))))
+       (routes (make-html-routes #:home-page "root"))
+       (page (assoc-ref (site->html forest #:routes routes #:mathjax-src #f)
+                        "root")))
+  (test-assert "page locale derives lang and dir without a renderer locale"
+    (string-contains page "<html lang=\"zh-Hans\" dir=\"ltr\">"))
+  (test-assert "page locale localizes chrome"
+    (and (string-contains page "跳到正文")
+         (string-contains page "aria-label=\"站点导航\"")))
+  (test-assert "page locale localizes dates"
+    (string-contains page
+                     "<time datetime=\"2026-09-27\">2026年9月27日</time>")))
 (test-end "forester accessibility")
