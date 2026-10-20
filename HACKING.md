@@ -76,8 +76,8 @@ Do not replace blue's fork with `spawn`: the suite child relies on blue's
 `primitive-load-path` redefinition, which a freshly exec'd process loses.
 
 Coverage runs (`GROVE_TESTS_ENABLE_COVERAGE=1`) execute under Guile's debug
-VM, which is far slower per build: give them `GROVE_TESTS_TIME_LIMIT=900` or
-more, and prefer `-j 1`; their subprocess bursts starve each other in
+VM, which is far slower per build, so the default time limit rises to 900
+seconds. Prefer `-j 1`: their subprocess bursts starve each other in
 parallel.
 
 Profile the polling watcher against a Flora-sized synthetic project (without

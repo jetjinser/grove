@@ -126,8 +126,10 @@
        ;;     legitimately approach a minute per suite while other
        ;;     fixtures run beside them; a tighter default kills them
        ;;     mid-suite and reports every remaining test as failed.
+       ;;     Coverage runs the debug VM, which needs the larger budget.
        #:time-limit (or (and=> (getenv "GROVE_TESTS_TIME_LIMIT") string->number)
-                        120)))
+                        (if (->bool (getenv "GROVE_TESTS_ENABLE_COVERAGE"))
+                            900 120))))
 
 (define grove-tests
   (map

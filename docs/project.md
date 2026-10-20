@@ -380,8 +380,11 @@ builds in separate processes without recompiling during measurement.
 For coverage, build first, then run:
 
 ```sh
-GROVE_TESTS_ENABLE_COVERAGE=1 GROVE_TESTS_TIME_LIMIT=600 blue check
+GROVE_TESTS_ENABLE_COVERAGE=1 blue check
 ```
+
+Coverage runs default to a 900-second suite limit; `GROVE_TESTS_TIME_LIMIT`
+overrides it.
 
 The vector identity suite may need a separate 1200-second tracing run. Blue
 compiles tests before tracing; suites write LCOV `.cov` files beside their logs.
