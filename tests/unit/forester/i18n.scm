@@ -369,4 +369,15 @@
                          "hello")))
     (and (string-contains text "首页")
          (not (string-contains text "Home")))))
+
+;;; Sorting
+
+(test-equal "sort keys fold case and accents"
+  "strasse" (locale-sort-key "Straße"))
+(test-equal "strings sort by their folded keys"
+  '("apple" "Straße" "Zebra" "éclair")
+  (sort-strings '("Straße" "apple" "Zebra" "éclair")))
+(test-equal "equal keys keep their input order"
+  '("Straße" "STRASSE")
+  (sort-strings '("Straße" "STRASSE")))
 (test-end "forester i18n")

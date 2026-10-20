@@ -29,7 +29,9 @@
             message-format
             format-date
             format-number
-            plural))
+            plural
+            locale-sort-key
+            sort-strings))
 
 ;; Grove's i18n primitives are language tags and chrome messages. They carry no
 ;; document content; translated trees and their presentation live elsewhere.
@@ -319,3 +321,23 @@ categories such as one and other.  The caller formats the chosen string."
         (assq-ref forms 'other)
         (assq-ref forms 'one)
         "")))
+
+(define (locale-sort-key text)
+  "Return TEXT's collation key: its canonical caseless form.
+
+The key is locale-independent, so ordering is deterministic across
+machines.  It is not a UCA collation key: accented letters sort by code
+point rather than by language-tailored rules."
+  (match-key text))
+
+(define (sort-strings strings)
+  "Stably sort STRINGS by locale-sort-key.
+
+Two strings with equal keys keep their input order.  Projects that need
+language-tailored ordering should supply their own comparator instead."
+  (sort strings
+        (lambda (a b)
+          (let ((ka (locale-sort-key a))
+                (kb (locale-sort-key b)))
+            (and (not (string=? ka kb))
+                 (string<? ka kb))))))
