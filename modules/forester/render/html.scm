@@ -1,3 +1,7 @@
+;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+;;;
+;;; SPDX-License-Identifier: GPL-3.0-or-later
+
 (define-module (forester render html)
   #:use-module (grove build)
   #:use-module (grove build state)
