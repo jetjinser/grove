@@ -328,7 +328,7 @@ rewrite rendered markup. They are available on `render-html`, `site->html`, and
 `make-html-renderer`:
 
 - `#:html-attributes` — an association list merged onto the root `<html>`
-  element, for example `'((lang . "zh-CN"))`.
+  element, for example `'((lang . "zh-Hans"))`.
 - `#:head` — SXML nodes placed in `<head>` after the description and before the
   stylesheets. Use it for viewport metadata, feed autodiscovery, or scripts that
   must run before the first paint.

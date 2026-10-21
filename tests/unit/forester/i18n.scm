@@ -15,6 +15,7 @@
   #:use-module (grove site)
   #:use-module (grove style html)
   #:use-module (forester i18n)
+  #:use-module (forester commands)
   #:use-module (forester render gemtext)
   #:use-module (forester render text)
   #:use-module (forester site)
@@ -127,7 +128,7 @@
 (test-equal "bilingual groups lanes into one pair"
   1 (length (content-element-children bilingual-block)))
 (test-equal "bilingual preserves lane order"
-  '("en" "zh-CN")
+  '("en" "zh-Hans")
   (map (lambda (lane) (content-element-property lane 'lang))
        (content-element-children
          (car (content-element-children bilingual-block)))))
@@ -179,7 +180,7 @@
   (test-equal "the reader lane is the disclosure summary"
     'summary (content-element-kind summary))
   (test-equal "the last lane is the default reader"
-    "zh-CN" (content-element-property summary 'lang))
+    "zh-Hans" (content-element-property summary 'lang))
   (test-equal "the folded lanes carry their language"
     '("en")
     (map (lambda (lane) (content-element-property lane 'lang))
@@ -197,20 +198,28 @@
   (test-equal "an explicit reader selects the visible lane"
     "en" (content-element-property (car kids) 'lang))
   (test-equal "the explicit reader folds the other language"
-    '("zh-CN")
+    '("zh-Hans")
     (map (lambda (lane) (content-element-property lane 'lang))
          (filter bilingual-lane? (cdr kids)))))
 
 (test-equal "the reader matches a more specific lane tag"
-  "zh-CN"
+  "zh-Hans"
   (content-element-property
     (car (content-element-children
            (car (content-element-children
                   (bilingual #:reader "zh" english chinese)))))
     'lang))
 
-(test-equal "an unmatched reader keeps the group parallel"
-  2 (length (pair-children (bilingual #:reader "fr" english chinese))))
+(test-error "an unmatched reader is an error"
+  #t (bilingual #:reader "fr" english chinese))
+
+(test-equal "a region alias selects the canonical lane"
+  "zh-Hans"
+  (content-element-property
+    (car (content-element-children
+           (car (content-element-children
+                  (bilingual #:reader "zh-CN" english chinese)))))
+    'lang))
 
 (test-equal "parallel mode keeps every lane visible"
   2 (length (pair-children
@@ -228,10 +237,10 @@
          (string-contains html "<details class=\"bilingual-pair\">")
          (string-contains html
            "<summary class=\"bilingual-lane\" lang=\"en\" dir=\"ltr\"")
-         (string-contains html "class=\"bilingual-more\">zh-CN"))))
+         (string-contains html "class=\"bilingual-more\">zh-Hans"))))
 
 (test-equal "text output keeps the reader lane and marks folded lanes"
-  "[en] The grove is a small forest.\n[zh-CN] 树林是一片小小的森林。\n"
+  "[en] The grove is a small forest.\n[zh-Hans] 树林是一片小小的森林。\n"
   (content->text
     (make-content-document (list (bilingual #:reader "en" english chinese)))
     #:handlers bilingual-text-handlers))
@@ -244,7 +253,7 @@
        (div (@ (class "bilingual-pair"))
          (div (@ (class "bilingual-lane") (lang "en") (dir "ltr"))
            (p "The grove is a small forest."))
-         (div (@ (class "bilingual-lane") (lang "zh-CN") (dir "ltr"))
+         (div (@ (class "bilingual-lane") (lang "zh-Hans") (dir "ltr"))
            (p "树林是一片小小的森林。")))))
   (content->sxml (make-content-document (list bilingual-block))))
 
@@ -252,7 +261,7 @@
   (let ((html (sxml->html
                 (content->sxml (make-content-document (list bilingual-block))))))
     (and (string-contains html "lang=\"en\" dir=\"ltr\"")
-         (string-contains html "lang=\"zh-CN\" dir=\"ltr\""))))
+         (string-contains html "lang=\"zh-Hans\" dir=\"ltr\""))))
 
 (test-equal "foreign terms keep their language inline"
   '(span (@ (class "foreign-term") (lang "fr") (dir "ltr")) "une forêt")
@@ -267,7 +276,7 @@
 ;;; Text presentation
 
 (test-equal "text output marks each lane"
-  "[en] The grove is a small forest.\n[zh-CN] 树林是一片小小的森林。\n\n"
+  "[en] The grove is a small forest.\n[zh-Hans] 树林是一片小小的森林。\n\n"
   (content->text (make-content-document (list bilingual-block))
                  #:handlers bilingual-text-handlers))
 
@@ -299,12 +308,12 @@
 (test-assert "the built-in text renderer marks each lane"
   (let ((text (assoc-ref (site->text bilingual-forest) "hello")))
     (and (string-contains text "[en] The grove is a small forest.")
-         (string-contains text "[zh-CN] 树林是一片小小的森林。"))))
+         (string-contains text "[zh-Hans] 树林是一片小小的森林。"))))
 
 (test-assert "the built-in Gemtext renderer marks each lane"
   (let ((gemtext (assoc-ref (site->gemtext bilingual-forest) "hello")))
     (and (string-contains gemtext "[en] The grove is a small forest.")
-         (string-contains gemtext "[zh-CN] 树林是一片小小的森林。"))))
+         (string-contains gemtext "[zh-Hans] 树林是一片小小的森林。"))))
 
 ;;; Scribble integration
 
@@ -323,7 +332,7 @@
   (test-equal "@bilingual lowers through the Scribble reader"
     'bilingual (content-element-kind block))
   (test-equal "the reader preserves lane order and language"
-    '("en" "zh-CN")
+    '("en" "zh-Hans")
     (map (lambda (lane) (content-element-property lane 'lang))
          (content-element-children pair)))
   (test-equal "the reader decodes lane prose into paragraphs"
@@ -464,4 +473,23 @@
   "站点导航" (message default-message-catalog 'nav-site "zh-CN"))
 (test-equal "Traditional Chinese has its own catalog"
   "網站導覽" (message default-message-catalog 'nav-site "zh-Hant"))
+
+(test-equal "zh-CN canonicalizes to zh-Hans"
+  "zh-Hans" (locale-tag (make-locale "zh-CN")))
+(test-equal "zh-TW canonicalizes to zh-Hant"
+  "zh-Hant" (locale-tag (make-locale "zh-TW")))
+(test-equal "the project reader locale selects the visible lane"
+  "zh-Hans"
+  (parameterize ((current-reader-locale "zh-Hans"))
+    (content-element-property
+      (car (content-element-children
+             (car (content-element-children (bilingual english chinese)))))
+      'lang)))
+(test-equal "the built-in bi uses the project reader locale"
+  "zh-Hans"
+  (parameterize ((current-reader-locale "zh-Hans"))
+    (content-element-property
+      (car (content-element-children
+             (car (content-element-children (bi english chinese)))))
+      'lang)))
 (test-end "forester i18n")

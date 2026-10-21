@@ -16,7 +16,7 @@ stack them, and every lane carries its own language and direction.}
   @lang["en"]{
     The grove is a small forest.
   }
-  @lang["zh-CN"]{
+  @lang["zh-Hans"]{
     树林是一片小小的森林。
   }
 
@@ -24,7 +24,7 @@ stack them, and every lane carries its own language and direction.}
     Every tree keeps a stable address, so links and translations point at the
     same idea.
   }
-  @lang["zh-CN"]{
+  @lang["zh-Hans"]{
     每一棵树都有稳定的地址，因此链接和译文都指向同一个想法。
   }
 }

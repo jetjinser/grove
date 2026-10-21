@@ -88,6 +88,6 @@
   (test-assert "the browser marks bilingual lanes"
     (let ((text (browse-output forest "q\n")))
       (and (string-contains text "[en] One.")
-           (string-contains text "[zh-CN] 一。")))))
+           (string-contains text "[zh-Hans] 一。")))))
 
 (test-end "forester terminal browser")

@@ -14,7 +14,8 @@
   #:use-module (grove ir)
   #:use-module (language scribble command)
   #:use-module (language scribble flow)
-  #:use-module (grove string-fun))
+  #:use-module (grove string-fun)
+  #:use-module (forester i18n))
 
 (define-public (title . body)
   (make-content-element 'title body #:flow-kind 'block))
@@ -192,3 +193,7 @@ page and must be a valid anchor ID."
                         #:properties `((target . ,id)
                                        ,@(if anchor `((anchor . ,anchor)) '()))
                         #:flow-kind 'block))
+
+(define*-public (bi . body)
+  "Folded bilingual block using the project's reader locale."
+  (apply bilingual body))

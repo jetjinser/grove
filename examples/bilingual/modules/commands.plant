@@ -10,4 +10,4 @@
 
 @(define (bi . body)
    "Folded bilingual block: show English, fold the other languages."
-   (apply bilingual #:reader "en" body))
+   (apply bilingual body))

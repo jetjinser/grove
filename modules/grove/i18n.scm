@@ -34,6 +34,7 @@
             locale-sort-key
             glibc-locale-name
             locale-collation-comparator
+            current-reader-locale
             og-locale-tag
             sort-strings))
 
@@ -91,6 +92,40 @@
       ((member lang rtl-languages) "rtl")
       (else "ltr"))))
 
+(define (canonical-locale-tag tag)
+  "Return TAG in canonical BCP 47 form.
+
+Language subtags are lowercased, scripts title-cased, and regions
+uppercased.  Chinese takes a script and drops the redundant region:
+zh-CN/zh-SG/zh-MY and bare zh become zh-Hans, while zh-TW/zh-HK/zh-MO
+become zh-Hant."
+  (unless (string? tag)
+    (error "locale tag must be a string" tag))
+  (let* ((subtags (string-split (string-trim-both tag) #\-))
+         (lang (string-downcase (car subtags)))
+         (rest (cdr subtags))
+         (script (find (lambda (subtag) (= (string-length subtag) 4)) rest))
+         (region (find (lambda (subtag)
+                         (or (= (string-length subtag) 2)
+                             (string-every char-set:digit subtag)))
+                       rest))
+         (variants (remove (lambda (subtag)
+                             (or (equal? subtag script) (equal? subtag region)))
+                           rest)))
+    (if (string=? lang "zh")
+        (let ((script (or (and script (string-titlecase script))
+                          (if (member (and region (string-upcase region))
+                                      '("TW" "HK" "MO"))
+                              "Hant"
+                              "Hans"))))
+          (string-join (append (list lang script) variants) "-"))
+        (string-join
+          (append (list lang)
+                  (if script (list (string-titlecase script)) '())
+                  (if region (list (string-upcase region)) '())
+                  variants)
+          "-"))))
+
 (define (make-locale tag)
   "Normalize a BCP 47-style language tag into a locale with a text direction."
   (unless (string? tag)
@@ -98,7 +133,8 @@
   (let ((tag (string-trim-both tag)))
     (unless (valid-locale-tag? tag)
       (error "locale tag must be a BCP 47-style language tag" tag))
-    (let* ((subtags (string-split tag #\-))
+    (let* ((tag (canonical-locale-tag tag))
+           (subtags (string-split tag #\-))
            (lang (string-downcase (car subtags)))
            (dir (resolve-direction subtags lang)))
       (%make-locale tag lang dir))))
@@ -112,11 +148,15 @@
 
 (define (locale-matches? reader tag)
   "True when TAG is READER or a more specific tag beneath it.
-So a `zh' reader matches `zh-CN', but `zh-CN' does not match `zh-TW'."
+
+Tags are canonicalized first, so `zh-CN' and `zh-Hans' compare equal
+and a `zh-Hans' reader matches `zh-Hans-CN'."
   (unless (and (string? reader) (string? tag))
     (error "locale-matches? requires two language tags" reader tag))
-  (or (string-ci=? reader tag)
-      (string-prefix-ci? (string-append reader "-") tag)))
+  (let ((reader (canonical-locale-tag reader))
+        (tag (canonical-locale-tag tag)))
+    (or (string-ci=? reader tag)
+        (string-prefix-ci? (string-append reader "-") tag))))
 
 (define (match-key text)
   "Return TEXT as a canonical caseless key for identity matching.
@@ -153,13 +193,22 @@ spellings."
                 (_ #f))
               entries)))
 
+(define (catalog-locale-key tag)
+  (if (= (length (string-split tag #\-)) 1)
+      tag
+      (canonical-locale-tag tag)))
+
 (define* (make-message-catalog entries #:key (default "en"))
   "Map locale tags to symbol-keyed messages, falling back to DEFAULT."
   (unless (valid-message-entries? entries)
     (error "message catalog requires locale-tagged message lists" entries))
   (unless (non-empty-string? default)
     (error "message catalog default locale must be a non-empty string" default))
-  (%make-message-catalog default entries))
+  (let ((entries (map (lambda (entry)
+                        (cons (catalog-locale-key (car entry)) (cdr entry)))
+                      entries))
+        (default (catalog-locale-key default)))
+    (%make-message-catalog default entries)))
 
 (define (locale-fallbacks tag)
   "List TAG and its progressively shorter prefixes, most specific first.
@@ -179,7 +228,10 @@ then the key name."
     (error "message requires a message catalog" catalog))
   (unless (symbol? key)
     (error "message key must be a symbol" key))
-  (let* ((entries (message-catalog-entries catalog))
+  (let* ((locale (if (locale? locale)
+                     (locale-tag locale)
+                     (canonical-locale-tag locale)))
+         (entries (message-catalog-entries catalog))
          (lookup (lambda (tags)
                    (any (lambda (tag)
                           (let ((messages (assoc-ref entries tag)))
@@ -517,3 +569,5 @@ territory, and an unknown tag falls back to its language subtag."
               (dot (string-index name #\.)))
          (if dot (substring name 0 dot) name)))
       (else lang))))
+
+(define current-reader-locale (make-parameter #f))

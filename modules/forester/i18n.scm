@@ -158,9 +158,18 @@ the visible language; without it the last lane of each group is shown."
                                        reader-tag
                                        (content-element-property lane 'lang)))
                                    group)))
-                    (visible (if reader-tag
-                                 (if (null? matched) group matched)
-                                 (list (last group))))
+                    (visible
+                      (if reader-tag
+                          (begin
+                            (when (null? matched)
+                              (error
+                                "bilingual reader ~a matches no lane in group ~a"
+                                reader-tag
+                                (map (lambda (lane)
+                                       (content-element-property lane 'lang))
+                                     group)))
+                            matched)
+                          (list (last group))))
                     (folded (if reader-tag
                                 (remove (lambda (lane) (memq lane visible)) group)
                                 (drop-right group 1))))
@@ -194,7 +203,8 @@ the visible language; without it the last lane of each group is shown."
                   (else (error "bilingual accepts only @lang blocks" item))))
               body))
 
-(define*-public (bilingual #:key (style #f) (mode 'fold) (reader #f)
+(define*-public (bilingual #:key (style #f) (mode 'fold)
+                           (reader (current-reader-locale))
                            (source-label #f) . body)
   "Present several @lang blocks as language lanes.
 

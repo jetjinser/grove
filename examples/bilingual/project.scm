@@ -34,7 +34,7 @@
   (make-message-catalog
     '(("en" . ((context . "Context") (references . "References")
                (backlinks . "Backlinks") (related . "Related")))
-      ("zh-CN" . ((context . "语境") (references . "参考")
+      ("zh-Hans" . ((context . "语境") (references . "参考")
                   (backlinks . "反向链接") (related . "相关"))))
     #:default "en"))
 
@@ -59,6 +59,7 @@
 (define bilingual-project
   (make-site-project
     #:default-prefix "bi"
+    #:locale "en"
     #:title "Bilingual Notes"
     #:description "One idea in two languages, shown side by side."
     #:home "hello"
