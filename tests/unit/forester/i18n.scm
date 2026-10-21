@@ -459,4 +459,9 @@
   "other" (plural "ru" 5 '((other . "other"))))
 (test-equal "plural falls back to the empty string"
   "" (plural "ru" 5 '()))
+
+(test-equal "generic Chinese tags fall back to the zh catalog"
+  "站点导航" (message default-message-catalog 'nav-site "zh-CN"))
+(test-equal "Traditional Chinese has its own catalog"
+  "網站導覽" (message default-message-catalog 'nav-site "zh-Hant"))
 (test-end "forester i18n")
