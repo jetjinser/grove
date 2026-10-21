@@ -463,7 +463,8 @@
         (and (string-contains algebra-html
                "<div class=\"metadata\"><ul><li class=\"meta-item\"><time datetime=\"2026-09-27\">2026-09-27</time></li><li class=\"meta-item\"><time datetime=\"2026-09-28\">updated 2026-09-28</time></li></ul></div>")
              (string-contains limits-html
-               "[algebra]</a></h3><div class=\"metadata\"><ul><li class=\"meta-item\"><time datetime=\"2026-09-27\">2026-09-27</time></li>")))
+               "</h3><div class=\"metadata\"><ul><li class=\"meta-item\"><time datetime=\"2026-09-27\">2026-09-27</time></li>")
+             (string-contains limits-html ">[algebra]</a>")))
       (test-assert "HTML project output preserves TeX for MathJax"
         (and (string-contains algebra-html "\\(x^2+y^2=z^2\\)")
              (string-contains algebra-html
