@@ -144,6 +144,9 @@ modules, in the project's module directory. A missing module, a missing
 - Include `(forester commands)` explicitly in the manifest. The base commands
   are part of the language, but the manifest is the readable list of
   everything the set provides.
+- The manifest itself is imported into the page environment, so the build
+  records its source as an input; a `.scm` manifest needs no separate project
+  input declaration.
 - The name may be a single name (`{bilingual}` or `[bilingual]`), or a
   multi-segment module name (`[(my project)]`).
 

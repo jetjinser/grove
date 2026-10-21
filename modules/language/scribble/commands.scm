@@ -26,6 +26,11 @@
       (error "no such command module" module-name))
     (unless variable
       (error "command module does not define command-modules" module-name))
+    ;; Import the manifest itself too, so the build records its source as an
+    ;; input even when the manifest is a plain .scm module.
+    (let ((interface (resolve-interface module-name)))
+      (unless (memq interface (module-uses (current-module)))
+        (module-use! (current-module) interface)))
     (for-each
       (lambda (dependency)
         (module-use! (current-module) (resolve-interface dependency)))

@@ -13,6 +13,9 @@
   #:use-module (grove render html)
   #:use-module (grove render text)
   #:use-module (grove style html)
+  #:use-module (grove private input dependencies)
+  #:use-module ((language scribble commands) #:select (use-command-module))
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:use-module (tests unit forester fixtures))
 
@@ -242,4 +245,18 @@
 
 (test-error "use-commands rejects a module without a manifest" #t
   (evaluate-document "@use-commands{plain}@title{Root}"))
+
+(let* ((environment (make-fresh-user-module))
+       (trace (make-hash-table)))
+  (parameterize ((current-input-trace trace))
+    (save-module-excursion
+      (lambda ()
+        (set-current-module environment)
+        (use-command-module '(proto))))
+    (record-module-inputs! environment))
+  (test-assert "use-commands records the manifest as an input"
+    (any (lambda (path)
+           (string-suffix? "tests/fixtures/proto.scm" path))
+         (trace-inputs trace))))
+
 (test-end "forester commands")
