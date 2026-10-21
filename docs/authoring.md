@@ -111,14 +111,44 @@ readable and lets tools find it quickly. A second `@taxon` is an error; use
 - See [Accessibility](accessibility.md) for the renderer guarantees and the
   project checklist.
 
-## Modules
+## Command sets
 
-Each page declares the commands it uses:
+A page names the command vocabulary it uses:
 
 ```scribble
-@use-modules[(forester commands) (my project commands)]
+@use-commands{bilingual}
 ```
 
-A project can define short aliases in a shared module (for example `@bi`) and
-re-export them; the module is loaded once per page. Project-level default
-modules are not built in yet, so the `@use-modules` line remains per page.
+The name resolves to a module that exports a `command-modules` list:
+
+```scribble
+@(define-module (bilingual)
+  #:export (command-modules))
+
+@(define-public command-modules
+   '((forester commands) (bilingual commands)))
+```
+
+`@use-commands` reads the list and imports each module into the page. The
+manifest may live in a `.scm` module or, in a project that loads `.plant`
+modules, in the project's module directory. A missing module, a missing
+`command-modules` export, or a non-name argument is an error.
+
+- `@use-commands{NAME}` is the semantic form: the page says which command set
+  it speaks, and the manifest says which modules implement it.
+- `@use-modules[...]` remains the raw form for arbitrary imports, prefixed
+  modules, and one-off macros.
+- There are no project-wide default modules. The page names the set, so a
+  `.plant` read outside the project still shows its dependency; the manifest
+  keeps the module list in one place.
+- Include `(forester commands)` explicitly in the manifest. The base commands
+  are part of the language, but the manifest is the readable list of
+  everything the set provides.
+- The name may be a single name (`{bilingual}` or `[bilingual]`), or a
+  multi-segment module name (`[(my project)]`).
+
+This is not a Guile `define-language`. A Guile language selects the reader,
+compiler, evaluator, and default environment, and is chosen by the CLI or the
+project. A command set only selects document vocabulary, and is chosen by the
+file. The Scribble language remains the only Guile language involved.
+

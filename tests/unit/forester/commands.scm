@@ -16,6 +16,11 @@
   #:use-module (srfi srfi-13)
   #:use-module (tests unit forester fixtures))
 
+(add-to-load-path
+  (if (current-filename)
+      (string-append (dirname (current-filename)) "/../../fixtures")
+      "tests/fixtures"))
+
 (define (label-text element)
   (content-verbatim-string (content-element-children element)))
 
@@ -195,4 +200,46 @@
     "Group\nBody.\n"
     (content->text
       (evaluate-document "@section{@title{Group}@paragraph{Body.}}")))
+
+(let ((document
+        (evaluate-document
+          "@use-commands{proto}@title{Root}@section{@title{Group}@paragraph{Body.}}")))
+  (test-assert "use-commands loads a command set"
+    (string-contains
+      (sxml->html (content->sxml document))
+      "<section class=\"forest-section\"><h2>Group</h2><p>Body.</p></section>")))
+
+(test-assert "use-commands accepts a bracketed name"
+  (let ((document
+          (evaluate-document
+            "@use-commands[(proto)]@title{Root}@section{@title{Group}}")))
+    (string-contains (sxml->html (content->sxml document)) "<h2>Group</h2>")))
+
+(test-assert "use-commands accepts a symbol name"
+  (let ((document
+          (evaluate-document
+            "@use-commands[proto]@title{Root}@section{@title{Group}}")))
+    (string-contains (sxml->html (content->sxml document)) "<h2>Group</h2>")))
+
+(test-error "use-commands rejects a non-name" #t
+  (evaluate-document "@use-commands[42]@title{Root}"))
+
+(test-assert "use-commands accepts a multi-segment module name"
+  (let ((document
+          (evaluate-document
+            "@use-commands[(proto nested)]@title{Root}@section{@title{Group}}")))
+    (string-contains (sxml->html (content->sxml document)) "<h2>Group</h2>")))
+
+(test-assert "use-commands makes macros available"
+  (let ((document
+          (evaluate-document
+            "@use-commands{proto}@title{Root}@paragraph{@shout{hi}}")))
+    (string-contains (sxml->html (content->sxml document)) "<p>hi!</p>")))
+
+
+(test-error "use-commands rejects a missing module" #t
+  (evaluate-document "@use-commands{no-such-module}@title{Root}"))
+
+(test-error "use-commands rejects a module without a manifest" #t
+  (evaluate-document "@use-commands{plain}@title{Root}"))
 (test-end "forester commands")

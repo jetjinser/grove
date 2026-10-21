@@ -15,7 +15,39 @@
   #:use-module (grove math expression)
   #:use-module (grove math layout)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13))
+  #:use-module (srfi srfi-13)
+  #:export (use-commands))
+
+(define-public (use-command-module module-name)
+  "Import the command modules declared by MODULE-NAME's command-modules export."
+  (let* ((module (resolve-module module-name))
+         (variable (and module (module-local-variable module 'command-modules))))
+    (unless module
+      (error "no such command module" module-name))
+    (unless variable
+      (error "command module does not define command-modules" module-name))
+    (for-each
+      (lambda (dependency)
+        (module-use! (current-module) (resolve-interface dependency)))
+      (variable-ref variable))))
+
+(define-syntax use-commands
+  (lambda (form)
+    (syntax-case form ()
+      ((_ name)
+       (let* ((datum (syntax->datum #'name))
+              (base (cond ((string? datum) (string->symbol datum))
+                          ((symbol? datum) datum)
+                          ((list? datum) datum)
+                          (else
+                            (syntax-violation
+                              'use-commands
+                              "expected a command module name"
+                              form
+                              #'name))))
+              (module (if (list? base) base (list base))))
+         (with-syntax ((quoted (datum->syntax #'name (list 'quote module))))
+           #'(use-command-module quoted)))))))
 
 (define-public (text-paragraphs value)
   (unless (or (string? value) (content-text? value))
