@@ -10,6 +10,7 @@
              (forester render gemtext)
              (forester render html)
              (forester render rss)
+             (forester render site)
              (forester render sitemap)
              (grove render static)
              (forester render text)
@@ -51,6 +52,9 @@
     (lambda (id)
       (string-append id ".txt"))))
 
+(define notes-settings
+  (make-site-settings #:site-url "https://notes.example"))
+
 (define notes-project
   (make-site-project
     #:default-prefix "note"
@@ -66,16 +70,17 @@
     #:renderers
     (list (make-html-renderer
             #:style notes-style
-            #:routes notes-routes)
+            #:routes notes-routes
+            #:settings notes-settings)
           (make-text-renderer
             #:prefix "text"
             #:routes notes-text-routes)
           (make-gemtext-renderer #:prefix "gemini")
           (make-rss-renderer
-            #:site-url "https://notes.example"
+            #:settings notes-settings
             #:routes notes-routes)
           (make-sitemap-renderer
-            #:site-url "https://notes.example"
+            #:settings notes-settings
             #:routes notes-routes)
           (make-graph-renderer
             #:path "forest-graph.scm")

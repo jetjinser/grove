@@ -7,6 +7,7 @@
              (forester render graph)
              (forester render html)
              (forester render rss)
+             (forester render site)
              (forester render sitemap)
              (forester render text)
              (forester site)
@@ -33,6 +34,7 @@
                (list (make-artifact "style.css" stylesheet
                                     (list stylesheet-path))))))
          (routes (make-html-routes #:home-page home-page))
+         (settings (make-site-settings #:site-url site-url))
          (project
            (make-site-project
              #:title title
@@ -46,10 +48,11 @@
              (make-page-reader (make-scribble-document-reader))
              #:analyze make-forest
              #:renderers
-             (list (make-html-renderer #:style style #:routes routes)
+             (list (make-html-renderer #:style style #:routes routes
+                                       #:settings settings)
                    (make-text-renderer #:prefix "text")
-                   (make-rss-renderer #:site-url site-url #:routes routes)
-                   (make-sitemap-renderer #:site-url site-url #:routes routes)
+                   (make-rss-renderer #:settings settings #:routes routes)
+                   (make-sitemap-renderer #:settings settings #:routes routes)
                    (make-graph-renderer #:path "forest-graph.scm"))
              #:output-directory output-directory)))
     project))
