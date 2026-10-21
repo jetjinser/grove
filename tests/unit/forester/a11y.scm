@@ -7,7 +7,9 @@
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64)
   #:use-module (ice-9 textual-ports)
+  #:use-module (ice-9 optargs)
   #:use-module (forester backmatter)
+  #:use-module (forester input scribble)
   #:use-module (forester render labels)
   #:use-module (forester render html)
   #:use-module (forester render text)
@@ -187,4 +189,38 @@
   (resolve-chrome-locale 42 default-message-catalog))
 (test-error "renderer catalogs reject non-catalogs" #t
   (resolve-chrome-catalog 42))
+
+(define* (render-page-with document #:key (site-url #f))
+  (let* ((page (document->tree-page "root" (evaluate-document document) #f))
+         (forest (make-forest (make-site (list page))))
+         (routes (make-html-routes #:home-page "root")))
+    (assoc-ref
+      (site->html forest #:routes routes #:mathjax-src #f #:site-url site-url)
+      "root")))
+
+(let ((page (render-page-with
+              "@title{Root}@og-image{assets/cover.png}@paragraph{Body.}"
+              #:site-url "https://example.org")))
+  (test-assert "og:image resolves against the site URL"
+    (string-contains
+      page
+      "property=\"og:image\" content=\"https://example.org/assets/cover.png\""))
+  (test-assert "og:image:alt defaults to the page title"
+    (string-contains
+      page
+      "property=\"og:image:alt\" content=\"Root\""))
+  (test-assert "og:image metadata leaves the body"
+    (not (string-contains page "<p>assets/cover.png</p>"))))
+
+(let ((page (render-page-with
+              "@title{Root}@og-image{https://cdn.example.org/cover.png}@paragraph{Body.}")))
+  (test-assert "external og:image is used as-is"
+    (string-contains
+      page
+      "property=\"og:image\" content=\"https://cdn.example.org/cover.png\"")))
+
+(let ((page (render-page-with
+              "@title{Root}@og-image{assets/cover.png}@paragraph{Body.}")))
+  (test-assert "relative og:image is omitted without a site URL"
+    (not (string-contains page "property=\"og:image\""))))
 (test-end "forester accessibility")

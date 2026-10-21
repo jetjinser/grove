@@ -31,10 +31,11 @@ to them.
 - Dates render as `<time datetime="…">` with a human-readable label.
 - Code blocks and inline code carry `translate="no"`, so browser translation
   does not rewrite source.
-- Documents carry a viewport meta tag, Open Graph title/description/type, and
-  `article:published_time` when the page has a publication date.  A
-  `#:site-url` adds the canonical link and `og:url`; without it no absolute
-  URL is invented.
+- Documents carry a viewport meta tag, Open Graph title/description/type, an
+  absolute `og:image` when the page has `@og-image` and a site URL is
+  configured, and `article:published_time` when the page has a publication
+  date.  A `#:site-url` adds the canonical link and `og:url`; without it no
+  absolute URL is invented.
 - The default stylesheet hides the skip link until it is focused and keeps
   `:focus-visible` outlines visible.
 

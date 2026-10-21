@@ -575,7 +575,8 @@ name, property, rel, or title."
                        #:key (html-attributes '()) (head '()) (site-nav '())
                        (home-link #f) (scripts '()) (current-page #f)
                        (language-nav '()) (article? #f) (published #f)
-                       (og-locales '()) (updated #f))
+                       (og-locales '()) (updated #f) (og-image #f)
+                       (og-image-alt #f))
   (let* ((site-nav (if (procedure? site-nav)
                        (site-nav current-page)
                        site-nav))
@@ -590,7 +591,19 @@ name, property, rel, or title."
                         (html-page-url routes current-page)))
          (absolute-url (and page-url
                             (string-append (string-trim-right site-url #\/)
-                                           page-url))))
+                                           page-url)))
+         (og-image-url
+           (and og-image
+                (cond ((or (string-prefix? "http://" og-image)
+                           (string-prefix? "https://" og-image))
+                       og-image)
+                      ((and site-url (string-prefix? "/" og-image))
+                       (string-append (string-trim-right site-url #\/)
+                                      og-image))
+                      (site-url
+                       (string-append (string-trim-right site-url #\/)
+                                      (html-asset-url routes og-image)))
+                      (else #f)))))
     `(html
      ,@(if (null? html-attributes)
            '()
@@ -625,6 +638,15 @@ name, property, rel, or title."
                     `(meta (@ (property "og:locale:alternate")
                               (content ,(og-locale-tag tag)))))
                   og-locales)
+             (if og-image-url
+                 (append
+                   (list `(meta (@ (property "og:image")
+                                   (content ,og-image-url))))
+                   (if og-image-alt
+                       (list `(meta (@ (property "og:image:alt")
+                                       (content ,og-image-alt))))
+                       '()))
+                 '())
              (if absolute-url
                  (list `(link (@ (rel "canonical") (href ,absolute-url)))
                        `(meta (@ (property "og:url") (content ,absolute-url))))
@@ -748,6 +770,7 @@ to the lane, and an in-place numbered marker links to it."
              (og-locales (if (current-hreflang?)
                              (alternate-og-locales forest page)
                              '()))
+             (og-image (assq-ref (site-page-metadata page) 'og-image))
              (lane (and (pair? side-lane) (make-side-lane-collector)))
              (body (subtree-content-sxml forest routes page "" 1 highlighters
                                          #:title-decoration title-decoration
@@ -794,6 +817,8 @@ to the lane, and an in-place numbered marker links to it."
             #:published (assq-ref (site-page-metadata page) 'published)
             #:updated (assq-ref (site-page-metadata page) 'updated)
             #:og-locales og-locales
+            #:og-image og-image
+            #:og-image-alt (and og-image (site-page-title page))
             #:scripts (if (null? backmatter)
                           '()
                           (list backmatter-fetch-script))))))))

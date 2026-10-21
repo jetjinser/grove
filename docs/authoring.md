@@ -27,6 +27,7 @@ A page is a Scribble document. Commands use `@name{body}` or
 | --- | --- |
 | `@title{...}` | Page or section title; required for a page and for every subtree. |
 | `@summary{...}` | Description used by `<meta>`, Open Graph, and feeds. |
+| `@og-image{assets/cover.png}` | Open Graph image; external URLs pass through, relative paths resolve against the site URL. The alt text defaults to the page title. |
 | `@published{YYYY-MM-DD}` | Publication date. |
 | `@updated{YYYY-MM-DD}` | Last update; must not precede `@published`. |
 | `@taxon["chapter"]` | One classification per page, rendered above the title. |

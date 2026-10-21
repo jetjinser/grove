@@ -23,6 +23,9 @@
 (define-public (summary . body)
   (make-content-element 'summary body #:flow-kind 'block))
 
+(define-public (og-image . source)
+  (make-content-element 'og-image source #:flow-kind 'block))
+
 
 (define lipsum-source
   (search-path %load-path "forester/data/lipsum-la.txt"))
