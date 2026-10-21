@@ -350,7 +350,7 @@
 (test-equal "Chinese dates"
   "2026年9月27日" (format-date "zh-Hans" "2026-09-27"))
 (test-equal "unsupported locales keep the ISO date"
-  "2026-09-27" (format-date "fr" "2026-09-27"))
+  "2026-09-27" (format-date "sw" "2026-09-27"))
 (test-equal "unparseable dates pass through"
   "not-a-date" (format-date "en" "not-a-date"))
 (test-equal "numbers group by threes"
@@ -419,4 +419,29 @@
 (test-equal "Open Graph locales map Chinese scripts"
   (list "zh_CN" "zh_TW")
   (list (og-locale-tag "zh-Hans") (og-locale-tag "zh-Hant")))
+
+(test-equal "German long dates"
+  "27. September 2026" (format-date "de" "2026-09-27" #:style 'long))
+(test-equal "German medium dates"
+  "27. Sept. 2026" (format-date "de" "2026-09-27"))
+(test-equal "French long dates"
+  "27 septembre 2026" (format-date "fr" "2026-09-27" #:style 'long))
+(test-equal "French medium dates"
+  "27 sept. 2026" (format-date "fr" "2026-09-27"))
+(test-equal "Russian plural categories"
+  '("one" "few" "many" "many")
+  (map (lambda (n)
+         (plural "ru" n '((one . "one") (few . "few") (many . "many"))))
+       '(1 2 5 11)))
+(test-equal "Polish plural categories"
+  '("one" "few" "many" "many")
+  (map (lambda (n)
+         (plural "pl" n '((one . "one") (few . "few") (many . "many"))))
+       '(1 2 5 12)))
+(test-equal "Arabic plural categories"
+  '("zero" "one" "two" "few" "many" "other")
+  (map (lambda (n)
+         (plural "ar" n '((zero . "zero") (one . "one") (two . "two")
+                          (few . "few") (many . "many") (other . "other"))))
+       '(0 1 2 3 11 100)))
 (test-end "forester i18n")

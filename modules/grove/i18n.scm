@@ -253,6 +253,25 @@ catalog keeps the built-in messages for everything it does not name."
   '("January" "February" "March" "April" "May" "June"
     "July" "August" "September" "October" "November" "December"))
 
+(define german-months
+  '("Januar" "Februar" "März" "April" "Mai" "Juni"
+    "Juli" "August" "September" "Oktober" "November" "Dezember"))
+
+(define german-months-short
+  '("Jan." "Feb." "März" "Apr." "Mai" "Juni"
+    "Juli" "Aug." "Sept." "Okt." "Nov." "Dez."))
+
+(define french-months
+  '("janvier" "février" "mars" "avril" "mai" "juin"
+    "juillet" "août" "septembre" "octobre" "novembre" "décembre"))
+
+(define french-months-short
+  '("janv." "févr." "mars" "avr." "mai" "juin"
+    "juil." "août" "sept." "oct." "nov." "déc."))
+
+(define (iso-date year month day)
+  (format #f "~4,'0d-~2,'0d-~2,'0d" year month day))
+
 (define (parse-iso-date text)
   (and (string? text)
        (let ((parts (string-split text #\-)))
@@ -277,12 +296,11 @@ locales without date data return DATE unchanged."
           (cond
             ((string=? lang "zh")
              (if (eq? style 'short)
-                 (format #f "~4,'0d-~2,'0d-~2,'0d" year month day)
+                 (iso-date year month day)
                  (format #f "~d年~d月~d日" year month day)))
             ((string=? lang "en")
              (cond
-               ((eq? style 'short)
-                (format #f "~4,'0d-~2,'0d-~2,'0d" year month day))
+               ((eq? style 'short) (iso-date year month day))
                ((eq? style 'long)
                 (format #f "~a ~d, ~d"
                         (list-ref english-months (1- month)) day year))
@@ -290,8 +308,25 @@ locales without date data return DATE unchanged."
                 (format #f "~a ~d, ~d"
                         (substring (list-ref english-months (1- month)) 0 3)
                         day year))))
+            ((string=? lang "de")
+             (cond
+               ((eq? style 'short) (iso-date year month day))
+               ((eq? style 'long)
+                (format #f "~d. ~a ~d"
+                        day (list-ref german-months (1- month)) year))
+               (else
+                (format #f "~d. ~a ~d"
+                        day (list-ref german-months-short (1- month)) year))))
+            ((string=? lang "fr")
+             (cond
+               ((eq? style 'short) (iso-date year month day))
+               ((eq? style 'long)
+                (format #f "~d ~a ~d"
+                        day (list-ref french-months (1- month)) year))
+               (else
+                (format #f "~d ~a ~d"
+                        day (list-ref french-months-short (1- month)) year))))
             (else date))))))
-
 (define (group-digits digits)
   (let loop ((end (string-length digits)) (acc '()))
     (if (<= end 3)
@@ -311,11 +346,30 @@ number types pass through number->string."
         (if negative? (string-append "-" digits) digits))))
 
 (define (plural-category lang count)
-  (cond
-    ((string=? lang "zh") 'other)
-    ((string=? lang "en") (if (= count 1) 'one 'other))
-    (else (if (= count 1) 'one 'other))))
-
+  (let ((n (abs count))
+        (m10 (modulo (abs count) 10))
+        (m100 (modulo (abs count) 100)))
+    (cond
+      ((string=? lang "zh") 'other)
+      ((string=? lang "en") (if (= n 1) 'one 'other))
+      ((string=? lang "ru")
+       (cond ((and (= m10 1) (not (= m100 11))) 'one)
+             ((and (>= m10 2) (<= m10 4)
+                   (not (and (>= m100 12) (<= m100 14)))) 'few)
+             (else 'many)))
+      ((string=? lang "pl")
+       (cond ((= n 1) 'one)
+             ((and (>= m10 2) (<= m10 4)
+                   (not (and (>= m100 12) (<= m100 14)))) 'few)
+             (else 'many)))
+      ((string=? lang "ar")
+       (cond ((= n 0) 'zero)
+             ((= n 1) 'one)
+             ((= n 2) 'two)
+             ((and (>= n 3) (<= n 10)) 'few)
+             ((and (>= n 11) (<= n 99)) 'many)
+             (else 'other)))
+      (else (if (= n 1) 'one 'other)))))
 (define* (plural locale count forms)
   "Choose the plural form for COUNT from FORMS, an alist of CLDR
 categories such as one and other.  The caller formats the chosen string."
