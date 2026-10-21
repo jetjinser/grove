@@ -4,11 +4,13 @@
 
 (define-module (forester render rss)
   #:use-module (grove build)
+  #:use-module (forester render site)
   #:use-module (forester site)
   #:use-module (forester private web)
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove render html routes)
+  #:use-module (grove string-fun)
   #:use-module (grove render text)
   #:use-module (grove site)
   #:use-module (sxml simple)
@@ -86,7 +88,8 @@
        ,@(if pub-date `((pubDate ,(rss-date pub-date))) '())
        (description ,(page-description page)))))
 
-(define (rss-document site home-url items stylesheet-url stylesheet-type)
+(define (rss-document site home-url items stylesheet-url stylesheet-type
+                      language)
   (append
     (list '*TOP*
           (list '*PI* 'xml "version=\"1.0\" encoding=\"utf-8\"")
@@ -104,16 +107,22 @@
            (title ,(site-title site))
            (link ,home-url)
            (description ,(channel-description site))
+           ,@(if language (list `(language ,language)) '())
            ,@items)))))
 
 (define (serialize-rss document)
   (call-with-output-string (lambda (port) (sxml->xml document port))))
 
-(define* (render-rss forest #:key site-url
+(define* (render-rss forest #:key (settings #f)
+                            (site-url
+                              (and settings (site-settings-site-url settings)))
                             (feed-path "feed.xml")
                             (routes (make-html-routes #:home-page "index"))
                             stylesheet-url
-                            (stylesheet-type "text/xsl"))
+                            (stylesheet-type "text/xsl")
+                            (language
+                              (and settings
+                                   (site-settings-default-locale settings))))
   (unless (forest? forest)
     (error "Forester RSS renderer requires a forest" forest))
   (unless (web-url? site-url)
@@ -126,6 +135,8 @@
   (when (and stylesheet-url (not (rss-stylesheet-url? stylesheet-url)))
     (error "RSS stylesheet URL must be a non-empty URL without whitespace"
            stylesheet-url))
+  (unless (or (not language) (non-empty-string? language))
+    (error "RSS language must be a non-empty tag or #f" language))
   (unless (rss-stylesheet-url? stylesheet-type)
     (error "RSS stylesheet type must be a non-empty media type without whitespace"
            stylesheet-type))
@@ -137,14 +148,20 @@
                 (feed-pages (site-pages site))))
          (content
            (serialize-rss
-             (rss-document site home-url items stylesheet-url stylesheet-type))))
+             (rss-document site home-url items stylesheet-url stylesheet-type
+                           language))))
     (list (make-artifact feed-path content (source-paths forest)))))
 
-(define* (make-rss-renderer #:key site-url
+(define* (make-rss-renderer #:key (settings #f)
+                                     (site-url
+                                       (and settings (site-settings-site-url settings)))
                                      (feed-path "feed.xml")
                                      (routes (make-html-routes #:home-page "index"))
                                      stylesheet-url
                                      (stylesheet-type "text/xsl")
+                                     (language
+                                       (and settings
+                                            (site-settings-default-locale settings)))
                                      (cache? #t))
   (let ((render (lambda (forest)
                   (render-rss forest
@@ -152,11 +169,12 @@
                                      #:feed-path feed-path
                                      #:routes routes
                                      #:stylesheet-url stylesheet-url
-                                     #:stylesheet-type stylesheet-type))))
+                                     #:stylesheet-type stylesheet-type
+                                     #:language language))))
     (make-cached-renderer render #:cache? cache?
           #:configuration
           (lambda (forest)
-            (list 'rss site-url feed-path stylesheet-url stylesheet-type
+            (list 'rss site-url feed-path stylesheet-url stylesheet-type language
                   (site-title (site forest)) (site-description (site forest))
                   (html-index-url routes)
                   (html-route-table routes

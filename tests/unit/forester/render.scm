@@ -1060,4 +1060,11 @@
                  ("article" "Article" "named-sub" "term-sub" "subtree term")))
     (term-definition-conflicts forest)))
 
+
+(let* ((forest (make-forest (make-site (list algebra limits))))
+       (feed (artifact-content
+               (car (render-rss forest #:site-url "https://notes.example"
+                                #:language "zh-Hans")))))
+  (test-assert "RSS declares its language"
+    (string-contains feed "<language>zh-Hans</language>")))
 (test-end "forester renderers")

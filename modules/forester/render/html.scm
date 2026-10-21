@@ -9,6 +9,7 @@
   #:use-module (grove string-fun)
   #:use-module (forester render artifact)
   #:use-module (forester render labels)
+  #:use-module (forester render site)
   #:use-module (forester site)
   #:use-module (grove ir)
   #:use-module (grove output)
@@ -525,12 +526,56 @@ better than a procedure recreated on every project load."
   ;;     failed fetch quietly keeps the outline.
   "(function () {\n  function loadFull(entry) {\n    var details = entry.querySelector(':scope > details');\n    if (!details || details.dataset.full) return;\n    var id = entry.getAttribute('data-tree-id');\n    var slug = entry.querySelector('a.forest-tree-id');\n    if (!id || !slug) return;\n    var url = slug.getAttribute('href').split('#')[0];\n    if (!url) return;\n    details.dataset.full = 'pending';\n    fetch(url).then(function (response) { return response.text(); })\n      .then(function (html) {\n        var doc = new DOMParser().parseFromString(html, 'text/html');\n        var root = doc.getElementById('tree-root-' + id);\n        var content = root && root.querySelector('.forest-tree-content');\n        if (!content) throw new Error('tree content missing');\n        var panel = details.querySelector('.forest-tree-content');\n        panel.innerHTML = content.innerHTML;\n        panel.classList.add('backmatter-full');\n        details.dataset.full = 'done';\n      })\n      .catch(function () { delete details.dataset.full; });\n  }\n  document.querySelectorAll('section.forest-tree-block.backmatter')\n    .forEach(function (entry) {\n      var details = entry.querySelector(':scope > details');\n      if (details) details.addEventListener('toggle', function () {\n        if (details.open) loadFull(entry);\n      });\n    });\n}());")
 
+(define (head-attribute node attribute)
+  (let ((attrs (and (pair? node) (pair? (cdr node))
+                    (eq? (caadr node) '@)
+                    (cdadr node))))
+    (and attrs
+         (let ((entry (assq attribute attrs)))
+           (and entry (cadr entry))))))
+
+(define (head-key node)
+  (let ((tag (and (pair? node) (car node))))
+    (cond
+      ((eq? tag 'meta)
+       (cond ((head-attribute node 'name)
+              => (lambda (value) (cons 'meta-name value)))
+             ((head-attribute node 'property)
+              => (lambda (value) (cons 'meta-property value)))
+             (else #f)))
+      ((eq? tag 'link)
+       (let ((rel (head-attribute node 'rel))
+             (hreflang (head-attribute node 'hreflang)))
+         (cond ((and rel hreflang (string=? rel "alternate"))
+                (cons 'link-alternate hreflang))
+               (rel (cons 'link-rel rel))
+               (else #f))))
+      ((eq? tag 'title) 'title)
+      (else #f))))
+
+(define (head-keys nodes)
+  (let loop ((rest nodes) (keys '()))
+    (if (null? rest)
+        (reverse keys)
+        (let ((key (head-key (car rest))))
+          (loop (cdr rest) (if key (cons key keys) keys))))))
+
+(define (merge-head defaults overrides)
+  "Append OVERRIDES to DEFAULTS, dropping defaults they replace by
+name, property, rel, or title."
+  (let ((keys (head-keys overrides)))
+    (append (filter (lambda (node)
+                      (let ((key (head-key node)))
+                        (or (not key) (not (member key keys)))))
+                    defaults)
+            overrides)))
+
 (define* (html-document title description body math? home-title style
                        routes mathjax-src inline-stylesheets?
                        #:key (html-attributes '()) (head '()) (site-nav '())
                        (home-link #f) (scripts '()) (current-page #f)
                        (language-nav '()) (article? #f) (published #f)
-                       (og-locales '()))
+                       (og-locales '()) (updated #f))
   (let* ((site-nav (if (procedure? site-nav)
                        (site-nav current-page)
                        site-nav))
@@ -553,38 +598,46 @@ better than a procedure recreated on every project load."
                                  (list (car attribute) (cdr attribute)))
                                html-attributes))))
      (head
-       (meta (@ (charset "utf-8")))
-       (meta (@ (name "viewport")
-                (content "width=device-width, initial-scale=1")))
-       (title ,title)
-       ,@(if description
-             (list `(meta (@ (name "description") (content ,description))))
-             '())
-       (meta (@ (property "og:title") (content ,title)))
-       ,@(if description
-             (list `(meta (@ (property "og:description")
-                             (content ,description))))
-             '())
-       (meta (@ (property "og:type")
-                (content ,(if article? "article" "website"))))
-       ,@(if locale
-             (list `(meta (@ (property "og:locale")
-                             (content ,(og-locale-tag
-                                          (current-chrome-locale))))))
-             '())
-       ,@(map (lambda (tag)
-                `(meta (@ (property "og:locale:alternate")
-                          (content ,(og-locale-tag tag)))))
-              og-locales)
-       ,@(if absolute-url
-             (list `(link (@ (rel "canonical") (href ,absolute-url)))
-                   `(meta (@ (property "og:url") (content ,absolute-url))))
-             '())
-       ,@(if (and article? published)
-             (list `(meta (@ (property "article:published_time")
-                             (content ,published))))
-             '())
-       ,@head
+       ,@(merge-head
+           (append
+             (list `(meta (@ (charset "utf-8")))
+                   `(meta (@ (name "viewport")
+                             (content "width=device-width, initial-scale=1")))
+                   `(title ,title)
+                   `(meta (@ (property "og:title") (content ,title)))
+                   `(meta (@ (property "og:type")
+                             (content ,(if article? "article" "website")))))
+             (if (and home-title (not (string-null? home-title)))
+                 (list `(meta (@ (property "og:site_name")
+                                 (content ,home-title))))
+                 '())
+             (if description
+                 (list `(meta (@ (name "description") (content ,description)))
+                       `(meta (@ (property "og:description")
+                                 (content ,description))))
+                 '())
+             (if locale
+                 (list `(meta (@ (property "og:locale")
+                                 (content ,(og-locale-tag
+                                              (current-chrome-locale))))))
+                 '())
+             (map (lambda (tag)
+                    `(meta (@ (property "og:locale:alternate")
+                              (content ,(og-locale-tag tag)))))
+                  og-locales)
+             (if absolute-url
+                 (list `(link (@ (rel "canonical") (href ,absolute-url)))
+                       `(meta (@ (property "og:url") (content ,absolute-url))))
+                 '())
+             (if (and article? published)
+                 (list `(meta (@ (property "article:published_time")
+                                 (content ,published))))
+                 '())
+             (if (and article? updated)
+                 (list `(meta (@ (property "article:modified_time")
+                                 (content ,updated))))
+                 '()))
+           head)
        ,@(if inline-stylesheets?
              (map (lambda (stylesheet)
                     `(style ,(artifact-content stylesheet)))
@@ -739,6 +792,7 @@ to the lane, and an in-place numbered marker links to it."
             #:current-page (site-page-id page)
             #:article? article?
             #:published (assq-ref (site-page-metadata page) 'published)
+            #:updated (assq-ref (site-page-metadata page) 'updated)
             #:og-locales og-locales
             #:scripts (if (null? backmatter)
                           '()
@@ -844,8 +898,11 @@ to the lane, and an in-place numbered marker links to it."
                        (side-lane '())
                        (locale #f)
                        (messages default-message-catalog)
-                       (default-locale #f)
-                       (site-url #f)
+                       (settings #f)
+                       (default-locale
+                         (and settings (site-settings-default-locale settings)))
+                       (site-url
+                         (and settings (site-settings-site-url settings)))
                        (hreflang? #t)
                        (language-switcher? #t))
   (parameterize ((current-hreflang? hreflang?)
@@ -905,8 +962,11 @@ errors when the count outlives the list."
                              (side-lane '())
                              (locale #f)
                              (messages default-message-catalog)
-                             (default-locale #f)
-                             (site-url #f)
+                             (settings #f)
+                             (default-locale
+                               (and settings (site-settings-default-locale settings)))
+                             (site-url
+                               (and settings (site-settings-site-url settings)))
                              (hreflang? #t)
                              (language-switcher? #t))
   (parameterize ((current-hreflang? hreflang?)
@@ -966,8 +1026,11 @@ errors when the count outlives the list."
                                       (side-lane '())
                                       (locale #f)
                                       (messages default-message-catalog)
-                                      (default-locale #f)
-                                      (site-url #f)
+                                      (settings #f)
+                                      (default-locale
+                                        (and settings (site-settings-default-locale settings)))
+                                      (site-url
+                                        (and settings (site-settings-site-url settings)))
                                       (hreflang? #t)
                                       (language-switcher? #t)
                                       (cache? #t))

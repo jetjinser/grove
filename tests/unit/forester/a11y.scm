@@ -50,6 +50,8 @@
   (test-assert "dates stay machine-readable in time elements"
     (string-contains page
                      "<time datetime=\"2026-09-27\">2026-09-27</time>"))
+  (test-assert "documents carry the site name for Open Graph"
+    (string-contains page "property=\"og:site_name\" content=\"Site\""))
   (test-assert "documents carry a viewport meta tag"
     (string-contains page "<meta name=\"viewport\""))
   (test-assert "no Open Graph locale is invented without a declared locale"
@@ -64,7 +66,21 @@
     (and (string-contains page "property=\"og:type\" content=\"article\"")
          (string-contains
            page
-           "property=\"article:published_time\" content=\"2026-09-27\""))))
+           "property=\"article:published_time\" content=\"2026-09-27\"")))
+  (test-assert "article pages expose their modification time"
+    (string-contains
+      page
+      "property=\"article:modified_time\" content=\"2026-09-28\"")))
+
+(let ((page (render-page
+              #:head '((meta (@ (name "viewport") (content "width=1024")))
+                       (meta (@ (property "og:title") (content "Custom")))))))
+  (test-assert "project head entries override generated defaults"
+    (and (string-contains page "content=\"width=1024\"")
+         (not (string-contains page "width=device-width"))
+         (string-contains page "property=\"og:title\" content=\"Custom\"")
+         (not (string-contains page "property=\"og:title\" content=\"Root\"")))))
+
 (let ((page (render-page #:locale "zh-Hans")))
   (test-assert "skip link localizes"
     (string-contains page "跳到正文"))

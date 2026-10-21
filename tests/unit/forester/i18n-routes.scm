@@ -8,6 +8,8 @@
   #:use-module (srfi srfi-64)
   #:use-module (forester input scribble)
   #:use-module (forester render html)
+  #:use-module (forester render rss)
+  #:use-module (forester render site)
   #:use-module (forester render sitemap)
   #:use-module (forester site)
   #:use-module (grove ir)
@@ -136,4 +138,20 @@
          (string-contains
            sitemap
            (string-append "<loc>" site-url "/guide.html</loc>")))))
+
+(let* ((settings (make-site-settings #:site-url "https://example.org"
+                                     #:default-locale "en"))
+       (html (assoc-ref (site->html forest #:settings settings
+                                    #:routes routes #:mathjax-src #f)
+                        "guide"))
+       (sitemap (artifact-content
+                  (car (render-sitemap forest #:settings settings
+                                       #:routes routes))))
+       (feed (artifact-content
+               (car (render-rss forest #:settings settings
+                                #:routes routes)))))
+  (test-assert "site settings feed HTML, sitemap, and RSS"
+    (and (string-contains html "https://example.org/guide.html")
+         (string-contains sitemap "<loc>https://example.org/guide.html</loc>")
+         (string-contains feed "<language>en</language>"))))
 (test-end "forester i18n routes")

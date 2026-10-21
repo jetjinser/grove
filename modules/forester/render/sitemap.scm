@@ -5,6 +5,7 @@
 (define-module (forester render sitemap)
   #:use-module (forester private date)
   #:use-module (forester private web)
+  #:use-module (forester render site)
   #:use-module (forester site)
   #:use-module (grove build)
   #:use-module (grove output)
@@ -101,10 +102,14 @@
              "\n"))
         port))))
 
-(define* (render-sitemap forest #:key site-url
+(define* (render-sitemap forest #:key (settings #f)
+                                (site-url
+                                  (and settings (site-settings-site-url settings)))
                                 (sitemap-path "sitemap.xml")
                                 (routes (make-html-routes #:home-page "index"))
-                                (default-locale #f))
+                                (default-locale
+                                  (and settings
+                                       (site-settings-default-locale settings))))
   (unless (forest? forest)
     (error "Forester sitemap renderer requires a forest" forest))
   (unless (web-url? site-url)
@@ -126,10 +131,14 @@
                                     default-locale (pages forest))))
     (list (make-artifact sitemap-path content (source-paths forest)))))
 
-(define* (make-sitemap-renderer #:key site-url
+(define* (make-sitemap-renderer #:key (settings #f)
+                                         (site-url
+                                           (and settings (site-settings-site-url settings)))
                                          (sitemap-path "sitemap.xml")
                                          (routes (make-html-routes #:home-page "index"))
-                                         (default-locale #f)
+                                         (default-locale
+                                           (and settings
+                                                (site-settings-default-locale settings)))
                                          (cache? #t))
   (let ((render (lambda (forest)
                   (render-sitemap forest
