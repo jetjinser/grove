@@ -101,7 +101,7 @@
   (test-assert "styled at-exp commands keep body text and apply classes"
     (and (string-contains html "<p class=\"notice\">Read ")
          (string-contains html "<strong class=\"emphasis\">this</strong>")
-         (string-contains html "<pre class=\"source\"><code>")))
+         (string-contains html "<pre translate=\"no\" class=\"source\"><code translate=\"no\">")))
   (test-equal "text output ignores HTML presentation"
     "Read this.\n```\n(display \"hello\")\n```\n" (content->text document)))
 

@@ -119,8 +119,9 @@
        (p "Details")
        (blockquote "A short quote.")
        (ul (li "First") (li "Second"))
-       (p "Run " (code "x + 1") ".")
-       (pre (code "(display \"hi\")")))
+       (p "Run " (code (@ (translate "no")) "x + 1") ".")
+       (pre (@ (translate "no"))
+            (code (@ (translate "no")) "(display \"hi\")")))
     (content->sxml document))
   (test-equal "plain text keeps structure, bullets, and code readable"
     (string-append

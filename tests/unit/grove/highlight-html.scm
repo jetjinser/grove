@@ -51,7 +51,7 @@
     (and (string-contains output "data-syntax=\"function.builtin\">f</span>")
          (string-contains output "data-syntax=\"function-builtin\">x</span>"))))
 (test-equal "blocks without a language remain plain code"
-  "<pre><code>&lt;&amp;&gt;</code></pre>"
+  "<pre translate=\"no\"><code translate=\"no\">&lt;&amp;&gt;</code></pre>"
   (html (command:code-block "<&>")))
 (test-assert "unknown languages warn and retain escaped source"
   (let* ((port (open-output-string))
@@ -67,7 +67,7 @@
     (html (command:code-block #:language 'scheme
             #:style (make-content-style 'example
                       (list (make-html-attributes '((id . "sample"))))) "x"))
-    "<pre class=\"example\" id=\"sample\">"))
+    "<pre translate=\"no\" class=\"example\" id=\"sample\">"))
 (test-error "invalid language options fail at the call site" #t
   (command:code-block #:language "scheme" "x"))
 (test-error "invalid renderer mappings fail explicitly" #t
