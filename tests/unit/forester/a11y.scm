@@ -182,4 +182,9 @@
     (member '(aria-current "page")
             (cadr (car (site-nav routes '(("root" . "Home"))
                                  #:current-page "root"))))))
+
+(test-error "renderer locales reject non-tags" #t
+  (resolve-chrome-locale 42 default-message-catalog))
+(test-error "renderer catalogs reject non-catalogs" #t
+  (resolve-chrome-catalog 42))
 (test-end "forester accessibility")

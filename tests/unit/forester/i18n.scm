@@ -444,4 +444,19 @@
          (plural "ar" n '((zero . "zero") (one . "one") (two . "two")
                           (few . "few") (many . "many") (other . "other"))))
        '(0 1 2 3 11 100)))
+
+(test-equal "format-number passes non-integers through"
+  "1.5" (format-number "en" 1.5))
+(test-equal "format-number can skip grouping"
+  "1234" (format-number "en" 1234 #:group? #f))
+(test-equal "unsupported Open Graph locales keep the language"
+  "sw" (og-locale-tag "sw"))
+(test-equal "German short dates"
+  "2026-09-27" (format-date "de" "2026-09-27" #:style 'short))
+(test-equal "French short dates"
+  "2026-09-27" (format-date "fr" "2026-09-27" #:style 'short))
+(test-equal "plural falls back to other"
+  "other" (plural "ru" 5 '((other . "other"))))
+(test-equal "plural falls back to the empty string"
+  "" (plural "ru" 5 '()))
 (test-end "forester i18n")

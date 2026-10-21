@@ -154,4 +154,9 @@
     (and (string-contains html "https://example.org/guide.html")
          (string-contains sitemap "<loc>https://example.org/guide.html</loc>")
          (string-contains feed "<language>en</language>"))))
+
+(test-error "site settings reject an empty URL" #t
+  (make-site-settings #:site-url ""))
+(test-error "site settings reject an empty locale" #t
+  (make-site-settings #:default-locale ""))
 (test-end "forester i18n routes")
