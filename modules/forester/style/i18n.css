@@ -3,10 +3,9 @@
 
 /* Minimal, reset-style baseline for bilingual content. Projects own the visual
    design; these rules only keep the generated markup readable on their own.
-   Parallel pairs are .bilingual-pair grids of .bilingual-lane. Folded pairs are
-   a <details class="bilingual-pair"> whose <summary> is the reader lane and
-   whose folded lanes follow, with a .bilingual-more hint (a language code and
-   a chevron) trailing the summary. */
+   Parallel pairs are .bilingual-pair grids of .bilingual-lane. Folded pairs
+   keep the reader lane visible and put the other lanes in a
+   <details class="bilingual-source"> whose summary is the language hint. */
 
 .bilingual {
   margin-block: 1em;
@@ -31,24 +30,24 @@
   margin-block-end: 0;
 }
 
-/* Folded, reader-first layout: the reader lane is the disclosure summary and is
-   itself the control; the folded lanes follow it. */
+/* Folded, reader-first layout: the reader lane stays visible; the source lanes
+   sit behind a small disclosure control. */
 
 .bilingual[data-mode="fold"] .bilingual-pair {
   grid-template-columns: 1fr;
 }
 
-.bilingual-pair > summary {
+.bilingual-source > summary {
   cursor: pointer;
   list-style: none;
 }
 
-.bilingual-pair > summary::-webkit-details-marker {
+.bilingual-source > summary::-webkit-details-marker {
   display: none;
 }
 
-.bilingual-pair > summary:hover,
-.bilingual-pair > summary:focus-visible {
+.bilingual-source > summary:hover,
+.bilingual-source > summary:focus-visible {
   background: rgba(127, 127, 127, 0.08);
 }
 
@@ -56,7 +55,6 @@
   font-size: 0.75em;
   opacity: 0.55;
   white-space: nowrap;
-  margin-inline-start: 0.5em;
 }
 
 .bilingual-more::after {
@@ -65,11 +63,11 @@
   margin-inline-start: 0.4em;
 }
 
-.bilingual-pair[open] > summary .bilingual-more::after {
+.bilingual-source[open] > summary .bilingual-more::after {
   content: "\25BE"; /* ▾ */
 }
 
-.bilingual-pair > summary ~ .bilingual-lane {
+.bilingual-source > summary ~ .bilingual-lane {
   margin-block-start: 0.5rem;
   padding-inline-start: 1rem;
 }

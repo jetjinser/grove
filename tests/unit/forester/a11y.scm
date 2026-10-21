@@ -54,6 +54,8 @@
                      "<time datetime=\"2026-09-27\">2026-09-27</time>"))
   (test-assert "documents carry the site name for Open Graph"
     (string-contains page "property=\"og:site_name\" content=\"Site\""))
+  (test-assert "documents default to a language tag"
+    (string-contains page "<html lang=\"en\""))
   (test-assert "documents carry a viewport meta tag"
     (string-contains page "<meta name=\"viewport\""))
   (test-assert "no Open Graph locale is invented without a declared locale"
@@ -190,12 +192,16 @@
 (test-error "renderer catalogs reject non-catalogs" #t
   (resolve-chrome-catalog 42))
 
-(define* (render-page-with document #:key (site-url #f))
+(define* (render-page-with document #:key (site-url #f)
+                           (og-image #f) (og-image-alt #f))
   (let* ((page (document->tree-page "root" (evaluate-document document) #f))
          (forest (make-forest (make-site (list page))))
          (routes (make-html-routes #:home-page "root")))
     (assoc-ref
-      (site->html forest #:routes routes #:mathjax-src #f #:site-url site-url)
+      (site->html forest #:routes routes #:mathjax-src #f
+                  #:site-url site-url
+                  #:og-image og-image
+                  #:og-image-alt og-image-alt)
       "root")))
 
 (let ((page (render-page-with
@@ -223,4 +229,44 @@
               "@title{Root}@og-image{assets/cover.png}@paragraph{Body.}")))
   (test-assert "relative og:image is omitted without a site URL"
     (not (string-contains page "property=\"og:image\""))))
+
+(let ((page (render-page-with
+              "@title{Root}@paragraph{Body.}"
+              #:site-url "https://example.org"
+              #:og-image "assets/site.png"
+              #:og-image-alt "Site cover")))
+  (test-assert "site-level og:image is a fallback"
+    (string-contains
+      page
+      "property=\"og:image\" content=\"https://example.org/assets/site.png\""))
+  (test-assert "site-level og:image alt is used"
+    (string-contains
+      page
+      "property=\"og:image:alt\" content=\"Site cover\"")))
+
+(let ((page (render-page-with
+              "@title{Root}@og-image{assets/page.png}@og-image-alt{Page cover}@paragraph{Body.}"
+              #:site-url "https://example.org"
+              #:og-image "assets/site.png"
+              #:og-image-alt "Site cover")))
+  (test-assert "page og:image overrides the site default"
+    (string-contains
+      page
+      "property=\"og:image\" content=\"https://example.org/assets/page.png\""))
+  (test-assert "page og:image alt overrides the site default"
+    (string-contains
+      page
+      "property=\"og:image:alt\" content=\"Page cover\""))
+  (test-assert "the site image is not emitted for a page image"
+    (not (string-contains page "assets/site.png"))))
+
+(let ((page (render-page-with
+              "@title{Root}@og-image{assets/page.png}@paragraph{Body.}"
+              #:site-url "https://example.org"
+              #:og-image "assets/site.png"
+              #:og-image-alt "Site cover")))
+  (test-assert "a page image alt falls back to the title"
+    (string-contains
+      page
+      "property=\"og:image:alt\" content=\"Root\"")))
 (test-end "forester accessibility")

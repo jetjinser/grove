@@ -541,7 +541,7 @@
     (and (string-contains algebra-html "[algebra]</a>")
          (string-contains algebra-html "href=\"/index.html\"")))
   (test-assert "HTML renderer produces standalone HTML artifacts"
-    (string-contains algebra-html "<html>"))
+    (string-contains algebra-html "<html lang=\"en\">"))
   (test-assert "text renderer produces independent text artifacts"
     (string-contains algebra-text "are useful")))
 

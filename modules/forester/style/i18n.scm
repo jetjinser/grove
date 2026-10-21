@@ -12,6 +12,7 @@
             bilingual-fold-container-style
             bilingual-pair-style
             bilingual-fold-pair-style
+            bilingual-source-style
             bilingual-lane-style
             bilingual-summary-style
             foreign-term-style
@@ -55,8 +56,12 @@
     (list (make-html-tag 'div)
           (make-html-attributes '((class . "bilingual-pair"))))))
 
-;; A folded pair is a <details>, so its style only adds the class and leaves the
-;; element's tag alone.
+;; A folded source is a <details>, so its style only adds the class and leaves
+;; the element's tag alone.
+
+(define bilingual-source-style
+  (make-content-style 'bilingual-source))
+
 (define bilingual-fold-pair-style
   (make-content-style 'bilingual-pair))
 

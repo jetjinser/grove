@@ -100,50 +100,25 @@ so `en zh en zh' becomes two pairs while `en zh fr' stays one three-lane group."
         (map (lambda (lane) (content-element-property lane 'lang)) folded)
         " ")))
 
-(define (attach-affordance children hint)
-  "Place HINT at the end of the reader lane.
-
-When the lane ends in a paragraph the hint goes inside it, so it trails the text
-on the same line instead of starting a new line under the paragraph margin."
-  (cond
-    ((null? children) (list hint))
-    ((and (content-element? (last children))
-          (eq? (content-element-kind (last children)) 'paragraph))
-     (let ((last-child (last children)))
-       (append (drop-right children 1)
-               (list (make-content-element 'paragraph
-                       (append (content-element-children last-child)
-                               (list hint))
-                       (content-element-source last-child)
-                       #:properties (content-element-properties last-child)
-                       #:style (content-element-style last-child)
-                       #:flow-kind (content-element-flow-kind last-child))))))
-    (else (append children (list hint)))))
-
-(define (reader-summary lane folded source-label)
-  "Present LANE as the disclosure summary, with a hint about the folded lanes."
-  (let ((tag (content-element-property lane 'lang))
-        (dir (content-element-property lane 'dir))
-    (hint (make-content-element 'bilingual-more
+(define (source-summary folded source-label)
+  "Build the disclosure summary for the folded lanes."
+  (make-content-element 'summary
+    (list (make-content-element 'bilingual-more
             (list (make-content-text
                     (fold-affordance folded source-label)))
             #:style (make-content-style #f
                       (list (make-html-tag 'span)
                             (make-html-attributes
-                              '((class . "bilingual-more"))))))))
-    (make-content-element 'summary
-      (attach-affordance (content-element-children lane) hint)
-      #:properties `((lang . ,tag) (dir . ,dir))
-      #:style (bilingual-summary-style tag dir)
-      #:flow-kind 'block)))
+                              '((class . "bilingual-more")))))))
+    #:flow-kind 'block))
 
 (define* (make-content-folded-bilingual lanes #:key (reader #f) (style #f)
                                         (source-label #f))
   "Build a reader-first bilingual block.
 
-Each group shows one language as a disclosure summary and folds the rest into
-the body, so the reader's text is itself the control. READER, a locale, selects
-the visible language; without it the last lane of each group is shown."
+Each group keeps the reader lane visible and folds the rest into a disclosure.
+READER, a locale, selects the visible language; without it the last lane of
+each group is shown."
   (unless (and (list? lanes) (every bilingual-lane? lanes))
     (error "bilingual requires language lanes" lanes))
   (when (and reader (not (locale? reader)))
@@ -177,10 +152,15 @@ the visible language; without it the last lane of each group is shown."
                    (make-content-element 'bilingual-pair group
                      #:style bilingual-pair-style
                      #:flow-kind 'block)
-                   (make-content-element 'details
-                     (cons (reader-summary (car visible) folded source-label)
-                           folded)
-                     #:style bilingual-fold-pair-style
+                   (make-content-element 'bilingual-pair
+                     (append visible
+                             (list
+                               (make-content-element 'details
+                                 (cons (source-summary folded source-label)
+                                       folded)
+                                 #:style bilingual-source-style
+                                 #:flow-kind 'block)))
+                     #:style bilingual-pair-style
                      #:flow-kind 'block))))
            (pair-translations lanes))
       #:style (bilingual-fold-container-style style)

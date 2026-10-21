@@ -15,7 +15,7 @@
             document->tree-page))
 
 (define metadata-kinds
-  '(title summary og-image published updated tag taxon locale translation))
+  '(title summary og-image og-image-alt published updated tag taxon locale translation))
 
 (define (metadata-element? child)
   (and (content-element? child)
@@ -98,6 +98,7 @@
          (tree-title (or title (one-metadata-value metadata-nodes 'title source #t)))
          (summary (one-metadata-value metadata-nodes 'summary source))
          (og-image (one-metadata-value metadata-nodes 'og-image source))
+         (og-image-alt (one-metadata-value metadata-nodes 'og-image-alt source))
          (published (date-metadata metadata-nodes 'published source))
          (updated (date-metadata metadata-nodes 'updated source))
          (locale (locale-metadata metadata-nodes 'locale source))
@@ -111,7 +112,7 @@
         (remove (lambda (child)
                   (and (content-element? child)
                        (memq (content-element-kind child)
-                             '(title summary og-image published updated
+                             '(title summary og-image og-image-alt published updated
                                locale translation))))
                 children)
         (content-document-source document))
@@ -120,6 +121,7 @@
                          (filter cdr
                            (list (cons 'summary summary)
                                  (cons 'og-image og-image)
+                                 (cons 'og-image-alt og-image-alt)
                                  (cons 'published published)
                                  (cons 'updated updated)
                                  (cons 'locale locale)

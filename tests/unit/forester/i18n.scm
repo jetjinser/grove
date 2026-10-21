@@ -173,24 +173,25 @@
     (and chip (content-text-value (car (content-element-children chip))))))
 
 (let* ((pair (car (content-element-children (bilingual english chinese))))
-       (summary (car (content-element-children pair)))
-       (folded (cdr (content-element-children pair))))
-  (test-equal "fold is the default bilingual mode"
-    'details (content-element-kind pair))
-  (test-equal "the reader lane is the disclosure summary"
-    'summary (content-element-kind summary))
+       (kids (content-element-children pair))
+       (reader (car kids))
+       (details (cadr kids))
+       (summary (car (content-element-children details)))
+       (folded (cdr (content-element-children details))))
+  (test-equal "fold keeps the pair container"
+    'bilingual-pair (content-element-kind pair))
+  (test-equal "the reader lane stays visible"
+    'bilingual-lane (content-element-kind reader))
   (test-equal "the last lane is the default reader"
-    "zh-Hans" (content-element-property summary 'lang))
+    "zh-Hans" (content-element-property reader 'lang))
   (test-equal "the folded lanes carry their language"
     '("en")
     (map (lambda (lane) (content-element-property lane 'lang))
          (filter bilingual-lane? folded)))
   (test-equal "the summary hints at the folded language"
     "en" (chip-text summary))
-  (test-assert "the hint trails the reader text on the same line"
-    (let ((paragraph (car (content-element-children summary))))
-      (eq? 'bilingual-more
-           (content-element-kind (last (content-element-children paragraph)))))))
+  (test-equal "the source lanes are in a disclosure"
+    'details (content-element-kind details)))
 
 (let* ((pair (car (content-element-children
                     (bilingual #:reader "en" english chinese))))
@@ -200,7 +201,8 @@
   (test-equal "the explicit reader folds the other language"
     '("zh-Hans")
     (map (lambda (lane) (content-element-property lane 'lang))
-         (filter bilingual-lane? (cdr kids)))))
+         (filter bilingual-lane?
+                 (cdr (content-element-children (cadr kids)))))))
 
 (test-equal "the reader matches a more specific lane tag"
   "zh-Hans"
@@ -228,19 +230,21 @@
 (test-error "bilingual rejects unknown modes" #t
   (bilingual #:mode 'side english))
 
-(test-assert "folded bilingual makes the reader lane the disclosure"
+(test-assert "folded bilingual keeps the reader lane visible"
   (let ((html (sxml->html
                 (content->sxml
                   (make-content-document
                     (list (bilingual #:reader "en" english chinese)))))))
     (and (string-contains html "data-mode=\"fold\"")
-         (string-contains html "<details class=\"bilingual-pair\">")
+         (string-contains html "<div class=\"bilingual-pair\">")
          (string-contains html
-           "<summary class=\"bilingual-lane\" lang=\"en\" dir=\"ltr\"")
-         (string-contains html "class=\"bilingual-more\">zh-Hans"))))
+           "<div class=\"bilingual-lane\" lang=\"en\" dir=\"ltr\"")
+         (string-contains html "<details class=\"bilingual-source\">")
+         (string-contains html
+           "<summary><span class=\"bilingual-more\">zh-Hans</span></summary>"))))
 
 (test-equal "text output keeps the reader lane and marks folded lanes"
-  "[en] The grove is a small forest.\n[zh-Hans] 树林是一片小小的森林。\n"
+  "[en] The grove is a small forest.\n[zh-Hans] 树林是一片小小的森林。\n\n"
   (content->text
     (make-content-document (list (bilingual #:reader "en" english chinese)))
     #:handlers bilingual-text-handlers))

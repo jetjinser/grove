@@ -32,10 +32,11 @@ to them.
 - Code blocks and inline code carry `translate="no"`, so browser translation
   does not rewrite source.
 - Documents carry a viewport meta tag, Open Graph title/description/type, an
-  absolute `og:image` when the page has `@og-image` and a site URL is
-  configured, and `article:published_time` when the page has a publication
-  date.  A `#:site-url` adds the canonical link and `og:url`; without it no
-  absolute URL is invented.
+  absolute `og:image` when the page has `@og-image` or the site supplies
+  `#:og-image` and a site URL is configured, and `article:published_time` when
+  the page has a publication date.  The image alt comes from `@og-image-alt`,
+  the site's `#:og-image-alt`, or the page title.  A `#:site-url` adds the
+  canonical link and `og:url`; without it no absolute URL is invented.
 - The default stylesheet hides the skip link until it is focused and keeps
   `:focus-visible` outlines visible.
 

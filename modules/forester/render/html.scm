@@ -39,6 +39,8 @@
 (define current-hreflang? (make-parameter #t))
 (define current-default-locale (make-parameter #f))
 (define current-site-url (make-parameter #f))
+(define current-default-og-image (make-parameter #f))
+(define current-default-og-image-alt (make-parameter #f))
 (define current-language-switcher? (make-parameter #t))
 
 (define (page-locale page)
@@ -284,13 +286,13 @@ hooks replace this wholesale; compose with it to extend."
          (,(string->symbol (format #f "h~a" (min depth 6)))
            (@ (class "forest-tree-title"))
            ,@title-decoration
-           (span ,title)
-           (a (@ (class "forest-tree-id")
-               (href ,page-url)
-               (aria-label ,(chrome-message-format
-                              'tree-open-page (list (display-tree-id id)))))
-              "[" ,(display-tree-id id) "]"))
+           (span ,title))
          ,@(metadata-sxml metadata-items))
+       (a (@ (class "forest-tree-id")
+           (href ,page-url)
+           (aria-label ,(chrome-message-format
+                          'tree-open-page (list (display-tree-id id)))))
+          "[" ,(display-tree-id id) "]")
        (div (@ (class "forest-tree-content"))
             ,@(if (and (pair? content) (eq? (car content) 'article))
                   (cdr content)
@@ -582,10 +584,16 @@ name, property, rel, or title."
                        site-nav))
          (locale (current-chrome-locale-object))
          (html-attributes
-           (if locale
-               (merge-html-attributes (locale-html-attributes locale)
-                                      html-attributes)
-               html-attributes))
+           (cond
+             (locale
+              (merge-html-attributes (locale-html-attributes locale)
+                                     html-attributes))
+             ((current-default-locale)
+              (merge-html-attributes
+                (locale-html-attributes (make-locale (current-default-locale)))
+                html-attributes))
+             (else
+              (merge-html-attributes '((lang . "en")) html-attributes))))
          (site-url (current-site-url))
          (page-url (and site-url current-page
                         (html-page-url routes current-page)))
@@ -770,7 +778,14 @@ to the lane, and an in-place numbered marker links to it."
              (og-locales (if (current-hreflang?)
                              (alternate-og-locales forest page)
                              '()))
-             (og-image (assq-ref (site-page-metadata page) 'og-image))
+             (page-image (assq-ref (site-page-metadata page) 'og-image))
+             (page-image-alt (assq-ref (site-page-metadata page) 'og-image-alt))
+             (og-image (or page-image (current-default-og-image)))
+             (og-image-alt (cond (page-image-alt page-image-alt)
+                                 (page-image (site-page-title page))
+                                 (og-image (or (current-default-og-image-alt)
+                                               (site-page-title page)))
+                                 (else #f)))
              (lane (and (pair? side-lane) (make-side-lane-collector)))
              (body (subtree-content-sxml forest routes page "" 1 highlighters
                                          #:title-decoration title-decoration
@@ -818,7 +833,7 @@ to the lane, and an in-place numbered marker links to it."
             #:updated (assq-ref (site-page-metadata page) 'updated)
             #:og-locales og-locales
             #:og-image og-image
-            #:og-image-alt (and og-image (site-page-title page))
+            #:og-image-alt og-image-alt
             #:scripts (if (null? backmatter)
                           '()
                           (list backmatter-fetch-script))))))))
@@ -928,11 +943,15 @@ to the lane, and an in-place numbered marker links to it."
                          (and settings (site-settings-default-locale settings)))
                        (site-url
                          (and settings (site-settings-site-url settings)))
+                       (og-image #f)
+                       (og-image-alt #f)
                        (hreflang? #t)
                        (language-switcher? #t))
   (parameterize ((current-hreflang? hreflang?)
                  (current-default-locale default-locale)
                  (current-site-url site-url)
+                 (current-default-og-image og-image)
+                 (current-default-og-image-alt og-image-alt)
                  (current-language-switcher? language-switcher?)
                  (current-translation-groups (translation-groups forest)))
     (with-chrome-locale (locale messages)
@@ -992,11 +1011,15 @@ errors when the count outlives the list."
                                (and settings (site-settings-default-locale settings)))
                              (site-url
                                (and settings (site-settings-site-url settings)))
+                             (og-image #f)
+                             (og-image-alt #f)
                              (hreflang? #t)
                              (language-switcher? #t))
   (parameterize ((current-hreflang? hreflang?)
                  (current-default-locale default-locale)
                  (current-site-url site-url)
+                 (current-default-og-image og-image)
+                 (current-default-og-image-alt og-image-alt)
                  (current-language-switcher? language-switcher?)
                  (current-translation-groups (translation-groups forest)))
     (with-chrome-locale (locale messages)
