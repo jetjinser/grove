@@ -62,6 +62,9 @@ A partial catalog is layered over the built-in one, so keys it does not
 name keep their default text.  The same catalog drives the backmatter
 headings; `#:backmatter-labels` remains available as an explicit override.
 
+See [Design boundaries](design.md) for the split between Grove and project
+responsibilities.
+
 ## What a project supplies
 
 - **Page language and direction**: pass `#:locale` and the renderer derives

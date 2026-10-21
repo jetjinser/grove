@@ -5,7 +5,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # Authoring `.plant` pages
 
-A page is a Scribble document. Commands use `@name{body}` or
+A page is a Scribble document.  See [Design boundaries](design.md) for what
+Grove owns versus what a project supplies. Commands use `@name{body}` or
 `@name[arguments]{body}`; metadata is written with the same command shape.
 
 ## Minimal page
