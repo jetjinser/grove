@@ -1079,6 +1079,8 @@ errors when the count outlives the list."
                                         (and settings (site-settings-default-locale settings)))
                                       (site-url
                                         (and settings (site-settings-site-url settings)))
+                                      (og-image #f)
+                                      (og-image-alt #f)
                                       (hreflang? #t)
                                       (language-switcher? #t)
                                       (cache? #t))
@@ -1107,6 +1109,8 @@ errors when the count outlives the list."
                                       #:messages messages
                                       #:default-locale default-locale
                                       #:site-url site-url
+                                      #:og-image og-image
+                                      #:og-image-alt og-image-alt
                                       #:hreflang? hreflang?
                                       #:language-switcher? language-switcher?))))
     (make-cached-renderer render #:cache? cache?
@@ -1118,7 +1122,7 @@ errors when the count outlives the list."
                   mathjax-src backmatter backmatter-labels reference-taxon-id
                   article? backmatter-details? html-attributes head site-nav
                   side-lane (resolve-chrome-locale locale (resolve-chrome-catalog messages))
-                  default-locale site-url hreflang? language-switcher?
+                  default-locale site-url og-image og-image-alt hreflang? language-switcher?
                   (message-catalog-default (resolve-chrome-catalog messages))
                   (message-catalog-entries (resolve-chrome-catalog messages))
                   (map (lambda (entry)
@@ -1138,6 +1142,8 @@ errors when the count outlives the list."
             (parameterize ((current-hreflang? hreflang?)
                            (current-default-locale default-locale)
                            (current-site-url site-url)
+                           (current-default-og-image og-image)
+                           (current-default-og-image-alt og-image-alt)
                            (current-language-switcher? language-switcher?)
                            (current-translation-groups
                              (translation-groups forest)))
