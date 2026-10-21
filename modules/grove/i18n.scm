@@ -34,6 +34,7 @@
             locale-sort-key
             glibc-locale-name
             locale-collation-comparator
+            og-locale-tag
             sort-strings))
 
 ;; Grove's i18n primitives are language tags and chrome messages. They carry no
@@ -354,6 +355,8 @@ point rather than by language-tailored rules."
     ("el" . "el_GR.UTF-8")
     ("ja" . "ja_JP.UTF-8")
     ("ko" . "ko_KR.UTF-8")
+    ("zh-Hans" . "zh_CN.UTF-8")
+    ("zh-Hant" . "zh_TW.UTF-8")
     ("zh" . "zh_CN.UTF-8")))
 
 (define* (glibc-locale-name locale)
@@ -406,3 +409,35 @@ order."
         (or compare
             (and locale (locale-collation-comparator locale))
             folded-order)))
+
+(define (og-locale-tag locale)
+  "Return the Open Graph locale tag (language_TERRITORY) for LOCALE.
+
+A region subtag wins (`fr-CA' -> `fr_CA'); Chinese script subtags map to
+`zh_CN' and `zh_TW'; otherwise the glibc locale name supplies the
+territory, and an unknown tag falls back to its language subtag."
+  (let* ((locale (if (locale? locale) locale (make-locale locale)))
+         (tag (locale-tag locale))
+         (parts (string-split tag #\-))
+         (lang (car parts))
+         (second (if (>= (length parts) 2) (cadr parts) #f))
+         (third (if (>= (length parts) 3) (caddr parts) #f))
+         (script? (lambda (part)
+                    (and part (= (string-length part) 4)
+                         (string-every char-set:letter part))))
+         (region? (lambda (part)
+                    (and part (= (string-length part) 2)
+                         (string-every char-set:letter part))))
+         (script (and (script? second) second))
+         (region (cond ((region? second) second)
+                       ((region? third) third)
+                       (else #f))))
+    (cond
+      (region (string-append lang "_" region))
+      ((and (string=? lang "zh") (equal? script "Hant")) "zh_TW")
+      ((string=? lang "zh") "zh_CN")
+      ((glibc-locale-name tag)
+       (let* ((name (glibc-locale-name tag))
+              (dot (string-index name #\.)))
+         (if dot (substring name 0 dot) name)))
+      (else lang))))

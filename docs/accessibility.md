@@ -22,12 +22,15 @@ to them.
 - The site navigation link to the current page carries
   `aria-current="page"`.  Use `site-nav-link` for project navigation, and
   pass `#:site-nav` a procedure of the current page id so it can mark the
-  active entry.
+  active entry.  The data-driven `site-nav` helper returns stable SXML; a
+  procedure is compared by object identity in the renderer cache key.
 - `@image` emits `<img>` with `alt` taken from the element's children; an
   image without children is decorative (`alt=""`).
 - Collapsible trees and backmatter use native `<details>/<summary>`, so
   keyboard operation and expanded state come from the browser.
 - Dates render as `<time datetime="…">` with a human-readable label.
+- Code blocks and inline code carry `translate="no"`, so browser translation
+  does not rewrite source.
 - Documents carry a viewport meta tag, Open Graph title/description/type, and
   `article:published_time` when the page has a publication date.  A
   `#:site-url` adds the canonical link and `og:url`; without it no absolute

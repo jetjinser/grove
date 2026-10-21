@@ -385,6 +385,8 @@
 
 (test-equal "glibc locale names follow the primary language"
   "fr_FR.UTF-8" (glibc-locale-name "fr-CA"))
+(test-equal "glibc locale names cover traditional Chinese"
+  "zh_TW.UTF-8" (glibc-locale-name "zh-Hant"))
 (test-equal "glibc locale names cover Chinese"
   "zh_CN.UTF-8" (glibc-locale-name "zh-Hans"))
 (test-equal "unsupported locales have no glibc name"
@@ -407,4 +409,14 @@
 (test-equal "locale sorting keeps equal keys stable"
   '("Straße" "STRASSE")
   (sort-strings '("Straße" "STRASSE") #:locale "de"))
+
+;;; Open Graph locales
+
+(test-equal "Open Graph locale tags use language_TERRITORY"
+  "en_US" (og-locale-tag "en"))
+(test-equal "Open Graph locales honor a region subtag"
+  "fr_CA" (og-locale-tag "fr-CA"))
+(test-equal "Open Graph locales map Chinese scripts"
+  (list "zh_CN" "zh_TW")
+  (list (og-locale-tag "zh-Hans") (og-locale-tag "zh-Hant")))
 (test-end "forester i18n")

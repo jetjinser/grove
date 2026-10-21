@@ -25,6 +25,7 @@
   #:use-module (srfi srfi-13)
   #:export (site->html
             site-nav-link
+            site-nav
             split-into-chunks
             render-html
             default-metadata-items
@@ -84,6 +85,20 @@
                                 (href ,(html-page-url
                                          routes (site-page-id default))))))
                 '()))))))
+
+(define (alternate-og-locales forest page)
+  (let ((group (translation-group forest page)))
+    (if (not group)
+        '()
+        (let loop ((rest group) (acc '()))
+          (if (null? rest)
+              (reverse acc)
+              (let ((other (car rest)))
+                (if (and (not (string=? (site-page-id other)
+                                        (site-page-id page)))
+                         (page-locale other))
+                    (loop (cdr rest) (cons (page-locale other) acc))
+                    (loop (cdr rest) acc))))))))
 
 (define (language-switcher-sxml forest page routes)
   (let ((group (translation-group forest page)))
@@ -408,8 +423,7 @@ top-level taxon element; pages without one contribute nothing."
     sections))
 
 (define* (tree-outline-sxml forest id
-                            #:key (base-url "") (title-decoration #f)
-                            (current-page #f))
+                            #:key (base-url "") (title-decoration #f))
   ;;     The tree's own subtree/transclusion outline as nested list
   ;;     items.  With the default BASE-URL the links are same-page
   ;;     fragments (the page's table of contents); pass a page URL to
@@ -434,11 +448,7 @@ top-level taxon element; pages without one contribute nothing."
                                             (string-append anchor "--")
                                             (cons target-id visited)))))
                         `(li (a (@ (href ,(string-append base-url "#"
-                                                         anchor))
-                                   ,@(if (and current-page
-                                              (string=? target-id current-page))
-                                         '((aria-current "page"))
-                                         '()))
+                                                         anchor)))
                                 ,@decoration
                                 ,(site-page-title target))
                              ,@(if (null? nested) '()
@@ -449,8 +459,7 @@ top-level taxon element; pages without one contribute nothing."
 
 (define* (table-of-contents-sxml forest page #:key (title-decoration #f))
   (let ((items (tree-outline-sxml forest (site-page-id page)
-                                  #:title-decoration title-decoration
-                                  #:current-page (site-page-id page))))
+                                  #:title-decoration title-decoration)))
     (if (null? items) '()
         (list `(nav (@ (class "table-of-contents")
                        (aria-label ,(chrome-message 'nav-contents)))
@@ -466,6 +475,16 @@ that navigation links can use this helper."
                '((aria-current "page"))
                '()))
       ,label))
+
+(define* (site-nav routes entries #:key (current-page #f))
+  "Build site navigation links from ENTRIES, an alist of page id to label.
+
+The result is stable SXML, so it participates in the renderer cache key
+better than a procedure recreated on every project load."
+  (map (lambda (entry)
+         (site-nav-link routes (car entry) (cdr entry)
+                        #:current-page current-page))
+       entries))
 
 (define default-mathjax-src
   "https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js")
@@ -510,7 +529,8 @@ that navigation links can use this helper."
                        routes mathjax-src inline-stylesheets?
                        #:key (html-attributes '()) (head '()) (site-nav '())
                        (home-link #f) (scripts '()) (current-page #f)
-                       (language-nav '()) (article? #f) (published #f))
+                       (language-nav '()) (article? #f) (published #f)
+                       (og-locales '()))
   (let* ((site-nav (if (procedure? site-nav)
                        (site-nav current-page)
                        site-nav))
@@ -547,6 +567,15 @@ that navigation links can use this helper."
              '())
        (meta (@ (property "og:type")
                 (content ,(if article? "article" "website"))))
+       ,@(if locale
+             (list `(meta (@ (property "og:locale")
+                             (content ,(og-locale-tag
+                                          (current-chrome-locale))))))
+             '())
+       ,@(map (lambda (tag)
+                `(meta (@ (property "og:locale:alternate")
+                          (content ,(og-locale-tag tag)))))
+              og-locales)
        ,@(if absolute-url
              (list `(link (@ (rel "canonical") (href ,absolute-url)))
                    `(meta (@ (property "og:url") (content ,absolute-url))))
@@ -663,6 +692,9 @@ to the lane, and an in-place numbered marker links to it."
              (language-nav (if (current-language-switcher?)
                                (language-switcher-sxml forest page routes)
                                '()))
+             (og-locales (if (current-hreflang?)
+                             (alternate-og-locales forest page)
+                             '()))
              (lane (and (pair? side-lane) (make-side-lane-collector)))
              (body (subtree-content-sxml forest routes page "" 1 highlighters
                                          #:title-decoration title-decoration
@@ -707,6 +739,7 @@ to the lane, and an in-place numbered marker links to it."
             #:current-page (site-page-id page)
             #:article? article?
             #:published (assq-ref (site-page-metadata page) 'published)
+            #:og-locales og-locales
             #:scripts (if (null? backmatter)
                           '()
                           (list backmatter-fetch-script))))))))

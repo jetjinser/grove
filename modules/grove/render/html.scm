@@ -139,8 +139,10 @@ ID-PREFIX."
       (when (and language (not highlighter))
         (format (current-error-port)
           "WARNING: no code highlighter configured for ~a; displaying plain text~%" language))
-      `(pre (code
-              ,@(if language `((@ (data-language ,(symbol->string language)))) '())
+      `(pre (@ (translate "no"))
+            (code
+              (@ (translate "no")
+                 ,@(if language `((data-language ,(symbol->string language))) '()))
               ,@(if highlighter
                     (map (lambda (piece)
                            (if (car piece)
@@ -168,9 +170,9 @@ ID-PREFIX."
                         ((blockquote) (cons 'blockquote children))
                         ((itemize) (cons 'ul children))
                         ((item) (cons 'li children))
-                        ((code) (cons 'code children))
+                        ((code) `(code (@ (translate "no")) ,@children))
                         ((code-block) (render-code-block element))
-                        ((verbatim) (cons 'pre children))
+                        ((verbatim) `(pre (@ (translate "no")) ,@children))
                         ((details) (cons 'details children))
                         ((summary) (cons 'summary children))
                         ((disclosure subtree)

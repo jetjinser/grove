@@ -39,6 +39,18 @@
                     #:page-path (locale-page-path locale-of
                                                   #:default-locale "en")))
 
+(test-equal "the configured home page keeps index.html"
+  "index.html" (html-page-path routes "home"))
+(test-equal "a translated home page keeps its locale suffix"
+  "home-zh.zh-Hans.html"
+  (html-page-path
+    (make-html-routes
+      #:home-page "home"
+      #:page-path (locale-page-path
+                    (lambda (id) (and (equal? id "home-zh") "zh-Hans"))
+                    #:default-locale "en"))
+    "home-zh"))
+
 (test-equal "locale page paths leave default locales unprefixed"
   "guide.html" (html-page-path routes "guide"))
 (test-equal "locale page paths suffix other locales"
@@ -67,6 +79,10 @@
                           "hreflang=\"zh-Hans\" href=\"/guide-zh.zh-Hans.html\"")
          (string-contains page
                           "hreflang=\"x-default\" href=\"/guide.html\"")))
+  (test-assert "Open Graph locales describe the page and its translations"
+    (and (string-contains page "property=\"og:locale\" content=\"en_US\"")
+         (string-contains page
+                          "property=\"og:locale:alternate\" content=\"zh_CN\"")))
   (test-assert "language switcher is on by default and marks the current page"
     (and (string-contains
            page "<nav class=\"language-switcher\" aria-label=\"Language\">")
@@ -103,4 +119,21 @@
                 (memq (content-element-kind child) '(locale translation)))
               (content-document-children (site-page-document page))))))
 
+
+(let* ((site-url "https://example.org")
+       (html (assoc-ref (site->html forest #:routes routes #:mathjax-src #f
+                                     #:site-url site-url #:default-locale "en")
+                        "guide"))
+       (sitemap (artifact-content
+                  (car (render-sitemap forest #:site-url site-url
+                                       #:routes routes
+                                       #:default-locale "en")))))
+  (test-assert "HTML canonical and sitemap locations agree"
+    (and (string-contains
+           html
+           (string-append "<link rel=\"canonical\" href=\"" site-url
+                          "/guide.html\""))
+         (string-contains
+           sitemap
+           (string-append "<loc>" site-url "/guide.html</loc>")))))
 (test-end "forester i18n routes")

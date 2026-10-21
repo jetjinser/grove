@@ -52,6 +52,8 @@
                      "<time datetime=\"2026-09-27\">2026-09-27</time>"))
   (test-assert "documents carry a viewport meta tag"
     (string-contains page "<meta name=\"viewport\""))
+  (test-assert "no Open Graph locale is invented without a declared locale"
+    (not (string-contains page "property=\"og:locale\"")))
   (test-assert "documents carry Open Graph defaults"
     (and (string-contains page "property=\"og:title\"")
          (string-contains page "property=\"og:description\"")
@@ -155,5 +157,13 @@
          (string-contains page "aria-label=\"站点导航\"")))
   (test-assert "page locale localizes dates"
     (string-contains page
-                     "<time datetime=\"2026-09-27\">2026年9月27日</time>")))
+                     "<time datetime=\"2026-09-27\">2026年9月27日</time>"))
+  (test-assert "declared locales appear as Open Graph locales"
+    (string-contains page "property=\"og:locale\" content=\"zh_CN\"")))
+
+(let ((routes (make-html-routes #:home-page "root")))
+  (test-assert "site-nav builds stable current-page markup"
+    (member '(aria-current "page")
+            (cadr (car (site-nav routes '(("root" . "Home"))
+                                 #:current-page "root"))))))
 (test-end "forester accessibility")
