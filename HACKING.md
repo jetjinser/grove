@@ -54,24 +54,17 @@ development shell:
 blue build
 blue check tests/unit/grove/content.scm  # choose the relevant suite
 blue check
-reuse --no-multiprocessing lint
+blue check-all
 ```
 
-For the complete local gate, including the browser accessibility audit:
-
-```sh
-scripts/check-all.sh
-```
-
-It runs `blue check`, `reuse --no-multiprocessing lint`, builds the five
-examples covered by the audit, and runs axe-core over their index pages.
-`scripts/check-examples.sh` does only the example builds plus the audit;
-`scripts/a11y-audit.sh [HTML ...]` audits explicit pages. The audit needs
-Chromium; the script uses `CHROMIUM` if set, otherwise `chromium` on `PATH`, then
-a `/gnu/store/*chromium*` match. The first run downloads pinned axe-core 4.10.2
+`blue check-all` runs `blue check`, `blue lint`, and `blue check-examples` in
+order. `blue check-examples` builds the five audited examples and runs
+axe-core; `blue a11y [HTML ...]` audits explicit pages; `blue lint` runs
+`reuse --no-multiprocessing lint`. The audit needs Chromium: it uses
+`CHROMIUM` if set, otherwise `chromium` on `PATH`, then a
+`/gnu/store/*chromium*` match. The first run downloads pinned axe-core 4.10.2
 into `${XDG_CACHE_HOME:-$HOME/.cache}/grove` and verifies its SHA-256, so it
-needs network access once. Flora has the equivalent `scripts/check-all.sh`
-using `GROVE_ROOT` to find this checkout.
+needs network access once.
 
 Each suite runs under a wall-clock limit (two minutes by default; set
 `GROVE_TESTS_TIME_LIMIT` to override), and blue runs the suites in parallel by
