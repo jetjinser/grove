@@ -1,7 +1,8 @@
 @; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 @; SPDX-License-Identifier: CC0-1.0
 
-@use-modules[(math-derivations commands) (grove math catalog) (grove relation dsl)]
+@use-commands{math-derivations}
+@use-modules[(grove math catalog) (grove relation dsl)]
 @title{Inference rule catalog}
 
 @paragraph{The catalog is relational: rules can be selected by group, execution mode, input operator, or a declared premise. These queries inspect the same registered rules that the rewrite engine executes.}

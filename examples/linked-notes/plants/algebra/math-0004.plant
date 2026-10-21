@@ -1,7 +1,7 @@
 @; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 @; SPDX-License-Identifier: CC0-1.0
 
-@use-modules[(linked-notes commands)]
+@use-commands{linked-notes}
 
 @title{Using a Reusable Calculation}
 @summary{A separate tree that embeds a subtree defined by another source file.}

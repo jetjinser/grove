@@ -1,7 +1,7 @@
 @; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 @; SPDX-License-Identifier: CC0-1.0
 
-@use-modules[(heat-notes commands)]
+@use-commands{heat-notes}
 
 @title{Balance on a thin slice}
 @summary{Combining flux and stored energy yields the local heat equation.}

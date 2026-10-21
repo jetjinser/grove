@@ -1,7 +1,7 @@
 @; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 @; SPDX-License-Identifier: CC0-1.0
 
-@use-modules[(heat-notes commands)]
+@use-commands{heat-notes}
 
 @title{Volume sources and Joule heating}
 @summary{A heat-production rate per volume contributes a source term.}

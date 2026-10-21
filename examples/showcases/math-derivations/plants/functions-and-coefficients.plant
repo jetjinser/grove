@@ -1,6 +1,7 @@
 @; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 @; SPDX-License-Identifier: CC0-1.0
-@use-modules[(math-derivations commands) (grove math pipeline)
+@use-commands{math-derivations}
+@use-modules[(grove math pipeline)
              ((grove math semantic) #:prefix ◆:)]
 @title{Function derivatives and parameter coefficients}
 @summary{Argument-indexed chain rules, finite regularity, and rational coefficients.}

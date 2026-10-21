@@ -1,8 +1,8 @@
 @; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 @; SPDX-License-Identifier: CC0-1.0
 
-@use-modules[(linked-notes commands)
-             (forester site)
+@use-commands{linked-notes}
+@use-modules[(forester site)
              (grove ir)
              (grove site)
              (srfi srfi-1)]

@@ -1,7 +1,7 @@
 @; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 @; SPDX-License-Identifier: CC0-1.0
 
-@use-modules[(heat-notes commands)]
+@use-commands{heat-notes}
 
 @title{Steady state and boundary data}
 @summary{The equilibrium equation needs boundary temperatures to select a profile.}

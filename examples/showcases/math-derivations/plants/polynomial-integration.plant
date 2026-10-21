@@ -1,6 +1,7 @@
 @; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 @; SPDX-License-Identifier: CC0-1.0
-@use-modules[(math-derivations commands) ((grove math semantic) #:prefix ◆:)]
+@use-commands{math-derivations}
+@use-modules[((grove math semantic) #:prefix ◆:)]
 @title{Polynomial antiderivatives}
 @summary{Exact primitives with zero value at the selected coordinate origin.}
 @(define r3 (◆:space 'x 'y 'z))

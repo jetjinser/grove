@@ -1,7 +1,8 @@
 @; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 @; SPDX-License-Identifier: CC0-1.0
 
-@use-modules[((grove math formula) #:prefix φ:) (math-derivations commands) ((grove math semantic) #:prefix ◆:)]
+@use-commands{math-derivations}
+@use-modules[((grove math formula) #:prefix φ:) ((grove math semantic) #:prefix ◆:)]
 @title{Scalar calculus}
 @summary{Reusable declarations, chain and quotient rules, and real-domain premises.}
 

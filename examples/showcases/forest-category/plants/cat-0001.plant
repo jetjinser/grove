@@ -1,7 +1,7 @@
 @; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 @; SPDX-License-Identifier: CC0-1.0
 
-@use-modules[(forest-category commands)]
+@use-commands{forest-category}
 
 @title{Category}
 @summary{A small adaptation of the category definition in cat-0001.tree.}

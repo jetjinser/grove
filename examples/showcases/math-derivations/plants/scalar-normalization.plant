@@ -1,7 +1,8 @@
 @; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 @; SPDX-License-Identifier: CC0-1.0
 
-@use-modules[((grove math formula) #:prefix φ:) (math-derivations commands) (grove math pipeline)
+@use-commands{math-derivations}
+@use-modules[((grove math formula) #:prefix φ:) (grove math pipeline)
              ((grove math semantic) #:prefix ◆:)]
 @title{Scalar normalization}
 @summary{Stable ordering, combined factors, explicit expansion and retained domains.}
