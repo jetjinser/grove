@@ -77,6 +77,27 @@ headings; `#:backmatter-labels` remains available as an explicit override.
   `prefers-reduced-motion`; custom styles must keep contrast and focus
   indicators.
 
+
+## User preferences
+
+The default stylesheet stays neutral: it does not choose a palette, but it
+respects user preferences where the behaviour is unambiguous.
+
+- **Motion**: transitions are declared only inside
+  `@media (prefers-reduced-motion: no-preference)`, so reduced-motion users get
+  no animation.
+- **Contrast**: `prefers-contrast: more` raises decorative opacity (tree ids,
+  equation numbers) and thickens the focus outline; it does not change project
+  colors.
+- **Color scheme**: projects own palettes.  Flora uses `color-scheme` and
+  `light-dark()`; Grove's default stylesheet does not impose one.
+- **Transparency**: `prefers-reduced-transparency: reduce` is progressive and
+  currently browser-limited; projects may use it for translucent surfaces, but
+  must not depend on it.
+
+Axe does not evaluate media queries.  Check these preferences in browser
+DevTools (Rendering -> Emulate CSS media feature) or with a real OS setting.
+
 ## Checklist
 
 Before publishing a site:
