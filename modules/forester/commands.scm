@@ -184,6 +184,32 @@ page and must be a valid anchor ID."
       [_ (error "Forester subtree requires exactly one direct @title"
                 (length titles))])))
 
+
+(define*-public (section #:key (style #f) . arguments)
+  "Group content structurally without an addressable tree ID.
+
+A section renders as a nested heading and body but gets no route and no
+anchor; use @subtree with #:id when the group must be linked."
+  (let* ((body (command-body arguments))
+         (titles (filter (lambda (element)
+                           (and (content-element? element)
+                                (eq? (content-element-kind element) 'title)))
+                         body)))
+    (match titles
+      [(title-element)
+       (let ((title-text
+               (string-trim-both
+                 (content-verbatim-string
+                   (content-element-children title-element)))))
+         (when (string-null? title-text)
+           (error "Forester section title cannot be empty"))
+         (make-content-element
+           'section (decode-flow (remove (cut eq? <> title-element) body))
+           #:style style
+           #:properties `((title . ,title-text))
+           #:flow-kind 'block))]
+      [_ (error "Forester section requires exactly one direct @title"
+                (length titles))])))
 (define*-public (transclude id #:key (style #f) (anchor #f))
   (unless (non-empty-string? id)
     (error "Forester transclusion target must be a non-empty tree ID" id))

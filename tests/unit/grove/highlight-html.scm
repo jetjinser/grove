@@ -68,8 +68,12 @@
             #:style (make-content-style 'example
                       (list (make-html-attributes '((id . "sample"))))) "x"))
     "<pre translate=\"no\" class=\"example\" id=\"sample\">"))
+(test-assert "string languages are accepted"
+  (string-contains
+    (html (command:code-block #:language "scheme" "(define x)"))
+    "data-language=\"scheme\""))
 (test-error "invalid language options fail at the call site" #t
-  (command:code-block #:language "scheme" "x"))
+  (command:code-block #:language 42 "x"))
 (test-error "invalid renderer mappings fail explicitly" #t
   (content->sxml block #:highlighters '((scheme . invalid))))
 (test-assert "incomplete code still renders"

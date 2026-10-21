@@ -6,6 +6,8 @@
   #:use-module (srfi srfi-64)
   #:use-module (forester commands)
   #:use-module (forester input scribble)
+  #:use-module (forester site)
+  #:use-module (grove site)
   #:use-module (grove ir)
   #:use-module (grove style)
   #:use-module (grove render html)
@@ -177,4 +179,20 @@
          (styled (content-with-style math style)))
     (sxml->html (content->sxml (make-content-document (list styled))))))
 
+
+(let* ((document (evaluate-document
+                   "@title{Root}@section{@title{Group}@paragraph{Body.}}"))
+       (html (sxml->html (content->sxml document)))
+       (page (make-site-page "root" "Root" document))
+       (forest (make-forest (make-site (list page)))))
+  (test-assert "sections render as structural headings"
+    (string-contains
+      html
+      "<section class=\"forest-section\"><h2>Group</h2><p>Body.</p></section>"))
+  (test-assert "sections do not create tree pages"
+    (= 1 (length (pages forest)))))
+  (test-equal "sections keep their title in text output"
+    "Group\nBody.\n"
+    (content->text
+      (evaluate-document "@section{@title{Group}@paragraph{Body.}}")))
 (test-end "forester commands")

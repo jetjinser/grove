@@ -104,4 +104,5 @@ Before publishing a site:
 | 4.1.2 Name, role, value | named landmarks, native disclosures |
 
 Language metadata is the overlap between i18n and accessibility; see
-[i18n](i18n.md) for locales, catalogs, and matching.
+[i18n](i18n.md) for locales, catalogs, and matching, and
+[Authoring](authoring.md) for the page-side rules.
