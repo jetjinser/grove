@@ -58,17 +58,10 @@
   (if context
       (or (render-context-ref context key) fallback)
       fallback))
-(define current-hreflang? (make-parameter #t))
-(define current-default-locale (make-parameter #f))
-(define current-site-url (make-parameter #f))
-(define current-default-og-image (make-parameter #f))
-(define current-default-og-image-alt (make-parameter #f))
-(define current-language-switcher? (make-parameter #t))
 
 (define (page-locale page)
   (assq-ref (site-page-metadata page) 'locale))
 
-(define current-translation-groups (make-parameter #f))
 
 (define (translation-groups forest)
   (let ((groups (make-hash-table)))
@@ -86,7 +79,6 @@
     (and key
          (reverse (hash-ref (or (and context
                                 (render-context-ref context 'translation-groups))
-                                (current-translation-groups)
                                 (translation-groups forest))
                             key
                             '())))))
@@ -102,7 +94,7 @@
                            (href ,(html-page-url routes (site-page-id other))))))
                group)
           (let* ((default-locale
-                   (context-ref context 'default-locale (current-default-locale)))
+                   (render-context-ref context 'default-locale))
                  (default
                    (and default-locale
                         (find (lambda (other)
@@ -632,7 +624,7 @@ name, property, rel, or title."
          (locale (context-ref context 'locale-object
                               (current-chrome-locale-object)))
          (default-locale
-           (context-ref context 'default-locale (current-default-locale)))
+           (render-context-ref context 'default-locale))
          (html-attributes
            (cond
              (locale
@@ -644,7 +636,7 @@ name, property, rel, or title."
                 html-attributes))
              (else
               (merge-html-attributes '((lang . "en")) html-attributes))))
-         (site-url (context-ref context 'site-url (current-site-url)))
+         (site-url (render-context-ref context 'site-url))
          (page-url (and site-url current-page
                         (html-page-url routes current-page)))
          (absolute-url (and page-url
@@ -816,32 +808,18 @@ to the lane, and an in-place numbered marker links to it."
                      (if page-locale
                          (make-locale page-locale)
                          (current-chrome-locale-object))))
+      (unless (render-context? context)
+        (error "page-html requires a render context" context))
       (let* ((site (site forest))
              (context
-               (if context
-                   (render-context-with context
-                     #:forest forest
-                     #:routes routes
-                     #:page page
-                     #:anchor-prefix ""
-                     #:locale (current-chrome-locale)
-                     #:locale-object (current-chrome-locale-object)
-                     #:messages (current-message-catalog))
-                   (make-render-context
-                     #:forest forest
-                     #:routes routes
-                     #:page page
-                     #:anchor-prefix ""
-                     #:site-url (current-site-url)
-                     #:default-locale (current-default-locale)
-                     #:hreflang? (current-hreflang?)
-                     #:language-switcher? (current-language-switcher?)
-                     #:translation-groups (current-translation-groups)
-                     #:og-image (current-default-og-image)
-                     #:og-image-alt (current-default-og-image-alt)
-                     #:locale (current-chrome-locale)
-                     #:locale-object (current-chrome-locale-object)
-                     #:messages (current-message-catalog))))
+               (render-context-with context
+                 #:forest forest
+                 #:routes routes
+                 #:page page
+                 #:anchor-prefix ""
+                 #:locale (current-chrome-locale)
+                 #:locale-object (current-chrome-locale-object)
+                 #:messages (current-message-catalog)))
              (labels
                (normalize-backmatter-labels
                  labels

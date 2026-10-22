@@ -46,7 +46,9 @@ Done:
 - `page-html` hreflang, language navigation, OG defaults, and backmatter labels;
 - `site->html`, `render-html`, `render-html-changed`, and `make-html-renderer`
   construct the site context once;
-- chrome date/messages for tree labels, TOC, and language switcher.
+- chrome date/messages for tree labels, TOC, and language switcher;
+- `page-html` requires a context and the site-level `current-*` parameters
+  are gone.
 
 Pending:
 
