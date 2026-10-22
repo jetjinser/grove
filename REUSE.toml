@@ -29,3 +29,11 @@ path = [
 precedence = "override"
 SPDX-FileCopyrightText = "2026 Jinser Kafka <aimer@purejs.icu>"
 SPDX-License-Identifier = "CC0-1.0"
+
+[[annotations]]
+path = [
+    "tests/golden/**",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 Jinser Kafka <aimer@purejs.icu>"
+SPDX-License-Identifier = "CC0-1.0"
