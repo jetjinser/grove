@@ -7,6 +7,7 @@
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove render text)
+  #:use-module (grove render rules)
   #:use-module (forester render text routes)
   #:use-module (forester backmatter)
   #:use-module (forester render labels)
@@ -170,9 +171,11 @@
                                       (if (string-suffix? "\n" body) "" "\n")
                                       (marked-line #\F "```") "\n")))))))
 
-(define (page-body forest routes page)
+(define (page-body forest routes page rules)
   (content->text (site-page-document page)
     #:handlers (page-content-handlers forest routes page)
+    #:rules rules
+    #:context `((forest . ,forest) (routes . ,routes) (page . ,page))
     #:lazy-handlers
     (map (lambda (kind)
            (cons kind
@@ -262,8 +265,8 @@
            (pages forest))))))
 
 (define (page->gemtext forest routes page backmatter backmatter-labels
-                       reference-taxon-id)
-  (let ((body (page-body forest routes page)))
+                       reference-taxon-id rules)
+  (let ((body (page-body forest routes page rules)))
     (finish-gemtext
       (string-append
         (title-line (site-page-title page))
@@ -291,7 +294,8 @@
                         (backmatter-labels '())
                         (reference-taxon-id default-reference-taxon-id)
                         (locale #f)
-                        (messages default-message-catalog))
+                        (messages default-message-catalog)
+                        (rules empty-render-rules))
   (with-chrome-locale (locale messages)
     (validate-backmatter-sections backmatter)
     (set! backmatter-labels
@@ -305,7 +309,7 @@
           (map (lambda (page)
                  (cons (site-page-id page)
                        (page->gemtext forest routes page backmatter
-                                      backmatter-labels reference-taxon-id)))
+                                      backmatter-labels reference-taxon-id rules)))
                (pages forest)))))
 
 (define* (render-gemtext forest #:key
@@ -314,7 +318,8 @@
                          (backmatter-labels '())
                          (reference-taxon-id default-reference-taxon-id)
                          (locale #f)
-                         (messages default-message-catalog))
+                         (messages default-message-catalog)
+                         (rules empty-render-rules))
   (with-chrome-locale (locale messages)
     (validate-backmatter-sections backmatter)
     (set! backmatter-labels
@@ -331,7 +336,7 @@
                  (make-artifact
                    (text-page-path routes (site-page-id page))
                    (page->gemtext forest routes page backmatter
-                                  backmatter-labels reference-taxon-id)
+                                  backmatter-labels reference-taxon-id rules)
                    (page-source-paths forest page)))
                (pages forest)))))
 
@@ -342,6 +347,7 @@
                                 (reference-taxon-id default-reference-taxon-id)
                                 (locale #f)
                                 (messages default-message-catalog)
+                                (rules empty-render-rules)
                                 (cache? #t))
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
@@ -356,7 +362,8 @@
                                     #:backmatter-labels backmatter-labels
                                     #:reference-taxon-id reference-taxon-id
                                     #:locale locale
-                                    #:messages messages)))
+                                    #:messages messages
+                                    #:rules rules)))
                     (if prefix (prefix-artifacts prefix artifacts) artifacts)))))
     (make-cached-renderer render #:cache? cache?
       #:configuration

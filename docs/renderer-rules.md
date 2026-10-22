@@ -126,6 +126,20 @@ The macro expands to `make-image-set`/`make-image-variant` values.  It does
 not run encoders; an asset pipeline produces the files, and the rule only
 chooses the URLs and the fallback.
 
+
+## Text and gemtext
+
+The same rule values adapt to the text backends:
+
+```scheme
+(content->text document #:rules rules)
+(site->gemtext forest #:rules rules)
+```
+
+The text adapter receives the rendered body as `children`; `next` delegates to
+the default text interpretation.  Gemtext reuses the text adapter and its own
+line-oriented handlers, so a project rule can override one kind without
+rewriting the capsule.
 ## Production hook
 
 `site->html`, `render-html`, `render-html-changed`, and `make-html-renderer`

@@ -15,11 +15,11 @@ become the same type.
 | Layer | Current implementation | Composition | Gap |
 | --- | --- | --- | --- |
 | Content algebra | `grove ir`, `forester commands`, `forester composition`, `forester input scribble` | tree construction | none; keep it a free algebra, not a monad |
-| HTML interpretation | `grove render html`, `forester render html`, `grove render html rules` | left-biased rule monoid; `#:rules` in production | default handlers are still an alist; `html-presentation` is not the public option |
-| Text interpretation | `grove render text`, `forester render text` | direct `case` on kind | no composable rules |
-| Gemtext interpretation | `forester render gemtext` | text handlers | no composable rules |
+| HTML interpretation | `grove render html`, `forester render html`, `grove render rules` | left-biased rule monoid; `#:rules`/`#:presentation` in production | default handlers are still an alist; generic rules are aliases over the HTML module |
+| Text interpretation | `grove render text`, `forester render text` | `content->text #:rules` | gemtext still has its own handler layer |
+| Gemtext interpretation | `forester render gemtext` | `site->gemtext`/`render-gemtext #:rules` | text-specific rules share the text adapter |
 | RSS / sitemap / graph | `forester render rss`, `sitemap`, `graph` | direct artifact renderers | derived outputs are not modeled as interpretations |
-| Presentation | `grove style html`, `forester style html`, `grove render html presentation` | style product; rules product | presentation value is not wired into `site->html` |
+| Presentation | `grove style html`, `forester style html`, `grove render html presentation` | style product; rules product | wired as `#:presentation`; style/rules options remain for compatibility |
 | Content transforms | `grove content transform` | endomorphism monoid | not wired into project reading |
 | Asset pipelines | `grove pipeline`; Flora font/figures | pipeline values; content-addressed cache | no shared encoder/format registry; image-set is data only |
 | Context | `current-*` parameters; rule context alists | Reader-like | two context mechanisms coexist |
@@ -31,14 +31,12 @@ become the same type.
 
 ## Candidate refactors
 
-1. **Make `html-presentation` the production option.** (done: `#:presentation` is accepted by the HTML renderers)
-   `site->html` and `make-html-renderer` currently take `#:style` and `#:rules`
-   separately.  A single `#:presentation` would make the product monoid the
-   public shape and remove the chance of mismatched components.
-2. **Generalize rules beyond HTML.**
-   Rename/parameterize `html-rules` as renderer rules with an output type, and
-   let text/gemtext use the same identity/compose/next model.  This is the
-   biggest payoff for the theory: one composition story across backends.
+1. **Make `html-presentation` the production option.** (done: `#:presentation`
+   is accepted by the HTML renderers; `#:style`/`#:rules` remain for
+   compatibility)
+2. **Generalize rules beyond HTML.** (done for the public shape: `grove render
+   rules` aliases the algebra and text/gemtext accept `#:rules`; the internal
+   implementation still lives in the HTML module and can be renamed later)
 3. **Wire content transforms into the project.**
    Add a transform pipeline between reading and page construction, so rewrites
    (variant enrichment, adjacent-paragraph merging) are pure and testable

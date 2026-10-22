@@ -4,11 +4,16 @@
 
 (define-module (grove render text)
   #:use-module (grove ir)
+  #:use-module (grove render rules)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (content->text))
 
-(define* (content->text content #:key (handlers '()) (lazy-handlers '()))
+(define* (content->text content #:key (handlers '()) (lazy-handlers '())
+                         (rules empty-render-rules) (context #f))
+  (define all-handlers
+    (append (render-rules->handlers rules #:context context) handlers))
+
   (define (render content)
     (cond
       ((string? content) content)
@@ -27,7 +32,7 @@
           (lazy-handler element render)
           (let ((body (string-concatenate
                         (map render (content-element-children element))))
-                (handler (assq-ref handlers kind)))
+                (handler (assq-ref all-handlers kind)))
             (if handler
                 (handler element body)
                 (case kind

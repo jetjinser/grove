@@ -12,6 +12,8 @@
   #:use-module (grove style html)
   #:use-module (grove content transform)
   #:use-module (grove render html image)
+  #:use-module (grove render rules)
+  #:use-module (grove render text)
   #:use-module (forester commands))
 
 (test-begin "grove html rules")
@@ -178,4 +180,12 @@
     (any (lambda (node)
            (and (pair? node) (eq? (car node) 'img)))
          sxml)))
+
+(let ((rules (make-render-rules
+               (list (cons 'image
+                           (lambda (context element children next)
+                             "PICTURE"))))))
+  (test-equal "text renderer accepts renderer rules"
+    "PICTURE"
+    (content->text (image-element) #:rules rules)))
 (test-end "grove html rules")

@@ -17,6 +17,7 @@
   #:use-module (grove build)
   #:use-module (grove ir)
   #:use-module (grove render html)
+  #:use-module (grove render rules)
   #:use-module (grove render html routes)
   #:use-module (grove style)
   #:use-module (grove style html)
@@ -66,6 +67,14 @@
                          #:backmatter-labels '((backlinks . "Linked from")))))))
       (and (string-contains page "## Linked from")
            (not (string-contains page "## Related")))))
+  (test-assert "Gemtext accepts renderer rules"
+    (let* ((rules (make-render-rules
+                    (list (cons 'paragraph
+                                (lambda (context element children next)
+                                  "CUSTOM\n")))))
+           (page (cdr (assoc "algebra"
+                              (site->gemtext forest #:rules rules)))))
+      (string-contains page "CUSTOM")))
   (test-assert "Gemtext artifacts retain Forest source dependencies"
     (equal? (source-paths forest) (artifact-sources (car artifacts)))))
 
