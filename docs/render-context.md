@@ -43,11 +43,12 @@ Done:
 
 - rule contexts;
 - `html-document` locale/site-url/default-locale/OG locale;
-- `page-html` hreflang, language navigation, OG defaults, and backmatter labels.
+- `page-html` hreflang, language navigation, OG defaults, and backmatter labels;
+- `site->html`, `render-html`, `render-html-changed`, and `make-html-renderer`
+  construct the site context once.
 
 Pending:
 
-- entry points still populate compatibility parameters;
 - `chrome-date` and `chrome-message` still read the chrome parameters;
 - text/gemtext and derived artifacts do not consume the context yet.
 

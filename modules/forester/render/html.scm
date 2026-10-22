@@ -40,6 +40,18 @@
     (if locale (format-date locale text #:style 'long) text)))
 
 
+
+(define (make-site-render-context forest site-url default-locale
+                                  hreflang? language-switcher?
+                                  og-image og-image-alt)
+  (make-render-context
+    #:site-url site-url
+    #:default-locale default-locale
+    #:hreflang? hreflang?
+    #:language-switcher? language-switcher?
+    #:translation-groups (translation-groups forest)
+    #:og-image og-image
+    #:og-image-alt og-image-alt))
 (define (context-ref context key fallback)
   (if context
       (or (render-context-ref context key) fallback)
@@ -801,10 +813,6 @@ to the lane, and an in-place numbered marker links to it."
                      (if page-locale
                          (make-locale page-locale)
                          (current-chrome-locale-object))))
-      (set! labels
-        (normalize-backmatter-labels
-          labels
-          #:defaults (localized-backmatter-labels context)))
       (let* ((site (site forest))
              (context
                (if context
@@ -831,6 +839,10 @@ to the lane, and an in-place numbered marker links to it."
                      #:locale (current-chrome-locale)
                      #:locale-object (current-chrome-locale-object)
                      #:messages (current-message-catalog))))
+             (labels
+               (normalize-backmatter-labels
+                 labels
+                 #:defaults (localized-backmatter-labels context)))
              (head (if (render-context-ref context 'hreflang?)
                        (append head (hreflang-links forest page routes context))
                        head))
@@ -913,6 +925,7 @@ to the lane, and an in-place numbered marker links to it."
                              (side-lane '())
                              (rules empty-html-rules)
                              (presentation #f)
+                             (context #f)
                              (dirty-paths '()))
   (when presentation
     (set! style (html-presentation-style presentation))
@@ -961,7 +974,8 @@ to the lane, and an in-place numbered marker links to it."
                                              #:home-link home-link
                                              #:metadata-items metadata-items
                                              #:side-lane side-lane
-                                             #:rules rules)))))
+                                             #:rules rules
+                                             #:context context)))))
                           (pages forest))))
               (append style-artifacts page-artifacts)))))))
 
@@ -1023,13 +1037,10 @@ to the lane, and an in-place numbered marker links to it."
   (when presentation
     (set! style (html-presentation-style presentation))
     (set! rules (html-presentation-rules presentation)))
-  (parameterize ((current-hreflang? hreflang?)
-                 (current-default-locale default-locale)
-                 (current-site-url site-url)
-                 (current-default-og-image og-image)
-                 (current-default-og-image-alt og-image-alt)
-                 (current-language-switcher? language-switcher?)
-                 (current-translation-groups (translation-groups forest)))
+  (let ((context
+          (make-site-render-context forest site-url default-locale
+                                    hreflang? language-switcher?
+                                    og-image og-image-alt)))
     (with-chrome-locale (locale messages)
       (validate-backmatter-sections backmatter)
       (check-reference-taxon-id reference-taxon-id)
@@ -1049,9 +1060,9 @@ to the lane, and an in-place numbered marker links to it."
                               #:home-link home-link
                               #:metadata-items metadata-items
                               #:side-lane side-lane
-                              #:rules rules)))
+                              #:rules rules
+                              #:context context)))
            (pages forest)))))
-
 (define (split-into-chunks entries chunk-size)
   "Split ENTRIES into consecutive groups of at most CHUNK-SIZE entries,
 preserving order.  The tail group may be shorter, so the tail walk uses
@@ -1097,13 +1108,10 @@ errors when the count outlives the list."
   (when presentation
     (set! style (html-presentation-style presentation))
     (set! rules (html-presentation-rules presentation)))
-  (parameterize ((current-hreflang? hreflang?)
-                 (current-default-locale default-locale)
-                 (current-site-url site-url)
-                 (current-default-og-image og-image)
-                 (current-default-og-image-alt og-image-alt)
-                 (current-language-switcher? language-switcher?)
-                 (current-translation-groups (translation-groups forest)))
+  (let ((context
+          (make-site-render-context forest site-url default-locale
+                                    hreflang? language-switcher?
+                                    og-image og-image-alt)))
     (with-chrome-locale (locale messages)
       (validate-backmatter-sections backmatter)
       (check-reference-taxon-id reference-taxon-id)
@@ -1116,10 +1124,6 @@ errors when the count outlives the list."
                (total (length forest-pages))
                (route-table (html-route-table routes
                                               (map site-page-id forest-pages))))
-          ;;     Pages render independently against the shared forest. The
-          ;;     entry list is zipped with an explicit named let: the
-          ;;     multi-list map on load paths that pull in
-          ;;     faster-minikanren's rnrs override is unreliable.
           (map (lambda (page index)
                  (make-artifact
                    (cdr (assoc (site-page-id page) route-table))
@@ -1134,7 +1138,8 @@ errors when the count outlives the list."
                               #:home-link home-link
                               #:metadata-items metadata-items
                               #:side-lane side-lane
-                              #:rules rules)
+                              #:rules rules
+                              #:context context)
                    (page-source-paths forest page)))
                forest-pages
                (iota total 1)))))))
@@ -1228,14 +1233,10 @@ errors when the count outlives the list."
                                    (html-style-artifacts style))))
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
-            (parameterize ((current-hreflang? hreflang?)
-                           (current-default-locale default-locale)
-                           (current-site-url site-url)
-                           (current-default-og-image og-image)
-                           (current-default-og-image-alt og-image-alt)
-                           (current-language-switcher? language-switcher?)
-                           (current-translation-groups
-                             (translation-groups forest)))
+            (let ((context
+                    (make-site-render-context forest site-url default-locale
+                                              hreflang? language-switcher?
+                                              og-image og-image-alt)))
               (with-chrome-locale (locale messages)
                 (if (any (lambda (entry)
                            (any (lambda (path) (member path changed string=?))
@@ -1254,4 +1255,5 @@ errors when the count outlives the list."
                                          #:metadata-items metadata-items
                                          #:side-lane side-lane
                                          #:rules rules
+                                         #:context context
                                          #:dirty-paths dirty-paths))))))))

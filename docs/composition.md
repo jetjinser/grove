@@ -25,7 +25,7 @@ boundary.
 | Presentation | `grove style html`, `forester style html`, `grove render html presentation` | style product; rules product | wired as `#:presentation`; style/rules options remain for compatibility |
 | Content transforms | `grove content transform` | endomorphism monoid | wired as `make-site-project #:transforms` |
 | Asset pipelines | `grove pipeline`; Flora font/figures | pipeline values; content-addressed cache | AVIF figure variants wired through `image-set`; no shared encoder/format registry yet |
-| Context | `grove render context`; rules and `html-document` | Reader-like | entry points still populate `current-*` for compatibility; chrome locale remains dynamic |
+| Context | `grove render context`; rules, page HTML, and entry points | Reader-like | chrome date/message still read parameters; text/gemtext/derived artifacts pending |
 | Effects/build | `grove build`, `project`, `serve`, `output` | dependency graph and cache | intentionally separate; do not force into the value model |
 | Manifests | `@use-commands`, project modules | module dependency declaration | orthogonal to rendering |
 | i18n | `grove i18n`, `forester i18n` | bilingual constructors; chrome locale parameters | bilingual could be a content transform; chrome context is still dynamic |
