@@ -53,7 +53,7 @@ and lists the remaining gaps.
 
 ## Testing
 
-- `blue check-all` runs the test suite, REUSE, the example builds, and axe.
+- `blue verify` runs the test suite, REUSE, the example builds, and axe.
 - `blue a11y [HTML ...]` audits explicit pages.
 - Axe does not test keyboard order, focus movement, or media queries; check
   those in a browser or with a dedicated interaction test.

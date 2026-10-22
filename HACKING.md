@@ -54,10 +54,10 @@ development shell:
 blue build
 blue check tests/unit/grove/content.scm  # choose the relevant suite
 blue check
-blue check-all
+blue verify
 ```
 
-`blue check-all` runs `blue check`, `blue lint`, and `blue check-examples` in
+`blue verify` runs `blue check`, `blue lint`, and `blue check-examples` in
 order. `blue check-examples` builds the five audited examples and runs
 axe-core; `blue a11y [HTML ...]` audits explicit pages; `blue lint` runs
 `reuse --no-multiprocessing lint`. The audit needs Chromium: it uses

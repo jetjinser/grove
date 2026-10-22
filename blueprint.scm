@@ -133,8 +133,8 @@
    [load-configuration-policy 'no])
   (run-command "reuse" '("--no-multiprocessing" "lint")))
 
-(define-command (check-all-command _)
-  ([invoke   "check-all"]
+(define-command (verify-command _)
+  ([invoke   "verify"]
    [category 'test]
    [synopsis "Run tests, license lint, example builds, and the accessibility audit"]
    [help     "Run blue check, blue lint, and blue check-examples in order."]
@@ -157,5 +157,5 @@
           a11y-command
           check-examples-command
           lint-command
-          check-all-command))
+          verify-command))
   (testables grove-tests))
