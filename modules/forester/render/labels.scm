@@ -4,6 +4,7 @@
 
 (define-module (forester render labels)
   #:use-module (grove i18n)
+  #:use-module (grove render context)
   #:use-module (forester backmatter)
   #:export (current-chrome-locale
             current-chrome-locale-object
@@ -50,10 +51,14 @@
   (message-format (current-message-catalog) key arguments
                   (current-chrome-locale)))
 
-(define (localized-backmatter-labels)
-  "Default backmatter headings for the current catalog and locale."
-  (let ((catalog (current-message-catalog))
-        (locale (current-chrome-locale)))
+(define* (localized-backmatter-labels #:optional context)
+  "Default backmatter headings for the context catalog and locale."
+  (let ((catalog (if context
+                     (render-context-ref context 'messages)
+                     (current-message-catalog)))
+        (locale (if context
+                    (render-context-ref context 'locale)
+                    (current-chrome-locale))))
     (map (lambda (section)
            (cons section
                  (message catalog
@@ -61,6 +66,5 @@
                             (string-append "backmatter-" (symbol->string section)))
                           locale)))
          default-backmatter-sections)))
-
 (define-syntax-rule (with-chrome-locale (locale messages) body ...)
   (call-with-chrome-locale locale messages (lambda () body ...)))

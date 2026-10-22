@@ -67,16 +67,18 @@
       (pages forest))
     groups))
 
-(define (translation-group forest page)
+(define* (translation-group forest page #:optional context)
   (let ((key (assq-ref (site-page-metadata page) 'translation)))
     (and key
-         (reverse (hash-ref (or (current-translation-groups)
+         (reverse (hash-ref (or (and context
+                                (render-context-ref context 'translation-groups))
+                                (current-translation-groups)
                                 (translation-groups forest))
                             key
                             '())))))
 
-(define (hreflang-links forest page routes)
-  (let ((group (translation-group forest page)))
+(define (hreflang-links forest page routes context)
+  (let ((group (translation-group forest page context)))
     (if (or (not group) (< (length group) 2))
         '()
         (append
@@ -85,11 +87,13 @@
                            (hreflang ,(or (page-locale other) "und"))
                            (href ,(html-page-url routes (site-page-id other))))))
                group)
-          (let ((default (and (current-default-locale)
-                              (find (lambda (other)
-                                      (equal? (page-locale other)
-                                              (current-default-locale)))
-                                    group))))
+          (let* ((default-locale
+                   (context-ref context 'default-locale (current-default-locale)))
+                 (default
+                   (and default-locale
+                        (find (lambda (other)
+                                (equal? (page-locale other) default-locale))
+                              group))))
             (if default
                 (list `(link (@ (rel "alternate")
                                 (hreflang "x-default")
@@ -97,8 +101,8 @@
                                          routes (site-page-id default))))))
                 '()))))))
 
-(define (alternate-og-locales forest page)
-  (let ((group (translation-group forest page)))
+(define (alternate-og-locales forest page context)
+  (let ((group (translation-group forest page context)))
     (if (not group)
         '()
         (let loop ((rest group) (acc '()))
@@ -111,8 +115,8 @@
                     (loop (cdr rest) (cons (page-locale other) acc))
                     (loop (cdr rest) acc))))))))
 
-(define (language-switcher-sxml forest page routes)
-  (let ((group (translation-group forest page)))
+(define (language-switcher-sxml forest page routes context)
+  (let ((group (translation-group forest page context)))
     (if (or (not group) (< (length group) 2))
         '()
         `(nav (@ (class "language-switcher")
@@ -229,7 +233,14 @@ backlog report collects the mention."
                                 #:title-decoration title-decoration
                                 #:metadata-items metadata-items
                                 #:extra-handlers extra-handlers
-                                #:rules rules)
+                                #:rules rules
+                                #:context (if context
+                                             (render-context-with context
+                                               #:forest forest
+                                               #:routes routes
+                                               #:page target
+                                               #:anchor-prefix (string-append anchor "--"))
+                                             context))
           #:anchor anchor #:depth (1+ depth)
           #:style (content-element-style element)
           #:id-prefix anchor-prefix
@@ -246,11 +257,13 @@ backlog report collects the mention."
       #:handlers (append
                    (html-rules->handlers
                      rules
-                     #:context (make-render-context
-                                 #:forest forest
-                                 #:routes routes
-                                 #:page page
-                                 #:anchor-prefix anchor-prefix))
+                     #:context (if context
+                                   context
+                                   (make-render-context
+                                     #:forest forest
+                                     #:routes routes
+                                     #:page page
+                                     #:anchor-prefix anchor-prefix)))
                    extra-handlers
                    (page-content-handlers forest routes page anchor-prefix))
       #:lazy-handlers (map (lambda (kind) (cons kind render-tree))
@@ -791,7 +804,7 @@ to the lane, and an in-place numbered marker links to it."
       (set! labels
         (normalize-backmatter-labels
           labels
-          #:defaults (localized-backmatter-labels)))
+          #:defaults (localized-backmatter-labels context)))
       (let* ((site (site forest))
              (context
                (if context
@@ -818,21 +831,21 @@ to the lane, and an in-place numbered marker links to it."
                      #:locale (current-chrome-locale)
                      #:locale-object (current-chrome-locale-object)
                      #:messages (current-message-catalog))))
-             (head (if (current-hreflang?)
-                       (append head (hreflang-links forest page routes))
+             (head (if (render-context-ref context 'hreflang?)
+                       (append head (hreflang-links forest page routes context))
                        head))
-             (language-nav (if (current-language-switcher?)
-                               (language-switcher-sxml forest page routes)
+             (language-nav (if (render-context-ref context 'language-switcher?)
+                               (language-switcher-sxml forest page routes context)
                                '()))
-             (og-locales (if (current-hreflang?)
-                             (alternate-og-locales forest page)
+             (og-locales (if (render-context-ref context 'hreflang?)
+                             (alternate-og-locales forest page context)
                              '()))
              (page-image (assq-ref (site-page-metadata page) 'og-image))
              (page-image-alt (assq-ref (site-page-metadata page) 'og-image-alt))
-             (og-image (or page-image (current-default-og-image)))
+             (og-image (or page-image (render-context-ref context 'og-image)))
              (og-image-alt (cond (page-image-alt page-image-alt)
                                  (page-image (site-page-title page))
-                                 (og-image (or (current-default-og-image-alt)
+                                 (og-image (or (render-context-ref context 'og-image-alt)
                                                (site-page-title page)))
                                  (else #f)))
              (lane (and (pair? side-lane) (make-side-lane-collector)))
@@ -843,7 +856,8 @@ to the lane, and an in-place numbered marker links to it."
                                          (if lane
                                              (side-lane-handlers side-lane lane)
                                              '())
-                                         #:rules rules))
+                                         #:rules rules
+                                         #:context context))
              (tree (tree-block-sxml
                      "page-tree" (site-page-id page) (site-page-title page)
                      (html-page-url routes (site-page-id page)) body

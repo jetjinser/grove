@@ -42,13 +42,13 @@ own layers; merging them would turn the context into a new global state.
 Done:
 
 - rule contexts;
-- `html-document` locale/site-url/default-locale/OG locale.
+- `html-document` locale/site-url/default-locale/OG locale;
+- `page-html` hreflang, language navigation, OG defaults, and backmatter labels.
 
 Pending:
 
-- `page-html` still builds the context from compatibility parameters;
-- `chrome-date`, labels, backmatter, hreflang, and language switcher still read
-  the chrome parameters;
+- entry points still populate compatibility parameters;
+- `chrome-date` and `chrome-message` still read the chrome parameters;
 - text/gemtext and derived artifacts do not consume the context yet.
 
 The parallel golden test in `tests/unit/forester/render-golden.scm` renders two
