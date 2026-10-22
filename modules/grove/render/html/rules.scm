@@ -13,10 +13,14 @@
             html-rules->handlers
             define-html-rules))
 
-;; A renderer rule is a value, not a callback registration.  The rule set
-;; maps a content kind to its interpretation; composition is an explicit,
-;; left-biased merge.  The default renderer remains the fallback for kinds a
-;; project does not interpret.
+;; A renderer rule is a value, not a callback registration.  A rule maps a
+;; content kind to an interpretation:
+;;
+;;   (context element children next) -> sxml
+;;
+;; NEXT is a thunk that invokes the next interpretation for the same kind.
+;; Rule sets compose by explicit layers; the overlay wins and the base remains
+;; the fallback.  No global registry, no implicit invocation order.
 
 (define-record-type <html-rules>
   (%make-html-rules rules)
@@ -52,10 +56,22 @@
     (error "HTML rules can only be composed from HTML rules" base overlay))
   (let ((overlay-rules (html-rules-map overlay)))
     (%make-html-rules
-      (append overlay-rules
-              (remove (lambda (entry)
-                        (assq (car entry) overlay-rules))
-                      (html-rules-map base))))))
+      (append
+        (map (lambda (entry)
+               (cons (car entry)
+                     (let ((rule (cdr entry)))
+                       (lambda (context element children next)
+                         (rule context element children
+                               (lambda ()
+                                 (let ((fallback
+                                         (html-rules-ref base (car entry))))
+                                   (if fallback
+                                       (fallback context element children next)
+                                       (next)))))))))
+             overlay-rules)
+        (remove (lambda (entry)
+                  (assq (car entry) overlay-rules))
+                (html-rules-map base))))))
 
 (define (html-rules-ref rules kind)
   "Return the interpreter for KIND, or #f."
@@ -63,11 +79,17 @@
     (error "not an HTML rule set" rules))
   (assq-ref (html-rules-map rules) kind))
 
-(define (html-rules->handlers rules)
-  "The content->sxml handler alist represented by RULES."
+(define* (html-rules->handlers rules #:key (context #f))
+  "Adapt RULES to content->sxml handlers, closing over CONTEXT."
   (unless (html-rules? rules)
     (error "not an HTML rule set" rules))
-  (html-rules-map rules))
+  (map (lambda (entry)
+         (cons (car entry)
+               (lambda (element children)
+                 ((cdr entry) context element children
+                  (lambda ()
+                    (error "no fallback HTML rule" (car entry)))))))
+       (html-rules-map rules)))
 
 (define-syntax define-html-rules
   (syntax-rules ()

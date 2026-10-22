@@ -18,20 +18,42 @@ returns HTML.
     (list (cons 'image picture-rule))))
 ```
 
-- A rule is a value: `kind -> (element children -> sxml)`.
+- A rule is a value: `kind -> (context element children next -> sxml)`.
+- `context` is an explicit value (forest, routes, page, variants); rules do
+  not read hidden global state.
+- `next` is a thunk for the next interpretation of the same kind.  Delegation
+  is explicit: `(next)`.
 - `compose-html-rules` is a left-biased merge: the overlay wins for a kind it
   interprets, and the base remains the fallback for everything else.
-- `html-rules->handlers` adapts the value to `content->sxml`.
+- `html-rules->handlers` adapts the value to `content->sxml`, closing over a
+  context.
 - `define-html-rules` is a thin macro that expands to `make-html-rules`; it
-  adds no new evaluation model.
+  adds no new evaluation model.  `next` remains an ordinary parameter, so the
+  macro stays hygienic.
 
 The laws the experiment checks:
 
 1. **Identity**: composing with the empty rule set changes nothing.
 2. **Associativity**: `a + (b + c) = (a + b) + c` under the same precedence.
-3. **Override**: a later rule wins for its kind.
-4. **Totality by fallback**: kinds without an overlay still use the base.
-5. **Expansion**: the DSL produces the same values as the explicit API.
+3. **Idempotence**: composing a rule set with itself changes nothing.
+4. **Override**: a later rule wins for its kind.
+5. **Totality by fallback**: kinds without an overlay still use the base.
+6. **Context**: a rule sees exactly the context passed to the adapter.
+7. **Expansion**: the DSL produces the same values as the explicit API.
+
+## Presentation
+
+`html-presentation` is the product of independent components:
+
+```scheme
+(make-html-presentation
+  #:style (make-html-style #:stylesheets ... #:assets ...)
+  #:rules rules)
+```
+
+`compose-html-presentations` composes styles and rules componentwise.  Its
+laws reduce to the laws of the style monoid and the rule monoid; there is no
+hidden ordering between the components.
 
 ## Image example
 
@@ -42,12 +64,12 @@ Image variants are data, not a format policy in the core:
   '(("forest.jpg" . (("avif" . "/images/forest.avif")
                      ("jxl"  . "/images/forest.jxl")))))
 
-(define (picture-rule element children)
+(define (picture-rule context element children next)
   (let ((source (content-element-property element 'source))
         (alt (content-verbatim-string children)))
     (if (assoc-ref variants source)
         (picture-from-variants source alt)
-        `(img (@ (src ,source) (alt ,alt))))))
+        (next))))
 ```
 
 The asset pipeline produces the variant files; the rule only turns the image
@@ -55,11 +77,12 @@ element into `<picture>`.  Grove never learns which codec or encoder is used.
 
 ## Experiment status
 
-The candidate API lives in `(grove render html rules)`, with tests in
+The candidate API lives in `(grove render html rules)` and
+`(grove render html presentation)`, with tests in
 `tests/unit/grove/html-rules.scm`.  It is not wired into the default site
 renderer yet; the experiment is intentionally isolated so the value model can
 be evaluated before production adoption.
 
 The next step, if adopted, is to replace the internal handler alists in
-`site->html`/`render-html` with rule values and pass a render context
-(forest, routes, page) to rules that need it.
+`site->html`/`render-html` with rule values and pass the production render
+context (forest, routes, page) to rules that need it.
