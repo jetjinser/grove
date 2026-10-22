@@ -9,6 +9,7 @@
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove render text)
+  #:use-module (grove render context)
   #:use-module (forester render text routes)
   #:use-module (forester backmatter)
   #:use-module (forester render labels)
@@ -60,7 +61,7 @@ HTML renderer so text and HTML address occurrences identically."
   (or (content-element-property element 'anchor)
       (format #f "~atree-~a" prefix position)))
 
-(define* (subtree-content-text forest routes page #:optional (prefix ""))
+(define* (subtree-content-text forest routes page #:optional (prefix "") (context #f))
   (let ((position 0))
     (define (render-tree element _render)
       (set! position (1+ position))
@@ -68,9 +69,10 @@ HTML renderer so text and HTML address occurrences identically."
              (target (find-page forest id))
              (anchor (occurrence-anchor element prefix position)))
         (string-append (title-text (site-page-title target)) "[#" anchor "]\n"
-                       (subtree-content-text forest routes target (string-append anchor "--")))))
+                       (subtree-content-text forest routes target (string-append anchor "--") context))))
     (content->text (site-page-document page)
       #:handlers (page-content-handlers forest routes page)
+      #:context context
       #:lazy-handlers (map (lambda (kind) (cons kind render-tree))
                           '(subtree transclude query-transclude)))))
 
@@ -187,11 +189,11 @@ HTML renderer so text and HTML address occurrences identically."
                               "\n"))
              (site-pages site))))))
 
-(define (page->text forest page routes backmatter backmatter-labels
-                    reference-taxon-id)
+(define* (page->text forest page routes backmatter backmatter-labels
+                     reference-taxon-id #:optional (context #f))
   (let ((page-path (text-page-path routes (site-page-id page)))
         (body (string-trim-both
-                (subtree-content-text forest routes page)
+                (subtree-content-text forest routes page "" context)
                 (char-set #\newline))))
     (string-append
       (title-text (site-page-title page))
@@ -261,12 +263,19 @@ HTML renderer so text and HTML address occurrences identically."
     (unless (forest? forest)
       (error "Forester text renderer requires a forest" forest))
     (check-text-routes forest routes)
-    (let ((site (site forest)))
+    (let* ((context
+             (make-render-context
+               #:forest forest #:routes routes
+               #:locale (current-chrome-locale)
+               #:locale-object (current-chrome-locale-object)
+               #:messages (current-message-catalog)))
+           (site (site forest)))
       (cons (cons "index" (index->text forest routes))
             (map (lambda (page)
                    (cons (site-page-id page)
                          (page->text forest page routes backmatter
-                                     backmatter-labels reference-taxon-id)))
+                                     backmatter-labels reference-taxon-id
+                                     context)))
                  (pages forest))))))
 
 (define* (render-text forest #:key
