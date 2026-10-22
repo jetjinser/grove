@@ -251,7 +251,7 @@ backlog report collects the mention."
           #:context context
           #:style (content-element-style element)
           #:id-prefix anchor-prefix
-          #:metadata-items (metadata-items target)
+          #:metadata-items (metadata-items-for metadata-items target context)
           #:title-decoration (if title-decoration
                                  (title-decoration forest target)
                                  '())
@@ -280,21 +280,26 @@ backlog report collects the mention."
   (if (string-prefix? "unstable-" id)
       (string-append "#" (substring id (string-length "unstable-")))
       id))
-(define (default-metadata-items page)
+(define* (default-metadata-items page #:optional context)
   "The stock metadata items: the page's publication dates. Render
 hooks replace this wholesale; compose with it to extend."
   (let ((published (assq-ref (site-page-metadata page) 'published))
         (updated (assq-ref (site-page-metadata page) 'updated)))
     `(,@(if published
             `((li (@ (class "meta-item"))
-                  (time (@ (datetime ,published)) ,(chrome-date published))))
+                  (time (@ (datetime ,published)) ,(chrome-date published context))))
             '())
       ,@(if updated
             `((li (@ (class "meta-item"))
                   (time (@ (datetime ,updated))
                         ,(chrome-message-format
-                           'metadata-updated (list (chrome-date updated))))))
+                           'metadata-updated (list (chrome-date updated context))))))
             '()))))
+
+(define (metadata-items-for metadata-items page context)
+  (if (eq? metadata-items default-metadata-items)
+      (metadata-items page context)
+      (metadata-items page)))
 
 (define (metadata-sxml items)
   (if (null? items)
@@ -857,7 +862,7 @@ to the lane, and an in-place numbered marker links to it."
                      #:anchor (string-append "tree-root-" (site-page-id page))
                      #:depth 1
                      #:context context
-                     #:metadata-items (metadata-items page)
+                     #:metadata-items (metadata-items-for metadata-items page context)
                      #:title-decoration (if title-decoration
                                             (title-decoration forest page)
                                             '())))
