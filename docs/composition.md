@@ -31,7 +31,7 @@ become the same type.
 
 ## Candidate refactors
 
-1. **Make `html-presentation` the production option.**
+1. **Make `html-presentation` the production option.** (done: `#:presentation` is accepted by the HTML renderers)
    `site->html` and `make-html-renderer` currently take `#:style` and `#:rules`
    separately.  A single `#:presentation` would make the product monoid the
    public shape and remove the chance of mismatched components.

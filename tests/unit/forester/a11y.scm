@@ -18,6 +18,7 @@
   #:use-module (grove ir)
   #:use-module (grove render html routes)
   #:use-module (grove render html rules)
+  #:use-module (grove render html presentation)
   #:use-module (grove site)
   #:use-module (tests unit forester fixtures))
 
@@ -195,7 +196,8 @@
 
 (define* (render-page-with document #:key (site-url #f)
                            (og-image #f) (og-image-alt #f)
-                           (rules empty-html-rules))
+                           (rules empty-html-rules)
+                           (presentation #f))
   (let* ((page (document->tree-page "root" (evaluate-document document) #f))
          (forest (make-forest (make-site (list page))))
          (routes (make-html-routes #:home-page "root")))
@@ -204,7 +206,8 @@
                   #:site-url site-url
                   #:og-image og-image
                   #:og-image-alt og-image-alt
-                  #:rules rules)
+                  #:rules rules
+                  #:presentation presentation)
       "root")))
 
 
@@ -291,4 +294,19 @@
     (string-contains
       page
       "property=\"og:image:alt\" content=\"Root\"")))
+
+(let* ((picture-rule
+         (lambda (context element children next)
+           `(picture
+              (source (@ (type "image/avif")
+                         (srcset "/forest.avif")))
+              (img (@ (src ,(content-element-property element 'source))
+                      (alt ,(content-verbatim-string children)))))))
+       (rules (make-html-rules (list (cons 'image picture-rule))))
+       (presentation (make-html-presentation #:rules rules))
+       (page (render-page-with
+               "@title{Root}@image{forest.jpg}{A forest}@paragraph{Body.}"
+               #:presentation presentation)))
+  (test-assert "site->html accepts an HTML presentation"
+    (string-contains page "<picture><source type=\"image/avif\"")))
 (test-end "forester accessibility")

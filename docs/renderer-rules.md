@@ -129,7 +129,8 @@ chooses the URLs and the fallback.
 ## Production hook
 
 `site->html`, `render-html`, `render-html-changed`, and `make-html-renderer`
-now accept `#:rules`.  The renderer builds the context per page:
+now accept `#:rules` and `#:presentation`.  The renderer builds the context per
+page:
 
 ```scheme
 ((forest . ,forest) (routes . ,routes) (page . ,page))
