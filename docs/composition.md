@@ -21,7 +21,7 @@ become the same type.
 | RSS / sitemap / graph | `forester render rss`, `sitemap`, `graph` | direct artifact renderers | derived outputs are not modeled as interpretations |
 | Presentation | `grove style html`, `forester style html`, `grove render html presentation` | style product; rules product | wired as `#:presentation`; style/rules options remain for compatibility |
 | Content transforms | `grove content transform` | endomorphism monoid | wired as `make-site-project #:transforms` |
-| Asset pipelines | `grove pipeline`; Flora font/figures | pipeline values; content-addressed cache | no shared encoder/format registry; image-set is data only |
+| Asset pipelines | `grove pipeline`; Flora font/figures | pipeline values; content-addressed cache | AVIF figure variants wired through `image-set`; no shared encoder/format registry yet |
 | Context | `current-*` parameters; rule context alists | Reader-like | two context mechanisms coexist |
 | Effects/build | `grove build`, `project`, `serve`, `output` | dependency graph and cache | intentionally separate; do not force into the value model |
 | Manifests | `@use-commands`, project modules | module dependency declaration | orthogonal to rendering |
@@ -39,10 +39,8 @@ become the same type.
    implementation still lives in the HTML module and can be renamed later)
 3. **Wire content transforms into the project.** (done: `make-site-project
    #:transforms` applies the endomorphism pipeline after reading)
-4. **Implement the real image pipeline in Flora.**
-   The encoders are now in Flora's manifest.  Generate AVIF/JXL/WebP variants
-   from a small manifest, feed `image-set`, and compare sizes before choosing a
-   default policy.
+4. **Implement the real image pipeline in Flora.** (done: 127 figures,
+   PNG 9.3M -> AVIF 2.2M; JXL/WebP were larger for line art)
 5. **Replace dynamic chrome parameters with an explicit render context.**
    The rule context is already explicit; the remaining `current-*` parameters
    (site URL, locale, hreflang, OG defaults) are a second mechanism.  This is a
