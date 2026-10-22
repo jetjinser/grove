@@ -52,8 +52,9 @@ Pending:
 
 - backmatter entry metadata and default metadata items still read chrome
   parameters;
-- gemtext and the project `#:derived` entry still need the context/derived
-  wiring.
+- gemtext uses a render-context record for rules; its labels still use the
+  chrome compatibility path;
+- the project `#:derived` entry is not wired yet.
 
 The parallel golden test in `tests/unit/forester/render-golden.scm` renders two
 different contexts on separate threads and checks that site URL and language do

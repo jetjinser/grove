@@ -8,6 +8,7 @@
   #:use-module (grove output)
   #:use-module (grove render text)
   #:use-module (grove render rules)
+  #:use-module (grove render context)
   #:use-module (forester render text routes)
   #:use-module (forester backmatter)
   #:use-module (forester render labels)
@@ -175,7 +176,7 @@
   (content->text (site-page-document page)
     #:handlers (page-content-handlers forest routes page)
     #:rules rules
-    #:context `((forest . ,forest) (routes . ,routes) (page . ,page))
+    #:context (make-render-context #:forest forest #:routes routes #:page page)
     #:lazy-handlers
     (map (lambda (kind)
            (cons kind
