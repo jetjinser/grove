@@ -10,6 +10,9 @@ model: values with an identity, an associative composition, and an explicit
 interpreter.  It is a map for refactoring, not a claim that every layer should
 become the same type.
 
+See [Render context](render-context.md) for the render/build/reader/math
+boundary.
+
 ## Layers
 
 | Layer | Current implementation | Composition | Gap |

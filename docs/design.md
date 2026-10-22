@@ -46,6 +46,11 @@ HTML rendering can be extended with [renderer rules](renderer-rules.md): values
 that map a content kind to its interpretation, composed explicitly rather than
 registered as callbacks.
 
+## Render context
+
+[Render context](render-context.md) defines the four context layers and their
+boundaries.
+
 ## Composition audit
 
 [Composition audit](composition.md) maps the existing features onto this model
