@@ -20,7 +20,7 @@ become the same type.
 | Gemtext interpretation | `forester render gemtext` | `site->gemtext`/`render-gemtext #:rules` | text-specific rules share the text adapter |
 | RSS / sitemap / graph | `forester render rss`, `sitemap`, `graph` | direct artifact renderers | derived outputs are not modeled as interpretations |
 | Presentation | `grove style html`, `forester style html`, `grove render html presentation` | style product; rules product | wired as `#:presentation`; style/rules options remain for compatibility |
-| Content transforms | `grove content transform` | endomorphism monoid | not wired into project reading |
+| Content transforms | `grove content transform` | endomorphism monoid | wired as `make-site-project #:transforms` |
 | Asset pipelines | `grove pipeline`; Flora font/figures | pipeline values; content-addressed cache | no shared encoder/format registry; image-set is data only |
 | Context | `current-*` parameters; rule context alists | Reader-like | two context mechanisms coexist |
 | Effects/build | `grove build`, `project`, `serve`, `output` | dependency graph and cache | intentionally separate; do not force into the value model |
@@ -37,10 +37,8 @@ become the same type.
 2. **Generalize rules beyond HTML.** (done for the public shape: `grove render
    rules` aliases the algebra and text/gemtext accept `#:rules`; the internal
    implementation still lives in the HTML module and can be renamed later)
-3. **Wire content transforms into the project.**
-   Add a transform pipeline between reading and page construction, so rewrites
-   (variant enrichment, adjacent-paragraph merging) are pure and testable
-   without HTML.
+3. **Wire content transforms into the project.** (done: `make-site-project
+   #:transforms` applies the endomorphism pipeline after reading)
 4. **Implement the real image pipeline in Flora.**
    The encoders are now in Flora's manifest.  Generate AVIF/JXL/WebP variants
    from a small manifest, feed `image-set`, and compare sizes before choosing a

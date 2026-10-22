@@ -4,6 +4,7 @@
 
 (define-module (grove project site)
   #:use-module (grove i18n)
+  #:use-module (grove content transform)
   #:use-module (grove project)
   #:use-module (grove site)
   #:use-module (srfi srfi-1)
@@ -21,6 +22,7 @@
                             (extra-sources '())
                             read-page
                             (analyze (lambda (site) site))
+                            (transforms '())
                             (renderers '())
                             (pipelines '())
                             output-directory
@@ -34,6 +36,8 @@
     (error "site project requires a page reader" read-page))
   (unless (procedure? analyze)
     (error "site project analyzer must be a procedure" analyze))
+  (unless (every content-transform? transforms)
+    (error "site project transforms must be content transforms" transforms))
   (let ((locale-tag (and locale (locale-tag (make-locale locale)))))
     (make-project
       #:source-directory source-directory
@@ -45,7 +49,17 @@
       (lambda (source)
         (parameterize ((current-reader-locale
                          locale-tag))
-          (read-page source)))
+          (let ((page (read-page source)))
+            (if (null? transforms)
+                page
+                (make-site-page
+                  (site-page-id page)
+                  (site-page-title page)
+                  (transform-document
+                    (apply compose-content-transforms transforms)
+                    (site-page-document page))
+                  (site-page-source page)
+                  #:metadata (site-page-metadata page))))))
       #:analyze
       (lambda (context)
         (let* ((inputs (project-context-inputs context))
