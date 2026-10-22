@@ -46,6 +46,11 @@ HTML rendering can be extended with [renderer rules](renderer-rules.md): values
 that map a content kind to its interpretation, composed explicitly rather than
 registered as callbacks.
 
+## Composition audit
+
+[Composition audit](composition.md) maps the existing features onto this model
+and lists the remaining gaps.
+
 ## Testing
 
 - `blue check-all` runs the test suite, REUSE, the example builds, and axe.
