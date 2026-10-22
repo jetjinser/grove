@@ -35,8 +35,10 @@
             default-metadata-items
             make-html-renderer))
 
-(define (chrome-date text)
-  (let ((locale (current-chrome-locale-object)))
+(define* (chrome-date text #:optional context)
+  (let ((locale (if context
+                    (render-context-ref context 'locale-object)
+                    (current-chrome-locale-object))))
     (if locale (format-date locale text #:style 'long) text)))
 
 
@@ -132,7 +134,7 @@
     (if (or (not group) (< (length group) 2))
         '()
         `(nav (@ (class "language-switcher")
-                 (aria-label ,(chrome-message 'language)))
+                 (aria-label ,(chrome-message 'language context)))
               ,@(map (lambda (other)
                        (let ((tag (or (page-locale other) "und")))
                          `(a (@ (href ,(html-page-url
@@ -254,6 +256,7 @@ backlog report collects the mention."
                                                #:anchor-prefix (string-append anchor "--"))
                                              context))
           #:anchor anchor #:depth (1+ depth)
+          #:context context
           #:style (content-element-style element)
           #:id-prefix anchor-prefix
           #:metadata-items (metadata-items target)
@@ -309,7 +312,7 @@ hooks replace this wholesale; compose with it to extend."
 (define* (tree-block-sxml kind id title page-url content
                           #:key (open? #t) anchor (depth 2)
                           (title-decoration '()) (style #f) (id-prefix "")
-                          (metadata-items '()))
+                          (metadata-items '()) (context #f))
   (let* ((style-attributes (style-attribute-assoc style id-prefix))
          (_ (when (assq 'id style-attributes)
               (error "tree container style cannot set an id; the occurrence anchor owns it"
@@ -335,7 +338,7 @@ hooks replace this wholesale; compose with it to extend."
        (a (@ (class "forest-tree-id")
            (href ,page-url)
            (aria-label ,(chrome-message-format
-                          'tree-open-page (list (display-tree-id id)))))
+                          'tree-open-page (list (display-tree-id id)) context)))
           "[" ,(display-tree-id id) "]")
        (div (@ (class "forest-tree-content"))
             ,@(if (and (pair? content) (eq? (car content) 'article))
@@ -504,13 +507,13 @@ top-level taxon element; pages without one contribute nothing."
                     (iota (length (tree-occurrences forest id)) 1)))))
     (entries id "" (list id))))
 
-(define* (table-of-contents-sxml forest page #:key (title-decoration #f))
+(define* (table-of-contents-sxml forest page #:key (title-decoration #f) (context #f))
   (let ((items (tree-outline-sxml forest (site-page-id page)
                                   #:title-decoration title-decoration)))
     (if (null? items) '()
         (list `(nav (@ (class "table-of-contents")
-                       (aria-label ,(chrome-message 'nav-contents)))
-                    (h2 ,(chrome-message 'nav-contents))
+                       (aria-label ,(chrome-message 'nav-contents context)))
+                    (h2 ,(chrome-message 'nav-contents context))
                     (ol ,@items))))))
 
 (define* (site-nav-link routes id label #:key (current-page #f))
@@ -875,6 +878,7 @@ to the lane, and an in-place numbered marker links to it."
                      (html-page-url routes (site-page-id page)) body
                      #:anchor (string-append "tree-root-" (site-page-id page))
                      #:depth 1
+                     #:context context
                      #:metadata-items (metadata-items page)
                      #:title-decoration (if title-decoration
                                             (title-decoration forest page)
@@ -890,7 +894,8 @@ to the lane, and an in-place numbered marker links to it."
             (site-page-title page)
             (page-description site page)
             (append (table-of-contents-sxml forest page
-                                            #:title-decoration title-decoration)
+                                            #:title-decoration title-decoration
+                                            #:context context)
                     (list (if article? (cons 'article article) article)))
             (content-has-tex-math? (site-page-document page))
             (site-title site)

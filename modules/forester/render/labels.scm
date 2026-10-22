@@ -44,13 +44,20 @@
                           (if (locale? locale) locale (make-locale locale)))))
       (thunk))))
 
-(define (chrome-message key)
-  (message (current-message-catalog) key (current-chrome-locale)))
+(define* (chrome-message key #:optional context)
+  (if context
+      (message (render-context-ref context 'messages)
+               key
+               (render-context-ref context 'locale))
+      (message (current-message-catalog) key (current-chrome-locale))))
 
-(define (chrome-message-format key arguments)
-  (message-format (current-message-catalog) key arguments
-                  (current-chrome-locale)))
-
+(define* (chrome-message-format key arguments #:optional context)
+  (if context
+      (message-format (render-context-ref context 'messages)
+                      key arguments
+                      (render-context-ref context 'locale))
+      (message-format (current-message-catalog) key arguments
+                      (current-chrome-locale))))
 (define* (localized-backmatter-labels #:optional context)
   "Default backmatter headings for the context catalog and locale."
   (let ((catalog (if context
