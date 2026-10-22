@@ -40,6 +40,12 @@ management, an accessible name, and a way to close it. The Flora link preview
 follows the visual-only rule: it is `aria-hidden`, contains no focusable
 descendants, and closes on Escape or focus leaving the link.
 
+## Renderer rules
+
+HTML rendering can be extended with [renderer rules](renderer-rules.md): values
+that map a content kind to its interpretation, composed explicitly rather than
+registered as callbacks.
+
 ## Testing
 
 - `blue check-all` runs the test suite, REUSE, the example builds, and axe.
