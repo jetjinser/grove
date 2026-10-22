@@ -21,11 +21,11 @@ boundary.
 | HTML interpretation | `grove render html`, `forester render html`, `grove render rules` | left-biased rule monoid; `#:rules`/`#:presentation` in production | default handlers are still an alist; generic rules are aliases over the HTML module |
 | Text interpretation | `grove render text`, `forester render text` | `content->text #:rules` | gemtext still has its own handler layer |
 | Gemtext interpretation | `forester render gemtext` | `site->gemtext`/`render-gemtext #:rules` | text-specific rules share the text adapter |
-| RSS / sitemap / graph | `forester render rss`, `sitemap`, `graph` | direct artifact renderers | derived outputs are not modeled as interpretations |
+| RSS / sitemap / graph | `forester render rss`, `sitemap`, `graph`, `grove render derived` | derived-artifact values; list composition | built-ins provided; project `#:derived` entry is next |
 | Presentation | `grove style html`, `forester style html`, `grove render html presentation` | style product; rules product | wired as `#:presentation`; style/rules options remain for compatibility |
 | Content transforms | `grove content transform` | endomorphism monoid | wired as `make-site-project #:transforms` |
 | Asset pipelines | `grove pipeline`; Flora font/figures | pipeline values; content-addressed cache | AVIF figure variants wired through `image-set`; no shared encoder/format registry yet |
-| Context | `grove render context`; rules, page HTML, and entry points | Reader-like | chrome date/message still read parameters; text/gemtext/derived artifacts pending |
+| Context | `grove render context`; rules, page HTML, and entry points | Reader-like | backmatter metadata and gemtext still read parameters |
 | Effects/build | `grove build`, `project`, `serve`, `output` | dependency graph and cache | intentionally separate; do not force into the value model |
 | Manifests | `@use-commands`, project modules | module dependency declaration | orthogonal to rendering |
 | i18n | `grove i18n`, `forester i18n` | bilingual constructors; chrome locale parameters | bilingual could be a content transform; chrome context is still dynamic |
@@ -47,9 +47,8 @@ boundary.
 5. **Replace dynamic chrome parameters with an explicit render context.**
    (partial: rules and `html-document` read the context; entry options still
    feed `current-*`)
-6. **Model derived artifacts as interpretations (optional).**
-   RSS, sitemap, and graph are already artifact renderers; they can share the
-   same interpretation vocabulary without sharing the HTML rule type.
+6. **Model derived artifacts as interpretations (optional).** (done: sitemap,
+   RSS, and graph are `derived-artifact` values)
 
 ## Do not unify
 

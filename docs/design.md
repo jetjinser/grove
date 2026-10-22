@@ -51,6 +51,11 @@ registered as callbacks.
 [Render context](render-context.md) defines the four context layers and their
 boundaries.
 
+## Derived artifacts
+
+[Derived artifacts](derived-artifacts.md) defines the projection layer for
+sitemap, RSS, and graph.
+
 ## Composition audit
 
 [Composition audit](composition.md) maps the existing features onto this model
