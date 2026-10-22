@@ -9,6 +9,7 @@
   #:use-module (grove render html)
   #:use-module (grove render html rules)
   #:use-module (grove render html presentation)
+  #:use-module (grove render context)
   #:use-module (grove style html)
   #:use-module (grove content transform)
   #:use-module (grove render html image)
@@ -81,13 +82,13 @@
         (make-html-rules
           (list (cons 'image
                       (lambda (context element children next)
-                        `(p ,(assq-ref context 'label))))))))
+                        `(p ,(render-context-ref context 'page))))))))
   (test-assert "rules receive an explicit context"
     (let ((sxml (content->sxml
                   (image-element)
                   #:handlers (html-rules->handlers
                                contextual
-                               #:context '((label . "ctx"))))))
+                               #:context (make-render-context #:page "ctx")))))
       (and (pair? (memq 'p sxml))
            (string=? "ctx" (cadr (memq 'p sxml)))))))
 

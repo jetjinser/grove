@@ -22,7 +22,7 @@ become the same type.
 | Presentation | `grove style html`, `forester style html`, `grove render html presentation` | style product; rules product | wired as `#:presentation`; style/rules options remain for compatibility |
 | Content transforms | `grove content transform` | endomorphism monoid | wired as `make-site-project #:transforms` |
 | Asset pipelines | `grove pipeline`; Flora font/figures | pipeline values; content-addressed cache | AVIF figure variants wired through `image-set`; no shared encoder/format registry yet |
-| Context | `current-*` parameters; rule context alists | Reader-like | two context mechanisms coexist |
+| Context | `grove render context`; rules and `html-document` | Reader-like | entry points still populate `current-*` for compatibility; chrome locale remains dynamic |
 | Effects/build | `grove build`, `project`, `serve`, `output` | dependency graph and cache | intentionally separate; do not force into the value model |
 | Manifests | `@use-commands`, project modules | module dependency declaration | orthogonal to rendering |
 | i18n | `grove i18n`, `forester i18n` | bilingual constructors; chrome locale parameters | bilingual could be a content transform; chrome context is still dynamic |
@@ -42,9 +42,8 @@ become the same type.
 4. **Implement the real image pipeline in Flora.** (done: 127 figures,
    PNG 9.3M -> AVIF 2.2M; JXL/WebP were larger for line art)
 5. **Replace dynamic chrome parameters with an explicit render context.**
-   The rule context is already explicit; the remaining `current-*` parameters
-   (site URL, locale, hreflang, OG defaults) are a second mechanism.  This is a
-   larger refactor; do it after the presentation/rules shape settles.
+   (partial: rules and `html-document` read the context; entry options still
+   feed `current-*`)
 6. **Model derived artifacts as interpretations (optional).**
    RSS, sitemap, and graph are already artifact renderers; they can share the
    same interpretation vocabulary without sharing the HTML rule type.

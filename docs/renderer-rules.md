@@ -19,8 +19,8 @@ returns HTML.
 ```
 
 - A rule is a value: `kind -> (context element children next -> sxml)`.
-- `context` is an explicit value (forest, routes, page, variants); rules do
-  not read hidden global state.
+- `context` is a `render-context` value (forest, routes, page, variants); rules do
+  not read hidden global state.  Use `render-context-ref` for named fields.
 - `next` is a thunk for the next interpretation of the same kind.  Delegation
   is explicit: `(next)`.
 - `compose-html-rules` is a left-biased merge: the overlay wins for a kind it

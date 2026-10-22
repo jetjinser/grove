@@ -15,6 +15,7 @@
   #:use-module (grove output)
   #:use-module (grove render html)
   #:use-module (grove render html rules)
+  #:use-module (grove render context)
   #:use-module (grove render html presentation)
   #:use-module (grove highlight)
   #:use-module (grove render html routes)
@@ -38,6 +39,11 @@
   (let ((locale (current-chrome-locale-object)))
     (if locale (format-date locale text #:style 'long) text)))
 
+
+(define (context-ref context key fallback)
+  (if context
+      (or (render-context-ref context key) fallback)
+      fallback))
 (define current-hreflang? (make-parameter #t))
 (define current-default-locale (make-parameter #f))
 (define current-site-url (make-parameter #f))
@@ -207,7 +213,8 @@ backlog report collects the mention."
                               #:key (title-decoration #f)
                               (metadata-items default-metadata-items)
                               (extra-handlers '())
-                              (rules empty-html-rules))
+                              (rules empty-html-rules)
+                    (context #f))
   (let ((position 0))
     (define (render-tree element _render)
       (set! position (1+ position))
@@ -239,10 +246,11 @@ backlog report collects the mention."
       #:handlers (append
                    (html-rules->handlers
                      rules
-                     #:context `((forest . ,forest)
-                                 (routes . ,routes)
-                                 (page . ,page)
-                                 (anchor-prefix . ,anchor-prefix)))
+                     #:context (make-render-context
+                                 #:forest forest
+                                 #:routes routes
+                                 #:page page
+                                 #:anchor-prefix anchor-prefix))
                    extra-handlers
                    (page-content-handlers forest routes page anchor-prefix))
       #:lazy-handlers (map (lambda (kind) (cons kind render-tree))
@@ -589,23 +597,26 @@ name, property, rel, or title."
                        (home-link #f) (scripts '()) (current-page #f)
                        (language-nav '()) (article? #f) (published #f)
                        (og-locales '()) (updated #f) (og-image #f)
-                       (og-image-alt #f))
+                       (og-image-alt #f) (context #f))
   (let* ((site-nav (if (procedure? site-nav)
                        (site-nav current-page)
                        site-nav))
-         (locale (current-chrome-locale-object))
+         (locale (context-ref context 'locale-object
+                              (current-chrome-locale-object)))
+         (default-locale
+           (context-ref context 'default-locale (current-default-locale)))
          (html-attributes
            (cond
              (locale
               (merge-html-attributes (locale-html-attributes locale)
                                      html-attributes))
-             ((current-default-locale)
+             (default-locale
               (merge-html-attributes
-                (locale-html-attributes (make-locale (current-default-locale)))
+                (locale-html-attributes (make-locale default-locale))
                 html-attributes))
              (else
               (merge-html-attributes '((lang . "en")) html-attributes))))
-         (site-url (current-site-url))
+         (site-url (context-ref context 'site-url (current-site-url)))
          (page-url (and site-url current-page
                         (html-page-url routes current-page)))
          (absolute-url (and page-url
@@ -651,7 +662,7 @@ name, property, rel, or title."
              (if locale
                  (list `(meta (@ (property "og:locale")
                                  (content ,(og-locale-tag
-                                              (current-chrome-locale))))))
+                                              (context-ref context 'locale (current-chrome-locale)))))))
                  '())
              (map (lambda (tag)
                     `(meta (@ (property "og:locale:alternate")
@@ -768,7 +779,8 @@ to the lane, and an in-place numbered marker links to it."
                     #:key (title-decoration #f) (article? #f) (backmatter-details? #f)
                     (html-attributes '()) (head '()) (site-nav '()) (home-link #f)
                     (metadata-items default-metadata-items) (side-lane '())
-                    (rules empty-html-rules))
+                    (rules empty-html-rules)
+                    (context #f))
   (let ((page-locale (page-locale page)))
     (parameterize ((current-chrome-locale
                      (or page-locale (current-chrome-locale)))
@@ -781,6 +793,31 @@ to the lane, and an in-place numbered marker links to it."
           labels
           #:defaults (localized-backmatter-labels)))
       (let* ((site (site forest))
+             (context
+               (if context
+                   (render-context-with context
+                     #:forest forest
+                     #:routes routes
+                     #:page page
+                     #:anchor-prefix ""
+                     #:locale (current-chrome-locale)
+                     #:locale-object (current-chrome-locale-object)
+                     #:messages (current-message-catalog))
+                   (make-render-context
+                     #:forest forest
+                     #:routes routes
+                     #:page page
+                     #:anchor-prefix ""
+                     #:site-url (current-site-url)
+                     #:default-locale (current-default-locale)
+                     #:hreflang? (current-hreflang?)
+                     #:language-switcher? (current-language-switcher?)
+                     #:translation-groups (current-translation-groups)
+                     #:og-image (current-default-og-image)
+                     #:og-image-alt (current-default-og-image-alt)
+                     #:locale (current-chrome-locale)
+                     #:locale-object (current-chrome-locale-object)
+                     #:messages (current-message-catalog))))
              (head (if (current-hreflang?)
                        (append head (hreflang-links forest page routes))
                        head))
@@ -847,6 +884,7 @@ to the lane, and an in-place numbered marker links to it."
             #:og-locales og-locales
             #:og-image og-image
             #:og-image-alt og-image-alt
+            #:context context
             #:scripts (if (null? backmatter)
                           '()
                           (list backmatter-fetch-script))))))))
