@@ -86,3 +86,54 @@ be evaluated before production adoption.
 The next step, if adopted, is to replace the internal handler alists in
 `site->html`/`render-html` with rule values and pass the production render
 context (forest, routes, page) to rules that need it.
+
+## Content transforms
+
+Rendering is not the only composition layer.  A `content-transform` is an
+endomorphism on content documents:
+
+```scheme
+(define normalize
+  (compose-content-transforms
+    merge-adjacent-paragraphs
+    enrich-image-variants))
+
+(transform-document normalize document)
+```
+
+Transforms rewrite the content algebra; rules interpret it.  Keeping them
+separate means a transform can be tested without HTML and a rule can be tested
+without rewriting the document.  Composition is ordinary function composition
+with the identity transform as its unit.
+
+## Image-set DSL
+
+The image rule can be expressed as data:
+
+```scheme
+(define-image-sets image-sets
+  (image-set "forest.jpg"
+    (variant "image/avif" "/images/forest.avif")
+    (variant "image/jxl" "/images/forest.jxl")
+    (fallback "/images/forest.jpg")))
+
+(define rules
+  (make-html-rules
+    (list (cons 'image (image-set-rule image-sets)))))
+```
+
+The macro expands to `make-image-set`/`make-image-variant` values.  It does
+not run encoders; an asset pipeline produces the files, and the rule only
+chooses the URLs and the fallback.
+
+## Production hook
+
+`site->html`, `render-html`, `render-html-changed`, and `make-html-renderer`
+now accept `#:rules`.  The renderer builds the context per page:
+
+```scheme
+((forest . ,forest) (routes . ,routes) (page . ,page))
+```
+
+Project rules override the default interpretation; no core codec knowledge is
+involved.  The isolated tests cover 19 laws and integration cases.

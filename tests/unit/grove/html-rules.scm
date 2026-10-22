@@ -10,6 +10,8 @@
   #:use-module (grove render html rules)
   #:use-module (grove render html presentation)
   #:use-module (grove style html)
+  #:use-module (grove content transform)
+  #:use-module (grove render html image)
   #:use-module (forester commands))
 
 (test-begin "grove html rules")
@@ -129,4 +131,51 @@
                    (html-presentation-rules
                      (compose-html-presentations a b)))))))
 
+
+(let* ((add-text
+         (make-content-transform
+           (lambda (document)
+             (make-content-document
+               (append (content-document-children document)
+                       (list (make-content-text "x")))))))
+       (document (make-content-document '()))
+       (composed (compose-content-transforms add-text add-text)))
+  (test-equal "content transform identity"
+    0 (length (content-document-children
+                (transform-document identity-content-transform document))))
+  (test-equal "content transforms compose in order"
+    2 (length (content-document-children
+                (transform-document composed document))))
+  (test-equal "content transform composition is associative"
+    (content-document-children
+      (transform-document
+        (compose-content-transforms add-text
+                                    (compose-content-transforms add-text add-text))
+        document))
+    (content-document-children
+      (transform-document
+        (compose-content-transforms
+          (compose-content-transforms add-text add-text)
+          add-text)
+        document))))
+
+(define-image-sets image-sets
+  (image-set "forest.jpg"
+    (variant "image/avif" "/images/forest.avif")
+    (variant "image/jxl" "/images/forest.jxl")
+    (fallback "/images/forest.jpg")))
+
+(let* ((rules (make-html-rules
+                (list (cons 'image (image-set-rule image-sets)))))
+       (sxml (render-with rules)))
+  (test-assert "image-set-rule emits a picture"
+    (pair? (memq 'picture sxml)))
+  (test-assert "image-set-rule keeps every variant"
+    (= 2 (length (filter (lambda (node)
+                           (and (pair? node) (eq? (car node) 'source)))
+                         sxml))))
+  (test-assert "image-set-rule uses the fallback in img"
+    (any (lambda (node)
+           (and (pair? node) (eq? (car node) 'img)))
+         sxml)))
 (test-end "grove html rules")

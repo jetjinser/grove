@@ -14,6 +14,7 @@
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove render html)
+  #:use-module (grove render html rules)
   #:use-module (grove highlight)
   #:use-module (grove render html routes)
   #:use-module (grove site)
@@ -204,7 +205,8 @@ backlog report collects the mention."
                               #:optional (anchor-prefix "") (depth 1) (highlighters '())
                               #:key (title-decoration #f)
                               (metadata-items default-metadata-items)
-                              (extra-handlers '()))
+                              (extra-handlers '())
+                              (rules empty-html-rules))
   (let ((position 0))
     (define (render-tree element _render)
       (set! position (1+ position))
@@ -218,7 +220,8 @@ backlog report collects the mention."
           (subtree-content-sxml forest routes target (string-append anchor "--") (1+ depth) highlighters
                                 #:title-decoration title-decoration
                                 #:metadata-items metadata-items
-                                #:extra-handlers extra-handlers)
+                                #:extra-handlers extra-handlers
+                                #:rules rules)
           #:anchor anchor #:depth (1+ depth)
           #:style (content-element-style element)
           #:id-prefix anchor-prefix
@@ -232,8 +235,15 @@ backlog report collects the mention."
       (site-page-document page)
       #:id-prefix anchor-prefix
       #:highlighters highlighters
-      #:handlers (append extra-handlers
-                         (page-content-handlers forest routes page anchor-prefix))
+      #:handlers (append
+                   (html-rules->handlers
+                     rules
+                     #:context `((forest . ,forest)
+                                 (routes . ,routes)
+                                 (page . ,page)
+                                 (anchor-prefix . ,anchor-prefix)))
+                   extra-handlers
+                   (page-content-handlers forest routes page anchor-prefix))
       #:lazy-handlers (map (lambda (kind) (cons kind render-tree))
                           '(subtree transclude query-transclude)))))
 
@@ -756,7 +766,8 @@ to the lane, and an in-place numbered marker links to it."
                     #:optional (inline-stylesheets? #f) (highlighters '())
                     #:key (title-decoration #f) (article? #f) (backmatter-details? #f)
                     (html-attributes '()) (head '()) (site-nav '()) (home-link #f)
-                    (metadata-items default-metadata-items) (side-lane '()))
+                    (metadata-items default-metadata-items) (side-lane '())
+                    (rules empty-html-rules))
   (let ((page-locale (page-locale page)))
     (parameterize ((current-chrome-locale
                      (or page-locale (current-chrome-locale)))
@@ -793,7 +804,8 @@ to the lane, and an in-place numbered marker links to it."
                                          #:extra-handlers
                                          (if lane
                                              (side-lane-handlers side-lane lane)
-                                             '())))
+                                             '())
+                                         #:rules rules))
              (tree (tree-block-sxml
                      "page-tree" (site-page-id page) (site-page-title page)
                      (html-page-url routes (site-page-id page)) body
@@ -846,6 +858,7 @@ to the lane, and an in-place numbered marker links to it."
                              (head '()) (site-nav '()) (home-link #f)
                              (metadata-items default-metadata-items)
                              (side-lane '())
+                             (rules empty-html-rules)
                              (dirty-paths '()))
   (set! routes (resolve-html-routes forest routes))
   (check-html-input forest style routes mathjax-src)
@@ -890,7 +903,8 @@ to the lane, and an in-place numbered marker links to it."
                                              #:site-nav site-nav
                                              #:home-link home-link
                                              #:metadata-items metadata-items
-                                             #:side-lane side-lane)))))
+                                             #:side-lane side-lane
+                                             #:rules rules)))))
                           (pages forest))))
               (append style-artifacts page-artifacts)))))))
 
@@ -936,6 +950,7 @@ to the lane, and an in-place numbered marker links to it."
                        (home-link #f)
                        (metadata-items default-metadata-items)
                        (side-lane '())
+                       (rules empty-html-rules)
                        (locale #f)
                        (messages default-message-catalog)
                        (settings #f)
@@ -972,7 +987,8 @@ to the lane, and an in-place numbered marker links to it."
                               #:site-nav site-nav
                               #:home-link home-link
                               #:metadata-items metadata-items
-                              #:side-lane side-lane)))
+                              #:side-lane side-lane
+                              #:rules rules)))
            (pages forest)))))
 
 (define (split-into-chunks entries chunk-size)
@@ -1004,6 +1020,7 @@ errors when the count outlives the list."
                              (home-link #f)
                              (metadata-items default-metadata-items)
                              (side-lane '())
+                             (rules empty-html-rules)
                              (locale #f)
                              (messages default-message-catalog)
                              (settings #f)
@@ -1051,7 +1068,8 @@ errors when the count outlives the list."
                               #:site-nav site-nav
                               #:home-link home-link
                               #:metadata-items metadata-items
-                              #:side-lane side-lane)
+                              #:side-lane side-lane
+                              #:rules rules)
                    (page-source-paths forest page)))
                forest-pages
                (iota total 1)))))))
@@ -1072,6 +1090,7 @@ errors when the count outlives the list."
                                       (home-link #f)
                                       (metadata-items default-metadata-items)
                                       (side-lane '())
+                                      (rules empty-html-rules)
                                       (locale #f)
                                       (messages default-message-catalog)
                                       (settings #f)
@@ -1105,6 +1124,7 @@ errors when the count outlives the list."
                                       #:home-link home-link
                                       #:metadata-items metadata-items
                                       #:side-lane side-lane
+                                      #:rules rules
                                       #:locale locale
                                       #:messages messages
                                       #:default-locale default-locale
@@ -1164,4 +1184,5 @@ errors when the count outlives the list."
                                          #:home-link home-link
                                          #:metadata-items metadata-items
                                          #:side-lane side-lane
+                                         #:rules rules
                                          #:dirty-paths dirty-paths))))))))

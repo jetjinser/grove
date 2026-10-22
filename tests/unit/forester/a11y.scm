@@ -17,6 +17,7 @@
   #:use-module (grove i18n)
   #:use-module (grove ir)
   #:use-module (grove render html routes)
+  #:use-module (grove render html rules)
   #:use-module (grove site)
   #:use-module (tests unit forester fixtures))
 
@@ -193,7 +194,8 @@
   (resolve-chrome-catalog 42))
 
 (define* (render-page-with document #:key (site-url #f)
-                           (og-image #f) (og-image-alt #f))
+                           (og-image #f) (og-image-alt #f)
+                           (rules empty-html-rules))
   (let* ((page (document->tree-page "root" (evaluate-document document) #f))
          (forest (make-forest (make-site (list page))))
          (routes (make-html-routes #:home-page "root")))
@@ -201,9 +203,24 @@
       (site->html forest #:routes routes #:mathjax-src #f
                   #:site-url site-url
                   #:og-image og-image
-                  #:og-image-alt og-image-alt)
+                  #:og-image-alt og-image-alt
+                  #:rules rules)
       "root")))
 
+
+(let* ((picture-rule
+         (lambda (context element children next)
+           `(picture
+              (source (@ (type "image/avif")
+                         (srcset "/forest.avif")))
+              (img (@ (src ,(content-element-property element 'source))
+                      (alt ,(content-verbatim-string children)))))))
+       (rules (make-html-rules (list (cons 'image picture-rule))))
+       (page (render-page-with
+               "@title{Root}@image{forest.jpg}{A forest}@paragraph{Body.}"
+               #:rules rules)))
+  (test-assert "site->html accepts renderer rules"
+    (string-contains page "<picture><source type=\"image/avif\"")))
 (let ((page (render-page-with
               "@title{Root}@og-image{assets/cover.png}@paragraph{Body.}"
               #:site-url "https://example.org")))
@@ -218,6 +235,7 @@
   (test-assert "og:image metadata leaves the body"
     (not (string-contains page "<p>assets/cover.png</p>"))))
 
+
 (let ((page (render-page-with
               "@title{Root}@og-image{https://cdn.example.org/cover.png}@paragraph{Body.}")))
   (test-assert "external og:image is used as-is"
@@ -225,10 +243,12 @@
       page
       "property=\"og:image\" content=\"https://cdn.example.org/cover.png\"")))
 
+
 (let ((page (render-page-with
               "@title{Root}@og-image{assets/cover.png}@paragraph{Body.}")))
   (test-assert "relative og:image is omitted without a site URL"
     (not (string-contains page "property=\"og:image\""))))
+
 
 (let ((page (render-page-with
               "@title{Root}@paragraph{Body.}"
@@ -243,6 +263,7 @@
     (string-contains
       page
       "property=\"og:image:alt\" content=\"Site cover\"")))
+
 
 (let ((page (render-page-with
               "@title{Root}@og-image{assets/page.png}@og-image-alt{Page cover}@paragraph{Body.}"
@@ -259,6 +280,7 @@
       "property=\"og:image:alt\" content=\"Page cover\""))
   (test-assert "the site image is not emitted for a page image"
     (not (string-contains page "assets/site.png"))))
+
 
 (let ((page (render-page-with
               "@title{Root}@og-image{assets/page.png}@paragraph{Body.}"
