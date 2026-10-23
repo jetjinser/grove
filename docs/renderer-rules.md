@@ -21,12 +21,12 @@ returns HTML.
 - A rule is a value: `kind -> (context element children next -> sxml)`.
 - `context` is a `render-context` value (forest, routes, page, variants); rules do
   not read hidden global state.  Use `render-context-ref` for named fields.
-- `next` is a thunk for the next interpretation of the same kind.  Delegation
-  is explicit: `(next)`.
+- `next` is the next interpretation of the same kind.  Delegation is explicit:
+  `(next)`.  It walks composed rule sets, then the project handlers, then the
+  built-in interpretation, so an overlay can adjust one case and leave the
+  rest to the defaults.
 - `compose-html-rules` is a left-biased merge: the overlay wins for a kind it
   interprets, and the base remains the fallback for everything else.
-- `html-rules->handlers` adapts the value to `content->sxml`, closing over a
-  context.
 - `define-html-rules` is a thin macro that expands to `make-html-rules`; it
   adds no new evaluation model.  `next` remains an ordinary parameter, so the
   macro stays hygienic.
@@ -37,9 +37,25 @@ The laws the experiment checks:
 2. **Associativity**: `a + (b + c) = (a + b) + c` under the same precedence.
 3. **Idempotence**: composing a rule set with itself changes nothing.
 4. **Override**: a later rule wins for its kind.
-5. **Totality by fallback**: kinds without an overlay still use the base.
-6. **Context**: a rule sees exactly the context passed to the adapter.
+5. **Totality by fallback**: an overlay that calls `(next)` reaches the base
+   rule and then the built-in interpretation.
+6. **Context**: a rule sees exactly the context passed to the interpreter.
 7. **Expansion**: the DSL produces the same values as the explicit API.
+
+## Interpreter chain
+
+`content->sxml` and `content->text` resolve a kind in this order:
+
+```text
+composed rules -> project handlers -> built-in interpretation
+```
+
+`content->sxml`/`content->text` accept `#:rules` and `#:context` directly, so
+the built-in interpretation is always the terminal fallback.  Each backend
+derives the page context per page (including transcluded targets), so a rule
+can read `(render-context-ref context 'page)`.  Lazy handlers (trees and
+transclusions) own structural recursion and stay outside the chain; `math` is
+an internal interpretation that rules do not override in either backend.
 
 ## Presentation
 
@@ -74,18 +90,6 @@ Image variants are data, not a format policy in the core:
 
 The asset pipeline produces the variant files; the rule only turns the image
 element into `<picture>`.  Grove never learns which codec or encoder is used.
-
-## Experiment status
-
-The candidate API lives in `(grove render html rules)` and
-`(grove render html presentation)`, with tests in
-`tests/unit/grove/html-rules.scm`.  It is not wired into the default site
-renderer yet; the experiment is intentionally isolated so the value model can
-be evaluated before production adoption.
-
-The next step, if adopted, is to replace the internal handler alists in
-`site->html`/`render-html` with rule values and pass the production render
-context (forest, routes, page) to rules that need it.
 
 ## Content transforms
 
@@ -126,29 +130,32 @@ The macro expands to `make-image-set`/`make-image-variant` values.  It does
 not run encoders; an asset pipeline produces the files, and the rule only
 chooses the URLs and the fallback.
 
-
 ## Text and gemtext
 
 The same rule values adapt to the text backends:
 
 ```scheme
 (content->text document #:rules rules)
+(site->text forest #:rules rules)
 (site->gemtext forest #:rules rules)
 ```
 
 The text adapter receives the rendered body as `children`; `next` delegates to
-the default text interpretation.  Gemtext reuses the text adapter and its own
-line-oriented handlers, so a project rule can override one kind without
-rewriting the capsule.
+the project handler and then the default text interpretation.  Gemtext reuses
+the text adapter and its own line-oriented handlers, so a project rule can
+override one kind without rewriting the capsule.
+
 ## Production hook
 
-`site->html`, `render-html`, `render-html-changed`, and `make-html-renderer`
-now accept `#:rules` and `#:presentation`.  The renderer builds the context per
-page:
-
-```scheme
-((forest . ,forest) (routes . ,routes) (page . ,page))
-```
+`site->html`, `render-html`, `render-html-changed`, `make-html-renderer`, and
+`site->text`/`render-text`/`make-text-renderer`/`site->gemtext` accept
+`#:rules`.  The renderer builds the site context once per entry point and
+derives the page context per page; rules receive it through `#:context`.
 
 Project rules override the default interpretation; no core codec knowledge is
-involved.  The isolated tests cover 19 laws and integration cases.
+involved.  Cached text renderers disable caching when project rules are present
+unless `make-text-renderer` receives a stable `#:rules-id`, so a rule change
+cannot silently reuse old text artifacts.  Public hooks (`title-decoration`,
+`home-link`, `site-nav`) accept an optional trailing render context, and
+one-argument `metadata-items` hooks run with a scoped context fallback so their
+chrome helpers still localize.

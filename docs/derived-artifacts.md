@@ -37,6 +37,33 @@ rule type.
 - RSS uses the context site URL and language, plus explicit stylesheet options.
 - Graph is a pure data projection; it needs no HTML rules.
 
+## Project wiring
+
+`make-site-project` accepts derived artifacts directly:
+
+```scheme
+(make-site-project
+  #:derived (list (sitemap-derived #:routes routes)
+                  (rss-derived #:routes routes)
+                  (graph-derived))
+  #:context (lambda (forest)
+              (make-site-render-context forest
+                #:settings settings
+                #:routes routes
+                #:locale "en")))
+```
+
+- `#:derived` is a list of `derived-artifact` values.
+- `#:context` is a procedure from forest to `render-context`; the default
+  builds a context with only the forest.
+- The project wraps the list in a cached renderer.  Its configuration includes
+  the artifact names plus each artifact's `derived-artifact-configuration`
+  (path, routes, language, stylesheet, and site URL), so changing a derived
+  option invalidates the cache.
+- The project computes the context once per forest and shares it between the
+  configuration and the render call.
+- Without `#:derived` the project behaves exactly as before.
+
 ## Boundary
 
 - Do not model these as `html-rules`: they have no per-kind interpretation.

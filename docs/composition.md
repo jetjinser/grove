@@ -18,17 +18,17 @@ boundary.
 | Layer | Current implementation | Composition | Gap |
 | --- | --- | --- | --- |
 | Content algebra | `grove ir`, `forester commands`, `forester composition`, `forester input scribble` | tree construction | none; keep it a free algebra, not a monad |
-| HTML interpretation | `grove render html`, `forester render html`, `grove render rules` | left-biased rule monoid; `#:rules`/`#:presentation` in production | default handlers are still an alist; generic rules are aliases over the HTML module |
-| Text interpretation | `grove render text`, `forester render text` | `content->text #:rules` | gemtext still has its own handler layer |
-| Gemtext interpretation | `forester render gemtext` | `site->gemtext`/`render-gemtext #:rules` | text-specific rules share the text adapter |
-| RSS / sitemap / graph | `forester render rss`, `sitemap`, `graph`, `grove render derived` | derived-artifact values; list composition | built-ins provided; project `#:derived` entry is next |
+| HTML interpretation | `grove render html`, `forester render html`, `grove render rules` | left-biased rule monoid with built-in fallback; `#:rules`/`#:presentation` in production | default handlers are still an alist; generic rules are aliases over the HTML module |
+| Text interpretation | `grove render text`, `forester render text` | `content->text #:rules`/`#:context`; project handlers then built-in fallback | none |
+| Gemtext interpretation | `forester render gemtext` | `site->gemtext`/`render-gemtext #:rules` | reuses the text adapter and its own line handlers |
+| RSS / sitemap / graph | `forester render rss`, `sitemap`, `graph`, `grove render derived` | derived-artifact values; list composition; project `#:derived` | none |
 | Presentation | `grove style html`, `forester style html`, `grove render html presentation` | style product; rules product | wired as `#:presentation`; style/rules options remain for compatibility |
 | Content transforms | `grove content transform` | endomorphism monoid | wired as `make-site-project #:transforms` |
 | Asset pipelines | `grove pipeline`; Flora font/figures | pipeline values; content-addressed cache | AVIF figure variants wired through `image-set`; no shared encoder/format registry yet |
-| Context | `grove render context`; rules, page HTML, entry points, text, gemtext | Reader-like | backmatter metadata and chrome labels still use compatibility parameters |
+| Context | `grove render context`; `forester render context`; rules, page HTML, entry points, text, gemtext | explicit value, unknown keys, explicit `#f`, built-once site context | none |
 | Effects/build | `grove build`, `project`, `serve`, `output` | dependency graph and cache | intentionally separate; do not force into the value model |
 | Manifests | `@use-commands`, project modules | module dependency declaration | orthogonal to rendering |
-| i18n | `grove i18n`, `forester i18n` | bilingual constructors; chrome locale parameters | bilingual could be a content transform; chrome context is still dynamic |
+| i18n | `grove i18n`, `forester i18n` | bilingual constructors; chrome reads the render context | bilingual could be a content transform |
 | A11y / OG | HTML renderer options | options on the HTML interpretation | could become presentation metadata |
 | CLI | `grove cli` | command interface | not a composition layer |
 
@@ -45,10 +45,10 @@ boundary.
 4. **Implement the real image pipeline in Flora.** (done: 127 figures,
    PNG 9.3M -> AVIF 2.2M; JXL/WebP were larger for line art)
 5. **Replace dynamic chrome parameters with an explicit render context.**
-   (partial: rules and `html-document` read the context; entry options still
-   feed `current-*`)
+   (done: site contexts are built once, page contexts are derived, and the
+   `current-*` chrome parameters are gone)
 6. **Model derived artifacts as interpretations (optional).** (done: sitemap,
-   RSS, and graph are `derived-artifact` values)
+   RSS, and graph are `derived-artifact` values wired through the project)
 
 ## Do not unify
 
@@ -68,3 +68,6 @@ boundary.
 4. Real image variants in Flora.
 5. Explicit render context.
 6. Derived-artifact interpretations, if they earn their keep.
+
+All six steps above are complete; the remaining gaps are the compatibility
+options listed in the layer table, not missing composition layers.
