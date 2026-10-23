@@ -19,10 +19,13 @@
   #:use-module (forester i18n)
   #:use-module (grove site)
   #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-14)
   #:export (site->text
             render-text
+            make-text-options
+            text-options?
             make-text-renderer))
 
 (define (page-content-handlers forest routes page)
@@ -274,6 +277,38 @@ HTML renderer so text and HTML address occurrences identically."
                 (pages forest))))
     (cons index-artifact page-artifacts)))
 
+(define-record-type <text-options>
+  (%make-text-options prefix routes backmatter backmatter-labels
+                      reference-taxon-id locale messages rules rules-id
+                      cache?)
+  text-options?
+  (prefix text-options-prefix)
+  (routes text-options-routes)
+  (backmatter text-options-backmatter)
+  (backmatter-labels text-options-backmatter-labels)
+  (reference-taxon-id text-options-reference-taxon-id)
+  (locale text-options-locale)
+  (messages text-options-messages)
+  (rules text-options-rules)
+  (rules-id text-options-rules-id)
+  (cache? text-options-cache?))
+
+(define* (make-text-options #:key
+                            (prefix #f)
+                            (routes (make-text-routes))
+                            (backmatter default-backmatter-sections)
+                            (backmatter-labels '())
+                            (reference-taxon-id default-reference-taxon-id)
+                            (locale #f)
+                            (messages default-message-catalog)
+                            (rules empty-render-rules)
+                            (rules-id #f)
+                            (cache? #t))
+  "Immutable configuration for the Forester text renderer."
+  (%make-text-options prefix routes backmatter backmatter-labels
+                      reference-taxon-id locale messages rules rules-id
+                      cache?))
+
 (define* (site->text forest #:key
                      (routes (make-text-routes))
                      (backmatter default-backmatter-sections)
@@ -281,7 +316,24 @@ HTML renderer so text and HTML address occurrences identically."
                      (reference-taxon-id default-reference-taxon-id)
                      (locale #f)
                      (messages default-message-catalog)
-                     (rules empty-render-rules))
+                     (rules empty-render-rules)
+                     (options #f))
+  (let* ((options
+           (or options
+               (make-text-options #:routes routes
+                                  #:backmatter backmatter
+                                  #:backmatter-labels backmatter-labels
+                                  #:reference-taxon-id reference-taxon-id
+                                  #:locale locale
+                                  #:messages messages
+                                  #:rules rules)))
+         (routes (text-options-routes options))
+         (backmatter (text-options-backmatter options))
+         (backmatter-labels (text-options-backmatter-labels options))
+         (reference-taxon-id (text-options-reference-taxon-id options))
+         (locale (text-options-locale options))
+         (messages (text-options-messages options))
+         (rules (text-options-rules options)))
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
   (unless (forest? forest)
@@ -302,7 +354,7 @@ HTML renderer so text and HTML address occurrences identically."
                        (page->text forest page routes backmatter
                                    backmatter-labels reference-taxon-id
                                    context #:rules rules)))
-               (pages forest)))))
+               (pages forest))))))
 
 (define* (render-text forest #:key
                       (routes (make-text-routes))
@@ -311,7 +363,24 @@ HTML renderer so text and HTML address occurrences identically."
                       (reference-taxon-id default-reference-taxon-id)
                       (locale #f)
                       (messages default-message-catalog)
-                      (rules empty-render-rules))
+                      (rules empty-render-rules)
+                      (options #f))
+  (let* ((options
+           (or options
+               (make-text-options #:routes routes
+                                  #:backmatter backmatter
+                                  #:backmatter-labels backmatter-labels
+                                  #:reference-taxon-id reference-taxon-id
+                                  #:locale locale
+                                  #:messages messages
+                                  #:rules rules)))
+         (routes (text-options-routes options))
+         (backmatter (text-options-backmatter options))
+         (backmatter-labels (text-options-backmatter-labels options))
+         (reference-taxon-id (text-options-reference-taxon-id options))
+         (locale (text-options-locale options))
+         (messages (text-options-messages options))
+         (rules (text-options-rules options)))
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
   (let* ((context
@@ -335,7 +404,7 @@ HTML renderer so text and HTML address occurrences identically."
                (page->text forest page routes backmatter backmatter-labels
                            reference-taxon-id context #:rules rules)
                (page-source-paths forest page)))
-           (pages forest)))))
+           (pages forest))))))
 
 (define* (make-text-renderer #:key (prefix #f)
                                       (routes (make-text-routes))
@@ -346,7 +415,30 @@ HTML renderer so text and HTML address occurrences identically."
                                       (messages default-message-catalog)
                                       (rules empty-render-rules)
                                       (rules-id #f)
-                                      (cache? #t))
+                                      (cache? #t)
+                                      (options #f))
+  (let* ((options
+           (or options
+               (make-text-options #:prefix prefix
+                                  #:routes routes
+                                  #:backmatter backmatter
+                                  #:backmatter-labels backmatter-labels
+                                  #:reference-taxon-id reference-taxon-id
+                                  #:locale locale
+                                  #:messages messages
+                                  #:rules rules
+                                  #:rules-id rules-id
+                                  #:cache? cache?)))
+         (prefix (text-options-prefix options))
+         (routes (text-options-routes options))
+         (backmatter (text-options-backmatter options))
+         (backmatter-labels (text-options-backmatter-labels options))
+         (reference-taxon-id (text-options-reference-taxon-id options))
+         (locale (text-options-locale options))
+         (messages (text-options-messages options))
+         (rules (text-options-rules options))
+         (rules-id (text-options-rules-id options))
+         (cache? (text-options-cache? options)))
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
   (unless (or (not prefix) (artifact-path? prefix))
@@ -389,4 +481,4 @@ HTML renderer so text and HTML address occurrences identically."
                                    #:routes routes
                                    #:locale locale
                                    #:messages messages)
-                                 changed old-artifacts)))))
+                                 changed old-artifacts))))))

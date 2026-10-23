@@ -75,9 +75,12 @@
               #:routes notes-routes
               #:settings notes-settings))
           (make-text-renderer
-            #:prefix "text"
-            #:routes notes-text-routes)
-          (make-gemtext-renderer #:prefix "gemini")
+            #:options
+            (make-text-options
+              #:prefix "text"
+              #:routes notes-text-routes))
+          (make-gemtext-renderer
+            #:options (make-gemtext-options #:prefix "gemini"))
           (make-rss-renderer
             #:settings notes-settings
             #:routes notes-routes)

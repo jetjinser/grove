@@ -77,7 +77,8 @@
               #:html-attributes (locale-html-attributes default-locale)
               #:backmatter-labels
               (backmatter-labels (locale-tag default-locale))))
-          (make-text-renderer #:prefix "text"))
+          (make-text-renderer
+            #:options (make-text-options #:prefix "text")))
     #:output-directory output-directory))
 
 bilingual-project

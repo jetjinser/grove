@@ -1115,4 +1115,12 @@
                 (make-html-options #:routes routes #:mathjax-src #f
                                    #:article? #t))))
 
+(let ((forest (make-forest (make-site (list algebra limits)))))
+  (test-equal "text #:options matches the legacy keyword path"
+    (site->text forest #:locale "en")
+    (site->text forest #:options (make-text-options #:locale "en")))
+  (test-equal "gemtext #:options matches the legacy keyword path"
+    (site->gemtext forest #:locale "en")
+    (site->gemtext forest #:options (make-gemtext-options #:locale "en"))))
+
 (test-end "forester renderers")

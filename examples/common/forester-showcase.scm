@@ -52,7 +52,8 @@
                      #:options (make-html-options #:style style
                                                   #:routes routes
                                                   #:settings settings))
-                   (make-text-renderer #:prefix "text")
+                   (make-text-renderer
+                     #:options (make-text-options #:prefix "text"))
                    (make-rss-renderer #:settings settings #:routes routes)
                    (make-sitemap-renderer #:settings settings #:routes routes)
                    (make-graph-renderer #:path "forest-graph.scm"))

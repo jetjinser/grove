@@ -160,6 +160,15 @@ HTML renderer configuration is a value:
 `#:presentation`.  The legacy keyword arguments remain as a compatibility shim
 and are translated into the same value.
 
+Text and gemtext follow the same pattern:
+
+```scheme
+(make-text-options #:routes routes #:rules rules)
+(make-gemtext-options #:routes routes #:rules rules)
+(site->text forest #:options options)
+(site->gemtext forest #:options options)
+```
+
 ## Production hook
 
 `site->html`, `render-html`, `render-html-changed`, `make-html-renderer`, and
