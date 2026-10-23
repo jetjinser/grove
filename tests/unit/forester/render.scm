@@ -1107,4 +1107,12 @@
                                 #:language "zh-Hans")))))
   (test-assert "RSS declares its language"
     (string-contains feed "<language>zh-Hans</language>")))
+(let* ((forest (make-forest (make-site (list algebra limits))))
+       (routes (make-html-routes #:home-page "algebra")))
+  (test-equal "html #:options matches the legacy keyword path"
+    (site->html forest #:routes routes #:mathjax-src #f #:article? #t)
+    (site->html forest #:options
+                (make-html-options #:routes routes #:mathjax-src #f
+                                   #:article? #t))))
+
 (test-end "forester renderers")

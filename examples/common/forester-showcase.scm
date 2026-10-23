@@ -48,8 +48,10 @@
              (make-page-reader (make-scribble-document-reader))
              #:analyze make-forest
              #:renderers
-             (list (make-html-renderer #:style style #:routes routes
-                                       #:settings settings)
+             (list (make-html-renderer
+                     #:options (make-html-options #:style style
+                                                  #:routes routes
+                                                  #:settings settings))
                    (make-text-renderer #:prefix "text")
                    (make-rss-renderer #:settings settings #:routes routes)
                    (make-sitemap-renderer #:settings settings #:routes routes)

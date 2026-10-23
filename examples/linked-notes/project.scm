@@ -69,9 +69,11 @@
     #:analyze make-forest
     #:renderers
     (list (make-html-renderer
-            #:style notes-style
-            #:routes notes-routes
-            #:settings notes-settings)
+            #:options
+            (make-html-options
+              #:style notes-style
+              #:routes notes-routes
+              #:settings notes-settings))
           (make-text-renderer
             #:prefix "text"
             #:routes notes-text-routes)

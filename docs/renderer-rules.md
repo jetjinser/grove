@@ -145,6 +145,21 @@ the project handler and then the default text interpretation.  Gemtext reuses
 the text adapter and its own line-oriented handlers, so a project rule can
 override one kind without rewriting the capsule.
 
+## Options
+
+HTML renderer configuration is a value:
+
+```scheme
+(make-html-options #:routes routes #:style style #:rules rules)
+(site->html forest #:options options)
+(render-html forest #:options options)
+(make-html-renderer #:options options)
+```
+
+`make-html-options` is the single place for defaults and for merging
+`#:presentation`.  The legacy keyword arguments remain as a compatibility shim
+and are translated into the same value.
+
 ## Production hook
 
 `site->html`, `render-html`, `render-html-changed`, `make-html-renderer`, and

@@ -70,10 +70,13 @@
     #:analyze make-forest
     #:renderers
     (list (make-html-renderer
-            #:style bilingual-style
-            #:routes bilingual-routes
-            #:html-attributes (locale-html-attributes default-locale)
-            #:backmatter-labels (backmatter-labels (locale-tag default-locale)))
+            #:options
+            (make-html-options
+              #:style bilingual-style
+              #:routes bilingual-routes
+              #:html-attributes (locale-html-attributes default-locale)
+              #:backmatter-labels
+              (backmatter-labels (locale-tag default-locale))))
           (make-text-renderer #:prefix "text"))
     #:output-directory output-directory))
 
