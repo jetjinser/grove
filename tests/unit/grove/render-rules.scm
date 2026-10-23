@@ -65,7 +65,7 @@
     (equal? (render-with (compose-render-rules a (compose-render-rules b c)))
             (render-with (compose-render-rules (compose-render-rules a b) c)))))
 
-(test-assert "composition is idempotent"
+(test-assert "reapplying this terminal override preserves this output"
   (let* ((rules (compose-render-rules base overlay))
          (again (compose-render-rules rules overlay)))
     (equal? (render-with rules) (render-with again))))

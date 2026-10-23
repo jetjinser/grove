@@ -20,7 +20,7 @@
 (define-record-type <site-options>
   (%make-site-options title description source-directory source-filter
                       collect-sources prepare extra-sources read-page analyze
-                      transforms renderers derived context pipelines
+                      transforms renderers derived derived-context pipelines
                       output-directory cache? default-prefix tree-template
                       home browse locale)
   site-options?
@@ -36,7 +36,7 @@
   (transforms site-options-transforms)
   (renderers site-options-renderers)
   (derived site-options-derived)
-  (context site-options-context)
+  (derived-context site-options-derived-context)
   (pipelines site-options-pipelines)
   (output-directory site-options-output-directory)
   (cache? site-options-cache?)
@@ -60,7 +60,7 @@
                             (transforms '())
                             (renderers '())
                             (derived '())
-                            (context #f)
+                            (derived-context #f)
                             (pipelines '())
                             output-directory
                             (cache? #t)
@@ -74,7 +74,7 @@
 READ-PAGE and OUTPUT-DIRECTORY are required."
   (%make-site-options title description source-directory source-filter
                       collect-sources prepare extra-sources read-page analyze
-                      transforms renderers derived context pipelines
+                      transforms renderers derived derived-context pipelines
                       output-directory cache? default-prefix tree-template
                       home browse locale))
 
@@ -93,7 +93,7 @@ READ-PAGE and OUTPUT-DIRECTORY are required."
          (transforms (site-options-transforms options))
          (renderers (site-options-renderers options))
          (derived (site-options-derived options))
-         (context (site-options-context options))
+         (derived-context (site-options-derived-context options))
          (pipelines (site-options-pipelines options))
          (output-directory (site-options-output-directory options))
          (cache? (site-options-cache? options))
@@ -110,11 +110,12 @@ READ-PAGE and OUTPUT-DIRECTORY are required."
     (error "site project transforms must be content transforms" transforms))
   (unless (every derived-artifact? derived)
     (error "site project derived values must be derived artifacts" derived))
-  (unless (or (not context) (procedure? context))
-    (error "site project context builder must be a procedure or #f" context))
+  (unless (or (not derived-context) (procedure? derived-context))
+    (error "site project derived context builder must be a procedure or #f"
+           derived-context))
   (let* ((locale-tag (and locale (locale-tag (make-locale locale))))
-         (derived-context
-           (or context
+         (build-derived-context
+           (or derived-context
                (lambda (forest)
                  (make-render-context #:forest forest))))
          (context-forest #f)
@@ -123,7 +124,7 @@ READ-PAGE and OUTPUT-DIRECTORY are required."
            (lambda (forest)
              (if (and context-forest (eq? context-forest forest))
                  context-value
-                 (let ((value (derived-context forest)))
+                 (let ((value (build-derived-context forest)))
                    (set! context-forest forest)
                    (set! context-value value)
                    value))))

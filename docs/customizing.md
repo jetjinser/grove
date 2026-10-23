@@ -11,8 +11,8 @@ This is the shortest path from “I want to change X” to the right Grove API.
 
 | I want to change… | Use | Where |
 | --- | --- | --- |
-| one element's HTML | render rules | `make-html-options #:rules (make-render-rules ...)` |
-| one element's text/gemtext output | the same rule value | `make-text-options` / `make-gemtext-options #:rules` |
+| one element's HTML | an HTML presentation | `make-html-options #:presentation (make-html-presentation #:rules ...)` |
+| one element's text/gemtext output | backend rules using the shared rule API | `make-text-options` / `make-gemtext-options #:rules` |
 | the metadata line under a title | `metadata-items` hook | `make-html-hooks #:metadata-items` |
 | the site navigation | `site-nav` hook | `make-html-hooks #:site-nav` |
 | the home link | `home-link` hook | `make-html-hooks #:home-link` |
@@ -78,7 +78,8 @@ for project-defined keys.
                       (picture-from-variants ...)
                       (next)))))))
 
-(make-html-options #:rules rules)
+(make-html-options
+  #:presentation (make-html-presentation #:rules rules))
 ```
 
 ### Add a metadata item

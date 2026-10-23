@@ -7,8 +7,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 A renderer is an interpretation of the content algebra, not a set of
 imperative hooks.  Content has constructors such as `paragraph`, `image`,
-`link`, and `subtree`; a rule set maps each constructor to a function that
-returns HTML.
+`link`, and `subtree`; a rule set maps each constructor to a backend-specific
+interpretation.
 
 ## The model
 
@@ -18,29 +18,38 @@ returns HTML.
     (list (cons 'image picture-rule))))
 ```
 
-- A rule is a value: `kind -> (context element children next -> sxml)`.
+- A rule is a value: `kind -> (context element children next -> backend value)`.
+  HTML rules return SXML; text and gemtext rules return strings. The rule-set
+  shape and composition are shared, while `children`, `next`, and the result
+  follow the backend using that rule set. A rule is reusable across backends
+  only when it handles those differences itself.
 - `context` is a `render-context` value (forest, routes, page, variants); rules do
   not read hidden global state.  Use `render-context-ref` for named fields.
 - `next` is the next interpretation of the same kind.  Delegation is explicit:
   `(next)`.  It walks composed rule sets, then the internal handler layer, then
   the built-in interpretation, so an overlay can adjust one case and leave the
   rest to the defaults.
-- `compose-render-rules` is a left-biased merge: the overlay wins for a kind it
-  interprets, and the base remains the fallback for everything else.
+- `compose-render-rules` layers an overlay over a base: the overlay runs first
+  for a kind it interprets, and `next` reaches the base rule before the
+  backend's internal and built-in interpretations.
 - `define-render-rules` is a thin macro that expands to `make-render-rules`; it
   adds no new evaluation model.  `next` remains an ordinary parameter, so the
   macro stays hygienic.
 
-The laws the experiment checks:
+The composition laws and behaviors:
 
 1. **Identity**: composing with the empty rule set changes nothing.
 2. **Associativity**: `a + (b + c) = (a + b) + c` under the same precedence.
-3. **Idempotence**: composing a rule set with itself changes nothing.
-4. **Override**: a later rule wins for its kind.
-5. **Totality by fallback**: an overlay that calls `(next)` reaches the base
+3. **Override**: a later rule wins for its kind and may delegate to the prior
+   rule through `next`.
+4. **Totality by fallback**: an overlay that calls `(next)` reaches the base
    rule, the internal layer, and then the built-in interpretation.
-6. **Context**: a rule sees exactly the context passed to the interpreter.
-7. **Expansion**: the DSL produces the same values as the explicit API.
+5. **Context**: a rule sees exactly the context passed to the interpreter.
+6. **Expansion**: the DSL produces the same values as the explicit API.
+
+Composition is not generally idempotent: composing a delegating rule again
+adds another layer that `next` can invoke. Use composition to build an
+intentional fallback chain; do not treat repeated composition as deduplication.
 
 ## Interpreter chain
 
@@ -57,8 +66,9 @@ can read `(render-context-ref context 'page)`.
 
 ### Public boundary
 
-- **Public customization point:** `#:rules` (and `#:presentation`, which
-  combines style and rules).  This is the only element-level extension API.
+- **Public customization point:** HTML renderer options take one
+  `#:presentation`, which combines style and rules; text and gemtext options
+  take backend rules directly.
 - **Internal layer:** `#:internal-handlers` and `#:internal-lazy-handlers` on
   `content->sxml`/`content->text`.  They exist for the stock renderer and may
   change without notice; projects should not pass them.
@@ -78,9 +88,11 @@ can read `(render-context-ref context 'page)`.
   #:rules rules)
 ```
 
-`compose-html-presentations` composes styles and rules componentwise.  Its
-laws reduce to the laws of the style monoid and the rule monoid; there is no
-hidden ordering between the components.
+`compose-html-presentations` composes styles and rules componentwise. Styles
+accumulate in base-to-overlay order (so later CSS can override earlier CSS);
+rules give later layers precedence and let them delegate to earlier rules with
+`next`. Both components have an identity and associative composition, but
+their precedence semantics differ.
 
 ## Image example
 
@@ -143,7 +155,10 @@ chooses the URLs and the fallback.
 
 ## Text and gemtext
 
-The same rule values adapt to the text backends:
+Text and gemtext use the same rule-set API with backend-specific value
+contracts. A rule that only relies on compatible child and result values can
+be shared; HTML rules that construct SXML usually need a text or gemtext
+counterpart:
 
 ```scheme
 (content->text document #:rules rules)
@@ -161,15 +176,14 @@ project rule can override one kind without rewriting the capsule.
 HTML renderer configuration is a value:
 
 ```scheme
-(make-html-options #:routes routes #:style style #:rules rules)
+(make-html-options #:routes routes #:presentation presentation)
 (site->html forest #:options options)
 (render-html forest #:options options)
 (make-html-renderer #:options options)
 ```
 
-`make-html-options` is the single place for defaults and for merging
-`#:presentation`.  The entry points take only `#:options`; there is no keyword
-shim.
+`make-html-options` is the single place for HTML defaults and takes exactly one
+presentation. The entry points take only `#:options`.
 
 Text and gemtext follow the same pattern:
 
@@ -182,9 +196,9 @@ Text and gemtext follow the same pattern:
 
 ## Production hook
 
-`site->html`, `render-html`, `render-html-changed`, `make-html-renderer`, and
-`site->text`/`render-text`/`make-text-renderer`/`site->gemtext` accept
-`#:rules`.  The renderer builds the site context once per entry point and
+`site->html`, `render-html`, and `make-html-renderer` take a presentation
+through `make-html-options`; text and gemtext options accept `#:rules`. The
+renderer builds the site context once per entry point and
 derives the page context per page; rules receive it through `#:context`.
 
 Project rules override the default interpretation; no core codec knowledge is

@@ -10,7 +10,6 @@
             render-context-ref
             render-context-has?
             render-context-with
-            render-context-set
             render-context-without
             render-context-values
             current-render-context
@@ -155,26 +154,11 @@ namespaced data without changing the record."
 (define* (render-context-with context #:rest entries)
   "Return CONTEXT with ENTRIES (a keyword plist) overlaid.
 
-A #f value means \"inherit\": it is not overlaid.  Use RENDER-CONTEXT-SET to
-store an explicit #f, and RENDER-CONTEXT-WITHOUT to remove a key."
+Every supplied value, including #f, replaces the inherited value.  Omit a key
+to inherit it, or use RENDER-CONTEXT-WITHOUT to remove it."
   (unless (render-context? context)
     (error "not a render context" context))
-  (let ((overlay (filter (lambda (entry) (cdr entry))
-                         (keyword-plist->alist entries 'render-context-with))))
-    (%make-render-context
-      (append overlay
-              (remove (lambda (entry)
-                        (assq (car entry) overlay))
-                      (render-context-values context))))))
-
-(define* (render-context-set context #:rest entries)
-  "Return CONTEXT with ENTRIES overlaid, including explicit #f values.
-
-Use this when a caller must clear an inherited value; RENDER-CONTEXT-WITH
-treats #f as \"inherit\"."
-  (unless (render-context? context)
-    (error "not a render context" context))
-  (let ((overlay (keyword-plist->alist entries 'render-context-set)))
+  (let ((overlay (keyword-plist->alist entries 'render-context-with)))
     (%make-render-context
       (append overlay
               (remove (lambda (entry)

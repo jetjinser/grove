@@ -221,7 +221,6 @@
 
 (define* (render-page-with document #:key (site-url #f)
                            (og-image #f) (og-image-alt #f)
-                           (rules empty-render-rules)
                            (presentation #f))
   (let* ((page (document->tree-page "root" (evaluate-document document) #f))
          (forest (make-forest (make-site (list page))))
@@ -235,7 +234,6 @@
                     #:site-url site-url
                     #:og-image og-image
                     #:og-image-alt og-image-alt
-                    #:rules rules
                     #:presentation presentation))
       "root")))
 
@@ -250,7 +248,7 @@
        (rules (make-render-rules (list (cons 'image picture-rule))))
        (page (render-page-with
                "@title{Root}@image{forest.jpg}{A forest}@paragraph{Body.}"
-               #:rules rules)))
+               #:presentation (make-html-presentation #:rules rules))))
   (test-assert "site->html accepts renderer rules"
     (string-contains page "<picture><source type=\"image/avif\"")))
 (let ((page (render-page-with

@@ -640,7 +640,7 @@
                    #:collect-sources (lambda () '("virtual.plant"))
                    #:read-page (lambda (_source) page)
                    #:analyze make-forest
-                   #:context
+                   #:derived-context
                    (lambda (forest)
                      (make-site-render-context
                        forest

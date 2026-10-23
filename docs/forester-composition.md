@@ -121,7 +121,12 @@ Passing a style uses it directly; filenames have no special meaning.
 To extend the default CSS, compose styles in cascade order:
 
 ```scheme
-(use-modules (forester style html) (grove style html) (grove output))
+(use-modules (forester render html)
+             (forester style html)
+             (grove render html presentation)
+             (grove render html routes)
+             (grove style html)
+             (grove output))
 
 (define style
   (compose-html-styles
@@ -129,7 +134,10 @@ To extend the default CSS, compose styles in cascade order:
     (make-html-style
       #:stylesheets (list (make-artifact "flora.css" "body { color: #333; }")))))
 
-(make-html-renderer #:routes routes #:style style)
+(make-html-renderer
+  #:options (make-html-options
+              #:routes routes
+              #:presentation (make-html-presentation #:style style)))
 ```
 
 Pass the custom style alone to replace the default, or `(make-html-style)` to

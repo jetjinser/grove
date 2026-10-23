@@ -72,29 +72,29 @@
     #t (render-context-ref context 'language-switcher?)))
 
 (let* ((base (make-render-context #:hreflang? #t #:page "base"))
-       (derived (render-context-set base #:hreflang? #f #:page "derived")))
-  (test-equal "set overrides a site-level boolean"
+       (derived (render-context-with base #:hreflang? #f #:page "derived")))
+  (test-equal "with overlays a site-level boolean with #f"
     #f (render-context-ref derived 'hreflang?))
-  (test-equal "set overrides a value"
+  (test-equal "with overrides a value"
     "derived" (render-context-ref derived 'page))
-  (test-equal "set leaves the base value untouched"
+  (test-equal "with leaves the base value untouched"
     "base" (render-context-ref base 'page))
-  (test-equal "set keeps unrelated keys"
+  (test-equal "with keeps unrelated keys"
     #t (render-context-ref derived 'language-switcher?)))
 
 (let* ((base (make-render-context #:og-image "img"))
-       (derived (render-context-set base #:og-image #f)))
-  (test-equal "set can clear an optional value with #f"
+       (derived (render-context-with base #:og-image #f)))
+  (test-equal "with can clear an optional value with #f"
     #f (render-context-ref derived 'og-image))
-  (test-assert "cleared value remains present"
+  (test-assert "an explicitly cleared value remains present"
     (render-context-has? derived 'og-image)))
 
 (let* ((base (make-render-context #:page "base" #:og-image "img"))
        (derived (render-context-with base #:page #f #:og-image #f)))
-  (test-equal "with treats #f as inherit"
-    "base" (render-context-ref derived 'page))
-  (test-equal "with keeps an inherited optional value"
-    "img" (render-context-ref derived 'og-image)))
+  (test-equal "with overlays #f for an existing value"
+    #f (render-context-ref derived 'page))
+  (test-equal "with overlays #f for an optional value"
+    #f (render-context-ref derived 'og-image)))
 
 (let* ((base (make-render-context #:page "p" #:custom "v"))
        (derived (render-context-with base #:extra "e")))

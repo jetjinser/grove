@@ -26,17 +26,16 @@ own layers; merging them would turn the context into a new global state.
 ```scheme
 (make-render-context #:page page #:locale "en" #:project/extra "value")
 (render-context-ref context 'page)
-(render-context-with context #:page next-page)      ; #f means inherit
-(render-context-set context #:hreflang? #f)         ; explicit false
+(render-context-with context #:page next-page)
+(render-context-with context #:hreflang? #f)        ; explicit false
 (render-context-without context 'og-image)          ; remove
 (render-context-has? context 'og-image)
 ```
 
 - Every provided key is stored, including an explicit `#f`.  Absence and a
   false value are distinct; use `render-context-has?` to tell them apart.
-- `render-context-with` overlays truthy values and treats `#f` as "inherit".
-  Use `render-context-set` when a caller must store an explicit `#f`, and
-  `render-context-without` to remove a key.
+- `render-context-with` overlays every supplied value, including `#f`.  Omit a
+  key to inherit it; use `render-context-without` to remove a key.
 - Unknown namespaced keys are allowed, so projects can add data without
   changing the core record.
 - Rules receive `(context element children next)` and use
@@ -47,14 +46,17 @@ own layers; merging them would turn the context into a new global state.
 
 ## Where contexts are built
 
-`(forester render context)` provides `make-site-render-context`, which builds
-the site-level context once for HTML, text, gemtext, and derived artifacts.  It
-resolves `locale`, `locale-object`, `messages`, and translation groups from the
-arguments, not from dynamic state.  Entry points call it once; page-level
-fields are derived with `render-context-with`.
+`(forester render context)` provides `make-site-render-context`. Each HTML,
+text, or gemtext entry point builds one site-level context for that render pass
+and derives page contexts from it with `render-context-with`. Separate
+renderer entry points build their own contexts from their options. A project
+may provide `make-site-options #:derived-context` for its derived artifacts; that
+project context is not currently injected into the HTML, text, or gemtext
+renderers. Locale, messages, and optional translation groups are resolved
+from the context builder's arguments, not dynamic state.
 
 `make-site-options` accepts `#:derived` (derived-artifact values) and
-`#:context` (a procedure of forest to render context); `make-site-project`
+`#:derived-context` (a procedure of forest to render context); `make-site-project`
 takes that value with `#:options`.  The project wraps the derived values into a
 cached renderer that receives that context.
 

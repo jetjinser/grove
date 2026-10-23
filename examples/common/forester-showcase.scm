@@ -14,6 +14,7 @@
              (grove output)
              (grove project)
              (grove project site)
+             (grove render html presentation)
              (grove render html routes)
              (grove style html))
 
@@ -49,9 +50,11 @@
                #:analyze make-forest
                #:renderers
                (list (make-html-renderer
-                       #:options (make-html-options #:style style
-                                                    #:routes routes
-                                                    #:settings settings))
+                       #:options
+                       (make-html-options
+                         #:presentation (make-html-presentation #:style style)
+                         #:routes routes
+                         #:settings settings))
                      (make-text-renderer
                        #:options (make-text-options #:prefix "text")))
                #:derived

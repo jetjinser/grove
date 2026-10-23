@@ -14,6 +14,7 @@
              (grove output)
              (grove project)
              (grove project site)
+             (grove render html presentation)
              (grove render html routes)
              (grove style html))
 
@@ -74,7 +75,7 @@
       (list (make-html-renderer
               #:options
               (make-html-options
-                #:style bilingual-style
+                #:presentation (make-html-presentation #:style bilingual-style)
                 #:routes bilingual-routes
                 #:html-attributes (locale-html-attributes default-locale)
                 #:backmatter-labels

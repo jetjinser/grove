@@ -18,14 +18,14 @@ boundary.
 | Layer | Current implementation | Composition | Gap |
 | --- | --- | --- | --- |
 | Content algebra | `grove ir`, `forester commands`, `forester composition`, `forester input scribble` | tree construction | none; keep it a free algebra, not a monad |
-| HTML interpretation | `grove render html`, `forester render html`, `grove render rules` | left-biased rule monoid with built-in fallback; `#:rules`/`#:presentation` in production | internal handler layer is still an alist (not public) |
+| HTML interpretation | `grove render html`, `forester render html`, `grove render rules` | associative rule layers with rightmost precedence and explicit `next` fallback; the HTML renderer takes `#:presentation` | internal handler layer is still an alist (not public) |
 | Text interpretation | `grove render text`, `forester render text` | `content->text #:rules`/`#:context`; internal handlers then built-in fallback | none |
 | Gemtext interpretation | `forester render gemtext` | `site->gemtext`/`render-gemtext #:rules` | reuses the text adapter and its own line-oriented internal handlers |
 | RSS / sitemap / graph | `forester render rss`, `sitemap`, `graph`, `grove render derived` | derived-artifact values; list composition; project `#:derived` | none |
-| Presentation | `grove style html`, `forester style html`, `grove render html presentation` | style product; rules product | wired as `#:presentation`; style/rules options remain for compatibility |
+| Presentation | `grove style html`, `forester style html`, `grove render html presentation` | style product; rules product | the HTML renderer accepts this as its only style/rule configuration |
 | Content transforms | `grove content transform` | endomorphism monoid | wired as `make-site-options #:transforms` |
 | Asset pipelines | `grove pipeline`; Flora font/figures | pipeline values; content-addressed cache | AVIF figure variants wired through `image-set`; no shared encoder/format registry yet |
-| Context | `grove render context`; `forester render context`; rules, page HTML, entry points, text, gemtext | explicit value, unknown keys, explicit `#f`, built-once site context | none |
+| Context | `grove render context`; `forester render context`; rules, page HTML, entry points, text, gemtext | explicit value, unknown keys, explicit `#f`, one site context per renderer entry point | project context currently feeds derived artifacts only |
 | Effects/build | `grove build`, `project`, `serve`, `output` | dependency graph and cache | intentionally separate; do not force into the value model |
 | Manifests | `@use-commands`, project modules | module dependency declaration | orthogonal to rendering |
 | i18n | `grove i18n`, `forester i18n` | bilingual constructors; chrome reads the render context | bilingual could be a content transform |
@@ -37,15 +37,16 @@ boundary.
 1. **Make `html-presentation` the production option.** (done: `#:presentation`
    is accepted by the HTML renderers; `#:style`/`#:rules` remain for
    compatibility)
-2. **Generalize rules beyond HTML.** (done: rules live in `grove render
-   rules`; HTML, text, and gemtext share the same rule value)
+2. **Generalize rules beyond HTML.** (done: HTML, text, and gemtext share the
+   rule-set representation and composition API; each backend keeps its own
+   children and result contract)
 3. **Wire content transforms into the project.** (done: `make-site-options
    #:transforms` applies the endomorphism pipeline after reading)
 4. **Implement the real image pipeline in Flora.** (done: 127 figures,
    PNG 9.3M -> AVIF 2.2M; JXL/WebP were larger for line art)
 5. **Replace dynamic chrome parameters with an explicit render context.**
-   (done: site contexts are built once, page contexts are derived, and the
-   `current-*` chrome parameters are gone)
+   (done: each renderer entry point builds one site context, page contexts are
+   derived from it, and the `current-*` chrome parameters are gone)
 6. **Model derived artifacts as interpretations (optional).** (done: sitemap,
    RSS, and graph are `derived-artifact` values wired through the project)
 

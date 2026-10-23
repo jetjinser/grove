@@ -12,9 +12,9 @@
   #:export (translation-groups
             make-site-render-context))
 
-;; Site-level render contexts are built once and shared by the HTML, text,
-;; gemtext, and derived renderers.  Page-level values are derived from them
-;; with render-context-with.
+;; Each renderer entry point builds a site-level context for one render pass;
+;; page-level values are derived from it with render-context-with. Projects may
+;; separately provide a context builder for derived artifacts.
 
 (define (translation-groups pages)
   (let ((groups (make-hash-table)))

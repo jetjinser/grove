@@ -1023,15 +1023,13 @@ to the lane, and an in-place numbered marker links to it."
            mathjax-src)))
 
 (define-record-type <html-options>
-  (%make-html-options style highlighters routes mathjax-src backmatter
+  (%make-html-options highlighters routes mathjax-src backmatter
                       backmatter-labels reference-taxon-id hooks
                       article? backmatter-details? html-attributes head
-                      side-lane rules
-                      presentation locale messages settings default-locale
+                      side-lane presentation locale messages settings default-locale
                       site-url og-image og-image-alt hreflang?
                       language-switcher? rules-id hooks-id cache?)
   html-options?
-  (style html-options-style)
   (highlighters html-options-highlighters)
   (routes html-options-routes)
   (mathjax-src html-options-mathjax-src)
@@ -1044,7 +1042,6 @@ to the lane, and an in-place numbered marker links to it."
   (html-attributes html-options-html-attributes)
   (head html-options-head)
   (side-lane html-options-side-lane)
-  (rules html-options-rules)
   (presentation html-options-presentation)
   (locale html-options-locale)
   (messages html-options-messages)
@@ -1059,8 +1056,13 @@ to the lane, and an in-place numbered marker links to it."
   (hooks-id html-options-hooks-id)
   (cache? html-options-cache?))
 
+(define (html-options-style options)
+  (html-presentation-style (html-options-presentation options)))
+
+(define (html-options-rules options)
+  (html-presentation-rules (html-options-presentation options)))
+
 (define* (make-html-options #:key
-                            (style default-html-style)
                             (highlighters (default-highlighters))
                             (routes #f)
                             (mathjax-src default-mathjax-src)
@@ -1073,7 +1075,6 @@ to the lane, and an in-place numbered marker links to it."
                             (html-attributes '())
                             (head '())
                             (side-lane '())
-                            (rules empty-render-rules)
                             (presentation #f)
                             (locale #f)
                             (messages default-message-catalog)
@@ -1093,20 +1094,18 @@ to the lane, and an in-place numbered marker links to it."
                             (cache? #t))
   "Build the immutable HTML renderer configuration.
 
-PRESENTATION, when given, replaces STYLE and RULES.  Entry points take this
+PRESENTATION contains the HTML style and element rules. Entry points take this
 value with #:options."
-  (let ((style (or (and presentation
-                        (html-presentation-style presentation))
-                   style))
-        (rules (or (and presentation
-                        (html-presentation-rules presentation))
-                   rules)))
-    (%make-html-options style highlighters routes mathjax-src backmatter
+  (let ((presentation
+          (or presentation
+              (make-html-presentation #:style default-html-style))))
+    (unless (html-presentation? presentation)
+      (error "HTML options require an HTML presentation" presentation))
+    (%make-html-options highlighters routes mathjax-src backmatter
                         backmatter-labels reference-taxon-id hooks
                         article? backmatter-details? html-attributes head
-                        side-lane rules
-                        presentation locale messages settings default-locale
-                        site-url og-image og-image-alt hreflang?
+                        side-lane presentation locale messages settings
+                        default-locale site-url og-image og-image-alt hreflang?
                         language-switcher? rules-id hooks-id cache?)))
 
 (define* (site->html forest #:key (options (make-html-options)))

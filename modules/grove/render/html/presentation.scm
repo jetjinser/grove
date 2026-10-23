@@ -35,7 +35,9 @@
   (make-html-presentation))
 
 (define (compose-html-presentations base overlay)
-  "Compose two presentations componentwise; OVERLAY wins in each component."
+  "Compose presentations by appending styles and layering rules.
+
+Styles accumulate in order; later rules take precedence and may delegate."
   (unless (and (html-presentation? base) (html-presentation? overlay))
     (error "presentations can only be composed from presentations"
            base overlay))

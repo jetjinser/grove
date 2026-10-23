@@ -18,6 +18,7 @@
              (grove output)
              (grove project)
              (grove project site)
+             (grove render html presentation)
              (grove render html routes)
              (grove style html))
 
@@ -71,7 +72,7 @@
       (list (make-html-renderer
               #:options
               (make-html-options
-                #:style notes-style
+                #:presentation (make-html-presentation #:style notes-style)
                 #:routes notes-routes
                 #:settings notes-settings))
             (make-text-renderer

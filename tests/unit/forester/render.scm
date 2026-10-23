@@ -18,6 +18,7 @@
   #:use-module (grove ir)
   #:use-module (grove render html)
   #:use-module (grove render context)
+  #:use-module (grove render html presentation)
   #:use-module (grove render text)
   #:use-module (grove render rules)
   #:use-module (grove render html routes)
@@ -294,11 +295,16 @@
   (test-assert "custom HTML rules disable caching without a rules id"
     (not (cached-renderer-cache?
            (make-html-renderer
-             #:options (make-html-options #:rules rules)))))
+             #:options
+             (make-html-options
+               #:presentation (make-html-presentation #:rules rules))))))
   (test-assert "HTML rules with an id stay cacheable"
     (cached-renderer-cache?
       (make-html-renderer
-        #:options (make-html-options #:rules rules #:rules-id 'v1))))
+        #:options
+        (make-html-options
+          #:presentation (make-html-presentation #:rules rules)
+          #:rules-id 'v1))))
   (test-assert "custom gemtext rules disable caching without a rules id"
     (not (cached-renderer-cache?
            (make-gemtext-renderer
@@ -605,9 +611,11 @@
                #:options
                (make-html-options
                  #:routes (make-html-routes #:home-page "algebra")
-                 #:style (compose-html-styles default-html-style
-                           (make-html-style
-                             #:stylesheets (list custom))))))
+                 #:presentation
+                 (make-html-presentation
+                   #:style (compose-html-styles default-html-style
+                             (make-html-style
+                               #:stylesheets (list custom)))))))
            (stylesheet-paths (map artifact-path (take styled-artifacts 3)))
            (styled-index
              (artifact-content
@@ -898,7 +906,8 @@
                                   #:options
                                   (make-html-options
                                     #:routes routes
-                                    #:style style)))))
+                                    #:presentation
+                                    (make-html-presentation #:style style))))))
              (html (artifact-content
                      (find (lambda (artifact) (string=? (artifact-path artifact) "index.html"))
                            artifacts))))
@@ -915,7 +924,8 @@
                                     #:options
                                     (make-html-options
                                       #:routes routes
-                                      #:style style))
+                                      #:presentation
+                                      (make-html-presentation #:style style))
                         "algebra")))
             (and (string-contains html "body { color: teal; }")
                  (not (string-contains html ".forest-tree-block {")))))))
@@ -926,7 +936,9 @@
                            #:options
                            (make-html-options
                              #:routes routes
-                             #:style (make-html-style)))))))
+                             #:presentation
+                             (make-html-presentation
+                               #:style (make-html-style))))))))
 
 (let* ((target
          (make-site-page "target" "Target"
