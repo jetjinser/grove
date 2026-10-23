@@ -10,6 +10,7 @@
   #:use-module (grove render rules)
   #:use-module (grove render html presentation)
   #:use-module (grove render context)
+  #:use-module (grove output)
   #:use-module (grove style html)
   #:use-module (grove content transform)
   #:use-module (grove render html image)
@@ -117,17 +118,28 @@
   (make-render-rules (list (cons 'image img-rule)
                          (cons 'image picture-rule))))
 
-(let* ((style-a (make-html-style))
-       (style-b (make-html-style))
+(let* ((style-a (make-html-style
+                 #:stylesheets (list (make-artifact "base.css" "base"))))
+       (style-b (make-html-style
+                 #:stylesheets (list (make-artifact "site.css" "site"))))
        (a (make-html-presentation #:style style-a #:rules base))
-       (b (make-html-presentation #:style style-b #:rules overlay)))
+       (b (make-html-presentation #:style style-b #:rules overlay))
+       (left (compose-html-presentations
+               a (compose-html-presentations b empty-html-presentation)))
+       (right (compose-html-presentations
+                (compose-html-presentations a b) empty-html-presentation)))
   (test-assert "presentation composition is associative"
-    (let* ((left (compose-html-presentations
-                   a (compose-html-presentations b empty-html-presentation)))
-           (right (compose-html-presentations
-                    (compose-html-presentations a b) empty-html-presentation)))
-      (equal? (render-with (html-presentation-rules left))
-              (render-with (html-presentation-rules right)))))
+    (equal? (render-with (html-presentation-rules left))
+            (render-with (html-presentation-rules right))))
+  (test-equal "presentation composition accumulates style artifacts in order"
+    '("base.css" "site.css")
+    (map artifact-path
+         (html-style-artifacts (html-presentation-style left))))
+  (test-equal "style composition is associative"
+    (map artifact-path
+         (html-style-artifacts (html-presentation-style left)))
+    (map artifact-path
+         (html-style-artifacts (html-presentation-style right))))
   (test-assert "presentation composition keeps the overlay rules"
     (pair? (memq 'picture
                  (render-with

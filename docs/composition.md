@@ -22,21 +22,21 @@ boundary.
 | Text interpretation | `grove render text`, `forester render text` | `content->text #:rules`/`#:context`; internal handlers then built-in fallback | none |
 | Gemtext interpretation | `forester render gemtext` | `site->gemtext`/`render-gemtext #:rules` | reuses the text adapter and its own line-oriented internal handlers |
 | RSS / sitemap / graph | `forester render rss`, `sitemap`, `graph`, `grove render derived` | derived-artifact values; list composition; project `#:derived` | none |
-| Presentation | `grove style html`, `forester style html`, `grove render html presentation` | style product; rules product | the HTML renderer accepts this as its only style/rule configuration |
+| Presentation | `grove style html`, `forester style html`, `grove render html presentation` | stylesheets/assets append base-to-overlay; rules use rightmost precedence with explicit `next` fallback | HTML style and rule policy share one input; hooks and site metadata remain renderer options |
 | Content transforms | `grove content transform` | endomorphism monoid | wired as `make-site-options #:transforms` |
 | Asset pipelines | `grove pipeline`; Flora font/figures | pipeline values; content-addressed cache | AVIF figure variants wired through `image-set`; no shared encoder/format registry yet |
-| Context | `grove render context`; `forester render context`; rules, page HTML, entry points, text, gemtext | explicit value, unknown keys, explicit `#f`, one site context per renderer entry point | project context currently feeds derived artifacts only |
+| Context | `grove render context`; `forester render context`; rules, page HTML, entry points, text, gemtext | explicit value, unknown keys, explicit `#f`, one site context per renderer entry point | project `#:derived-context` currently feeds derived artifacts only |
 | Effects/build | `grove build`, `project`, `serve`, `output` | dependency graph and cache | intentionally separate; do not force into the value model |
 | Manifests | `@use-commands`, project modules | module dependency declaration | orthogonal to rendering |
 | i18n | `grove i18n`, `forester i18n` | bilingual constructors; chrome reads the render context | bilingual could be a content transform |
-| A11y / OG | HTML renderer options | options on the HTML interpretation | could become presentation metadata |
+| A11y / OG | HTML renderer options | renderer configuration and per-page metadata | defaults belong to HTML rendering; project-specific values belong to site settings or hooks |
 | CLI | `grove cli` | command interface | not a composition layer |
 
-## Candidate refactors
+## Implemented composition layers
 
-1. **Make `html-presentation` the production option.** (done: `#:presentation`
-   is accepted by the HTML renderers; `#:style`/`#:rules` remain for
-   compatibility)
+1. **Make `html-presentation` the only HTML style/rule input.** (done:
+   `make-html-options` accepts `#:presentation`; style and rule options are
+   grouped into that value)
 2. **Generalize rules beyond HTML.** (done: HTML, text, and gemtext share the
    rule-set representation and composition API; each backend keeps its own
    children and result contract)
@@ -60,14 +60,11 @@ boundary.
 - Every backend behind one concrete type: a generic interpretation interface is
   useful; a single universal renderer is not.
 
-## Suggested order
+## Open design questions
 
-1. Presentation in production.
-2. Generic renderer rules for HTML + text/gemtext.
-3. Content transforms in project reading.
-4. Real image variants in Flora.
-5. Explicit render context.
-6. Derived-artifact interpretations, if they earn their keep.
-
-All six steps above are complete; the remaining gaps are the compatibility
-options listed in the layer table, not missing composition layers.
+- Keep the handler alist private unless third-party backends need to replace
+  dispatch itself; render rules already cover element-level extension.
+- Keep HTML hooks and site metadata separate from `html-presentation` while
+  they describe site structure or metadata rather than reusable visual policy.
+- Consider a shared image-variant/encoder registry only when more than one
+  consumer needs the same format-selection contract.
