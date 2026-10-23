@@ -65,7 +65,7 @@
   (render-graph forest #:path "/tmp/forest.scm"))
 
 (test-error "graph renderer rejects paths with parent traversal" #t
-  (make-graph-renderer #:path "../forest.scm"))
+  (render-graph forest #:path "../forest.scm"))
 
 (let* ((root
          (make-site-page

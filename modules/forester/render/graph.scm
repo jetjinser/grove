@@ -5,14 +5,12 @@
 (define-module (forester render graph)
   #:use-module (forester site)
   #:use-module ((forester composition) #:prefix composition:)
-  #:use-module (grove build)
   #:use-module (grove output)
   #:use-module (grove site)
   #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-1)
   #:export (site->graph
-            render-graph
-            make-graph-renderer))
+            render-graph))
 
 
 
@@ -66,13 +64,3 @@
               (write (site->graph forest) port)
               (newline port)))))
     (list (make-artifact path content (source-paths forest)))))
-
-(define* (make-graph-renderer #:key (path "forest-graph.scm")
-                                      (cache? #t))
-  (unless (artifact-path? path)
-    (error "Forester graph path must be a relative artifact path" path))
-  (let ((render (lambda (forest) (render-graph forest #:path path))))
-    (make-cached-renderer render #:cache? cache?
-          #:configuration
-          (lambda (forest)
-            (list 'graph path (site-title (site forest)) (site-description (site forest)))))))

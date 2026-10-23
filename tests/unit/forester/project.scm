@@ -119,26 +119,28 @@
                            #:page-path
                            (lambda (id)
                              (string-append "notes/" id ".html")))))
-                     (make-rss-renderer
-                       #:site-url "https://notes.example"
-                       #:routes
-                       (make-html-routes
-                         #:home-page "algebra"
-                         #:page-path
-                         (lambda (id)
-                           (string-append "notes/" id ".html"))))
-                     (make-sitemap-renderer
-                       #:site-url "https://notes.example"
-                       #:routes
-                       (make-html-routes
-                         #:home-page "algebra"
-                         #:page-path
-                         (lambda (id)
-                           (string-append "notes/" id ".html"))))
                      (make-text-renderer
                        #:options (make-text-options #:prefix "text"))
                      (make-gemtext-renderer
                        #:options (make-gemtext-options #:prefix "gemini")))
+               #:derived
+               (list
+                 (rss-derived
+                   #:site-url "https://notes.example"
+                   #:routes
+                   (make-html-routes
+                     #:home-page "algebra"
+                     #:page-path
+                     (lambda (id)
+                       (string-append "notes/" id ".html"))))
+                 (sitemap-derived
+                   #:site-url "https://notes.example"
+                   #:routes
+                   (make-html-routes
+                     #:home-page "algebra"
+                     #:page-path
+                     (lambda (id)
+                       (string-append "notes/" id ".html")))))
                #:output-directory output-directory))
            (artifacts (build-project project))
            (paths (map artifact-path artifacts))

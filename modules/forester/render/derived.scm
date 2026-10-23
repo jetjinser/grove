@@ -16,7 +16,8 @@
             rss-derived
             graph-derived))
 
-(define* (sitemap-derived #:key (settings #f) (sitemap-path "sitemap.xml")
+(define* (sitemap-derived #:key (settings #f) (site-url #f)
+                                  (sitemap-path "sitemap.xml")
                                   (routes #f) (default-locale #f))
   (let ((routes (or routes (make-html-routes #:home-page "index"))))
     (make-derived-artifact
@@ -25,7 +26,8 @@
       (lambda (context forest)
         (render-sitemap forest
                         #:settings settings
-                        #:site-url (or (and settings
+                        #:site-url (or site-url
+                                       (and settings
                                             (site-settings-site-url settings))
                                        (render-context-ref context 'site-url))
                         #:sitemap-path sitemap-path
@@ -37,14 +39,16 @@
       (lambda (context forest)
         (list 'sitemap
               sitemap-path
-              (or (and settings (site-settings-site-url settings))
+              (or site-url
+                  (and settings (site-settings-site-url settings))
                   (render-context-ref context 'site-url))
               (or default-locale
                   (render-context-ref context 'default-locale))
               (html-index-url routes)
               (html-route-table routes (map site-page-id (pages forest))))))))
 
-(define* (rss-derived #:key (settings #f) (feed-path "feed.xml")
+(define* (rss-derived #:key (settings #f) (site-url #f)
+                              (feed-path "feed.xml")
                               (routes #f) (stylesheet-url #f)
                               (stylesheet-type "text/xsl")
                               (language #f))
@@ -55,7 +59,8 @@
       (lambda (context forest)
         (render-rss forest
                     #:settings settings
-                    #:site-url (or (and settings
+                    #:site-url (or site-url
+                                   (and settings
                                         (site-settings-site-url settings))
                                    (render-context-ref context 'site-url))
                     #:feed-path feed-path
@@ -68,7 +73,8 @@
       (lambda (context forest)
         (list 'rss
               feed-path
-              (or (and settings (site-settings-site-url settings))
+              (or site-url
+                  (and settings (site-settings-site-url settings))
                   (render-context-ref context 'site-url))
               stylesheet-url
               stylesheet-type

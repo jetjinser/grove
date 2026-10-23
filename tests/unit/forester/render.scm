@@ -507,13 +507,15 @@
                    #:options
                    (make-html-options
                      #:routes (make-html-routes #:home-page "algebra")))
-                 (make-rss-renderer
-                   #:site-url "https://notes.example/"
-                   #:routes (make-html-routes
-                              #:home-page "algebra"
-                              #:page-path
-                              (lambda (id)
-                                (string-append "notes/" id ".html"))))
+                 (lambda (value)
+                   (render-rss
+                     value
+                     #:site-url "https://notes.example/"
+                     #:routes (make-html-routes
+                                #:home-page "algebra"
+                                #:page-path
+                                (lambda (id)
+                                  (string-append "notes/" id ".html")))))
                  (lambda (value)
                    (prefix-artifacts "text" (render-text value))))))
        (paths (map artifact-path artifacts))

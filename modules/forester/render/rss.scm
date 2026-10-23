@@ -3,7 +3,6 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester render rss)
-  #:use-module (grove build)
   #:use-module (forester render site)
   #:use-module (forester site)
   #:use-module (forester private web)
@@ -17,8 +16,7 @@
   #:use-module (srfi srfi-19)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (render-rss
-            make-rss-renderer))
+  #:export (render-rss))
 
 (define (page-url base routes page)
   (web-absolute-route-url base (html-page-url routes (site-page-id page))))
@@ -151,31 +149,3 @@
              (rss-document site home-url items stylesheet-url stylesheet-type
                            language))))
     (list (make-artifact feed-path content (source-paths forest)))))
-
-(define* (make-rss-renderer #:key (settings #f)
-                                     (site-url
-                                       (and settings (site-settings-site-url settings)))
-                                     (feed-path "feed.xml")
-                                     (routes (make-html-routes #:home-page "index"))
-                                     stylesheet-url
-                                     (stylesheet-type "text/xsl")
-                                     (language
-                                       (and settings
-                                            (site-settings-default-locale settings)))
-                                     (cache? #t))
-  (let ((render (lambda (forest)
-                  (render-rss forest
-                                     #:site-url site-url
-                                     #:feed-path feed-path
-                                     #:routes routes
-                                     #:stylesheet-url stylesheet-url
-                                     #:stylesheet-type stylesheet-type
-                                     #:language language))))
-    (make-cached-renderer render #:cache? cache?
-          #:configuration
-          (lambda (forest)
-            (list 'rss site-url feed-path stylesheet-url stylesheet-type language
-                  (site-title (site forest)) (site-description (site forest))
-                  (html-index-url routes)
-                  (html-route-table routes
-                                    (map site-page-id (pages forest))))))))

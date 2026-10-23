@@ -6,12 +6,10 @@
              (ice-9 textual-ports)
              (forester browse)
              (forester input scribble)
-             (forester render graph)
+             (forester render derived)
              (forester render gemtext)
              (forester render html)
-             (forester render rss)
              (forester render site)
-             (forester render sitemap)
              (grove render static)
              (forester render text)
              (forester render text routes)
@@ -81,16 +79,12 @@
               #:routes notes-text-routes))
           (make-gemtext-renderer
             #:options (make-gemtext-options #:prefix "gemini"))
-          (make-rss-renderer
-            #:settings notes-settings
-            #:routes notes-routes)
-          (make-sitemap-renderer
-            #:settings notes-settings
-            #:routes notes-routes)
-          (make-graph-renderer
-            #:path "forest-graph.scm")
           (make-static-assets-renderer
             #:source-directory (string-append examples-directory "/static")))
+    #:derived
+    (list (rss-derived #:settings notes-settings #:routes notes-routes)
+          (sitemap-derived #:settings notes-settings #:routes notes-routes)
+          (graph-derived #:path "forest-graph.scm"))
     #:browse (make-forest-browser)
     #:output-directory output-directory))
 

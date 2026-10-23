@@ -4,11 +4,9 @@
 
 (use-modules (ice-9 textual-ports)
              (forester input scribble)
-             (forester render graph)
+             (forester render derived)
              (forester render html)
-             (forester render rss)
              (forester render site)
-             (forester render sitemap)
              (forester render text)
              (forester site)
              (forester style html)
@@ -53,9 +51,10 @@
                                                   #:routes routes
                                                   #:settings settings))
                    (make-text-renderer
-                     #:options (make-text-options #:prefix "text"))
-                   (make-rss-renderer #:settings settings #:routes routes)
-                   (make-sitemap-renderer #:settings settings #:routes routes)
-                   (make-graph-renderer #:path "forest-graph.scm"))
+                     #:options (make-text-options #:prefix "text")))
+             #:derived
+             (list (rss-derived #:settings settings #:routes routes)
+                   (sitemap-derived #:settings settings #:routes routes)
+                   (graph-derived #:path "forest-graph.scm"))
              #:output-directory output-directory)))
     project))

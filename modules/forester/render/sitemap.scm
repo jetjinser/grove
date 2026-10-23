@@ -8,14 +8,12 @@
   #:use-module (forester render context)
   #:use-module (forester render site)
   #:use-module (forester site)
-  #:use-module (grove build)
   #:use-module (grove output)
   #:use-module (grove render html routes)
   #:use-module (grove site)
   #:use-module (sxml simple)
   #:use-module (srfi srfi-1)
-  #:export (render-sitemap
-            make-sitemap-renderer))
+  #:export (render-sitemap))
 
 (define (page-lastmod page)
   (let ((updated (assq-ref (site-page-metadata page) 'updated)))
@@ -120,27 +118,3 @@
          (content (sitemap-document base routes route-table groups
                                     default-locale (pages forest))))
     (list (make-artifact sitemap-path content (source-paths forest)))))
-
-(define* (make-sitemap-renderer #:key (settings #f)
-                                         (site-url
-                                           (and settings (site-settings-site-url settings)))
-                                         (sitemap-path "sitemap.xml")
-                                         (routes (make-html-routes #:home-page "index"))
-                                         (default-locale
-                                           (and settings
-                                                (site-settings-default-locale settings)))
-                                         (cache? #t))
-  (let ((render (lambda (forest)
-                  (render-sitemap forest
-                                         #:site-url site-url
-                                         #:sitemap-path sitemap-path
-                                         #:routes routes
-                                         #:default-locale default-locale))))
-    (make-cached-renderer render #:cache? cache?
-          #:configuration
-          (lambda (forest)
-            (list 'sitemap site-url sitemap-path default-locale
-                  (site-title (site forest)) (site-description (site forest))
-                  (html-index-url routes)
-                  (html-route-table routes
-                                    (map site-page-id (pages forest))))))))
