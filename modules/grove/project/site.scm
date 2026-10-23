@@ -11,10 +11,42 @@
   #:use-module (grove render derived)
   #:use-module (grove site)
   #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
-  #:export (make-site-project))
+  #:export (make-site-options
+            site-options?
+            make-site-project))
 
-(define* (make-site-project #:key
+(define-record-type <site-options>
+  (%make-site-options title description source-directory source-filter
+                      collect-sources prepare extra-sources read-page analyze
+                      transforms renderers derived context pipelines
+                      output-directory cache? default-prefix tree-template
+                      home browse locale)
+  site-options?
+  (title site-options-title)
+  (description site-options-description)
+  (source-directory site-options-source-directory)
+  (source-filter site-options-source-filter)
+  (collect-sources site-options-collect-sources)
+  (prepare site-options-prepare)
+  (extra-sources site-options-extra-sources)
+  (read-page site-options-read-page)
+  (analyze site-options-analyze)
+  (transforms site-options-transforms)
+  (renderers site-options-renderers)
+  (derived site-options-derived)
+  (context site-options-context)
+  (pipelines site-options-pipelines)
+  (output-directory site-options-output-directory)
+  (cache? site-options-cache?)
+  (default-prefix site-options-default-prefix)
+  (tree-template site-options-tree-template)
+  (home site-options-home)
+  (browse site-options-browse)
+  (locale site-options-locale))
+
+(define* (make-site-options #:key
                             (title "Site")
                             (description #f)
                             (source-directory #f)
@@ -31,12 +63,45 @@
                             (context #f)
                             (pipelines '())
                             output-directory
-                             (cache? #t)
-                             (default-prefix #f)
-                             (tree-template #f)
-                             (home #f)
-                             (browse #f)
-                             (locale #f))
+                            (cache? #t)
+                            (default-prefix #f)
+                            (tree-template #f)
+                            (home #f)
+                            (browse #f)
+                            (locale #f))
+  "Build the immutable configuration for a site project.
+
+READ-PAGE and OUTPUT-DIRECTORY are required."
+  (%make-site-options title description source-directory source-filter
+                      collect-sources prepare extra-sources read-page analyze
+                      transforms renderers derived context pipelines
+                      output-directory cache? default-prefix tree-template
+                      home browse locale))
+
+(define* (make-site-project #:key options)
+  (unless (site-options? options)
+    (error "make-site-project requires site options" options))
+  (let* ((title (site-options-title options))
+         (description (site-options-description options))
+         (source-directory (site-options-source-directory options))
+         (source-filter (site-options-source-filter options))
+         (collect-sources (site-options-collect-sources options))
+         (prepare (site-options-prepare options))
+         (extra-sources (site-options-extra-sources options))
+         (read-page (site-options-read-page options))
+         (analyze (site-options-analyze options))
+         (transforms (site-options-transforms options))
+         (renderers (site-options-renderers options))
+         (derived (site-options-derived options))
+         (context (site-options-context options))
+         (pipelines (site-options-pipelines options))
+         (output-directory (site-options-output-directory options))
+         (cache? (site-options-cache? options))
+         (default-prefix (site-options-default-prefix options))
+         (tree-template (site-options-tree-template options))
+         (home (site-options-home options))
+         (browse (site-options-browse options))
+         (locale (site-options-locale options)))
   (unless (procedure? read-page)
     (error "site project requires a page reader" read-page))
   (unless (procedure? analyze)
@@ -122,4 +187,4 @@
       #:cache? cache?
       #:default-prefix default-prefix
       #:tree-template tree-template
-      #:browse browse)))
+      #:browse browse))))

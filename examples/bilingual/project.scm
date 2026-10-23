@@ -58,27 +58,29 @@
 
 (define bilingual-project
   (make-site-project
-    #:default-prefix "bi"
-    #:locale "en"
-    #:title "Bilingual Notes"
-    #:description "One idea in two languages, shown side by side."
-    #:home "hello"
-    #:source-directory source-directory
-    #:extra-sources (list style-css-path)
-    #:prepare (make-scribble-module-setup module-directory)
-    #:read-page (make-page-reader read-document)
-    #:analyze make-forest
-    #:renderers
-    (list (make-html-renderer
-            #:options
-            (make-html-options
-              #:style bilingual-style
-              #:routes bilingual-routes
-              #:html-attributes (locale-html-attributes default-locale)
-              #:backmatter-labels
-              (backmatter-labels (locale-tag default-locale))))
-          (make-text-renderer
-            #:options (make-text-options #:prefix "text")))
-    #:output-directory output-directory))
+    #:options
+    (make-site-options
+      #:default-prefix "bi"
+      #:locale "en"
+      #:title "Bilingual Notes"
+      #:description "One idea in two languages, shown side by side."
+      #:home "hello"
+      #:source-directory source-directory
+      #:extra-sources (list style-css-path)
+      #:prepare (make-scribble-module-setup module-directory)
+      #:read-page (make-page-reader read-document)
+      #:analyze make-forest
+      #:renderers
+      (list (make-html-renderer
+              #:options
+              (make-html-options
+                #:style bilingual-style
+                #:routes bilingual-routes
+                #:html-attributes (locale-html-attributes default-locale)
+                #:backmatter-labels
+                (backmatter-labels (locale-tag default-locale))))
+            (make-text-renderer
+              #:options (make-text-options #:prefix "text")))
+      #:output-directory output-directory)))
 
 bilingual-project

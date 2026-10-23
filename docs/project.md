@@ -50,10 +50,11 @@ Validation rejects duplicate, reserved, and conflicting output paths. Writing
 preserves unchanged files and removes obsolete manifest-owned artifacts; other
 files remain untouched. Writing is not transactional across the directory.
 
-A site declares its start tree once with `make-site-project #:home ID`. HTML
-routes may then omit `#:home-page`; the HTML renderer resolves the index from
-the site. File-backed tree IDs are basenames without `.plant`; directories do
-not qualify IDs. Named subtrees share that namespace. See
+A site declares its start tree once with
+`(make-site-project #:options (make-site-options #:home ID ...))`. HTML routes
+may then omit `#:home-page`; the HTML renderer resolves the index from the
+site. File-backed tree IDs are basenames without `.plant`; directories do not
+qualify IDs. Named subtrees share that namespace. See
 [composition](forester-composition.md) for tree rules.
 
 `analyze-project` runs collection, preparation, reading, and analysis without

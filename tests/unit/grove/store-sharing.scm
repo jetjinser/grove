@@ -38,6 +38,7 @@
       "      (eval '(use-modules (forester commands)) e)\n"
       "      e)))\n"
       "(make-site-project\n"
+      "  #:options (make-site-options\n"
       "  #:title \"Sharing\"\n"
       "  #:home \"page\"\n"
       "  #:source-directory \"sources\"\n"
@@ -51,7 +52,7 @@
       "                   (make-artifact (string-append (site-page-id page) \".html\")\n"
       "                                  (content->plain-text (site-page-document page))))\n"
       "                 (site-pages site)))))\n"
-      "  #:output-directory \"build\")\n"))
+      "  #:output-directory \"build\"))\n"))
   (write-file (string-append worktree "/entry.scm")
     "(use-modules (grove cli))\n(exit (main (cdr (command-line))))\n"))
 

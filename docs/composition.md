@@ -23,7 +23,7 @@ boundary.
 | Gemtext interpretation | `forester render gemtext` | `site->gemtext`/`render-gemtext #:rules` | reuses the text adapter and its own line handlers |
 | RSS / sitemap / graph | `forester render rss`, `sitemap`, `graph`, `grove render derived` | derived-artifact values; list composition; project `#:derived` | none |
 | Presentation | `grove style html`, `forester style html`, `grove render html presentation` | style product; rules product | wired as `#:presentation`; style/rules options remain for compatibility |
-| Content transforms | `grove content transform` | endomorphism monoid | wired as `make-site-project #:transforms` |
+| Content transforms | `grove content transform` | endomorphism monoid | wired as `make-site-options #:transforms` |
 | Asset pipelines | `grove pipeline`; Flora font/figures | pipeline values; content-addressed cache | AVIF figure variants wired through `image-set`; no shared encoder/format registry yet |
 | Context | `grove render context`; `forester render context`; rules, page HTML, entry points, text, gemtext | explicit value, unknown keys, explicit `#f`, built-once site context | none |
 | Effects/build | `grove build`, `project`, `serve`, `output` | dependency graph and cache | intentionally separate; do not force into the value model |
@@ -37,10 +37,9 @@ boundary.
 1. **Make `html-presentation` the production option.** (done: `#:presentation`
    is accepted by the HTML renderers; `#:style`/`#:rules` remain for
    compatibility)
-2. **Generalize rules beyond HTML.** (done for the public shape: `grove render
-   rules` aliases the algebra and text/gemtext accept `#:rules`; the internal
-   implementation still lives in the HTML module and can be renamed later)
-3. **Wire content transforms into the project.** (done: `make-site-project
+2. **Generalize rules beyond HTML.** (done: rules live in `grove render
+   rules`; HTML, text, and gemtext share the same rule value)
+3. **Wire content transforms into the project.** (done: `make-site-options
    #:transforms` applies the endomorphism pipeline after reading)
 4. **Implement the real image pipeline in Flora.** (done: 127 figures,
    PNG 9.3M -> AVIF 2.2M; JXL/WebP were larger for line art)

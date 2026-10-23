@@ -53,9 +53,10 @@ resolves `locale`, `locale-object`, `messages`, and translation groups from the
 arguments, not from dynamic state.  Entry points call it once; page-level
 fields are derived with `render-context-with`.
 
-`make-site-project` accepts `#:derived` (derived-artifact values) and
-`#:context` (a procedure of forest to render context).  The project wraps the
-derived values into a cached renderer that receives that context.
+`make-site-options` accepts `#:derived` (derived-artifact values) and
+`#:context` (a procedure of forest to render context); `make-site-project`
+takes that value with `#:options`.  The project wraps the derived values into a
+cached renderer that receives that context.
 
 ## Interpreter boundary
 

@@ -102,8 +102,10 @@
   (lambda ()
     (let* ((project
              (make-site-project
-               #:title "Linked Notes"
-               #:source-directory source-directory
+               #:options
+               (make-site-options
+                 #:title "Linked Notes"
+                 #:source-directory source-directory
                #:prepare (make-scribble-module-setup module-directory)
                #:read-page
                (make-page-reader
@@ -141,7 +143,7 @@
                      #:page-path
                      (lambda (id)
                        (string-append "notes/" id ".html")))))
-               #:output-directory output-directory))
+                 #:output-directory output-directory)))
            (artifacts (build-project project))
            (paths (map artifact-path artifacts))
            (algebra-html
@@ -487,8 +489,10 @@
              (file-exists? (string-append output-directory "/text/index.txt"))))
       (let* ((incremental-project
                (make-site-project
-                 #:source-directory source-directory
-                 #:prepare (make-scribble-module-setup module-directory)
+                 #:options
+                 (make-site-options
+                   #:source-directory source-directory
+                   #:prepare (make-scribble-module-setup module-directory)
                  #:read-page
                  (make-page-reader (make-scribble-document-reader))
                  #:analyze make-forest
@@ -504,7 +508,7 @@
                               (string-append "notes/" id ".html")))))
                        (make-text-renderer
                          #:options (make-text-options #:prefix "text")))
-                 #:output-directory cache-output-directory))
+                 #:output-directory cache-output-directory)))
              (first (build-project/report incremental-project)))
         (test-assert "cached Forester HTML renderer performs initial render"
           (build-report-rendered? first))
@@ -630,22 +634,24 @@
                                'paragraph (list "Hello."))))))
              (project
                (make-site-project
-                 #:title "Derived"
-                 #:collect-sources (lambda () '("virtual.plant"))
-                 #:read-page (lambda (_source) page)
-                 #:analyze make-forest
-                 #:context
-                 (lambda (forest)
-                   (make-site-render-context
-                     forest
-                     #:site-url "https://derived.example"
-                     #:default-locale "en"
-                     #:locale "en"))
-                 #:derived
-                 (list (sitemap-derived #:routes routes)
-                       (rss-derived #:routes routes)
-                       (graph-derived))
-                 #:output-directory (string-append root "/output")))
+                 #:options
+                 (make-site-options
+                   #:title "Derived"
+                   #:collect-sources (lambda () '("virtual.plant"))
+                   #:read-page (lambda (_source) page)
+                   #:analyze make-forest
+                   #:context
+                   (lambda (forest)
+                     (make-site-render-context
+                       forest
+                       #:site-url "https://derived.example"
+                       #:default-locale "en"
+                       #:locale "en"))
+                   #:derived
+                   (list (sitemap-derived #:routes routes)
+                         (rss-derived #:routes routes)
+                         (graph-derived))
+                   #:output-directory (string-append root "/output"))))
              (artifacts (build-project project))
              (sitemap (find (lambda (artifact)
                               (string=? (artifact-path artifact)

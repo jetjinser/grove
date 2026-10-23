@@ -215,7 +215,7 @@
         (test-equal "CLI check does not repair or overwrite that state" before (snapshot))))
     ;; Creation needs only filenames, even when all execution hooks fail.
     (write-file config
-      "(use-modules (grove project site))\n(make-site-project #:source-directory \"sources\" #:default-prefix \"jsk\" #:prepare (lambda () (error \"must not prepare\")) #:read-page (lambda (_) (error \"must not read\")) #:analyze (lambda (_) (error \"must not analyze\")) #:output-directory \"output\")\n")
+      "(use-modules (grove project site))\n(make-site-project #:options (make-site-options #:source-directory \"sources\" #:default-prefix \"jsk\" #:prepare (lambda () (error \"must not prepare\")) #:read-page (lambda (_) (error \"must not read\")) #:analyze (lambda (_) (error \"must not analyze\")) #:output-directory \"output\"))\n")
     (mkdir (string-append root "/sources/nested"))
     (write-file (string-append root "/sources/nested/jsk-000z.plant") "invalid source")
     (write-file (string-append root "/sources/jsk-invalid!.plant") "ignored suffix")
@@ -254,7 +254,7 @@
     ;; Exercise generated source through the real document/page reader.
     (mkdir (string-append root "/template-sources"))
     (write-file config
-      "(use-modules (grove project site) (grove input scribble) (forester input scribble))\n(make-site-project #:source-directory \"template-sources\" #:default-prefix \"tutorial\" #:tree-template (lambda (id date) (string-append \"@use-modules[(forester commands) (language scribble commands)]\\n@title{教程：\" id \"}\\n@published{\" date \"}\\nHello.\\n\")) #:read-page (make-page-reader (make-scribble-document-reader)) #:output-directory \"output\")\n")
+      "(use-modules (grove project site) (grove input scribble) (forester input scribble))\n(make-site-project #:options (make-site-options #:source-directory \"template-sources\" #:default-prefix \"tutorial\" #:tree-template (lambda (id date) (string-append \"@use-modules[(forester commands) (language scribble commands)]\\n@title{教程：\" id \"}\\n@published{\" date \"}\\nHello.\\n\")) #:read-page (make-page-reader (make-scribble-document-reader)) #:output-directory \"output\"))\n")
     (test-equal "site projects preserve custom templates through CLI loading" 0
       (car (run "new" "--project" config)))
     (test-assert "custom templates receive the allocated ID and preserve Unicode"
@@ -264,7 +264,7 @@
     (test-equal "custom generated article passes real reading and analysis" 0
       (car (run "check" "--project" config)))
     (write-file config
-      "(use-modules (grove project site) (grove input scribble) (forester input scribble))\n(make-site-project #:source-directory \"template-sources\" #:default-prefix \"plain\" #:read-page (make-page-reader (make-scribble-document-reader)) #:output-directory \"output\")\n")
+      "(use-modules (grove project site) (grove input scribble) (forester input scribble))\n(make-site-project #:options (make-site-options #:source-directory \"template-sources\" #:default-prefix \"plain\" #:read-page (make-page-reader (make-scribble-document-reader)) #:output-directory \"output\"))\n")
     (test-equal "default template creates an article with explicit imports" 0
       (car (run "new" "--project" config)))
     (let ((path (string-append root "/template-sources/plain-0001.plant")))
