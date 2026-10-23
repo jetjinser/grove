@@ -10,7 +10,7 @@
             empty-render-rules
             compose-render-rules
             render-rules-ref
-            render-rules->handlers
+            render-rules->internal-handlers
             define-render-rules))
 
 ;; A renderer rule is a value, not a callback registration.  A rule maps a
@@ -81,11 +81,12 @@
     (error "not a render rule set" rules))
   (assq-ref (render-rules-map rules) kind))
 
-(define* (render-rules->handlers rules #:key (context #f) (fallback #f))
-  "Adapt RULES to content->sxml handlers, closing over CONTEXT.
+(define* (render-rules->internal-handlers rules #:key (context #f) (fallback #f))
+  "Internal adapter from RULES to content->sxml handlers.
 
-When a rule calls NEXT, it invokes FALLBACK on the same element and
-children if given, and otherwise reports that no fallback exists."
+Public callers should pass #:rules to CONTENT->SXML or CONTENT->TEXT.  This
+adapter exists for the interpreter's internal handler layer; its name and
+signature may change."
   (unless (render-rules? rules)
     (error "not a render rule set" rules))
   (unless (or (not fallback) (procedure? fallback))

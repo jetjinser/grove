@@ -18,9 +18,9 @@ boundary.
 | Layer | Current implementation | Composition | Gap |
 | --- | --- | --- | --- |
 | Content algebra | `grove ir`, `forester commands`, `forester composition`, `forester input scribble` | tree construction | none; keep it a free algebra, not a monad |
-| HTML interpretation | `grove render html`, `forester render html`, `grove render rules` | left-biased rule monoid with built-in fallback; `#:rules`/`#:presentation` in production | default handlers are still an alist |
-| Text interpretation | `grove render text`, `forester render text` | `content->text #:rules`/`#:context`; project handlers then built-in fallback | none |
-| Gemtext interpretation | `forester render gemtext` | `site->gemtext`/`render-gemtext #:rules` | reuses the text adapter and its own line handlers |
+| HTML interpretation | `grove render html`, `forester render html`, `grove render rules` | left-biased rule monoid with built-in fallback; `#:rules`/`#:presentation` in production | internal handler layer is still an alist (not public) |
+| Text interpretation | `grove render text`, `forester render text` | `content->text #:rules`/`#:context`; internal handlers then built-in fallback | none |
+| Gemtext interpretation | `forester render gemtext` | `site->gemtext`/`render-gemtext #:rules` | reuses the text adapter and its own line-oriented internal handlers |
 | RSS / sitemap / graph | `forester render rss`, `sitemap`, `graph`, `grove render derived` | derived-artifact values; list composition; project `#:derived` | none |
 | Presentation | `grove style html`, `forester style html`, `grove render html presentation` | style product; rules product | wired as `#:presentation`; style/rules options remain for compatibility |
 | Content transforms | `grove content transform` | endomorphism monoid | wired as `make-site-options #:transforms` |

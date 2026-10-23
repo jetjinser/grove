@@ -60,13 +60,11 @@ cached renderer that receives that context.
 
 ## Interpreter boundary
 
-- `next` in a rule walks composed rules, then project handlers, then the
-  built-in interpretation.  A rule that only wants to adjust one kind can call
-  `(next)` and delegate the rest.
-- Lazy handlers own structural recursion (trees and transclusions) and stay
-  outside the rule chain.
-- `math` is an internal interpretation: rules do not override it in this
-  version.
+- `next` in a rule walks composed rules, then the internal handler layer, then
+  the built-in interpretation.  A rule that only wants to adjust one kind can
+  call `(next)` and delegate the rest.
+- Trees and transclusions use lazy structural recursion and stay outside the
+  rule chain; `math` is a built-in interpretation that rules do not override.
 - No `current-chrome-locale` / `current-message-catalog` parameters remain in
   the render path.
 

@@ -87,10 +87,10 @@ HTML renderer so text and HTML address occurrences identically."
                                              target-context
                                              #:rules rules))))
     (content->text (site-page-document page)
-      #:handlers (page-content-handlers forest routes page)
+      #:internal-handlers (page-content-handlers forest routes page)
       #:rules rules
       #:context context
-      #:lazy-handlers (map (lambda (kind) (cons kind render-tree))
+      #:internal-lazy-handlers (map (lambda (kind) (cons kind render-tree))
                           '(subtree transclude query-transclude)))))
 
 (define (title-text title)

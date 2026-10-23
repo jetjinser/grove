@@ -246,10 +246,10 @@ backlog report collects the mention."
                       #:routes routes
                       #:page page
                       #:anchor-prefix anchor-prefix))
-      #:handlers (append
+      #:internal-handlers (append
                    extra-handlers
                    (page-content-handlers forest routes page anchor-prefix))
-      #:lazy-handlers (map (lambda (kind) (cons kind render-tree))
+      #:internal-lazy-handlers (map (lambda (kind) (cons kind render-tree))
                           '(subtree transclude query-transclude)))))
 
 (define (display-tree-id id)

@@ -9,7 +9,7 @@
   #:use-module (srfi srfi-13)
   #:export (content->text))
 
-(define* (content->text content #:key (handlers '()) (lazy-handlers '())
+(define* (content->text content #:key (internal-handlers '()) (internal-lazy-handlers '())
                          (rules empty-render-rules) (context #f))
   (define (render content)
     (cond
@@ -97,12 +97,12 @@
 
   (define (render-element element)
     (let* ((kind (content-element-kind element))
-           (lazy-handler (assq-ref lazy-handlers kind)))
+           (lazy-handler (assq-ref internal-lazy-handlers kind)))
       (if lazy-handler
           (lazy-handler element render)
           (let* ((body (string-concatenate
                          (map render (content-element-children element))))
-                 (handler (assq-ref handlers kind))
+                 (handler (assq-ref internal-handlers kind))
                  (rule (and rules (render-rules-ref rules kind))))
             (if (eq? kind 'math)
                 (default-element-text element body)

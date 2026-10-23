@@ -37,7 +37,7 @@
         (next))))
 
 (define (render-with rules)
-  (content->sxml (image-element) #:handlers (render-rules->handlers rules)))
+  (content->sxml (image-element) #:internal-handlers (render-rules->internal-handlers rules)))
 
 (define base
   (make-render-rules (list (cons 'image img-rule))))
@@ -73,7 +73,7 @@
 (test-assert "an overlay can delegate to the base rule"
   (let ((sxml (content->sxml
                 (image "missing.jpg" "A missing forest")
-                #:handlers (render-rules->handlers
+                #:internal-handlers (render-rules->internal-handlers
                              (compose-render-rules base overlay)))))
     (and (pair? (memq 'img sxml))
          (not (memq 'picture sxml)))))
@@ -86,7 +86,7 @@
   (test-assert "rules receive an explicit context"
     (let ((sxml (content->sxml
                   (image-element)
-                  #:handlers (render-rules->handlers
+                  #:internal-handlers (render-rules->internal-handlers
                                contextual
                                #:context (make-render-context #:page "ctx")))))
       (and (pair? (memq 'p sxml))

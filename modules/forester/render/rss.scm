@@ -53,7 +53,7 @@
   (or (assq-ref (site-page-metadata page) 'summary)
       (string-trim-both
         (content->text (site-page-document page)
-                       #:handlers rss-text-handlers))))
+                       #:internal-handlers rss-text-handlers))))
 
 (define (feed-pages pages)
   (stable-sort

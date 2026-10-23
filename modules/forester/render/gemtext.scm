@@ -178,13 +178,13 @@
 
 (define (page-body forest routes page rules context)
   (content->text (site-page-document page)
-    #:handlers (page-content-handlers forest routes page)
+    #:internal-handlers (page-content-handlers forest routes page)
     #:rules rules
     #:context (render-context-with context
                #:forest forest
                #:routes routes
                #:page page)
-    #:lazy-handlers
+    #:internal-lazy-handlers
     (map (lambda (kind)
            (cons kind
              (lambda (element _render)

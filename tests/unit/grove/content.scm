@@ -89,7 +89,7 @@
   (test-equal "renderers can add per-kind behavior without changing the IR"
     "notice: Hello"
     (content->text document
-      #:handlers
+      #:internal-handlers
       `((notice . ,(lambda (element body)
                      (string-append
                        (symbol->string (content-element-kind element))

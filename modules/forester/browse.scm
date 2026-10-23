@@ -111,8 +111,8 @@
                              ((transclude) "transclusion")
                              (else "query"))))))
   (content->text (site-page-document page)
-    #:handlers (terminal-content-handlers add-entry! references)
-    #:lazy-handlers (list (cons 'subtree render-tree)
+    #:internal-handlers (terminal-content-handlers add-entry! references)
+    #:internal-lazy-handlers (list (cons 'subtree render-tree)
                           (cons 'transclude render-tree)
                           (cons 'query-transclude render-tree))))
 

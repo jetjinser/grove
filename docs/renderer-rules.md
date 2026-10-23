@@ -22,8 +22,8 @@ returns HTML.
 - `context` is a `render-context` value (forest, routes, page, variants); rules do
   not read hidden global state.  Use `render-context-ref` for named fields.
 - `next` is the next interpretation of the same kind.  Delegation is explicit:
-  `(next)`.  It walks composed rule sets, then the project handlers, then the
-  built-in interpretation, so an overlay can adjust one case and leave the
+  `(next)`.  It walks composed rule sets, then the internal handler layer, then
+  the built-in interpretation, so an overlay can adjust one case and leave the
   rest to the defaults.
 - `compose-render-rules` is a left-biased merge: the overlay wins for a kind it
   interprets, and the base remains the fallback for everything else.
@@ -38,7 +38,7 @@ The laws the experiment checks:
 3. **Idempotence**: composing a rule set with itself changes nothing.
 4. **Override**: a later rule wins for its kind.
 5. **Totality by fallback**: an overlay that calls `(next)` reaches the base
-   rule and then the built-in interpretation.
+   rule, the internal layer, and then the built-in interpretation.
 6. **Context**: a rule sees exactly the context passed to the interpreter.
 7. **Expansion**: the DSL produces the same values as the explicit API.
 
@@ -47,15 +47,26 @@ The laws the experiment checks:
 `content->sxml` and `content->text` resolve a kind in this order:
 
 ```text
-composed rules -> project handlers -> built-in interpretation
+composed rules -> internal handlers -> built-in interpretation
 ```
 
 `content->sxml`/`content->text` accept `#:rules` and `#:context` directly, so
 the built-in interpretation is always the terminal fallback.  Each backend
 derives the page context per page (including transcluded targets), so a rule
-can read `(render-context-ref context 'page)`.  Lazy handlers (trees and
-transclusions) own structural recursion and stay outside the chain; `math` is
-an internal interpretation that rules do not override in either backend.
+can read `(render-context-ref context 'page)`.
+
+### Public boundary
+
+- **Public customization point:** `#:rules` (and `#:presentation`, which
+  combines style and rules).  This is the only element-level extension API.
+- **Internal layer:** `#:internal-handlers` and `#:internal-lazy-handlers` on
+  `content->sxml`/`content->text`.  They exist for the stock renderer and may
+  change without notice; projects should not pass them.
+- **Math:** a built-in interpretation.  Rules do not override `math` in either
+  backend; a rule for `math` is ignored.
+- **Trees and transclusions:** handled by lazy structural recursion before
+  rules are consulted.  A rule cannot replace the tree walk; customize the
+  target page instead.
 
 ## Presentation
 
@@ -141,9 +152,9 @@ The same rule values adapt to the text backends:
 ```
 
 The text adapter receives the rendered body as `children`; `next` delegates to
-the project handler and then the default text interpretation.  Gemtext reuses
-the text adapter and its own line-oriented handlers, so a project rule can
-override one kind without rewriting the capsule.
+the internal handler layer and then the default text interpretation.  Gemtext
+reuses the text adapter and its own line-oriented internal handlers, so a
+project rule can override one kind without rewriting the capsule.
 
 ## Options
 

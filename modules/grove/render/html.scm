@@ -68,7 +68,7 @@ ID-PREFIX."
                 attributes)))))
     original additions))
 
-(define* (content->sxml content #:key (handlers '()) (lazy-handlers '()) (id-prefix "")
+(define* (content->sxml content #:key (internal-handlers '()) (internal-lazy-handlers '()) (id-prefix "")
                          (highlighters (default-highlighters))
                          (rules empty-render-rules) (context #f))
   (unless (and (list? highlighters)
@@ -197,7 +197,7 @@ ID-PREFIX."
 
   (define (render-element element)
     (let* ((kind (content-element-kind element))
-           (lazy-handler (assq-ref lazy-handlers kind)))
+           (lazy-handler (assq-ref internal-lazy-handlers kind)))
       (cond
         (lazy-handler
          ;;     Lazy handlers own their element's presentation
@@ -208,7 +208,7 @@ ID-PREFIX."
          (apply-element-style element (render-math element)))
         (else
          (let* ((children (map render (content-element-children element)))
-                (handler (assq-ref handlers kind))
+                (handler (assq-ref internal-handlers kind))
                 (rule (and rules (render-rules-ref rules kind)))
                 (rendered
                  (if rule
