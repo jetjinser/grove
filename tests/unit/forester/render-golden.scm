@@ -41,11 +41,11 @@
                 #:locale locale)
     "root"))
 
-(define (text-output forest)
-  (assoc-ref (site->text forest) "root"))
+(define* (text-output forest #:key (locale #f))
+  (assoc-ref (site->text forest #:locale locale) "root"))
 
-(define (gemtext-output forest)
-  (assoc-ref (site->gemtext forest) "root"))
+(define* (gemtext-output forest #:key (locale #f))
+  (assoc-ref (site->gemtext forest #:locale locale) "root"))
 
 (define (rss-output forest)
   (artifact-content
@@ -112,5 +112,13 @@
     (and (string-contains b "https://b.example")
          (string-contains b "lang=\"zh-Hans\"")
          (not (string-contains b "https://a.example")))))
+
+(test-assert "text renderer reads the render context locale"
+  (and (string-contains (text-output (forest) #:locale "zh-Hans") "首页")
+       (not (string-contains (text-output (forest) #:locale "en") "首页"))))
+
+(test-assert "gemtext renderer reads the render context locale"
+  (and (string-contains (gemtext-output (forest) #:locale "zh-Hans") "首页")
+       (not (string-contains (gemtext-output (forest) #:locale "en") "首页"))))
 
 (test-end "forester render golden")

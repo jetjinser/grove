@@ -9,6 +9,7 @@
   #:use-module (grove string-fun)
   #:use-module (forester render artifact)
   #:use-module (forester render labels)
+  #:use-module (forester render context)
   #:use-module (forester render site)
   #:use-module (forester site)
   #:use-module (grove ir)
@@ -36,50 +37,20 @@
             make-html-renderer))
 
 (define* (chrome-date text #:optional context)
-  (let ((locale (if context
-                    (render-context-ref context 'locale-object)
-                    (current-chrome-locale-object))))
+  (let* ((context (or context (current-render-context)))
+         (locale (and context
+                      (render-context-ref context 'locale-object))))
     (if locale (format-date locale text #:style 'long) text)))
-
-
-
-(define (make-site-render-context forest site-url default-locale
-                                  hreflang? language-switcher?
-                                  og-image og-image-alt)
-  (make-render-context
-    #:site-url site-url
-    #:default-locale default-locale
-    #:hreflang? hreflang?
-    #:language-switcher? language-switcher?
-    #:translation-groups (translation-groups forest)
-    #:og-image og-image
-    #:og-image-alt og-image-alt))
-(define (context-ref context key fallback)
-  (if context
-      (or (render-context-ref context key) fallback)
-      fallback))
 
 (define (page-locale page)
   (assq-ref (site-page-metadata page) 'locale))
-
-
-(define (translation-groups forest)
-  (let ((groups (make-hash-table)))
-    (for-each
-      (lambda (page)
-        (let ((key (assq-ref (site-page-metadata page) 'translation)))
-          (when key
-            (hash-set! groups key
-                       (cons page (or (hash-ref groups key) '()))))))
-      (pages forest))
-    groups))
 
 (define* (translation-group forest page #:optional context)
   (let ((key (assq-ref (site-page-metadata page) 'translation)))
     (and key
          (reverse (hash-ref (or (and context
                                 (render-context-ref context 'translation-groups))
-                                (translation-groups forest))
+                                (translation-groups (pages forest)))
                             key
                             '())))))
 
@@ -253,7 +224,8 @@ backlog report collects the mention."
           #:id-prefix anchor-prefix
           #:metadata-items (metadata-items-for metadata-items target context)
           #:title-decoration (if title-decoration
-                                 (title-decoration forest target)
+                                 (call-hook title-decoration
+                                            (list forest target) context)
                                  '())
           #:open? (if (assq 'open? (content-element-properties element))
                       (content-element-property element 'open?) #t))))
@@ -261,16 +233,15 @@ backlog report collects the mention."
       (site-page-document page)
       #:id-prefix anchor-prefix
       #:highlighters highlighters
+      #:rules rules
+      #:context (if context
+                    context
+                    (make-render-context
+                      #:forest forest
+                      #:routes routes
+                      #:page page
+                      #:anchor-prefix anchor-prefix))
       #:handlers (append
-                   (html-rules->handlers
-                     rules
-                     #:context (if context
-                                   context
-                                   (make-render-context
-                                     #:forest forest
-                                     #:routes routes
-                                     #:page page
-                                     #:anchor-prefix anchor-prefix)))
                    extra-handlers
                    (page-content-handlers forest routes page anchor-prefix))
       #:lazy-handlers (map (lambda (kind) (cons kind render-tree))
@@ -293,13 +264,43 @@ hooks replace this wholesale; compose with it to extend."
             `((li (@ (class "meta-item"))
                   (time (@ (datetime ,updated))
                         ,(chrome-message-format
-                           'metadata-updated (list (chrome-date updated context))))))
+                           'metadata-updated (list (chrome-date updated context))
+                           context))))
             '()))))
+
+(define (call-metadata-items metadata-items page context)
+  "Call a metadata hook with CONTEXT when it accepts two arguments.
+
+One-argument hooks run with CONTEXT as a scoped fallback so chrome helpers
+inside them still localize."
+  (let ((arity (procedure-minimum-arity metadata-items)))
+    (if (and arity
+             (let ((required (car arity))
+                   (optional (cadr arity))
+                   (rest? (caddr arity)))
+               (or rest? (>= (+ required optional) 2))))
+        (metadata-items page context)
+        (if context
+            (with-render-context context
+              (lambda () (metadata-items page)))
+            (metadata-items page)))))
 
 (define (metadata-items-for metadata-items page context)
   (if (eq? metadata-items default-metadata-items)
       (metadata-items page context)
-      (metadata-items page)))
+      (call-metadata-items metadata-items page context)))
+
+(define (call-hook hook arguments context)
+  "Call HOOK with ARGUMENTS plus CONTEXT when it accepts one more argument."
+  (let ((arity (procedure-minimum-arity hook)))
+    (if (and context arity
+             (let ((required (car arity))
+                   (optional (cadr arity))
+                   (rest? (caddr arity)))
+               (or rest? (>= (+ required optional)
+                             (1+ (length arguments))))))
+        (apply hook (append arguments (list context)))
+        (apply hook arguments))))
 
 (define (metadata-sxml items)
   (if (null? items)
@@ -358,7 +359,8 @@ top-level taxon element; pages without one contribute nothing."
 (define* (backmatter-entry-sxml forest routes class page metadata-items
                                 #:key
                                 (url (html-page-url routes
-                                                 (site-page-id page))))
+                                                 (site-page-id page)))
+                                (context #f))
   ;;     Forester-style: a backmatter entry is a tree in its own
   ;;     right.  The summary identifies the tree - taxon, title, [id],
   ;;     metadata - and the disclosure folds open like any tree.  What
@@ -370,7 +372,8 @@ top-level taxon element; pages without one contribute nothing."
   ;;     in the citing body, where it was authored.
   (let ((outline (tree-outline-sxml
                    forest (site-page-id page)
-                   #:base-url (html-page-url routes (site-page-id page)))))
+                   #:base-url (html-page-url routes (site-page-id page))
+                   #:context context)))
     (tree-block-sxml
       "backmatter"
       (site-page-id page) (site-page-title page) url
@@ -379,15 +382,16 @@ top-level taxon element; pages without one contribute nothing."
           (list `(ol (@ (class "tree-outline")) ,@outline)))
       #:anchor (string-append "backmatter-" class "-" (site-page-id page))
       #:depth 3
-      #:metadata-items (metadata-items page)
+      #:metadata-items (metadata-items-for metadata-items page context)
       #:title-decoration (taxon-entry-sxml page)
       #:open? #f)))
 
 (define (backlink-reference-sxml forest routes class reference
-                                 metadata-items)
+                                 metadata-items context)
   (let ((source (lookup-page forest (reference-source-page-id reference))))
     (backmatter-entry-sxml forest routes class source metadata-items
-                           #:url (reference-source-url routes reference))))
+                           #:url (reference-source-url routes reference)
+                           #:context context)))
 
 (define (backmatter-section-sxml class label content details?)
   (if details?
@@ -399,7 +403,7 @@ top-level taxon element; pages without one contribute nothing."
          (h2 ,label)
          ,@content)))
 
-(define (backlinks-sxml forest page routes label details? metadata-items)
+(define (backlinks-sxml forest page routes label details? metadata-items context)
   (let ((references (incoming-references forest (site-page-id page))))
     (if (null? references)
         '()
@@ -407,11 +411,11 @@ top-level taxon element; pages without one contribute nothing."
                 "backlinks" label
                 (map (lambda (reference)
                        (backlink-reference-sxml forest routes "backlinks"
-                                                reference metadata-items))
+                                                reference metadata-items context))
                      references)
                 details?)))))
 
-(define (context-sxml forest page routes label details? metadata-items)
+(define (context-sxml forest page routes label details? metadata-items context)
   (let ((sources (context-pages forest (site-page-id page))))
     (if (null? sources)
         '()
@@ -419,58 +423,60 @@ top-level taxon element; pages without one contribute nothing."
                 "context" label
                 (map (lambda (source)
                        (backmatter-entry-sxml forest routes "context" source
-                                              metadata-items))
+                                              metadata-items #:context context))
                      sources)
                 details?)))))
 
 (define (page-list-backmatter-sxml forest routes class label targets
-                                   details? metadata-items)
+                                   details? metadata-items context)
     (if (null? targets)
         '()
         (list (backmatter-section-sxml
                 class label
                 (map (lambda (target)
                        (backmatter-entry-sxml forest routes class target
-                                              metadata-items))
+                                              metadata-items #:context context))
                      targets)
                 details?))))
 
 (define (related-sxml forest page routes reference-taxon-id label details?
-                      metadata-items)
+                      metadata-items context)
   (page-list-backmatter-sxml
     forest routes "related" label
     (related-pages forest (site-page-id page) reference-taxon-id)
-    details? metadata-items))
+    details? metadata-items context))
 
 (define (references-sxml forest page routes reference-taxon-id label details?
-                         metadata-items)
+                         metadata-items context)
   (page-list-backmatter-sxml
     forest routes "references" label
     (reference-pages forest (site-page-id page) reference-taxon-id)
-    details? metadata-items))
+    details? metadata-items context))
 
 (define* (backmatter-sxml forest page routes sections labels
-                         reference-taxon-id details?
-                         #:key (metadata-items default-metadata-items))
+                          reference-taxon-id details?
+                          #:key (metadata-items default-metadata-items)
+                          (context #f))
   (append-map
     (lambda (section)
       (case section
         ((context) (context-sxml forest page routes
                                  (assq-ref labels 'context) details?
-                                 metadata-items))
+                                 metadata-items context))
         ((references) (references-sxml forest page routes reference-taxon-id
                                        (assq-ref labels 'references) details?
-                                       metadata-items))
+                                       metadata-items context))
         ((backlinks) (backlinks-sxml forest page routes
                                      (assq-ref labels 'backlinks) details?
-                                     metadata-items))
+                                     metadata-items context))
         ((related) (related-sxml forest page routes reference-taxon-id
                                  (assq-ref labels 'related) details?
-                                 metadata-items))))
+                                 metadata-items context))))
     sections))
 
 (define* (tree-outline-sxml forest id
-                            #:key (base-url "") (title-decoration #f))
+                            #:key (base-url "") (title-decoration #f)
+                            (context #f))
   ;;     The tree's own subtree/transclusion outline as nested list
   ;;     items.  With the default BASE-URL the links are same-page
   ;;     fragments (the page's table of contents); pass a page URL to
@@ -486,7 +492,8 @@ top-level taxon element; pages without one contribute nothing."
                                                         position))
                              (decoration
                                (if title-decoration
-                                   (title-decoration forest target)
+                                   (call-hook title-decoration
+                                            (list forest target) context)
                                    '()))
                              (nested
                                (if (member target-id visited)
@@ -506,7 +513,8 @@ top-level taxon element; pages without one contribute nothing."
 
 (define* (table-of-contents-sxml forest page #:key (title-decoration #f) (context #f))
   (let ((items (tree-outline-sxml forest (site-page-id page)
-                                  #:title-decoration title-decoration)))
+                                  #:title-decoration title-decoration
+                                  #:context context)))
     (if (null? items) '()
         (list `(nav (@ (class "table-of-contents")
                        (aria-label ,(chrome-message 'nav-contents context)))
@@ -623,11 +631,12 @@ name, property, rel, or title."
                        (language-nav '()) (article? #f) (published #f)
                        (og-locales '()) (updated #f) (og-image #f)
                        (og-image-alt #f) (context #f))
+  (unless (render-context? context)
+    (error "html-document requires a render context" context))
   (let* ((site-nav (if (procedure? site-nav)
-                       (site-nav current-page)
+                       (call-hook site-nav (list current-page) context)
                        site-nav))
-         (locale (context-ref context 'locale-object
-                              (current-chrome-locale-object)))
+         (locale (render-context-ref context 'locale-object))
          (default-locale
            (render-context-ref context 'default-locale))
          (html-attributes
@@ -686,8 +695,8 @@ name, property, rel, or title."
                  '())
              (if locale
                  (list `(meta (@ (property "og:locale")
-                                 (content ,(og-locale-tag
-                                              (context-ref context 'locale (current-chrome-locale)))))))
+                                  (content ,(og-locale-tag
+                                               (render-context-ref context 'locale))))))
                  '())
              (map (lambda (tag)
                     `(meta (@ (property "og:locale:alternate")
@@ -731,12 +740,14 @@ name, property, rel, or title."
              '()))
      (body
        (a (@ (class "skip-link") (href "#main"))
-          ,(chrome-message 'skip-to-content))
+          ,(chrome-message 'skip-to-content context))
        (header
          ,@(if (or home-title home-link (pair? site-nav) (pair? language-nav))
-               (list `(nav (@ (aria-label ,(chrome-message 'nav-site)))
+               (list `(nav (@ (aria-label ,(chrome-message 'nav-site context)))
                            ,@(cond
-                               (home-link (list (home-link (html-index-url routes))))
+                               (home-link (list (call-hook home-link
+                                                           (list (html-index-url routes))
+                                                           context)))
                                (home-title (list `(a (@ (href ,(html-index-url routes)))
                                                     ,home-title)))
                                (else '()))
@@ -806,102 +817,100 @@ to the lane, and an in-place numbered marker links to it."
                     (metadata-items default-metadata-items) (side-lane '())
                     (rules empty-html-rules)
                     (context #f))
-  (let ((page-locale (page-locale page)))
-    (parameterize ((current-chrome-locale
-                     (or page-locale (current-chrome-locale)))
-                   (current-chrome-locale-object
-                     (if page-locale
-                         (make-locale page-locale)
-                         (current-chrome-locale-object))))
-      (unless (render-context? context)
-        (error "page-html requires a render context" context))
-      (let* ((site (site forest))
-             (context
-               (render-context-with context
-                 #:forest forest
-                 #:routes routes
-                 #:page page
-                 #:anchor-prefix ""
-                 #:locale (current-chrome-locale)
-                 #:locale-object (current-chrome-locale-object)
-                 #:messages (current-message-catalog)))
-             (labels
-               (normalize-backmatter-labels
-                 labels
-                 #:defaults (localized-backmatter-labels context)))
-             (head (if (render-context-ref context 'hreflang?)
-                       (append head (hreflang-links forest page routes context))
-                       head))
-             (language-nav (if (render-context-ref context 'language-switcher?)
-                               (language-switcher-sxml forest page routes context)
-                               '()))
-             (og-locales (if (render-context-ref context 'hreflang?)
-                             (alternate-og-locales forest page context)
-                             '()))
-             (page-image (assq-ref (site-page-metadata page) 'og-image))
-             (page-image-alt (assq-ref (site-page-metadata page) 'og-image-alt))
-             (og-image (or page-image (render-context-ref context 'og-image)))
-             (og-image-alt (cond (page-image-alt page-image-alt)
-                                 (page-image (site-page-title page))
-                                 (og-image (or (render-context-ref context 'og-image-alt)
-                                               (site-page-title page)))
-                                 (else #f)))
-             (lane (and (pair? side-lane) (make-side-lane-collector)))
-             (body (subtree-content-sxml forest routes page "" 1 highlighters
-                                         #:title-decoration title-decoration
-                                         #:metadata-items metadata-items
-                                         #:extra-handlers
-                                         (if lane
-                                             (side-lane-handlers side-lane lane)
-                                             '())
-                                         #:rules rules
-                                         #:context context))
-             (tree (tree-block-sxml
-                     "page-tree" (site-page-id page) (site-page-title page)
-                     (html-page-url routes (site-page-id page)) body
-                     #:anchor (string-append "tree-root-" (site-page-id page))
-                     #:depth 1
-                     #:context context
-                     #:metadata-items (metadata-items-for metadata-items page context)
-                     #:title-decoration (if title-decoration
-                                            (title-decoration forest page)
-                                            '())))
-             (article (append (list tree)
-                              (if lane (side-lane-sxml lane) '())
-                              (backmatter-sxml forest page routes backmatter
-                                               labels reference-taxon-id
-                                               backmatter-details?
-                                               #:metadata-items metadata-items))))
-        (serialize-html-document
-          (html-document
-            (site-page-title page)
-            (page-description site page)
-            (append (table-of-contents-sxml forest page
-                                            #:title-decoration title-decoration
-                                            #:context context)
-                    (list (if article? (cons 'article article) article)))
-            (content-has-tex-math? (site-page-document page))
-            (site-title site)
-            style
-            routes
-            mathjax-src
-            inline-stylesheets?
-            #:html-attributes html-attributes
-            #:head head
-            #:site-nav site-nav
-            #:language-nav language-nav
-            #:home-link home-link
-            #:current-page (site-page-id page)
-            #:article? article?
-            #:published (assq-ref (site-page-metadata page) 'published)
-            #:updated (assq-ref (site-page-metadata page) 'updated)
-            #:og-locales og-locales
-            #:og-image og-image
-            #:og-image-alt og-image-alt
-            #:context context
-            #:scripts (if (null? backmatter)
-                          '()
-                          (list backmatter-fetch-script))))))))
+  (unless (render-context? context)
+    (error "page-html requires a render context" context))
+  (let* ((page-locale (page-locale page))
+         (site (site forest))
+         (context
+           (render-context-with context
+             #:forest forest
+             #:routes routes
+             #:page page
+             #:anchor-prefix ""
+             #:locale (or page-locale (render-context-ref context 'locale))
+             #:locale-object (if page-locale
+                                 (make-locale page-locale)
+                                 (render-context-ref context 'locale-object))
+             #:messages (render-context-ref context 'messages)))
+         (labels
+           (normalize-backmatter-labels
+             labels
+             #:defaults (localized-backmatter-labels context)))
+         (head (if (render-context-ref context 'hreflang?)
+                   (append head (hreflang-links forest page routes context))
+                   head))
+         (language-nav (if (render-context-ref context 'language-switcher?)
+                           (language-switcher-sxml forest page routes context)
+                           '()))
+         (og-locales (if (render-context-ref context 'hreflang?)
+                         (alternate-og-locales forest page context)
+                         '()))
+         (page-image (assq-ref (site-page-metadata page) 'og-image))
+         (page-image-alt (assq-ref (site-page-metadata page) 'og-image-alt))
+         (og-image (or page-image (render-context-ref context 'og-image)))
+         (og-image-alt (cond (page-image-alt page-image-alt)
+                             (page-image (site-page-title page))
+                             (og-image (or (render-context-ref context 'og-image-alt)
+                                           (site-page-title page)))
+                             (else #f)))
+         (lane (and (pair? side-lane) (make-side-lane-collector)))
+         (body (subtree-content-sxml forest routes page "" 1 highlighters
+                                     #:title-decoration title-decoration
+                                     #:metadata-items metadata-items
+                                     #:extra-handlers
+                                     (if lane
+                                         (side-lane-handlers side-lane lane)
+                                         '())
+                                     #:rules rules
+                                     #:context context))
+         (tree (tree-block-sxml
+                 "page-tree" (site-page-id page) (site-page-title page)
+                 (html-page-url routes (site-page-id page)) body
+                 #:anchor (string-append "tree-root-" (site-page-id page))
+                 #:depth 1
+                 #:context context
+                 #:metadata-items (metadata-items-for metadata-items page context)
+                 #:title-decoration (if title-decoration
+                                        (call-hook title-decoration
+                                                   (list forest page) context)
+                                        '())))
+         (article (append (list tree)
+                          (if lane (side-lane-sxml lane) '())
+                          (backmatter-sxml forest page routes backmatter
+                                           labels reference-taxon-id
+                                           backmatter-details?
+                                           #:metadata-items metadata-items
+                                           #:context context))))
+    (serialize-html-document
+      (html-document
+        (site-page-title page)
+        (page-description site page)
+        (append (table-of-contents-sxml forest page
+                                        #:title-decoration title-decoration
+                                        #:context context)
+                (list (if article? (cons 'article article) article)))
+        (content-has-tex-math? (site-page-document page))
+        (site-title site)
+        style
+        routes
+        mathjax-src
+        inline-stylesheets?
+        #:html-attributes html-attributes
+        #:head head
+        #:site-nav site-nav
+        #:language-nav language-nav
+        #:home-link home-link
+        #:current-page (site-page-id page)
+        #:article? article?
+        #:published (assq-ref (site-page-metadata page) 'published)
+        #:updated (assq-ref (site-page-metadata page) 'updated)
+        #:og-locales og-locales
+        #:og-image og-image
+        #:og-image-alt og-image-alt
+        #:context context
+        #:scripts (if (null? backmatter)
+                      '()
+                      (list backmatter-fetch-script))))))
 
 (define* (render-html-changed forest style routes mathjax-src backmatter labels
                              reference-taxon-id
@@ -1026,31 +1035,39 @@ to the lane, and an in-place numbered marker links to it."
     (set! style (html-presentation-style presentation))
     (set! rules (html-presentation-rules presentation)))
   (let ((context
-          (make-site-render-context forest site-url default-locale
-                                    hreflang? language-switcher?
-                                    og-image og-image-alt)))
-    (with-chrome-locale (locale messages)
-      (validate-backmatter-sections backmatter)
-      (check-reference-taxon-id reference-taxon-id)
-      (set! routes (resolve-html-routes forest routes))
-      (check-html-input forest style routes mathjax-src)
-      (map (lambda (page)
-             (cons (site-page-id page)
-                   (page-html forest page style routes mathjax-src
-                              backmatter backmatter-labels
-                              reference-taxon-id #t highlighters
-                              #:title-decoration title-decoration
-                              #:article? article?
-                              #:backmatter-details? backmatter-details?
-                              #:html-attributes html-attributes
-                              #:head head
-                              #:site-nav site-nav
-                              #:home-link home-link
-                              #:metadata-items metadata-items
-                              #:side-lane side-lane
-                              #:rules rules
-                              #:context context)))
-           (pages forest)))))
+          (make-site-render-context forest
+                                    #:routes routes
+                                    #:site-url site-url
+                                    #:default-locale default-locale
+                                    #:hreflang? hreflang?
+                                    #:language-switcher? language-switcher?
+                                    #:og-image og-image
+                                    #:og-image-alt og-image-alt
+                                    #:locale locale
+                                    #:messages messages
+                                    #:translation-groups
+                                    (translation-groups (pages forest)))))
+    (validate-backmatter-sections backmatter)
+    (check-reference-taxon-id reference-taxon-id)
+    (set! routes (resolve-html-routes forest routes))
+    (check-html-input forest style routes mathjax-src)
+    (map (lambda (page)
+           (cons (site-page-id page)
+                 (page-html forest page style routes mathjax-src
+                            backmatter backmatter-labels
+                            reference-taxon-id #t highlighters
+                            #:title-decoration title-decoration
+                            #:article? article?
+                            #:backmatter-details? backmatter-details?
+                            #:html-attributes html-attributes
+                            #:head head
+                            #:site-nav site-nav
+                            #:home-link home-link
+                            #:metadata-items metadata-items
+                            #:side-lane side-lane
+                            #:rules rules
+                            #:context context)))
+         (pages forest))))
 (define (split-into-chunks entries chunk-size)
   "Split ENTRIES into consecutive groups of at most CHUNK-SIZE entries,
 preserving order.  The tail group may be shorter, so the tail walk uses
@@ -1097,40 +1114,47 @@ errors when the count outlives the list."
     (set! style (html-presentation-style presentation))
     (set! rules (html-presentation-rules presentation)))
   (let ((context
-          (make-site-render-context forest site-url default-locale
-                                    hreflang? language-switcher?
-                                    og-image og-image-alt)))
-    (with-chrome-locale (locale messages)
-      (validate-backmatter-sections backmatter)
-      (check-reference-taxon-id reference-taxon-id)
-      (set! routes (resolve-html-routes forest routes))
-      (check-html-input forest style routes mathjax-src)
-      (append
-        (html-style-artifacts style)
-        (let* ((report (current-render-progress))
-               (forest-pages (pages forest))
-               (total (length forest-pages))
-               (route-table (html-route-table routes
-                                              (map site-page-id forest-pages))))
-          (map (lambda (page index)
-                 (make-artifact
-                   (cdr (assoc (site-page-id page) route-table))
-                   (page-html forest page style routes mathjax-src backmatter
-                              backmatter-labels reference-taxon-id #f highlighters
-                              #:title-decoration title-decoration
-                              #:article? article?
-                              #:backmatter-details? backmatter-details?
-                              #:html-attributes html-attributes
-                              #:head head
-                              #:site-nav site-nav
-                              #:home-link home-link
-                              #:metadata-items metadata-items
-                              #:side-lane side-lane
-                              #:rules rules
-                              #:context context)
-                   (page-source-paths forest page)))
-               forest-pages
-               (iota total 1)))))))
+          (make-site-render-context forest
+                                    #:routes routes
+                                    #:site-url site-url
+                                    #:default-locale default-locale
+                                    #:hreflang? hreflang?
+                                    #:language-switcher? language-switcher?
+                                    #:og-image og-image
+                                    #:og-image-alt og-image-alt
+                                    #:locale locale
+                                    #:messages messages
+                                    #:translation-groups
+                                    (translation-groups (pages forest)))))
+    (validate-backmatter-sections backmatter)
+    (check-reference-taxon-id reference-taxon-id)
+    (set! routes (resolve-html-routes forest routes))
+    (check-html-input forest style routes mathjax-src)
+    (append
+      (html-style-artifacts style)
+      (let* ((forest-pages (pages forest))
+             (total (length forest-pages))
+             (route-table (html-route-table routes
+                                            (map site-page-id forest-pages))))
+        (map (lambda (page index)
+               (make-artifact
+                 (cdr (assoc (site-page-id page) route-table))
+                 (page-html forest page style routes mathjax-src backmatter
+                            backmatter-labels reference-taxon-id #f highlighters
+                            #:title-decoration title-decoration
+                            #:article? article?
+                            #:backmatter-details? backmatter-details?
+                            #:html-attributes html-attributes
+                            #:head head
+                            #:site-nav site-nav
+                            #:home-link home-link
+                            #:metadata-items metadata-items
+                            #:side-lane side-lane
+                            #:rules rules
+                            #:context context)
+                 (page-source-paths forest page)))
+             forest-pages
+             (iota total 1))))))
 (define* (make-html-renderer #:key
                                       (style default-html-style)
                                       (highlighters (default-highlighters))
@@ -1222,11 +1246,20 @@ errors when the count outlives the list."
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
             (let ((context
-                    (make-site-render-context forest site-url default-locale
-                                              hreflang? language-switcher?
-                                              og-image og-image-alt)))
-              (with-chrome-locale (locale messages)
-                (if (any (lambda (entry)
+                    (make-site-render-context forest
+                                              #:routes routes
+                                              #:site-url site-url
+                                              #:default-locale default-locale
+                                              #:hreflang? hreflang?
+                                              #:language-switcher? language-switcher?
+                                              #:og-image og-image
+                                              #:og-image-alt og-image-alt
+                                              #:locale locale
+                                              #:messages messages
+                                              #:translation-groups
+                                              (translation-groups
+                                                (pages forest)))))
+              (if (any (lambda (entry)
                            (any (lambda (path) (member path changed string=?))
                                 (highlighter-inputs (cdr entry)))) highlighters)
                     (render forest)
@@ -1244,4 +1277,4 @@ errors when the count outlives the list."
                                          #:side-lane side-lane
                                          #:rules rules
                                          #:context context
-                                         #:dirty-paths dirty-paths))))))))
+                                         #:dirty-paths dirty-paths)))))))

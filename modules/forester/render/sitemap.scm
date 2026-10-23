@@ -5,6 +5,7 @@
 (define-module (forester render sitemap)
   #:use-module (forester private date)
   #:use-module (forester private web)
+  #:use-module (forester render context)
   #:use-module (forester render site)
   #:use-module (forester site)
   #:use-module (grove build)
@@ -25,17 +26,6 @@
 
 (define (page-locale page)
   (assq-ref (site-page-metadata page) 'locale))
-
-(define (translation-groups pages)
-  (let ((groups (make-hash-table)))
-    (for-each
-      (lambda (page)
-        (let ((key (assq-ref (site-page-metadata page) 'translation)))
-          (when key
-            (hash-set! groups key
-                       (cons page (or (hash-ref groups key) '()))))))
-      pages)
-    groups))
 
 (define (alternate-links base routes route-table groups default-locale page)
   (let* ((key (assq-ref (site-page-metadata page) 'translation))

@@ -9,10 +9,12 @@
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove render text)
+  #:use-module (grove render rules)
   #:use-module (grove render context)
   #:use-module (forester render text routes)
   #:use-module (forester backmatter)
   #:use-module (forester render labels)
+  #:use-module (forester render context)
   #:use-module (grove i18n)
   #:use-module (forester i18n)
   #:use-module (grove site)
@@ -61,17 +63,29 @@ HTML renderer so text and HTML address occurrences identically."
   (or (content-element-property element 'anchor)
       (format #f "~atree-~a" prefix position)))
 
-(define* (subtree-content-text forest routes page #:optional (prefix "") (context #f))
+(define* (subtree-content-text forest routes page #:optional (prefix "") (context #f)
+                               #:key (rules empty-render-rules))
   (let ((position 0))
     (define (render-tree element _render)
       (set! position (1+ position))
       (let* ((id (tree-occurrence-target element))
              (target (find-page forest id))
-             (anchor (occurrence-anchor element prefix position)))
+             (anchor (occurrence-anchor element prefix position))
+             (child-prefix (string-append anchor "--"))
+             (target-context
+               (and context
+                    (render-context-with context
+                      #:forest forest
+                      #:routes routes
+                      #:page target
+                      #:anchor-prefix child-prefix))))
         (string-append (title-text (site-page-title target)) "[#" anchor "]\n"
-                       (subtree-content-text forest routes target (string-append anchor "--") context))))
+                       (subtree-content-text forest routes target child-prefix
+                                             target-context
+                                             #:rules rules))))
     (content->text (site-page-document page)
       #:handlers (page-content-handlers forest routes page)
+      #:rules rules
       #:context context
       #:lazy-handlers (map (lambda (kind) (cons kind render-tree))
                           '(subtree transclude query-transclude)))))
@@ -85,7 +99,7 @@ HTML renderer so text and HTML address occurrences identically."
                         from-path
                         (text-page-path routes (site-page-id page))) ")"))
 
-(define (table-of-contents-text forest page)
+(define* (table-of-contents-text forest page #:optional context)
   (define (entries id prefix indent)
     (string-concatenate
       (map (lambda (element position)
@@ -96,7 +110,10 @@ HTML renderer so text and HTML address occurrences identically."
                  (entries target-id (string-append anchor "--") (string-append indent "  ")))))
            (tree-occurrences forest id) (iota (length (tree-occurrences forest id)) 1))))
   (let ((items (entries (site-page-id page) "" "")))
-    (if (string-null? items) "" (string-append (title-text (chrome-message 'nav-contents)) "\n" items "\n"))))
+    (if (string-null? items)
+        ""
+        (string-append (title-text (chrome-message 'nav-contents context))
+                       "\n" items "\n"))))
 
 (define (text-backlink-reference forest page-id routes reference indent)
   ;;     Title plus the anchored path; the citing context's alt text
@@ -190,17 +207,26 @@ HTML renderer so text and HTML address occurrences identically."
              (site-pages site))))))
 
 (define* (page->text forest page routes backmatter backmatter-labels
-                     reference-taxon-id #:optional (context #f))
-  (let ((page-path (text-page-path routes (site-page-id page)))
-        (body (string-trim-both
-                (subtree-content-text forest routes page "" context)
-                (char-set #\newline))))
+                     reference-taxon-id #:optional (context #f)
+                     #:key (rules empty-render-rules))
+  (let* ((page-context
+           (and context
+                (render-context-with context
+                  #:forest forest
+                  #:routes routes
+                  #:page page
+                  #:anchor-prefix "")))
+         (page-path (text-page-path routes (site-page-id page)))
+         (body (string-trim-both
+                 (subtree-content-text forest routes page "" page-context
+                                       #:rules rules)
+                 (char-set #\newline))))
     (string-append
       (title-text (site-page-title page))
-      "\n" (chrome-message 'home) ": "
+      "\n" (chrome-message 'home context) ": "
       (text-relative-path page-path (text-index-path routes))
       "\n\n"
-      (table-of-contents-text forest page)
+      (table-of-contents-text forest page context)
       body
       (backmatter-text forest page routes backmatter backmatter-labels
                        reference-taxon-id))))
@@ -220,11 +246,11 @@ HTML renderer so text and HTML address occurrences identically."
       name))
 
 (define (render-text-changed forest prefix routes backmatter backmatter-labels
-                             reference-taxon-id
+                             reference-taxon-id rules context
                              changed old-artifacts)
   (set! backmatter-labels
     (normalize-backmatter-labels backmatter-labels
-      #:defaults (localized-backmatter-labels)))
+      #:defaults (localized-backmatter-labels context)))
   (check-text-routes forest routes)
   (let* ((site (site forest))
          (index-path (output-path prefix (text-index-path routes)))
@@ -243,7 +269,8 @@ HTML renderer so text and HTML address occurrences identically."
                       (lambda ()
                         (page->text forest page routes backmatter
                                     backmatter-labels
-                                    reference-taxon-id)))))
+                                    reference-taxon-id
+                                    context #:rules rules)))))
                 (pages forest))))
     (cons index-artifact page-artifacts)))
 
@@ -253,30 +280,29 @@ HTML renderer so text and HTML address occurrences identically."
                      (backmatter-labels '())
                      (reference-taxon-id default-reference-taxon-id)
                      (locale #f)
-                     (messages default-message-catalog))
-  (with-chrome-locale (locale messages)
-    (validate-backmatter-sections backmatter)
-    (set! backmatter-labels
-      (normalize-backmatter-labels backmatter-labels
-        #:defaults (localized-backmatter-labels)))
-    (check-reference-taxon-id reference-taxon-id)
-    (unless (forest? forest)
-      (error "Forester text renderer requires a forest" forest))
-    (check-text-routes forest routes)
-    (let* ((context
-             (make-render-context
-               #:forest forest #:routes routes
-               #:locale (current-chrome-locale)
-               #:locale-object (current-chrome-locale-object)
-               #:messages (current-message-catalog)))
-           (site (site forest)))
-      (cons (cons "index" (index->text forest routes))
-            (map (lambda (page)
-                   (cons (site-page-id page)
-                         (page->text forest page routes backmatter
-                                     backmatter-labels reference-taxon-id
-                                     context)))
-                 (pages forest))))))
+                     (messages default-message-catalog)
+                     (rules empty-render-rules))
+  (validate-backmatter-sections backmatter)
+  (check-reference-taxon-id reference-taxon-id)
+  (unless (forest? forest)
+    (error "Forester text renderer requires a forest" forest))
+  (check-text-routes forest routes)
+  (let* ((context
+           (make-site-render-context forest
+                                     #:routes routes
+                                     #:locale locale
+                                     #:messages messages))
+         (backmatter-labels
+           (normalize-backmatter-labels backmatter-labels
+             #:defaults (localized-backmatter-labels context)))
+         (site (site forest)))
+    (cons (cons "index" (index->text forest routes))
+          (map (lambda (page)
+                 (cons (site-page-id page)
+                       (page->text forest page routes backmatter
+                                   backmatter-labels reference-taxon-id
+                                   context #:rules rules)))
+               (pages forest)))))
 
 (define* (render-text forest #:key
                       (routes (make-text-routes))
@@ -284,27 +310,32 @@ HTML renderer so text and HTML address occurrences identically."
                       (backmatter-labels '())
                       (reference-taxon-id default-reference-taxon-id)
                       (locale #f)
-                      (messages default-message-catalog))
-  (with-chrome-locale (locale messages)
-    (validate-backmatter-sections backmatter)
-    (set! backmatter-labels
-      (normalize-backmatter-labels backmatter-labels
-        #:defaults (localized-backmatter-labels)))
-    (check-reference-taxon-id reference-taxon-id)
-    (let* ((site (site forest))
-           (sources (source-paths forest)))
-      (check-text-routes forest routes)
-      (cons
-        (make-artifact (text-index-path routes)
-                       (index->text forest routes)
-                       sources)
-        (map (lambda (page)
-               (make-artifact
-                 (text-page-path routes (site-page-id page))
-                 (page->text forest page routes backmatter backmatter-labels
-                             reference-taxon-id)
-                 (page-source-paths forest page)))
-             (pages forest))))))
+                      (messages default-message-catalog)
+                      (rules empty-render-rules))
+  (validate-backmatter-sections backmatter)
+  (check-reference-taxon-id reference-taxon-id)
+  (let* ((context
+           (make-site-render-context forest
+                                     #:routes routes
+                                     #:locale locale
+                                     #:messages messages))
+         (backmatter-labels
+           (normalize-backmatter-labels backmatter-labels
+             #:defaults (localized-backmatter-labels context)))
+         (site (site forest))
+         (sources (source-paths forest)))
+    (check-text-routes forest routes)
+    (cons
+      (make-artifact (text-index-path routes)
+                     (index->text forest routes)
+                     sources)
+      (map (lambda (page)
+             (make-artifact
+               (text-page-path routes (site-page-id page))
+               (page->text forest page routes backmatter backmatter-labels
+                           reference-taxon-id context #:rules rules)
+               (page-source-paths forest page)))
+           (pages forest)))))
 
 (define* (make-text-renderer #:key (prefix #f)
                                       (routes (make-text-routes))
@@ -313,6 +344,8 @@ HTML renderer so text and HTML address occurrences identically."
                                       (reference-taxon-id default-reference-taxon-id)
                                       (locale #f)
                                       (messages default-message-catalog)
+                                      (rules empty-render-rules)
+                                      (rules-id #f)
                                       (cache? #t))
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
@@ -329,22 +362,31 @@ HTML renderer so text and HTML address occurrences identically."
                                                 #:reference-taxon-id
                                                 reference-taxon-id
                                                 #:locale locale
-                                                #:messages messages)))
+                                                #:messages messages
+                                                #:rules rules)))
                     (if prefix
                         (prefix-artifacts prefix artifacts)
-                        artifacts)))))
-    (make-cached-renderer render #:cache? cache?
+                        artifacts))))
+        (effective-cache?
+          (and cache?
+               (or (eq? rules empty-render-rules)
+                   (and rules-id #t)))))
+    (make-cached-renderer render #:cache? effective-cache?
           #:configuration
           (lambda (forest)
             (list 'text prefix (site-title (site forest)) (site-description (site forest))
                   (text-index-path routes)
-                  backmatter backmatter-labels reference-taxon-id
+                  backmatter backmatter-labels reference-taxon-id rules-id
                   (resolve-chrome-locale locale (resolve-chrome-catalog messages))
                   (message-catalog-default (resolve-chrome-catalog messages))
                   (message-catalog-entries (resolve-chrome-catalog messages))))
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
-            (with-chrome-locale (locale messages)
-              (render-text-changed forest prefix routes backmatter
-                                   backmatter-labels reference-taxon-id
-                                   changed old-artifacts))))))
+            (render-text-changed forest prefix routes backmatter
+                                 backmatter-labels reference-taxon-id rules
+                                 (make-site-render-context
+                                   forest
+                                   #:routes routes
+                                   #:locale locale
+                                   #:messages messages)
+                                 changed old-artifacts)))))

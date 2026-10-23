@@ -12,6 +12,7 @@
   #:use-module (forester render text routes)
   #:use-module (forester backmatter)
   #:use-module (forester render labels)
+  #:use-module (forester render context)
   #:use-module (grove i18n)
   #:use-module (forester i18n)
   #:use-module (forester site)
@@ -172,11 +173,14 @@
                                       (if (string-suffix? "\n" body) "" "\n")
                                       (marked-line #\F "```") "\n")))))))
 
-(define (page-body forest routes page rules)
+(define (page-body forest routes page rules context)
   (content->text (site-page-document page)
     #:handlers (page-content-handlers forest routes page)
     #:rules rules
-    #:context (make-render-context #:forest forest #:routes routes #:page page)
+    #:context (render-context-with context
+               #:forest forest
+               #:routes routes
+               #:page page)
     #:lazy-handlers
     (map (lambda (kind)
            (cons kind
@@ -266,8 +270,8 @@
            (pages forest))))))
 
 (define (page->gemtext forest routes page backmatter backmatter-labels
-                       reference-taxon-id rules)
-  (let ((body (page-body forest routes page rules)))
+                       reference-taxon-id rules context)
+  (let ((body (page-body forest routes page rules context)))
     (finish-gemtext
       (string-append
         (title-line (site-page-title page))
@@ -275,7 +279,7 @@
                      (text-relative-path
                        (text-page-path routes (site-page-id page))
                        (text-index-path routes)))
-                   (chrome-message 'home))
+                   (chrome-message 'home context))
         "\n" body
         (page-backmatter forest page routes backmatter backmatter-labels
                          reference-taxon-id)
@@ -297,20 +301,25 @@
                         (locale #f)
                         (messages default-message-catalog)
                         (rules empty-render-rules))
-  (with-chrome-locale (locale messages)
-    (validate-backmatter-sections backmatter)
-    (set! backmatter-labels
-      (normalize-backmatter-labels backmatter-labels
-        #:defaults (localized-backmatter-labels)))
-    (check-reference-taxon-id reference-taxon-id)
-    (unless (forest? forest)
-      (error "Forester Gemtext renderer requires a forest" forest))
-    (check-routes forest routes)
+  (validate-backmatter-sections backmatter)
+  (check-reference-taxon-id reference-taxon-id)
+  (unless (forest? forest)
+    (error "Forester Gemtext renderer requires a forest" forest))
+  (check-routes forest routes)
+  (let* ((context
+           (make-site-render-context forest
+                                     #:routes routes
+                                     #:locale locale
+                                     #:messages messages))
+         (backmatter-labels
+           (normalize-backmatter-labels backmatter-labels
+             #:defaults (localized-backmatter-labels context))))
     (cons (cons "index" (index->gemtext forest routes))
           (map (lambda (page)
                  (cons (site-page-id page)
                        (page->gemtext forest routes page backmatter
-                                      backmatter-labels reference-taxon-id rules)))
+                                      backmatter-labels reference-taxon-id
+                                      rules context)))
                (pages forest)))))
 
 (define* (render-gemtext forest #:key
@@ -321,15 +330,19 @@
                          (locale #f)
                          (messages default-message-catalog)
                          (rules empty-render-rules))
-  (with-chrome-locale (locale messages)
-    (validate-backmatter-sections backmatter)
-    (set! backmatter-labels
-      (normalize-backmatter-labels backmatter-labels
-        #:defaults (localized-backmatter-labels)))
-    (check-reference-taxon-id reference-taxon-id)
-    (unless (forest? forest)
-      (error "Forester Gemtext renderer requires a forest" forest))
-    (check-routes forest routes)
+  (validate-backmatter-sections backmatter)
+  (check-reference-taxon-id reference-taxon-id)
+  (unless (forest? forest)
+    (error "Forester Gemtext renderer requires a forest" forest))
+  (check-routes forest routes)
+  (let* ((context
+           (make-site-render-context forest
+                                     #:routes routes
+                                     #:locale locale
+                                     #:messages messages))
+         (backmatter-labels
+           (normalize-backmatter-labels backmatter-labels
+             #:defaults (localized-backmatter-labels context))))
     (cons (make-artifact (text-index-path routes)
                          (index->gemtext forest routes)
                          (source-paths forest))
@@ -337,7 +350,8 @@
                  (make-artifact
                    (text-page-path routes (site-page-id page))
                    (page->gemtext forest routes page backmatter
-                                  backmatter-labels reference-taxon-id rules)
+                                  backmatter-labels reference-taxon-id
+                                  rules context)
                    (page-source-paths forest page)))
                (pages forest)))))
 

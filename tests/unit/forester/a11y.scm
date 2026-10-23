@@ -16,6 +16,7 @@
   #:use-module (forester site)
   #:use-module (grove i18n)
   #:use-module (grove ir)
+  #:use-module (grove render context)
   #:use-module (grove render html routes)
   #:use-module (grove render html rules)
   #:use-module (grove render html presentation)
@@ -97,10 +98,20 @@
     (string-contains page
                      "<time datetime=\"2026-09-28\">更新于 2026年9月28日</time>")))
 
+(let ((page (render-page
+              #:locale "zh-Hans"
+              #:metadata-items
+              (lambda (target) (default-metadata-items target)))))
+  (test-assert "one-argument metadata hooks keep the page locale"
+    (string-contains page "更新于 2026年9月28日")))
+
 (test-equal "backmatter headings localize"
   "参考文献"
-  (with-chrome-locale ("zh-Hans" default-message-catalog)
-    (assq-ref (localized-backmatter-labels) 'references)))
+  (assq-ref
+    (localized-backmatter-labels
+      (make-render-context #:locale "zh-Hans"
+                           #:messages default-message-catalog))
+    'references))
 
 (let ((routes (make-html-routes #:home-page "root")))
   (test-assert "site navigation links mark the current page"

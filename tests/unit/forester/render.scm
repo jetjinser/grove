@@ -17,6 +17,8 @@
   #:use-module (grove build)
   #:use-module (grove ir)
   #:use-module (grove render html)
+  #:use-module (grove render context)
+  #:use-module (grove render text)
   #:use-module (grove render rules)
   #:use-module (grove render html routes)
   #:use-module (grove style)
@@ -238,6 +240,35 @@
     (string-contains algebra-html "</script>"))
   (test-assert "HTML text is escaped"
     (string-contains algebra-html "Algebra &amp; limits")))
+
+(let* ((forest (make-forest (make-site (list algebra limits))))
+       (rules (make-render-rules
+                (list (cons 'paragraph
+                            (lambda (context element children next)
+                              (if (render-context-ref context 'page)
+                                  "HASPAGE\n" "NOPAGE\n")))))))
+  (test-assert "text rules see the current page context"
+    (string-contains (assoc-ref (site->text forest #:rules rules) "algebra")
+                     "HASPAGE")))
+
+(let* ((math (make-content-element 'math (list "x")
+                                   #:properties '((tex? . #t))))
+       (rules (make-render-rules
+                (list (cons 'math
+                            (lambda (context element children next)
+                              "MATH-RULE"))))))
+  (test-equal "text rules do not override math"
+    "$x$"
+    (content->text (make-content-document (list math)) #:rules rules)))
+
+(let ((rules (make-render-rules
+               (list (cons 'paragraph
+                           (lambda (context element children next) "X"))))))
+  (test-assert "custom text rules disable caching without a rules id"
+    (not (cached-renderer-cache? (make-text-renderer #:rules rules))))
+  (test-assert "text rules with an id stay cacheable"
+    (cached-renderer-cache?
+      (make-text-renderer #:rules rules #:rules-id 'v1))))
 
 (test-assert "HTML pages declare standards mode"
   (string-prefix? "<!DOCTYPE html>" (assoc-ref
