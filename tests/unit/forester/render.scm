@@ -925,7 +925,7 @@
                                     (make-html-options
                                       #:routes routes
                                       #:presentation
-                                      (make-html-presentation #:style style))
+                                      (make-html-presentation #:style style)))
                         "algebra")))
             (and (string-contains html "body { color: teal; }")
                  (not (string-contains html ".forest-tree-block {")))))))
