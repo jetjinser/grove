@@ -14,7 +14,7 @@ returns HTML.
 
 ```scheme
 (define picture-rules
-  (make-html-rules
+  (make-render-rules
     (list (cons 'image picture-rule))))
 ```
 
@@ -25,9 +25,9 @@ returns HTML.
   `(next)`.  It walks composed rule sets, then the project handlers, then the
   built-in interpretation, so an overlay can adjust one case and leave the
   rest to the defaults.
-- `compose-html-rules` is a left-biased merge: the overlay wins for a kind it
+- `compose-render-rules` is a left-biased merge: the overlay wins for a kind it
   interprets, and the base remains the fallback for everything else.
-- `define-html-rules` is a thin macro that expands to `make-html-rules`; it
+- `define-render-rules` is a thin macro that expands to `make-render-rules`; it
   adds no new evaluation model.  `next` remains an ordinary parameter, so the
   macro stays hygienic.
 
@@ -122,7 +122,7 @@ The image rule can be expressed as data:
     (fallback "/images/forest.jpg")))
 
 (define rules
-  (make-html-rules
+  (make-render-rules
     (list (cons 'image (image-set-rule image-sets)))))
 ```
 

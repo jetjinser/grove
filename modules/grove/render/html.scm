@@ -6,7 +6,7 @@
   #:use-module (grove ir)
   #:use-module (grove style)
   #:use-module (grove style html)
-  #:use-module (grove render html rules)
+  #:use-module (grove render rules)
   #:use-module (grove highlight)
   #:use-module (ice-9 format)
   #:use-module (srfi srfi-1)
@@ -70,7 +70,7 @@ ID-PREFIX."
 
 (define* (content->sxml content #:key (handlers '()) (lazy-handlers '()) (id-prefix "")
                          (highlighters (default-highlighters))
-                         (rules empty-html-rules) (context #f))
+                         (rules empty-render-rules) (context #f))
   (unless (and (list? highlighters)
                (every (lambda (entry)
                         (and (pair? entry) (symbol? (car entry))
@@ -209,7 +209,7 @@ ID-PREFIX."
         (else
          (let* ((children (map render (content-element-children element)))
                 (handler (assq-ref handlers kind))
-                (rule (and rules (html-rules-ref rules kind)))
+                (rule (and rules (render-rules-ref rules kind)))
                 (rendered
                  (if rule
                      (rule context element children

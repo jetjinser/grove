@@ -18,7 +18,7 @@
   #:use-module (grove ir)
   #:use-module (grove render context)
   #:use-module (grove render html routes)
-  #:use-module (grove render html rules)
+  #:use-module (grove render rules)
   #:use-module (grove render html presentation)
   #:use-module (grove site)
   #:use-module (tests unit forester fixtures))
@@ -216,7 +216,7 @@
 
 (define* (render-page-with document #:key (site-url #f)
                            (og-image #f) (og-image-alt #f)
-                           (rules empty-html-rules)
+                           (rules empty-render-rules)
                            (presentation #f))
   (let* ((page (document->tree-page "root" (evaluate-document document) #f))
          (forest (make-forest (make-site (list page))))
@@ -242,7 +242,7 @@
                          (srcset "/forest.avif")))
               (img (@ (src ,(content-element-property element 'source))
                       (alt ,(content-verbatim-string children)))))))
-       (rules (make-html-rules (list (cons 'image picture-rule))))
+       (rules (make-render-rules (list (cons 'image picture-rule))))
        (page (render-page-with
                "@title{Root}@image{forest.jpg}{A forest}@paragraph{Body.}"
                #:rules rules)))
@@ -326,7 +326,7 @@
                          (srcset "/forest.avif")))
               (img (@ (src ,(content-element-property element 'source))
                       (alt ,(content-verbatim-string children)))))))
-       (rules (make-html-rules (list (cons 'image picture-rule))))
+       (rules (make-render-rules (list (cons 'image picture-rule))))
        (presentation (make-html-presentation #:rules rules))
        (page (render-page-with
                "@title{Root}@image{forest.jpg}{A forest}@paragraph{Body.}"

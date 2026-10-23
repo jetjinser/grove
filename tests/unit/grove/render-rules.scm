@@ -2,12 +2,12 @@
 ;;;
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(define-module (tests unit grove html-rules)
+(define-module (tests unit grove render-rules)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-64)
   #:use-module (grove ir)
   #:use-module (grove render html)
-  #:use-module (grove render html rules)
+  #:use-module (grove render rules)
   #:use-module (grove render html presentation)
   #:use-module (grove render context)
   #:use-module (grove style html)
@@ -37,63 +37,63 @@
         (next))))
 
 (define (render-with rules)
-  (content->sxml (image-element) #:handlers (html-rules->handlers rules)))
+  (content->sxml (image-element) #:handlers (render-rules->handlers rules)))
 
 (define base
-  (make-html-rules (list (cons 'image img-rule))))
+  (make-render-rules (list (cons 'image img-rule))))
 
 (define overlay
-  (make-html-rules (list (cons 'image picture-rule))))
+  (make-render-rules (list (cons 'image picture-rule))))
 
 (test-equal "empty is the identity on the left"
   (render-with base)
-  (render-with (compose-html-rules empty-html-rules base)))
+  (render-with (compose-render-rules empty-render-rules base)))
 
 (test-equal "empty is the identity on the right"
   (render-with base)
-  (render-with (compose-html-rules base empty-html-rules)))
+  (render-with (compose-render-rules base empty-render-rules)))
 
 (test-assert "overlay wins"
-  (pair? (memq 'picture (render-with (compose-html-rules base overlay)))))
+  (pair? (memq 'picture (render-with (compose-render-rules base overlay)))))
 
 (test-assert "composition is associative"
-  (let* ((a (make-html-rules (list (cons 'image img-rule))))
-         (b (make-html-rules
+  (let* ((a (make-render-rules (list (cons 'image img-rule))))
+         (b (make-render-rules
               (list (cons 'link (lambda (context element children next)
                                   '(a))))))
-         (c (make-html-rules (list (cons 'image picture-rule)))))
-    (equal? (render-with (compose-html-rules a (compose-html-rules b c)))
-            (render-with (compose-html-rules (compose-html-rules a b) c)))))
+         (c (make-render-rules (list (cons 'image picture-rule)))))
+    (equal? (render-with (compose-render-rules a (compose-render-rules b c)))
+            (render-with (compose-render-rules (compose-render-rules a b) c)))))
 
 (test-assert "composition is idempotent"
-  (let* ((rules (compose-html-rules base overlay))
-         (again (compose-html-rules rules overlay)))
+  (let* ((rules (compose-render-rules base overlay))
+         (again (compose-render-rules rules overlay)))
     (equal? (render-with rules) (render-with again))))
 
 (test-assert "an overlay can delegate to the base rule"
   (let ((sxml (content->sxml
                 (image "missing.jpg" "A missing forest")
-                #:handlers (html-rules->handlers
-                             (compose-html-rules base overlay)))))
+                #:handlers (render-rules->handlers
+                             (compose-render-rules base overlay)))))
     (and (pair? (memq 'img sxml))
          (not (memq 'picture sxml)))))
 
 (let ((contextual
-        (make-html-rules
+        (make-render-rules
           (list (cons 'image
                       (lambda (context element children next)
                         `(p ,(render-context-ref context 'page))))))))
   (test-assert "rules receive an explicit context"
     (let ((sxml (content->sxml
                   (image-element)
-                  #:handlers (html-rules->handlers
+                  #:handlers (render-rules->handlers
                                contextual
                                #:context (make-render-context #:page "ctx")))))
       (and (pair? (memq 'p sxml))
            (string=? "ctx" (cadr (memq 'p sxml)))))))
 
 (test-assert "a rule set is usable as content handlers"
-  (let ((sxml (render-with (compose-html-rules base overlay))))
+  (let ((sxml (render-with (compose-render-rules base overlay))))
     (and (pair? (memq 'picture sxml))
          (any (lambda (node)
                 (and (pair? node) (eq? (car node) 'source)))
@@ -104,17 +104,17 @@
     (and (pair? (memq 'img sxml))
          (not (memq 'picture sxml)))))
 
-(define-html-rules dsl-rules
+(define-render-rules dsl-rules
   (image (context element children next)
     (picture-rule context element children next)))
 
-(test-assert "define-html-rules expands to a rule value"
+(test-assert "define-render-rules expands to a rule value"
   (let ((sxml (render-with dsl-rules)))
-    (and (html-rules? dsl-rules)
+    (and (render-rules? dsl-rules)
          (pair? (memq 'picture sxml)))))
 
 (test-error "duplicate kinds are rejected" #t
-  (make-html-rules (list (cons 'image img-rule)
+  (make-render-rules (list (cons 'image img-rule)
                          (cons 'image picture-rule))))
 
 (let* ((style-a (make-html-style))
@@ -168,7 +168,7 @@
     (variant "image/jxl" "/images/forest.jxl")
     (fallback "/images/forest.jpg")))
 
-(let* ((rules (make-html-rules
+(let* ((rules (make-render-rules
                 (list (cons 'image (image-set-rule image-sets)))))
        (sxml (render-with rules)))
   (test-assert "image-set-rule emits a picture"
@@ -190,7 +190,7 @@
     "PICTURE"
     (content->text (image-element) #:rules rules)))
 
-(let ((rules (make-html-rules
+(let ((rules (make-render-rules
                (list (cons 'paragraph
                            (lambda (context element children next)
                              (next)))))))
@@ -199,15 +199,15 @@
     (content->sxml (make-content-element 'paragraph (list "Hello"))
                    #:rules rules)))
 
-(let* ((base (make-html-rules
+(let* ((base (make-render-rules
                (list (cons 'paragraph
                            (lambda (context element children next)
                              (next))))))
-       (overlay (make-html-rules
+       (overlay (make-render-rules
                   (list (cons 'paragraph
                               (lambda (context element children next)
                                 (next))))))
-       (rules (compose-html-rules base overlay)))
+       (rules (compose-render-rules base overlay)))
   (test-equal "next reaches the base rule then the built-in interpretation"
     '(p "Hello")
     (content->sxml (make-content-element 'paragraph (list "Hello"))

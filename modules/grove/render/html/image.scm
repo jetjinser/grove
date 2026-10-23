@@ -4,7 +4,7 @@
 
 (define-module (grove render html image)
   #:use-module (grove ir)
-  #:use-module (grove render html rules)
+  #:use-module (grove render rules)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:export (image-variant?

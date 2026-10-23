@@ -4,7 +4,7 @@
 
 (define-module (grove render html presentation)
   #:use-module (grove style html)
-  #:use-module (grove render html rules)
+  #:use-module (grove render rules)
   #:use-module (srfi srfi-9)
   #:export (html-presentation?
             make-html-presentation
@@ -24,11 +24,11 @@
   (rules html-presentation-rules))
 
 (define* (make-html-presentation #:key (style (make-html-style))
-                                 (rules empty-html-rules))
+                                 (rules empty-render-rules))
   (unless (html-style? style)
     (error "presentation style must be an HTML style" style))
-  (unless (html-rules? rules)
-    (error "presentation rules must be HTML rules" rules))
+  (unless (render-rules? rules)
+    (error "presentation rules must be render rules" rules))
   (%make-html-presentation style rules))
 
 (define empty-html-presentation
@@ -42,5 +42,5 @@
   (%make-html-presentation
     (compose-html-styles (html-presentation-style base)
                          (html-presentation-style overlay))
-    (compose-html-rules (html-presentation-rules base)
+    (compose-render-rules (html-presentation-rules base)
                         (html-presentation-rules overlay))))
