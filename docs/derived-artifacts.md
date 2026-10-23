@@ -62,6 +62,8 @@ rule type.
   the artifact names plus each artifact's `derived-artifact-configuration`
   (path, routes, language, stylesheet, and site URL), so changing a derived
   option invalidates the cache.
+- `make-derived-artifact` requires `#:configuration`; there is no empty
+  default, so a custom artifact cannot silently reuse stale output.
 - The project computes the context once per forest and shares it between the
   configuration and the render call.
 - Without `#:derived` the project behaves exactly as before.

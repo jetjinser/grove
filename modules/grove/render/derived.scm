@@ -26,9 +26,7 @@
   (procedure derived-artifact-procedure)
   (configuration derived-artifact-configuration))
 
-(define* (make-derived-artifact #:key name procedure
-                                     (configuration
-                                       (lambda (context forest) '())))
+(define* (make-derived-artifact #:key name procedure configuration)
   (unless (and (string? name) (not (string-null? name)))
     (error "derived artifact name must be a non-empty string" name))
   (unless (procedure? procedure)

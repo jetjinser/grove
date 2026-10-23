@@ -298,7 +298,8 @@
 
 (define-record-type <gemtext-options>
   (%make-gemtext-options prefix routes backmatter backmatter-labels
-                         reference-taxon-id locale messages rules cache?)
+                         reference-taxon-id locale messages rules rules-id
+                         cache?)
   gemtext-options?
   (prefix gemtext-options-prefix)
   (routes gemtext-options-routes)
@@ -308,6 +309,7 @@
   (locale gemtext-options-locale)
   (messages gemtext-options-messages)
   (rules gemtext-options-rules)
+  (rules-id gemtext-options-rules-id)
   (cache? gemtext-options-cache?))
 
 (define* (make-gemtext-options #:key
@@ -319,10 +321,12 @@
                                (locale #f)
                                (messages default-message-catalog)
                                (rules empty-render-rules)
+                               (rules-id #f)
                                (cache? #t))
   "Immutable configuration for the Forester Gemtext renderer."
   (%make-gemtext-options prefix routes backmatter backmatter-labels
-                         reference-taxon-id locale messages rules cache?))
+                         reference-taxon-id locale messages rules rules-id
+                         cache?))
 
 (define* (site->gemtext forest #:key (options (make-gemtext-options)))
   (let* ((routes (gemtext-options-routes options))
@@ -395,7 +399,11 @@
          (locale (gemtext-options-locale options))
          (messages (gemtext-options-messages options))
          (rules (gemtext-options-rules options))
-         (cache? (gemtext-options-cache? options)))
+         (rules-id (gemtext-options-rules-id options))
+         (effective-cache?
+           (and (gemtext-options-cache? options)
+                (or (eq? rules empty-render-rules)
+                    (and rules-id #t)))))
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
   (unless (text-routes? routes)
@@ -405,7 +413,7 @@
   (let ((render (lambda (forest)
                   (let ((artifacts (render-gemtext forest #:options options)))
                     (if prefix (prefix-artifacts prefix artifacts) artifacts)))))
-    (make-cached-renderer render #:cache? cache?
+    (make-cached-renderer render #:cache? effective-cache?
       #:configuration
       (lambda (forest)
         (list 'gemtext prefix
@@ -414,7 +422,7 @@
                            (text-page-path routes (site-page-id page))))
                    (pages forest))
               (text-index-path routes)
-              backmatter backmatter-labels reference-taxon-id
+              backmatter backmatter-labels reference-taxon-id rules-id
               (site-title (site forest)) (site-description (site forest))
               (resolve-chrome-locale locale (resolve-chrome-catalog messages))
               (message-catalog-default (resolve-chrome-catalog messages))

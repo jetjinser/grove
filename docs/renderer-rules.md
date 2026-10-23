@@ -177,9 +177,11 @@ Text and gemtext follow the same pattern:
 derives the page context per page; rules receive it through `#:context`.
 
 Project rules override the default interpretation; no core codec knowledge is
-involved.  Cached text renderers disable caching when project rules are present
-unless `make-text-renderer` receives a stable `#:rules-id`, so a rule change
-cannot silently reuse old text artifacts.  Public hooks (`title-decoration`,
-`home-link`, `site-nav`) accept an optional trailing render context, and
-one-argument `metadata-items` hooks run with a scoped context fallback so their
-chrome helpers still localize.
+involved.  Cached renderers disable caching when project rules are present
+unless the options carry a stable `#:rules-id`.  HTML also disables caching when
+custom hooks are present unless the options carry a `#:hooks-id`.  This applies
+to HTML, text, and gemtext.  Derived artifacts require a `#:configuration`
+procedure so their inputs are part of the cache identity.  Public hooks
+(`title-decoration`, `home-link`, `site-nav`) accept an optional trailing render
+context, and one-argument `metadata-items` hooks run with a scoped context
+fallback so their chrome helpers still localize.

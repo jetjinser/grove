@@ -71,4 +71,9 @@
       (artifact-content (cadr rendered))
       "<language>en</language>")))
 
+(test-error "derived artifacts require a configuration" #t
+  (make-derived-artifact
+    #:name "unconfigured"
+    #:procedure (lambda (context forest) '())))
+
 (test-end "forester derived artifacts")

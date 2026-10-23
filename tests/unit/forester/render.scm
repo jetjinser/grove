@@ -286,6 +286,37 @@
       (make-text-renderer
         #:options (make-text-options #:rules rules #:rules-id 'v1)))))
 
+(let ((rules (make-render-rules
+               (list (cons 'paragraph
+                           (lambda (context element children next) "X"))))))
+  (test-assert "custom HTML rules disable caching without a rules id"
+    (not (cached-renderer-cache?
+           (make-html-renderer
+             #:options (make-html-options #:rules rules)))))
+  (test-assert "HTML rules with an id stay cacheable"
+    (cached-renderer-cache?
+      (make-html-renderer
+        #:options (make-html-options #:rules rules #:rules-id 'v1))))
+  (test-assert "custom gemtext rules disable caching without a rules id"
+    (not (cached-renderer-cache?
+           (make-gemtext-renderer
+             #:options (make-gemtext-options #:rules rules)))))
+  (test-assert "gemtext rules with an id stay cacheable"
+    (cached-renderer-cache?
+      (make-gemtext-renderer
+        #:options (make-gemtext-options #:rules rules #:rules-id 'v1)))))
+
+(let ((hook (lambda (forest page) '())))
+  (test-assert "custom HTML hooks disable caching without a hooks id"
+    (not (cached-renderer-cache?
+           (make-html-renderer
+             #:options (make-html-options #:title-decoration hook)))))
+  (test-assert "HTML hooks with an id stay cacheable"
+    (cached-renderer-cache?
+      (make-html-renderer
+        #:options (make-html-options #:title-decoration hook
+                                     #:hooks-id 'v1)))))
+
 (test-assert "HTML pages declare standards mode"
   (string-prefix? "<!DOCTYPE html>" (assoc-ref
                                        (render-test-html

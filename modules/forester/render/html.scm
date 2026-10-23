@@ -1011,7 +1011,7 @@ to the lane, and an in-place numbered marker links to it."
                       site-nav home-link metadata-items side-lane rules
                       presentation locale messages settings default-locale
                       site-url og-image og-image-alt hreflang?
-                      language-switcher? cache?)
+                      language-switcher? rules-id hooks-id cache?)
   html-options?
   (style html-options-style)
   (highlighters html-options-highlighters)
@@ -1040,6 +1040,8 @@ to the lane, and an in-place numbered marker links to it."
   (og-image-alt html-options-og-image-alt)
   (hreflang? html-options-hreflang?)
   (language-switcher? html-options-language-switcher?)
+  (rules-id html-options-rules-id)
+  (hooks-id html-options-hooks-id)
   (cache? html-options-cache?))
 
 (define* (make-html-options #:key
@@ -1074,6 +1076,8 @@ to the lane, and an in-place numbered marker links to it."
                             (og-image-alt #f)
                             (hreflang? #t)
                             (language-switcher? #t)
+                            (rules-id #f)
+                            (hooks-id #f)
                             (cache? #t))
   "Build the immutable HTML renderer configuration.
 
@@ -1091,7 +1095,7 @@ value with #:options."
                         site-nav home-link metadata-items side-lane rules
                         presentation locale messages settings default-locale
                         site-url og-image og-image-alt hreflang?
-                        language-switcher? cache?)))
+                        language-switcher? rules-id hooks-id cache?)))
 
 (define* (site->html forest #:key (options (make-html-options)))
   (let* ((style (html-options-style options))
@@ -1234,7 +1238,7 @@ errors when the count outlives the list."
              forest-pages
              (iota total 1)))))))
 (define* (make-html-renderer #:key (options (make-html-options)))
-    (let ((style (html-options-style options))
+    (let* ((style (html-options-style options))
           (highlighters (html-options-highlighters options))
           (routes (html-options-routes options))
           (mathjax-src (html-options-mathjax-src options))
@@ -1259,12 +1263,22 @@ errors when the count outlives the list."
           (og-image-alt (html-options-og-image-alt options))
           (hreflang? (html-options-hreflang? options))
           (language-switcher? (html-options-language-switcher? options))
-          (cache? (html-options-cache? options)))
+          (rules-id (html-options-rules-id options))
+          (hooks-id (html-options-hooks-id options))
+          (custom-hooks? (or title-decoration home-link
+                             (not (eq? metadata-items
+                                       default-metadata-items))))
+          (effective-cache?
+            (and (html-options-cache? options)
+                 (or (eq? rules empty-render-rules)
+                     (and rules-id #t))
+                 (or (not custom-hooks?)
+                     (and hooks-id #t)))))
       (validate-backmatter-sections backmatter)
       (check-reference-taxon-id reference-taxon-id)
       (let ((render (lambda (forest)
                       (render-html forest #:options options))))
-    (make-cached-renderer render #:cache? cache?
+    (make-cached-renderer render #:cache? effective-cache?
           #:configuration
           (lambda (forest)
             (list 'html (site-title (site forest)) (site-description (site forest))
@@ -1274,6 +1288,7 @@ errors when the count outlives the list."
                   article? backmatter-details? html-attributes head site-nav
                   side-lane (resolve-chrome-locale locale (resolve-chrome-catalog messages))
                   default-locale site-url og-image og-image-alt hreflang? language-switcher?
+                  rules-id hooks-id
                   (message-catalog-default (resolve-chrome-catalog messages))
                   (message-catalog-entries (resolve-chrome-catalog messages))
                   (map (lambda (entry)
