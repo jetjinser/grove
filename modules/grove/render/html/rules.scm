@@ -79,16 +79,23 @@
     (error "not an HTML rule set" rules))
   (assq-ref (html-rules-map rules) kind))
 
-(define* (html-rules->handlers rules #:key (context #f))
-  "Adapt RULES to content->sxml handlers, closing over CONTEXT."
+(define* (html-rules->handlers rules #:key (context #f) (fallback #f))
+  "Adapt RULES to content->sxml handlers, closing over CONTEXT.
+
+When a rule calls NEXT, it invokes FALLBACK on the same element and
+children if given, and otherwise reports that no fallback exists."
   (unless (html-rules? rules)
     (error "not an HTML rule set" rules))
+  (unless (or (not fallback) (procedure? fallback))
+    (error "HTML rule fallback must be a procedure or #f" fallback))
   (map (lambda (entry)
          (cons (car entry)
                (lambda (element children)
                  ((cdr entry) context element children
                   (lambda ()
-                    (error "no fallback HTML rule" (car entry)))))))
+                    (if fallback
+                        (fallback element children)
+                        (error "no fallback HTML rule" (car entry))))))))
        (html-rules-map rules)))
 
 (define-syntax define-html-rules

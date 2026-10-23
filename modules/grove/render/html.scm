@@ -6,6 +6,7 @@
   #:use-module (grove ir)
   #:use-module (grove style)
   #:use-module (grove style html)
+  #:use-module (grove render html rules)
   #:use-module (grove highlight)
   #:use-module (ice-9 format)
   #:use-module (srfi srfi-1)
@@ -68,7 +69,8 @@ ID-PREFIX."
     original additions))
 
 (define* (content->sxml content #:key (handlers '()) (lazy-handlers '()) (id-prefix "")
-                         (highlighters (default-highlighters)))
+                         (highlighters (default-highlighters))
+                         (rules empty-html-rules) (context #f))
   (unless (and (list? highlighters)
                (every (lambda (entry)
                         (and (pair? entry) (symbol? (car entry))
@@ -152,61 +154,73 @@ ID-PREFIX."
                          (highlight-code highlighter source))
                     (list source))))))
 
+  (define (default-element-sxml element children)
+    (case (content-element-kind element)
+      ((bold) (cons 'strong children))
+      ((paragraph) (cons 'p children))
+      ((blockquote) (cons 'blockquote children))
+      ((itemize) (cons 'ul children))
+      ((item) (cons 'li children))
+      ((code) `(code (@ (translate "no")) ,@children))
+      ((code-block) (render-code-block element))
+      ((verbatim) `(pre (@ (translate "no")) ,@children))
+      ((details) (cons 'details children))
+      ((summary) (cons 'summary children))
+      ((disclosure subtree)
+       `(details
+          ,@(if (if (assq 'open? (content-element-properties element))
+                    (content-element-property element 'open?) #t)
+                '((@ (open "open"))) '())
+          (summary ,(content-element-property element 'title))
+          ,@children))
+      ((section)
+       `(section (@ (class "forest-section"))
+          (h2 ,(content-element-property element 'title))
+          ,@children))
+      ((math-derivation math-diagnostics)
+       `(div (@ (class ,(symbol->string (content-element-kind element))))
+             ,@children))
+      ((math-diagnostic)
+       `(aside (@ (class "math-diagnostic")) ,@children))
+      (else
+       ;;     A style that replaces the tag owns the
+       ;;     element's shape: emit the bare form and
+       ;;     no invented class.  Styles that only add
+       ;;     attributes keep the kind class.
+       (if (and (content-element-style element)
+                (style-html-tag
+                  (content-element-style element)))
+           (cons 'span children)
+           `(span (@ (class ,(symbol->string
+                               (content-element-kind element))))
+                  ,@children)))))
+
   (define (render-element element)
     (let* ((kind (content-element-kind element))
-           (lazy-handler (assq-ref lazy-handlers kind))
-           (rendered
-             (cond
-               (lazy-handler (lazy-handler element render))
-               ((eq? kind 'math) (render-math element))
-               (else
-                (let ((children (map render (content-element-children element)))
-                      (handler (assq-ref handlers kind)))
-                  (if handler
-                      (handler element children)
-                      (case kind
-                        ((bold) (cons 'strong children))
-                        ((paragraph) (cons 'p children))
-                        ((blockquote) (cons 'blockquote children))
-                        ((itemize) (cons 'ul children))
-                        ((item) (cons 'li children))
-                        ((code) `(code (@ (translate "no")) ,@children))
-                        ((code-block) (render-code-block element))
-                        ((verbatim) `(pre (@ (translate "no")) ,@children))
-                        ((details) (cons 'details children))
-                        ((summary) (cons 'summary children))
-                        ((disclosure subtree)
-                         `(details
-                            ,@(if (if (assq 'open? (content-element-properties element))
-                                      (content-element-property element 'open?) #t)
-                                  '((@ (open "open"))) '())
-                            (summary ,(content-element-property element 'title))
-                            ,@children))
-                        ((section)
-                         `(section (@ (class "forest-section"))
-                            (h2 ,(content-element-property element 'title))
-                            ,@children))
-                        ((math-derivation math-diagnostics)
-                         `(div (@ (class ,(symbol->string kind))) ,@children))
-                        ((math-diagnostic)
-                         `(aside (@ (class "math-diagnostic")) ,@children))
-                        (else
-                         ;;     A style that replaces the tag owns the
-                         ;;     element's shape: emit the bare form and
-                         ;;     no invented class.  Styles that only add
-                         ;;     attributes keep the kind class.
-                         (if (and (content-element-style element)
-                                  (style-html-tag
-                                    (content-element-style element)))
-                             (cons 'span children)
-                             `(span (@ (class ,(symbol->string kind)))
-                                    ,@children))))))))))
-      ;;     Lazy handlers own their element's presentation entirely -
-      ;;     tree blocks apply the style themselves - so the generic
-      ;;     application runs only for the remaining elements.
-      (if lazy-handler
-          rendered
-          (apply-element-style element rendered))))
+           (lazy-handler (assq-ref lazy-handlers kind)))
+      (cond
+        (lazy-handler
+         ;;     Lazy handlers own their element's presentation
+         ;;     entirely - tree blocks apply the style themselves - so
+         ;;     the generic application runs only for the rest.
+         (lazy-handler element render))
+        ((eq? kind 'math)
+         (apply-element-style element (render-math element)))
+        (else
+         (let* ((children (map render (content-element-children element)))
+                (handler (assq-ref handlers kind))
+                (rule (and rules (html-rules-ref rules kind)))
+                (rendered
+                 (if rule
+                     (rule context element children
+                           (lambda ()
+                             (if handler
+                                 (handler element children)
+                                 (default-element-sxml element children))))
+                     (if handler
+                         (handler element children)
+                         (default-element-sxml element children)))))
+           (apply-element-style element rendered))))))
 
   (define (render-math-children children)
     (map render-math-child children))

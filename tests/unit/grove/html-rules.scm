@@ -189,4 +189,37 @@
   (test-equal "text renderer accepts renderer rules"
     "PICTURE"
     (content->text (image-element) #:rules rules)))
+
+(let ((rules (make-html-rules
+               (list (cons 'paragraph
+                           (lambda (context element children next)
+                             (next)))))))
+  (test-equal "next reaches the built-in HTML interpretation"
+    '(p "Hello")
+    (content->sxml (make-content-element 'paragraph (list "Hello"))
+                   #:rules rules)))
+
+(let* ((base (make-html-rules
+               (list (cons 'paragraph
+                           (lambda (context element children next)
+                             (next))))))
+       (overlay (make-html-rules
+                  (list (cons 'paragraph
+                              (lambda (context element children next)
+                                (next))))))
+       (rules (compose-html-rules base overlay)))
+  (test-equal "next reaches the base rule then the built-in interpretation"
+    '(p "Hello")
+    (content->sxml (make-content-element 'paragraph (list "Hello"))
+                   #:rules rules)))
+
+(let ((rules (make-render-rules
+               (list (cons 'paragraph
+                           (lambda (context element children next)
+                             (next)))))))
+  (test-equal "next reaches the built-in text interpretation"
+    "Hello\n"
+    (content->text (make-content-element 'paragraph (list "Hello"))
+                   #:rules rules)))
+
 (test-end "grove html rules")
