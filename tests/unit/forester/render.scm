@@ -64,9 +64,13 @@
          (string-contains limits-gemtext "=> algebra.gmi Algebra & limits")))
   (test-assert "Gemtext backmatter options control sections and labels"
     (let ((page (cdr (assoc "limits"
-                       (site->gemtext forest
-                         #:backmatter '(backlinks)
-                         #:backmatter-labels '((backlinks . "Linked from")))))))
+                       (site->gemtext
+                         forest
+                         #:options
+                         (make-gemtext-options
+                           #:backmatter '(backlinks)
+                           #:backmatter-labels
+                           '((backlinks . "Linked from"))))))))
       (and (string-contains page "## Linked from")
            (not (string-contains page "## Related")))))
   (test-assert "Gemtext accepts renderer rules"
@@ -75,7 +79,10 @@
                                 (lambda (context element children next)
                                   "CUSTOM\n")))))
            (page (cdr (assoc "algebra"
-                              (site->gemtext forest #:rules rules)))))
+                              (site->gemtext
+                                forest
+                                #:options
+                                (make-gemtext-options #:rules rules))))))
       (string-contains page "CUSTOM")))
   (test-assert "Gemtext artifacts retain Forest source dependencies"
     (equal? (source-paths forest) (artifact-sources (car artifacts)))))
@@ -216,7 +223,10 @@
          (string-contains
            (assoc-ref (site->text
                         (make-forest (make-site (list algebra limits)))
-                        #:backmatter-labels '((backlinks . "Link sources")))
+                        #:options
+                        (make-text-options
+                          #:backmatter-labels
+                          '((backlinks . "Link sources"))))
                       "limits")
            "Link sources:")))
   (test-assert "inline math keeps TeX delimiters"
@@ -248,8 +258,11 @@
                               (if (render-context-ref context 'page)
                                   "HASPAGE\n" "NOPAGE\n")))))))
   (test-assert "text rules see the current page context"
-    (string-contains (assoc-ref (site->text forest #:rules rules) "algebra")
-                     "HASPAGE")))
+    (string-contains
+      (assoc-ref (site->text forest
+                            #:options (make-text-options #:rules rules))
+                 "algebra")
+      "HASPAGE")))
 
 (let* ((math (make-content-element 'math (list "x")
                                    #:properties '((tex? . #t))))
@@ -265,10 +278,13 @@
                (list (cons 'paragraph
                            (lambda (context element children next) "X"))))))
   (test-assert "custom text rules disable caching without a rules id"
-    (not (cached-renderer-cache? (make-text-renderer #:rules rules))))
+    (not (cached-renderer-cache?
+           (make-text-renderer
+             #:options (make-text-options #:rules rules)))))
   (test-assert "text rules with an id stay cacheable"
     (cached-renderer-cache?
-      (make-text-renderer #:rules rules #:rules-id 'v1))))
+      (make-text-renderer
+        #:options (make-text-options #:rules rules #:rules-id 'v1)))))
 
 (test-assert "HTML pages declare standards mode"
   (string-prefix? "<!DOCTYPE html>" (assoc-ref
@@ -488,7 +504,9 @@
          (render-model
            forest
            (list (make-html-renderer
-                   #:routes (make-html-routes #:home-page "algebra"))
+                   #:options
+                   (make-html-options
+                     #:routes (make-html-routes #:home-page "algebra")))
                  (make-rss-renderer
                    #:site-url "https://notes.example/"
                    #:routes (make-html-routes
@@ -545,9 +563,12 @@
            (styled-artifacts
              (render-html
                forest
-               #:routes (make-html-routes #:home-page "algebra")
-               #:style (compose-html-styles default-html-style
-                         (make-html-style #:stylesheets (list custom)))))
+               #:options
+               (make-html-options
+                 #:routes (make-html-routes #:home-page "algebra")
+                 #:style (compose-html-styles default-html-style
+                           (make-html-style
+                             #:stylesheets (list custom))))))
            (stylesheet-paths (map artifact-path (take styled-artifacts 3)))
            (styled-index
              (artifact-content
@@ -587,7 +608,8 @@
 
 (let* ((forest (make-forest (make-site (list algebra limits))))
        (routes (make-html-routes #:home-page "algebra"))
-       (artifacts (render-html forest #:routes routes))
+       (artifacts (render-html forest
+                              #:options (make-html-options #:routes routes)))
        (index (artifact-content
                 (find (lambda (artifact)
                         (string=? (artifact-path artifact) "index.html"))
@@ -602,12 +624,17 @@
                                 (string-suffix? ".html" (artifact-path artifact)))
                               artifacts)))))
   (test-error "configured HTML home page must exist" #t
-    (render-html forest #:routes (make-html-routes #:home-page "missing")))
+    (render-html forest
+      #:options
+      (make-html-options
+        #:routes (make-html-routes #:home-page "missing"))))
   (test-error "non-home HTML routes cannot collide with the index" #t
     (render-html forest
-      #:routes (make-html-routes
-                 #:home-page "algebra"
-                 #:page-path (lambda (_id) "index.html")))))
+      #:options
+      (make-html-options
+        #:routes (make-html-routes
+                   #:home-page "algebra"
+                   #:page-path (lambda (_id) "index.html"))))))
 
 (let* ((html (render-test-html (make-forest (make-site (list algebra limits)))))
        (limits-html (assoc-ref html "limits")))
@@ -615,13 +642,16 @@
     (not (string-contains limits-html "mathjax"))))
 
 (let* ((forest (make-forest (make-site (list algebra limits))))
-       (html (site->html forest
-               #:routes (make-html-routes
-                          #:home-page "algebra"
-                          #:page-path
-                          (lambda (id)
-                            (string-append "notes/" id ".html")))
-               #:mathjax-src "assets/mathjax.js"))
+       (html (site->html
+               forest
+               #:options
+               (make-html-options
+                 #:routes (make-html-routes
+                            #:home-page "algebra"
+                            #:page-path
+                            (lambda (id)
+                              (string-append "notes/" id ".html")))
+                 #:mathjax-src "assets/mathjax.js")))
        (algebra-html (assoc-ref html "algebra")))
   (test-assert "projects can provide a local MathJax script"
     (string-contains algebra-html "src=\"/assets/mathjax.js\"")))
@@ -679,7 +709,7 @@
          (string-contains
            sitemap "https://notes.example/published/index.html")
          (not (string-contains
-                sitemap "https://notes.example/published/notes/algebra.html"))))
+                sitemap "https://notes.example/published/notes/algebra.html")))))
 
 (let* ((forest (make-forest (make-site (list algebra limits))))
        (feed (artifact-content
@@ -802,7 +832,8 @@
            #:index-path "index.txt"
            #:page-path
            (lambda (id) (string-append "notes/" id ".md"))))
-       (artifacts (render-text forest #:routes routes))
+       (artifacts (render-text forest
+                              #:options (make-text-options #:routes routes)))
        (index (artifact-content (car artifacts)))
        (alpha (artifact-content (cadr artifacts))))
   (test-equal "text routes configure the index and page output paths"
@@ -822,7 +853,13 @@
     (lambda (name)
       (let* ((style (make-html-style
                       #:stylesheets (list (make-artifact name "body { color: teal; }"))))
-             (artifacts (render-model forest (list (make-html-renderer #:routes routes #:style style))))
+             (artifacts (render-model
+                          forest
+                          (list (make-html-renderer
+                                  #:options
+                                  (make-html-options
+                                    #:routes routes
+                                    #:style style)))))
              (html (artifact-content
                      (find (lambda (artifact) (string=? (artifact-path artifact) "index.html"))
                            artifacts))))
@@ -834,13 +871,23 @@
           (and (string-contains html (string-append "href=\"/" name "\""))
                (string=? "body { color: teal; }" (artifact-content (car artifacts)))))
         (test-assert "explicit style controls inline stylesheet contents too"
-          (let ((html (assoc-ref (site->html forest #:routes routes #:style style) "algebra")))
+          (let ((html (assoc-ref
+                        (site->html forest
+                                    #:options
+                                    (make-html-options
+                                      #:routes routes
+                                      #:style style))
+                        "algebra")))
             (and (string-contains html "body { color: teal; }")
                  (not (string-contains html ".forest-tree-block {")))))))
     '("theme.css" "forester.css"))
   (test-assert "an empty style opts out of default stylesheets"
     (not (any (lambda (artifact) (string-suffix? ".css" (artifact-path artifact)))
-              (render-html forest #:routes routes #:style (make-html-style)))))))
+              (render-html forest
+                           #:options
+                           (make-html-options
+                             #:routes routes
+                             #:style (make-html-style)))))))
 
 (let* ((target
          (make-site-page "target" "Target"
@@ -849,14 +896,18 @@
        (forest (make-forest (make-site (list target))))
        (routes (make-html-routes #:home-page "target"))
        (html (assoc-ref
-               (site->html forest #:routes routes
-                 #:title-decoration
-                 (lambda (forest page)
-                   (if (string=? (site-page-id page) "overview")
-                       `((span (@ (class "taxon")) "overview. ")
-                         (span (@ (class "source"))
-                           ,(or (site-page-source page) "?")))
-                       '())))
+               (site->html
+                 forest
+                 #:options
+                 (make-html-options
+                   #:routes routes
+                   #:title-decoration
+                   (lambda (forest page)
+                     (if (string=? (site-page-id page) "overview")
+                         `((span (@ (class "taxon")) "overview. ")
+                           (span (@ (class "source"))
+                             ,(or (site-page-source page) "?")))
+                         '()))))
                "target")))
   (test-assert "title-decoration decorates tree headings"
     (string-contains html
@@ -874,25 +925,32 @@
            #:metadata '((summary . "A summary"))))
        (forest (make-forest (make-site (list annotated) #:home "annotated")))
        (html (assoc-ref
-               (site->html forest #:routes (make-html-routes)
-                 #:title-decoration
-                 (lambda (forest page)
-                   (if (assq-ref (site-page-metadata page) 'summary)
-                       '((span (@ (class "summary")) "S"))
-                       '())))
+               (site->html
+                 forest
+                 #:options
+                 (make-html-options
+                   #:routes (make-html-routes)
+                   #:title-decoration
+                   (lambda (forest page)
+                     (if (assq-ref (site-page-metadata page) 'summary)
+                         '((span (@ (class "summary")) "S"))
+                         '()))))
                "annotated")))
   (test-assert "title-decoration reads page metadata through the forest"
     (string-contains html "<span class=\"summary\">S</span>")))
 
 (let* ((forest (make-forest (make-site (list algebra limits))))
        (routes (make-html-routes #:home-page "algebra"))
-       (html (site->html forest
-               #:routes routes
-               #:html-attributes '((lang . "zh-CN"))
-               #:head '((link (@ (rel "alternate") (href "/feed.xml"))))
-               #:site-nav '((div (@ (class "controls")) "Controls"))
-               #:article? #t
-               #:backmatter-details? #t))
+       (html (site->html
+               forest
+               #:options
+               (make-html-options
+                 #:routes routes
+                 #:html-attributes '((lang . "zh-CN"))
+                 #:head '((link (@ (rel "alternate") (href "/feed.xml"))))
+                 #:site-nav '((div (@ (class "controls")) "Controls"))
+                 #:article? #t
+                 #:backmatter-details? #t)))
        (algebra-html (assoc-ref html "algebra"))
        (limits-html (assoc-ref html "limits")))
   (test-assert "html-attributes hook sets document language"
@@ -912,9 +970,14 @@
       "<aside class=\"backmatter forest-tree-block backlinks\"><details open=\"open\"><summary><h2 class=\"forest-tree-title\">Backlinks</h2>"))
   (test-assert "home-link hook replaces the default navigation link"
     (let ((custom (assoc-ref
-                    (site->html forest #:routes routes
-                      #:home-link (lambda (href)
-                                    `(a (@ (class "brand") (href ,href)) "Home")))
+                    (site->html
+                      forest
+                      #:options
+                      (make-html-options
+                        #:routes routes
+                        #:home-link
+                        (lambda (href)
+                          `(a (@ (class "brand") (href ,href)) "Home"))))
                     "algebra")))
       (and (string-contains custom "<a class=\"brand\" href=\"/index.html\">Home</a></nav>")
            (not (string-contains custom "Linked Notes</a></nav>"))))))
@@ -989,18 +1052,25 @@
        (forest (make-forest (make-site (list page)))))
   (test-assert "side-lane lifts declared kinds into a margin lane"
     (let ((html (assoc-ref
-                  (site->html forest
-                              #:routes (make-html-routes #:home-page "annotated")
-                              #:side-lane '(sidenote))
+                  (site->html
+                    forest
+                    #:options
+                    (make-html-options
+                      #:routes (make-html-routes #:home-page "annotated")
+                      #:side-lane '(sidenote)))
                   "annotated")))
       (and (string-contains html "class=\"margin-lane\"")
            (string-contains html "A marginal note.")
            (string-contains html "class=\"margin-ref\"")
            (string-contains html "id=\"margin-1\""))))
   (test-assert "the margin lane is opt-in"
-    (let ((html (assoc-ref (site->html forest
-                          #:routes (make-html-routes #:home-page "annotated"))
-                        "annotated")))
+    (let ((html (assoc-ref
+                  (site->html
+                    forest
+                    #:options
+                    (make-html-options
+                      #:routes (make-html-routes #:home-page "annotated")))
+                  "annotated")))
       ;;     The default stylesheet (inlined by site->html) names the
       ;;     margin classes, so probe the emitted markup, not the CSS.
       (and (not (string-contains html "class=\"margin-lane\""))
@@ -1047,8 +1117,12 @@
        (forest (make-forest (make-site (list glossary chapter)
                                        #:title "T" #:home "glossary")))
        (chapter-html
-         (assoc-ref (site->html forest
-                      #:routes (make-html-routes #:home-page "glossary"))
+         (assoc-ref (site->html
+                      forest
+                      #:options
+                      (make-html-options
+                        #:routes (make-html-routes
+                                   #:home-page "glossary")))
                     "ch01")))
   (test-equal "term definitions collect dfn occurrences across pages"
     '(("glossary" "term-loom" "loom")
@@ -1109,18 +1183,16 @@
     (string-contains feed "<language>zh-Hans</language>")))
 (let* ((forest (make-forest (make-site (list algebra limits))))
        (routes (make-html-routes #:home-page "algebra")))
-  (test-equal "html #:options matches the legacy keyword path"
-    (site->html forest #:routes routes #:mathjax-src #f #:article? #t)
-    (site->html forest #:options
-                (make-html-options #:routes routes #:mathjax-src #f
-                                   #:article? #t))))
-
-(let ((forest (make-forest (make-site (list algebra limits)))))
-  (test-equal "text #:options matches the legacy keyword path"
-    (site->text forest #:locale "en")
-    (site->text forest #:options (make-text-options #:locale "en")))
-  (test-equal "gemtext #:options matches the legacy keyword path"
-    (site->gemtext forest #:locale "en")
-    (site->gemtext forest #:options (make-gemtext-options #:locale "en"))))
+  (test-assert "renderer entry points accept options values"
+    (and (pair? (site->html
+                  forest
+                  #:options
+                  (make-html-options #:routes routes #:mathjax-src #f)))
+         (pair? (site->text
+                  forest
+                  #:options (make-text-options #:locale "en")))
+         (pair? (site->gemtext
+                  forest
+                  #:options (make-gemtext-options #:locale "en"))))))
 
 (test-end "forester renderers")

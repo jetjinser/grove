@@ -33,19 +33,25 @@
 (define* (html-output forest #:key (site-url #f) (locale #f))
   (assoc-ref
     (site->html forest
-                #:routes (make-html-routes #:home-page "root")
-                #:mathjax-src #f
-                #:settings (and site-url
-                                (make-site-settings #:site-url site-url
-                                                    #:default-locale locale))
-                #:locale locale)
+                #:options
+                (make-html-options
+                  #:routes (make-html-routes #:home-page "root")
+                  #:mathjax-src #f
+                  #:settings (and site-url
+                                  (make-site-settings #:site-url site-url
+                                                      #:default-locale locale))
+                  #:locale locale))
     "root"))
 
 (define* (text-output forest #:key (locale #f))
-  (assoc-ref (site->text forest #:locale locale) "root"))
+  (assoc-ref (site->text forest
+                         #:options (make-text-options #:locale locale))
+             "root"))
 
 (define* (gemtext-output forest #:key (locale #f))
-  (assoc-ref (site->gemtext forest #:locale locale) "root"))
+  (assoc-ref (site->gemtext forest
+                            #:options (make-gemtext-options #:locale locale))
+             "root"))
 
 (define (rss-output forest)
   (artifact-content

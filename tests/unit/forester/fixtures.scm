@@ -48,4 +48,5 @@
   (let ((routes
           (make-html-routes
             #:home-page (site-page-id (car (pages forest))))))
-    (apply site->html forest #:routes routes options)))
+    (site->html forest
+                #:options (apply make-html-options #:routes routes options))))

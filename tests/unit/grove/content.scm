@@ -218,8 +218,10 @@
   (test-assert "the anchored element renders on its page"
     (string-contains
       (assoc-ref (site->html forest
-                             #:routes (make-html-routes
-                                        #:home-page "glossary"))
+                             #:options
+                             (make-html-options
+                               #:routes (make-html-routes
+                                          #:home-page "glossary")))
                  "glossary")
       "<dfn id=\"term-id\">a term</dfn>")))
 

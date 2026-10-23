@@ -86,7 +86,10 @@
       (list (make-site-page "home" "Home" (evaluate-document "@transclude[\"code\"]"))
             (make-site-page "code" "Code" document)))))
 (define routes (make-html-routes #:home-page "home"))
-(define renderer (make-html-renderer #:routes routes #:highlighters highlights))
+(define renderer
+  (make-html-renderer
+    #:options (make-html-options #:routes routes
+                                 #:highlighters highlights)))
 (define artifacts ((cached-renderer-procedure renderer) forest))
 (test-assert "standalone pages and transclusions both receive the highlighters"
   (every (lambda (path)
@@ -117,8 +120,14 @@
 (test-assert "query changes participate in renderer cache configuration"
   (not (equal? ((cached-renderer-configuration renderer) forest)
                ((cached-renderer-configuration
-                  (make-html-renderer #:routes routes
-                    #:highlighters `((scheme . ,(make-highlighter grammar "tree_sitter_scheme" "(symbol) @name")))))
+                  (make-html-renderer
+                    #:options
+                    (make-html-options
+                      #:routes routes
+                      #:highlighters
+                      `((scheme . ,(make-highlighter
+                                     grammar "tree_sitter_scheme"
+                                     "(symbol) @name"))))))
                 forest))))
 (test-assert "consumers can compose a stylesheet after the default palette"
   (equal? '("highlight.css" "custom.css")

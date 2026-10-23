@@ -30,7 +30,9 @@
              "@subtree{@title{Inline section}@paragraph{Owned text. @link[\"root\"]{Home}.}}")))
        (forest (make-forest (make-site (list root))))
        (routes (make-html-routes #:home-page "root"))
-       (html (site->html forest #:routes routes #:mathjax-src #f))
+       (html (site->html forest
+                         #:options (make-html-options
+                                     #:routes routes #:mathjax-src #f)))
        (text (site->text forest))
        (rss (artifact-content
               (car (render-rss forest #:site-url "https://notes.example"
@@ -302,16 +304,24 @@
                            "reusable")
                 "class=\"backmatter backlinks\""))
          (not (string-contains
-                (assoc-ref (site->text forest #:backmatter '()) "reusable")
+                (assoc-ref (site->text forest
+                                       #:options (make-text-options
+                                                   #:backmatter '()))
+                           "reusable")
                 "Context:"))))
   (test-error "backmatter rejects unknown sections" #t
     (render-test-html forest #:backmatter '(unknown)))
   (test-error "backmatter rejects duplicate sections" #t
-    (site->text forest #:backmatter '(context context)))
+    (site->text forest #:options
+                (make-text-options #:backmatter '(context context))))
   (test-error "backmatter labels reject unknown sections" #t
-    (site->text forest #:backmatter-labels '((unknown . "Unknown"))))
+    (site->text forest #:options
+                (make-text-options
+                  #:backmatter-labels '((unknown . "Unknown")))))
   (test-error "backmatter labels reject empty text" #t
-    (site->text forest #:backmatter-labels '((context . ""))))
+    (site->text forest #:options
+                (make-text-options
+                  #:backmatter-labels '((context . "")))))
   (test-equal "transclusions do not become ordinary link references"
     '()
     (outgoing-references forest "host"))
@@ -428,7 +438,8 @@
     (map site-page-id
       (related-pages forest "source" "Bibliography")))
   (test-error "empty reference taxon IDs are rejected" #t
-    (site->text forest #:reference-taxon-id "")))
+    (site->text forest #:options (make-text-options
+                                   #:reference-taxon-id ""))))
 
 (let* ((source
          (make-site-page

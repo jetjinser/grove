@@ -38,8 +38,10 @@
 
 (define (render-site . options)
   (let ((routes (make-html-routes #:home-page "root")))
-    (apply site->html (a11y-forest)
-           #:routes routes #:mathjax-src #f options)))
+    (site->html (a11y-forest)
+                #:options
+                (apply make-html-options
+                       #:routes routes #:mathjax-src #f options))))
 
 (define (render-page . options)
   (assoc-ref (apply render-site options) "root"))
@@ -159,7 +161,10 @@
          (string-contains page "dir=\"ltr\""))))
 
 (test-assert "text output localizes its chrome"
-  (let ((text (assoc-ref (site->text (a11y-forest) #:locale "zh-Hans") "root")))
+  (let ((text (assoc-ref
+                (site->text (a11y-forest)
+                            #:options (make-text-options #:locale "zh-Hans"))
+                "root")))
     (and (string-contains text "目录")
          (string-contains text "首页"))))
 
@@ -181,7 +186,11 @@
                             (published . "2026-09-27"))))
        (forest (make-forest (make-site (list root))))
        (routes (make-html-routes #:home-page "root"))
-       (page (assoc-ref (site->html forest #:routes routes #:mathjax-src #f)
+       (page (assoc-ref (site->html forest
+                                    #:options
+                                    (make-html-options
+                                      #:routes routes
+                                      #:mathjax-src #f))
                         "root")))
   (test-assert "page locale derives lang and dir without a renderer locale"
     (string-contains page "<html lang=\"zh-Hans\" dir=\"ltr\">"))
@@ -213,12 +222,16 @@
          (forest (make-forest (make-site (list page))))
          (routes (make-html-routes #:home-page "root")))
     (assoc-ref
-      (site->html forest #:routes routes #:mathjax-src #f
-                  #:site-url site-url
-                  #:og-image og-image
-                  #:og-image-alt og-image-alt
-                  #:rules rules
-                  #:presentation presentation)
+      (site->html forest
+                  #:options
+                  (make-html-options
+                    #:routes routes
+                    #:mathjax-src #f
+                    #:site-url site-url
+                    #:og-image og-image
+                    #:og-image-alt og-image-alt
+                    #:rules rules
+                    #:presentation presentation))
       "root")))
 
 

@@ -1077,9 +1077,8 @@ to the lane, and an in-place numbered marker links to it."
                             (cache? #t))
   "Build the immutable HTML renderer configuration.
 
-PRESENTATION, when given, replaces STYLE and RULES.  Entry points accept this
-value with #:options; the legacy keyword arguments remain as a compatibility
-shim."
+PRESENTATION, when given, replaces STYLE and RULES.  Entry points take this
+value with #:options."
   (let ((style (or (and presentation
                         (html-presentation-style presentation))
                    style))
@@ -1094,68 +1093,8 @@ shim."
                         site-url og-image og-image-alt hreflang?
                         language-switcher? cache?)))
 
-(define* (site->html forest #:key
-                       (style default-html-style)
-                       (highlighters (default-highlighters))
-                       routes
-                       (mathjax-src default-mathjax-src)
-                       (backmatter default-backmatter-sections)
-                       (backmatter-labels '())
-                       (reference-taxon-id default-reference-taxon-id)
-                       (title-decoration #f)
-                       (article? #f)
-                       (backmatter-details? #f)
-                       (html-attributes '())
-                       (head '())
-                       (site-nav '())
-                       (home-link #f)
-                       (metadata-items default-metadata-items)
-                       (side-lane '())
-                       (rules empty-html-rules)
-                       (presentation #f)
-                       (locale #f)
-                       (messages default-message-catalog)
-                       (settings #f)
-                       (default-locale
-                         (and settings (site-settings-default-locale settings)))
-                       (site-url
-                         (and settings (site-settings-site-url settings)))
-                       (og-image #f)
-                       (og-image-alt #f)
-                       (hreflang? #t)
-                       (language-switcher? #t)
-                       (options #f))
-  (let* ((options
-           (or options
-               (make-html-options
-                 #:style style
-                 #:highlighters highlighters
-                 #:routes routes
-                 #:mathjax-src mathjax-src
-                 #:backmatter backmatter
-                 #:backmatter-labels backmatter-labels
-                 #:reference-taxon-id reference-taxon-id
-                 #:title-decoration title-decoration
-                 #:article? article?
-                 #:backmatter-details? backmatter-details?
-                 #:html-attributes html-attributes
-                 #:head head
-                 #:site-nav site-nav
-                 #:home-link home-link
-                 #:metadata-items metadata-items
-                 #:side-lane side-lane
-                 #:rules rules
-                 #:presentation presentation
-                 #:locale locale
-                 #:messages messages
-                 #:settings settings
-                 #:default-locale default-locale
-                 #:site-url site-url
-                 #:og-image og-image
-                 #:og-image-alt og-image-alt
-                 #:hreflang? hreflang?
-                 #:language-switcher? language-switcher?)))
-         (style (html-options-style options))
+(define* (site->html forest #:key (options (make-html-options)))
+  (let* ((style (html-options-style options))
          (highlighters (html-options-highlighters options))
          (routes (html-options-routes options))
          (mathjax-src (html-options-mathjax-src options))
@@ -1226,67 +1165,7 @@ errors when the count outlives the list."
           (loop (list-tail rest size)
                 (cons (list-head rest size) chunks))))))
 
-(define* (render-html forest #:key
-                             (style default-html-style)
-                             (highlighters (default-highlighters))
-                             routes
-                             (mathjax-src default-mathjax-src)
-                             (backmatter default-backmatter-sections)
-                             (backmatter-labels '())
-                             (reference-taxon-id default-reference-taxon-id)
-                             (title-decoration #f)
-                             (article? #f)
-                             (backmatter-details? #f)
-                             (html-attributes '())
-                             (head '())
-                             (site-nav '())
-                             (home-link #f)
-                             (metadata-items default-metadata-items)
-                             (side-lane '())
-                             (rules empty-html-rules)
-                             (presentation #f)
-                             (locale #f)
-                             (messages default-message-catalog)
-                             (settings #f)
-                             (default-locale
-                               (and settings (site-settings-default-locale settings)))
-                             (site-url
-                               (and settings (site-settings-site-url settings)))
-                             (og-image #f)
-                             (og-image-alt #f)
-                             (hreflang? #t)
-                             (language-switcher? #t)
-                             (options #f))
-  (let ((options
-          (or options
-              (make-html-options
-                #:style style
-                #:highlighters highlighters
-                #:routes routes
-                #:mathjax-src mathjax-src
-                #:backmatter backmatter
-                #:backmatter-labels backmatter-labels
-                #:reference-taxon-id reference-taxon-id
-                #:title-decoration title-decoration
-                #:article? article?
-                #:backmatter-details? backmatter-details?
-                #:html-attributes html-attributes
-                #:head head
-                #:site-nav site-nav
-                #:home-link home-link
-                #:metadata-items metadata-items
-                #:side-lane side-lane
-                #:rules rules
-                #:presentation presentation
-                #:locale locale
-                #:messages messages
-                #:settings settings
-                #:default-locale default-locale
-                #:site-url site-url
-                #:og-image og-image
-                #:og-image-alt og-image-alt
-                #:hreflang? hreflang?
-                #:language-switcher? language-switcher?))))
+(define* (render-html forest #:key (options (make-html-options)))
     (let ((style (html-options-style options))
           (highlighters (html-options-highlighters options))
           (routes (html-options-routes options))
@@ -1353,70 +1232,8 @@ errors when the count outlives the list."
                             #:context context)
                  (page-source-paths forest page)))
              forest-pages
-             (iota total 1))))))))
-(define* (make-html-renderer #:key
-                                      (style default-html-style)
-                                      (highlighters (default-highlighters))
-                                      routes
-                                      (mathjax-src default-mathjax-src)
-                                      (backmatter default-backmatter-sections)
-                                      (backmatter-labels '())
-                                      (reference-taxon-id default-reference-taxon-id)
-                                      (title-decoration #f)
-                                      (article? #f)
-                                      (backmatter-details? #f)
-                                      (html-attributes '())
-                                      (head '())
-                                      (site-nav '())
-                                      (home-link #f)
-                                      (metadata-items default-metadata-items)
-                                      (side-lane '())
-                                      (rules empty-html-rules)
-                                      (presentation #f)
-                                      (locale #f)
-                                      (messages default-message-catalog)
-                                      (settings #f)
-                                      (default-locale
-                                        (and settings (site-settings-default-locale settings)))
-                                      (site-url
-                                        (and settings (site-settings-site-url settings)))
-                                      (og-image #f)
-                                      (og-image-alt #f)
-                                      (hreflang? #t)
-                                      (language-switcher? #t)
-                                      (cache? #t)
-                                      (options #f))
-  (let ((options
-          (or options
-              (make-html-options
-                #:style style
-                #:highlighters highlighters
-                #:routes routes
-                #:mathjax-src mathjax-src
-                #:backmatter backmatter
-                #:backmatter-labels backmatter-labels
-                #:reference-taxon-id reference-taxon-id
-                #:title-decoration title-decoration
-                #:article? article?
-                #:backmatter-details? backmatter-details?
-                #:html-attributes html-attributes
-                #:head head
-                #:site-nav site-nav
-                #:home-link home-link
-                #:metadata-items metadata-items
-                #:side-lane side-lane
-                #:rules rules
-                #:presentation presentation
-                #:locale locale
-                #:messages messages
-                #:settings settings
-                #:default-locale default-locale
-                #:site-url site-url
-                #:og-image og-image
-                #:og-image-alt og-image-alt
-                #:hreflang? hreflang?
-                #:language-switcher? language-switcher?
-                #:cache? cache?))))
+             (iota total 1)))))))
+(define* (make-html-renderer #:key (options (make-html-options)))
     (let ((style (html-options-style options))
           (highlighters (html-options-highlighters options))
           (routes (html-options-routes options))
@@ -1505,4 +1322,4 @@ errors when the count outlives the list."
                                          #:side-lane side-lane
                                          #:rules rules
                                          #:context context
-                                         #:dirty-paths dirty-paths)))))))))
+                                         #:dirty-paths dirty-paths))))))))

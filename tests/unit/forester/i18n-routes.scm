@@ -71,8 +71,12 @@
                     #:default-locale "en"))
     "guide-zh"))
 
-(let ((page (assoc-ref (site->html forest #:routes routes #:mathjax-src #f
-                                   #:default-locale "en")
+(let ((page (assoc-ref (site->html forest
+                                   #:options
+                                   (make-html-options
+                                     #:routes routes
+                                     #:mathjax-src #f
+                                     #:default-locale "en"))
                        "guide")))
   (test-assert "translated pages emit hreflang alternates by default"
     (and (string-contains page
@@ -90,8 +94,13 @@
            page "<nav class=\"language-switcher\" aria-label=\"Language\">")
          (string-contains page "aria-current=\"true\""))))
 
-(let ((page (assoc-ref (site->html forest #:routes routes #:mathjax-src #f
-                                   #:hreflang? #f #:language-switcher? #f)
+(let ((page (assoc-ref (site->html forest
+                                   #:options
+                                   (make-html-options
+                                     #:routes routes
+                                     #:mathjax-src #f
+                                     #:hreflang? #f
+                                     #:language-switcher? #f))
                        "guide")))
   (test-assert "alternates can be disabled"
     (not (string-contains page "rel=\"alternate\"")))
@@ -123,8 +132,13 @@
 
 
 (let* ((site-url "https://example.org")
-       (html (assoc-ref (site->html forest #:routes routes #:mathjax-src #f
-                                     #:site-url site-url #:default-locale "en")
+       (html (assoc-ref (site->html forest
+                                    #:options
+                                    (make-html-options
+                                      #:routes routes
+                                      #:mathjax-src #f
+                                      #:site-url site-url
+                                      #:default-locale "en"))
                         "guide"))
        (sitemap (artifact-content
                   (car (render-sitemap forest #:site-url site-url
@@ -141,8 +155,12 @@
 
 (let* ((settings (make-site-settings #:site-url "https://example.org"
                                      #:default-locale "en"))
-       (html (assoc-ref (site->html forest #:settings settings
-                                    #:routes routes #:mathjax-src #f)
+       (html (assoc-ref (site->html forest
+                                    #:options
+                                    (make-html-options
+                                      #:settings settings
+                                      #:routes routes
+                                      #:mathjax-src #f))
                         "guide"))
        (sitemap (artifact-content
                   (car (render-sitemap forest #:settings settings

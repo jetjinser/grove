@@ -378,8 +378,10 @@
   "~a 条" (plural "zh-Hans" 1 '((one . "~a 条") (other . "~a 条"))))
 
 (test-assert "text output localizes chrome labels"
-  (let ((text (assoc-ref (site->text bilingual-forest #:locale "zh-Hans")
-                         "hello")))
+  (let ((text (assoc-ref
+                (site->text bilingual-forest
+                            #:options (make-text-options #:locale "zh-Hans"))
+                "hello")))
     (and (string-contains text "首页")
          (not (string-contains text "Home")))))
 

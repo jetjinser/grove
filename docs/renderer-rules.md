@@ -157,8 +157,8 @@ HTML renderer configuration is a value:
 ```
 
 `make-html-options` is the single place for defaults and for merging
-`#:presentation`.  The legacy keyword arguments remain as a compatibility shim
-and are translated into the same value.
+`#:presentation`.  The entry points take only `#:options`; there is no keyword
+shim.
 
 Text and gemtext follow the same pattern:
 

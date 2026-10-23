@@ -111,12 +111,14 @@
                #:analyze make-forest
                #:renderers
                (list (make-html-renderer
-                       #:routes
-                       (make-html-routes
-                         #:home-page "algebra"
-                         #:page-path
-                         (lambda (id)
-                           (string-append "notes/" id ".html"))))
+                       #:options
+                       (make-html-options
+                         #:routes
+                         (make-html-routes
+                           #:home-page "algebra"
+                           #:page-path
+                           (lambda (id)
+                             (string-append "notes/" id ".html")))))
                      (make-rss-renderer
                        #:site-url "https://notes.example"
                        #:routes
@@ -133,8 +135,10 @@
                          #:page-path
                          (lambda (id)
                            (string-append "notes/" id ".html"))))
-                     (make-text-renderer #:prefix "text")
-                     (make-gemtext-renderer #:prefix "gemini"))
+                     (make-text-renderer
+                       #:options (make-text-options #:prefix "text"))
+                     (make-gemtext-renderer
+                       #:options (make-gemtext-options #:prefix "gemini")))
                #:output-directory output-directory))
            (artifacts (build-project project))
            (paths (map artifact-path artifacts))
@@ -488,14 +492,16 @@
                  #:analyze make-forest
                  #:renderers
                  (list (make-html-renderer
-                        #:routes
-                         (make-html-routes
-                           #:home-page "algebra"
-                           #:page-path
-                           (lambda (id)
-                             (string-append "notes/" id ".html"))))
+                        #:options
+                        (make-html-options
+                          #:routes
+                          (make-html-routes
+                            #:home-page "algebra"
+                            #:page-path
+                            (lambda (id)
+                              (string-append "notes/" id ".html")))))
                        (make-text-renderer
-                         #:prefix "text"))
+                         #:options (make-text-options #:prefix "text")))
                  #:output-directory cache-output-directory))
              (first (build-project/report incremental-project)))
         (test-assert "cached Forester HTML renderer performs initial render"

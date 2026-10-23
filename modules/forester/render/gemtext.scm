@@ -324,25 +324,8 @@
   (%make-gemtext-options prefix routes backmatter backmatter-labels
                          reference-taxon-id locale messages rules cache?))
 
-(define* (site->gemtext forest #:key
-                        (routes (default-gemtext-routes))
-                        (backmatter default-backmatter-sections)
-                        (backmatter-labels '())
-                        (reference-taxon-id default-reference-taxon-id)
-                        (locale #f)
-                        (messages default-message-catalog)
-                        (rules empty-render-rules)
-                        (options #f))
-  (let* ((options
-           (or options
-               (make-gemtext-options #:routes routes
-                                     #:backmatter backmatter
-                                     #:backmatter-labels backmatter-labels
-                                     #:reference-taxon-id reference-taxon-id
-                                     #:locale locale
-                                     #:messages messages
-                                     #:rules rules)))
-         (routes (gemtext-options-routes options))
+(define* (site->gemtext forest #:key (options (make-gemtext-options)))
+  (let* ((routes (gemtext-options-routes options))
          (backmatter (gemtext-options-backmatter options))
          (backmatter-labels (gemtext-options-backmatter-labels options))
          (reference-taxon-id (gemtext-options-reference-taxon-id options))
@@ -370,25 +353,8 @@
                                       rules context)))
                (pages forest))))))
 
-(define* (render-gemtext forest #:key
-                         (routes (default-gemtext-routes))
-                         (backmatter default-backmatter-sections)
-                         (backmatter-labels '())
-                         (reference-taxon-id default-reference-taxon-id)
-                         (locale #f)
-                         (messages default-message-catalog)
-                         (rules empty-render-rules)
-                         (options #f))
-  (let* ((options
-           (or options
-               (make-gemtext-options #:routes routes
-                                     #:backmatter backmatter
-                                     #:backmatter-labels backmatter-labels
-                                     #:reference-taxon-id reference-taxon-id
-                                     #:locale locale
-                                     #:messages messages
-                                     #:rules rules)))
-         (routes (gemtext-options-routes options))
+(define* (render-gemtext forest #:key (options (make-gemtext-options)))
+  (let* ((routes (gemtext-options-routes options))
          (backmatter (gemtext-options-backmatter options))
          (backmatter-labels (gemtext-options-backmatter-labels options))
          (reference-taxon-id (gemtext-options-reference-taxon-id options))
@@ -420,28 +386,8 @@
                    (page-source-paths forest page)))
                (pages forest))))))
 
-(define* (make-gemtext-renderer #:key (prefix #f)
-                                (routes (default-gemtext-routes))
-                                (backmatter default-backmatter-sections)
-                                (backmatter-labels '())
-                                (reference-taxon-id default-reference-taxon-id)
-                                (locale #f)
-                                (messages default-message-catalog)
-                                (rules empty-render-rules)
-                                (cache? #t)
-                                (options #f))
-  (let* ((options
-           (or options
-               (make-gemtext-options #:prefix prefix
-                                     #:routes routes
-                                     #:backmatter backmatter
-                                     #:backmatter-labels backmatter-labels
-                                     #:reference-taxon-id reference-taxon-id
-                                     #:locale locale
-                                     #:messages messages
-                                     #:rules rules
-                                     #:cache? cache?)))
-         (prefix (gemtext-options-prefix options))
+(define* (make-gemtext-renderer #:key (options (make-gemtext-options)))
+  (let* ((prefix (gemtext-options-prefix options))
          (routes (gemtext-options-routes options))
          (backmatter (gemtext-options-backmatter options))
          (backmatter-labels (gemtext-options-backmatter-labels options))
@@ -457,14 +403,7 @@
   (unless (or (not prefix) (artifact-path? prefix))
     (error "Gemtext output prefix must be a relative path or #f" prefix))
   (let ((render (lambda (forest)
-                  (let ((artifacts (render-gemtext forest
-                                    #:routes routes
-                                    #:backmatter backmatter
-                                    #:backmatter-labels backmatter-labels
-                                    #:reference-taxon-id reference-taxon-id
-                                    #:locale locale
-                                    #:messages messages
-                                    #:rules rules)))
+                  (let ((artifacts (render-gemtext forest #:options options)))
                     (if prefix (prefix-artifacts prefix artifacts) artifacts)))))
     (make-cached-renderer render #:cache? cache?
       #:configuration

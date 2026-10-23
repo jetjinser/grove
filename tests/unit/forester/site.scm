@@ -74,7 +74,10 @@
 (let* ((document (evaluate-document "@lipsum{}"))
        (page (make-site-page "lipsum" "Lipsum" document))
        (forest (make-forest (make-site (list page) #:home "lipsum")))
-       (artifacts (render-html forest #:routes (make-html-routes))))
+       (artifacts (render-html forest
+                              #:options
+                              (make-html-options
+                                #:routes (make-html-routes)))))
   (test-assert "HTML routes derive the home page from the site"
     (find (lambda (artifact)
             (string=? "index.html" (artifact-path artifact)))
@@ -497,7 +500,10 @@
     (and (string-contains html "href=\"/article.html\">Article</a>")
          (string-contains html "id=\"ref-1\" href=\"/manual.html\">manual</a>")))
   (let* ((routes (make-text-routes))
-         (text (assoc-ref (site->text forest #:routes routes) "catalog")))
+         (text (assoc-ref (site->text forest
+                                      #:options
+                                      (make-text-options #:routes routes))
+                          "catalog")))
     (test-assert "query-generated links render in text output"
       (string-contains text "Article [article.txt]")))))
 
