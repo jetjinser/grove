@@ -11,6 +11,8 @@
   #:use-module (forester input scribble)
   #:use-module (forester relations)
   #:use-module (forester render gemtext)
+  #:use-module (forester render derived)
+  #:use-module (forester render context)
   #:use-module (forester render html)
   #:use-module (forester render rss)
   #:use-module (forester render sitemap)
@@ -607,5 +609,46 @@
         #t
         (build-project project)))))
   (lambda () (system* "rm" "-rf" project-root)))
+
+(let ((root (mkdtemp "/tmp/forester-derived-project-test-XXXXXX")))
+  (dynamic-wind
+    (lambda () #t)
+    (lambda ()
+      (let* ((routes (make-html-routes #:home-page "root"))
+             (page (make-site-page
+                     "root" "Root"
+                     (make-content-document
+                       (list (make-content-element
+                               'paragraph (list "Hello."))))))
+             (project
+               (make-site-project
+                 #:title "Derived"
+                 #:collect-sources (lambda () '("virtual.plant"))
+                 #:read-page (lambda (_source) page)
+                 #:analyze make-forest
+                 #:context
+                 (lambda (forest)
+                   (make-site-render-context
+                     forest
+                     #:site-url "https://derived.example"
+                     #:default-locale "en"
+                     #:locale "en"))
+                 #:derived
+                 (list (sitemap-derived #:routes routes)
+                       (rss-derived #:routes routes)
+                       (graph-derived))
+                 #:output-directory (string-append root "/output")))
+             (artifacts (build-project project))
+             (sitemap (find (lambda (artifact)
+                              (string=? (artifact-path artifact)
+                                        "sitemap.xml"))
+                            artifacts)))
+        (test-equal "project renders derived artifacts"
+          '("sitemap.xml" "feed.xml" "forest-graph.scm")
+          (map artifact-path artifacts))
+        (test-assert "project derived artifacts use the project context"
+          (string-contains (artifact-content sitemap)
+                           "https://derived.example"))))
+    (lambda () (system* "rm" "-rf" root))))
 
 (test-end "forester project")

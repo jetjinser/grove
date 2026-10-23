@@ -52,6 +52,12 @@
     (compose-derived-artifacts (car artifacts) (cadr artifacts))
     (caddr artifacts)))
 
+(let ((first (sitemap-derived #:routes routes #:sitemap-path "first.xml"))
+      (second (sitemap-derived #:routes routes #:sitemap-path "second.xml")))
+  (test-assert "derived configuration tracks the artifact path"
+    (not (equal? ((derived-artifact-configuration first) context forest)
+                 ((derived-artifact-configuration second) context forest)))))
+
 (let ((rendered (render-derived-artifacts artifacts context forest)))
   (test-equal "derived artifacts keep their paths"
     '("sitemap.xml" "feed.xml" "forest-graph.scm")
