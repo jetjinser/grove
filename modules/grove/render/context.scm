@@ -3,14 +3,18 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove render context)
-  #:use-module (ice-9 optargs)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:export (render-context?
             make-render-context
             render-context-ref
+            render-context-has?
             render-context-with
-            render-context-values))
+            render-context-set
+            render-context-without
+            render-context-values
+            current-render-context
+            with-render-context))
 
 ;; A render context is an explicit value passed to interpretations.  It is a
 ;; record over an association list so projects can add namespaced keys without
@@ -18,59 +22,113 @@
 ;; forest, routes, page, anchor-prefix, site-url, default-locale, hreflang?,
 ;; language-switcher?, translation-groups, og-image, og-image-alt, locale,
 ;; locale-object, messages.
+;;
+;; The alist stores every key that was provided, including #f.  Absence and a
+;; false value are distinct: use RENDER-CONTEXT-HAS? to tell them apart and
+;; RENDER-CONTEXT-WITHOUT to remove a key.
 
 (define-record-type <render-context>
   (%make-render-context values)
   render-context?
   (values render-context-values))
 
-(define* (make-render-context #:key (forest #f) (routes #f) (page #f)
-                              (anchor-prefix #f) (site-url #f)
-                              (default-locale #f) (hreflang? #t)
-                              (language-switcher? #t) (translation-groups #f)
-                              (og-image #f) (og-image-alt #f)
-                              (locale #f) (locale-object #f) (messages #f)
-                              #:allow-other-keys)
-  (let ((entries (filter (lambda (entry) (cdr entry))
-                         `((forest . ,forest)
-                           (routes . ,routes)
-                           (page . ,page)
-                           (anchor-prefix . ,anchor-prefix)
-                           (site-url . ,site-url)
-                           (default-locale . ,default-locale)
-                           (hreflang? . ,hreflang?)
-                           (language-switcher? . ,language-switcher?)
-                           (translation-groups . ,translation-groups)
-                           (og-image . ,og-image)
-                           (og-image-alt . ,og-image-alt)
-                           (locale . ,locale)
-                           (locale-object . ,locale-object)
-                           (messages . ,messages)))))
-    (%make-render-context entries)))
+;; Compatibility fallback for user-provided hooks that call chrome helpers
+;; without receiving a context.  Internal rendering always passes the explicit
+;; value; the parameter is thread-local and must not be used as primary state.
+(define current-render-context (make-parameter #f))
+
+(define (with-render-context context thunk)
+  (unless (render-context? context)
+    (error "not a render context" context))
+  (unless (procedure? thunk)
+    (error "with-render-context expects a thunk" thunk))
+  (parameterize ((current-render-context context))
+    (thunk)))
+
+(define default-render-context-values
+  '((hreflang? . #t)
+    (language-switcher? . #t)))
+
+(define (keyword-plist->alist entries who)
+  "Turn keyword/value ENTRIES into an alist; a repeated key keeps its last
+value."
+  (let loop ((remaining entries) (values '()))
+    (cond
+      ((null? remaining) (reverse values))
+      ((keyword? (car remaining))
+       (unless (pair? (cdr remaining))
+         (error "~a expects keyword/value pairs" who entries))
+       (let ((key (keyword->symbol (car remaining)))
+             (value (cadr remaining)))
+         (loop (cddr remaining)
+               (cons (cons key value)
+                     (remove (lambda (entry) (eq? (car entry) key))
+                             values)))))
+      (else (error "~a expects keyword/value pairs" who entries)))))
+
+(define* (make-render-context #:rest entries)
+  "Build a context from keyword/value ENTRIES.
+
+Known keys get their defaults; unknown keys are kept so projects can add
+namespaced data without changing the record."
+  (let ((provided (keyword-plist->alist entries 'make-render-context)))
+    (%make-render-context
+      (append provided
+              (filter (lambda (entry)
+                        (not (assq (car entry) provided)))
+                      default-render-context-values)))))
 
 (define (render-context-ref context key)
   (unless (render-context? context)
     (error "not a render context" context))
+  (unless (symbol? key)
+    (error "render context keys must be symbols" key))
   (assq-ref (render-context-values context) key))
 
-(define* (render-context-with context #:rest entries)
-  "Return CONTEXT with ENTRIES (a keyword plist) overlaid."
+(define (render-context-has? context key)
+  "Return #t when KEY is present in CONTEXT, even if its value is #f."
   (unless (render-context? context)
     (error "not a render context" context))
-  (let loop ((remaining entries) (overlay '()))
-    (cond
-      ((null? remaining)
-       (%make-render-context
-         (append overlay
-                 (remove (lambda (entry)
-                           (assq (car entry) overlay))
-                         (render-context-values context)))))
-      ((keyword? (car remaining))
-       (let ((key (keyword->symbol (car remaining)))
-             (value (cadr remaining)))
-         (loop (cddr remaining)
-               (if value
-                   (cons (cons key value) overlay)
-                   overlay))))
-      (else (error "render-context-with expects keyword/value pairs"
-                   entries)))))
+  (unless (symbol? key)
+    (error "render context keys must be symbols" key))
+  (and (assq key (render-context-values context)) #t))
+
+(define* (render-context-with context #:rest entries)
+  "Return CONTEXT with ENTRIES (a keyword plist) overlaid.
+
+A #f value means \"inherit\": it is not overlaid.  Use RENDER-CONTEXT-SET to
+store an explicit #f, and RENDER-CONTEXT-WITHOUT to remove a key."
+  (unless (render-context? context)
+    (error "not a render context" context))
+  (let ((overlay (filter (lambda (entry) (cdr entry))
+                         (keyword-plist->alist entries 'render-context-with))))
+    (%make-render-context
+      (append overlay
+              (remove (lambda (entry)
+                        (assq (car entry) overlay))
+                      (render-context-values context))))))
+
+(define* (render-context-set context #:rest entries)
+  "Return CONTEXT with ENTRIES overlaid, including explicit #f values.
+
+Use this when a caller must clear an inherited value; RENDER-CONTEXT-WITH
+treats #f as \"inherit\"."
+  (unless (render-context? context)
+    (error "not a render context" context))
+  (let ((overlay (keyword-plist->alist entries 'render-context-set)))
+    (%make-render-context
+      (append overlay
+              (remove (lambda (entry)
+                        (assq (car entry) overlay))
+                      (render-context-values context))))))
+
+(define (render-context-without context . keys)
+  "Return CONTEXT without KEYS.  Removing a key makes RENDER-CONTEXT-REF
+return #f for it."
+  (unless (render-context? context)
+    (error "not a render context" context))
+  (unless (every symbol? keys)
+    (error "render-context-without expects symbol keys" keys))
+  (%make-render-context
+    (remove (lambda (entry) (memq (car entry) keys))
+            (render-context-values context))))

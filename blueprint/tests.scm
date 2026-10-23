@@ -26,6 +26,7 @@
     "unit/grove/highlight.scm"
     "unit/grove/highlight-html.scm"
     "unit/grove/html-rules.scm"
+    "unit/grove/render-context.scm"
     "unit/forester/browse.scm"
     "unit/grove/cli-progress.scm"
     "unit/grove/math.scm"
