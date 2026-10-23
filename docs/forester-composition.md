@@ -86,14 +86,18 @@ the exact reference anchor.
 
 Tree headers and backmatter entries end in a metadata line. The stock items
 are the page's dates (`@published`/`@updated`); pages without dates render
-nothing. The HTML renderers accept `#:metadata-items`, a `page -> items`
-hook whose items fill the `<ul>`; it replaces the stock hook, and
-`default-metadata-items` is exported to compose with:
+nothing. The HTML renderer accepts a `metadata-items` hook in
+`make-html-hooks`, a `page -> items` procedure whose items fill the `<ul>`; it
+replaces the stock hook, and `default-metadata-items` is exported to compose
+with:
 
 ```scheme
 (define (flora-metadata-items page)
   (append (default-metadata-items page)
           (list `(li (@ (class "meta-item")) "…author or source items…"))))
+
+(make-html-options
+  #:hooks (make-html-hooks #:metadata-items flora-metadata-items))
 ```
 
 ## Composition API

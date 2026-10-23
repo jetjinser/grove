@@ -37,6 +37,8 @@
             default-metadata-items
             make-html-options
             html-options?
+            make-html-hooks
+            html-hooks?
             make-html-renderer))
 
 (define* (chrome-date text #:optional context)
@@ -304,6 +306,22 @@ inside them still localize."
                              (1+ (length arguments))))))
         (apply hook (append arguments (list context)))
         (apply hook arguments))))
+
+(define-record-type <html-hooks>
+  (%make-html-hooks title-decoration home-link site-nav metadata-items)
+  html-hooks?
+  (title-decoration html-hooks-title-decoration)
+  (home-link html-hooks-home-link)
+  (site-nav html-hooks-site-nav)
+  (metadata-items html-hooks-metadata-items))
+
+(define* (make-html-hooks #:key
+                          (title-decoration #f)
+                          (home-link #f)
+                          (site-nav '())
+                          (metadata-items default-metadata-items))
+  "Build the HTML hook value used by the renderer options."
+  (%make-html-hooks title-decoration home-link site-nav metadata-items))
 
 (define (metadata-sxml items)
   (if (null? items)
@@ -1006,9 +1024,9 @@ to the lane, and an in-place numbered marker links to it."
 
 (define-record-type <html-options>
   (%make-html-options style highlighters routes mathjax-src backmatter
-                      backmatter-labels reference-taxon-id title-decoration
+                      backmatter-labels reference-taxon-id hooks
                       article? backmatter-details? html-attributes head
-                      site-nav home-link metadata-items side-lane rules
+                      side-lane rules
                       presentation locale messages settings default-locale
                       site-url og-image og-image-alt hreflang?
                       language-switcher? rules-id hooks-id cache?)
@@ -1020,14 +1038,11 @@ to the lane, and an in-place numbered marker links to it."
   (backmatter html-options-backmatter)
   (backmatter-labels html-options-backmatter-labels)
   (reference-taxon-id html-options-reference-taxon-id)
-  (title-decoration html-options-title-decoration)
+  (hooks html-options-hooks)
   (article? html-options-article?)
   (backmatter-details? html-options-backmatter-details?)
   (html-attributes html-options-html-attributes)
   (head html-options-head)
-  (site-nav html-options-site-nav)
-  (home-link html-options-home-link)
-  (metadata-items html-options-metadata-items)
   (side-lane html-options-side-lane)
   (rules html-options-rules)
   (presentation html-options-presentation)
@@ -1052,14 +1067,11 @@ to the lane, and an in-place numbered marker links to it."
                             (backmatter default-backmatter-sections)
                             (backmatter-labels '())
                             (reference-taxon-id default-reference-taxon-id)
-                            (title-decoration #f)
+                            (hooks (make-html-hooks))
                             (article? #f)
                             (backmatter-details? #f)
                             (html-attributes '())
                             (head '())
-                            (site-nav '())
-                            (home-link #f)
-                            (metadata-items default-metadata-items)
                             (side-lane '())
                             (rules empty-render-rules)
                             (presentation #f)
@@ -1090,9 +1102,9 @@ value with #:options."
                         (html-presentation-rules presentation))
                    rules)))
     (%make-html-options style highlighters routes mathjax-src backmatter
-                        backmatter-labels reference-taxon-id title-decoration
+                        backmatter-labels reference-taxon-id hooks
                         article? backmatter-details? html-attributes head
-                        site-nav home-link metadata-items side-lane rules
+                        side-lane rules
                         presentation locale messages settings default-locale
                         site-url og-image og-image-alt hreflang?
                         language-switcher? rules-id hooks-id cache?)))
@@ -1105,14 +1117,15 @@ value with #:options."
          (backmatter (html-options-backmatter options))
          (backmatter-labels (html-options-backmatter-labels options))
          (reference-taxon-id (html-options-reference-taxon-id options))
-         (title-decoration (html-options-title-decoration options))
+         (hooks (html-options-hooks options))
+         (title-decoration (html-hooks-title-decoration hooks))
          (article? (html-options-article? options))
          (backmatter-details? (html-options-backmatter-details? options))
          (html-attributes (html-options-html-attributes options))
          (head (html-options-head options))
-         (site-nav (html-options-site-nav options))
-         (home-link (html-options-home-link options))
-         (metadata-items (html-options-metadata-items options))
+         (site-nav (html-hooks-site-nav hooks))
+         (home-link (html-hooks-home-link hooks))
+         (metadata-items (html-hooks-metadata-items hooks))
          (side-lane (html-options-side-lane options))
          (rules (html-options-rules options))
          (locale (html-options-locale options))
@@ -1170,21 +1183,22 @@ errors when the count outlives the list."
                 (cons (list-head rest size) chunks))))))
 
 (define* (render-html forest #:key (options (make-html-options)))
-    (let ((style (html-options-style options))
+    (let* ((style (html-options-style options))
           (highlighters (html-options-highlighters options))
           (routes (html-options-routes options))
           (mathjax-src (html-options-mathjax-src options))
           (backmatter (html-options-backmatter options))
           (backmatter-labels (html-options-backmatter-labels options))
           (reference-taxon-id (html-options-reference-taxon-id options))
-          (title-decoration (html-options-title-decoration options))
+          (hooks (html-options-hooks options))
+          (title-decoration (html-hooks-title-decoration hooks))
           (article? (html-options-article? options))
           (backmatter-details? (html-options-backmatter-details? options))
           (html-attributes (html-options-html-attributes options))
           (head (html-options-head options))
-          (site-nav (html-options-site-nav options))
-          (home-link (html-options-home-link options))
-          (metadata-items (html-options-metadata-items options))
+          (site-nav (html-hooks-site-nav hooks))
+          (home-link (html-hooks-home-link hooks))
+          (metadata-items (html-hooks-metadata-items hooks))
           (side-lane (html-options-side-lane options))
           (rules (html-options-rules options))
           (locale (html-options-locale options))
@@ -1245,14 +1259,15 @@ errors when the count outlives the list."
           (backmatter (html-options-backmatter options))
           (backmatter-labels (html-options-backmatter-labels options))
           (reference-taxon-id (html-options-reference-taxon-id options))
-          (title-decoration (html-options-title-decoration options))
+          (hooks (html-options-hooks options))
+          (title-decoration (html-hooks-title-decoration hooks))
           (article? (html-options-article? options))
           (backmatter-details? (html-options-backmatter-details? options))
           (html-attributes (html-options-html-attributes options))
           (head (html-options-head options))
-          (site-nav (html-options-site-nav options))
-          (home-link (html-options-home-link options))
-          (metadata-items (html-options-metadata-items options))
+          (site-nav (html-hooks-site-nav hooks))
+          (home-link (html-hooks-home-link hooks))
+          (metadata-items (html-hooks-metadata-items hooks))
           (side-lane (html-options-side-lane options))
           (rules (html-options-rules options))
           (locale (html-options-locale options))

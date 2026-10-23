@@ -325,23 +325,32 @@ version is fixed by `nix/flake.lock`.
 
 The HTML renderer accepts presentation options instead of requiring projects to
 rewrite rendered markup. They are available on `render-html`, `site->html`, and
-`make-html-renderer`:
+`make-html-renderer`. Project hooks are one value:
+
+```scheme
+(make-html-options
+  #:hooks (make-html-hooks
+            #:site-nav ...
+            #:home-link ...
+            #:title-decoration ...))
+```
 
 - `#:html-attributes` — an association list merged onto the root `<html>`
   element, for example `'((lang . "zh-Hans"))`.
 - `#:head` — SXML nodes placed in `<head>` after the description and before the
   stylesheets. Use it for viewport metadata, feed autodiscovery, or scripts that
   must run before the first paint.
-- `#:site-nav` — SXML nodes appended inside the site `<nav>`.
-- `#:home-link` — replaces the default home link: a procedure receiving the
-  index URL and returning the anchor SXML. Provide it when the navigation link
-  needs attributes, icons, or markup beyond the site title.
-- `#:title-decoration` — a procedure receiving the forest and the tree's page
-  record (every tree ID resolves to a page) and returning SXML inserted before
-  the title in tree headings and the table of contents. This is the supported
-  way to show per-tree frontmatter such as a taxon: `(page-taxon page)` and
-  `(page-tags page)` return the tree's own topic elements without scanning the
-  document.
+- `site-nav` (in `make-html-hooks`) — SXML nodes appended inside the site `<nav>`.
+- `home-link` (in `make-html-hooks`) — replaces the default home link: a
+  procedure receiving the index URL and returning the anchor SXML. Provide it
+  when the navigation link needs attributes, icons, or markup beyond the site
+  title.
+- `title-decoration` (in `make-html-hooks`) — a procedure receiving the forest
+  and the tree's page record (every tree ID resolves to a page) and returning
+  SXML inserted before the title in tree headings and the table of contents.
+  This is the supported way to show per-tree frontmatter such as a taxon:
+  `(page-taxon page)` and `(page-tags page)` return the tree's own topic
+  elements without scanning the document.
 - `#:article?` — wraps the page tree and its backmatter in one `<article>`
   element, leaving the table of contents outside it.
 - `#:side-lane` — a list of content element kinds (e.g. `(sidenote)`).
@@ -358,9 +367,10 @@ rewrite rendered markup. They are available on `render-html`, `site->html`, and
   `details`/`summary` block.
 
 The boolean and SXML-valued options participate in the renderer's cache
-configuration, so changing one invalidates cached pages. The procedure options
-(`#:home-link`, `#:title-decoration`) depend on project code, which Grove
-already tracks as an input.
+configuration, so changing one invalidates cached pages. The procedure hooks
+(`home-link`, `title-decoration`, `metadata-items`) require a stable
+`#:hooks-id` in the options; without it the renderer disables caching instead
+of risking stale output.
 
 ## Packaging and measurement
 

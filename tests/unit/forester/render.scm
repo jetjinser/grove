@@ -183,10 +183,12 @@
         (render-test-html
           (make-forest (make-site (list algebra limits)))
           #:mathjax-src #f
-          #:metadata-items
-          (lambda (page)
-            (cons '(li (@ (class "meta-item")) "hooked")
-                  (default-metadata-items page))))
+          #:hooks
+          (make-html-hooks
+            #:metadata-items
+            (lambda (page)
+              (cons '(li (@ (class "meta-item")) "hooked")
+                    (default-metadata-items page)))))
         "algebra")
       "<div class=\"metadata\"><ul><li class=\"meta-item\">hooked</li></ul></div>"))
   (test-assert "at-exp link resolves to a page"
@@ -310,12 +312,16 @@
   (test-assert "custom HTML hooks disable caching without a hooks id"
     (not (cached-renderer-cache?
            (make-html-renderer
-             #:options (make-html-options #:title-decoration hook)))))
+             #:options
+             (make-html-options
+               #:hooks (make-html-hooks #:title-decoration hook))))))
   (test-assert "HTML hooks with an id stay cacheable"
     (cached-renderer-cache?
       (make-html-renderer
-        #:options (make-html-options #:title-decoration hook
-                                     #:hooks-id 'v1)))))
+        #:options
+        (make-html-options
+          #:hooks (make-html-hooks #:title-decoration hook)
+          #:hooks-id 'v1)))))
 
 (test-assert "HTML pages declare standards mode"
   (string-prefix? "<!DOCTYPE html>" (assoc-ref
@@ -934,13 +940,15 @@
                  #:options
                  (make-html-options
                    #:routes routes
-                   #:title-decoration
-                   (lambda (forest page)
-                     (if (string=? (site-page-id page) "overview")
-                         `((span (@ (class "taxon")) "overview. ")
-                           (span (@ (class "source"))
-                             ,(or (site-page-source page) "?")))
-                         '()))))
+                   #:hooks
+                   (make-html-hooks
+                     #:title-decoration
+                     (lambda (forest page)
+                       (if (string=? (site-page-id page) "overview")
+                           `((span (@ (class "taxon")) "overview. ")
+                             (span (@ (class "source"))
+                               ,(or (site-page-source page) "?")))
+                           '())))))
                "target")))
   (test-assert "title-decoration decorates tree headings"
     (string-contains html
@@ -963,11 +971,13 @@
                  #:options
                  (make-html-options
                    #:routes (make-html-routes)
-                   #:title-decoration
-                   (lambda (forest page)
-                     (if (assq-ref (site-page-metadata page) 'summary)
-                         '((span (@ (class "summary")) "S"))
-                         '()))))
+                   #:hooks
+                   (make-html-hooks
+                     #:title-decoration
+                     (lambda (forest page)
+                       (if (assq-ref (site-page-metadata page) 'summary)
+                           '((span (@ (class "summary")) "S"))
+                           '())))))
                "annotated")))
   (test-assert "title-decoration reads page metadata through the forest"
     (string-contains html "<span class=\"summary\">S</span>")))
@@ -981,7 +991,9 @@
                  #:routes routes
                  #:html-attributes '((lang . "zh-CN"))
                  #:head '((link (@ (rel "alternate") (href "/feed.xml"))))
-                 #:site-nav '((div (@ (class "controls")) "Controls"))
+                 #:hooks
+                 (make-html-hooks
+                   #:site-nav '((div (@ (class "controls")) "Controls")))
                  #:article? #t
                  #:backmatter-details? #t)))
        (algebra-html (assoc-ref html "algebra"))
@@ -1008,9 +1020,11 @@
                       #:options
                       (make-html-options
                         #:routes routes
-                        #:home-link
-                        (lambda (href)
-                          `(a (@ (class "brand") (href ,href)) "Home"))))
+                        #:hooks
+                        (make-html-hooks
+                          #:home-link
+                          (lambda (href)
+                            `(a (@ (class "brand") (href ,href)) "Home")))))
                     "algebra")))
       (and (string-contains custom "<a class=\"brand\" href=\"/index.html\">Home</a></nav>")
            (not (string-contains custom "Linked Notes</a></nav>"))))))

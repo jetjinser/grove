@@ -102,8 +102,10 @@
 
 (let ((page (render-page
               #:locale "zh-Hans"
-              #:metadata-items
-              (lambda (target) (default-metadata-items target)))))
+              #:hooks
+              (make-html-hooks
+                #:metadata-items
+                (lambda (target) (default-metadata-items target))))))
   (test-assert "one-argument metadata hooks keep the page locale"
     (string-contains page "更新于 2026年9月28日")))
 
@@ -126,9 +128,12 @@
 
 (let* ((routes (make-html-routes #:home-page "root"))
        (page (render-page
-               #:site-nav (lambda (current)
-                            (list (site-nav-link routes "root" "Home"
-                                                 #:current-page current))))))
+               #:hooks
+               (make-html-hooks
+                 #:site-nav
+                 (lambda (current)
+                   (list (site-nav-link routes "root" "Home"
+                                        #:current-page current)))))))
   (test-assert "site navigation procedures receive the current page"
     (and (string-contains page "<nav aria-label=\"Site\">")
          (string-contains page "aria-current=\"page\""))))

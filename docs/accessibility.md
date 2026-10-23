@@ -21,9 +21,10 @@ to them.
   named navigation whose current language carries `aria-current="true"`.
 - The site navigation link to the current page carries
   `aria-current="page"`.  Use `site-nav-link` for project navigation, and
-  pass `#:site-nav` a procedure of the current page id so it can mark the
-  active entry.  The data-driven `site-nav` helper returns stable SXML; a
-  procedure is compared by object identity in the renderer cache key.
+  pass `#:site-nav` to `make-html-hooks` as a procedure of the current page id
+  so it can mark the active entry.  The data-driven `site-nav` helper returns
+  stable SXML; a procedure requires a `#:hooks-id` in the renderer options to
+  participate in the cache key.
 - `@image` emits `<img>` with `alt` taken from the element's children; an
   image without children is decorative (`alt=""`).
 - Collapsible trees and backmatter use native `<details>/<summary>`, so

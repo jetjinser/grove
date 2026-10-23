@@ -14,7 +14,21 @@
             render-context-without
             render-context-values
             current-render-context
-            with-render-context))
+            with-render-context
+            render-context-forest
+            render-context-routes
+            render-context-page
+            render-context-anchor-prefix
+            render-context-site-url
+            render-context-default-locale
+            render-context-hreflang?
+            render-context-language-switcher?
+            render-context-translation-groups
+            render-context-og-image
+            render-context-og-image-alt
+            render-context-locale
+            render-context-locale-object
+            render-context-messages))
 
 ;; A render context is an explicit value passed to interpretations.  It is a
 ;; record over an association list so projects can add namespaced keys without
@@ -84,6 +98,51 @@ namespaced data without changing the record."
   (unless (symbol? key)
     (error "render context keys must be symbols" key))
   (assq-ref (render-context-values context) key))
+
+;; Typed accessors for the documented keys.  RENDER-CONTEXT-REF remains the
+;; escape hatch for project-defined namespaced keys.
+
+(define (render-context-forest context)
+  (render-context-ref context 'forest))
+
+(define (render-context-routes context)
+  (render-context-ref context 'routes))
+
+(define (render-context-page context)
+  (render-context-ref context 'page))
+
+(define (render-context-anchor-prefix context)
+  (render-context-ref context 'anchor-prefix))
+
+(define (render-context-site-url context)
+  (render-context-ref context 'site-url))
+
+(define (render-context-default-locale context)
+  (render-context-ref context 'default-locale))
+
+(define (render-context-hreflang? context)
+  (render-context-ref context 'hreflang?))
+
+(define (render-context-language-switcher? context)
+  (render-context-ref context 'language-switcher?))
+
+(define (render-context-translation-groups context)
+  (render-context-ref context 'translation-groups))
+
+(define (render-context-og-image context)
+  (render-context-ref context 'og-image))
+
+(define (render-context-og-image-alt context)
+  (render-context-ref context 'og-image-alt))
+
+(define (render-context-locale context)
+  (render-context-ref context 'locale))
+
+(define (render-context-locale-object context)
+  (render-context-ref context 'locale-object))
+
+(define (render-context-messages context)
+  (render-context-ref context 'messages))
 
 (define (render-context-has? context key)
   "Return #t when KEY is present in CONTEXT, even if its value is #f."

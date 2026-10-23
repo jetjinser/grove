@@ -14,6 +14,49 @@
   (test-equal "construction keeps unknown keys"
     "v" (render-context-ref context 'custom-key)))
 
+(let ((context (make-render-context #:forest "forest"
+                                    #:routes "routes"
+                                    #:page "page"
+                                    #:anchor-prefix "anchor"
+                                    #:site-url "site"
+                                    #:default-locale "en"
+                                    #:hreflang? #f
+                                    #:language-switcher? #t
+                                    #:translation-groups 'groups
+                                    #:og-image "image"
+                                    #:og-image-alt "alt"
+                                    #:locale "zh-Hans"
+                                    #:locale-object "locale-object"
+                                    #:messages "messages")))
+  (test-equal "typed forest accessor" "forest"
+    (render-context-forest context))
+  (test-equal "typed routes accessor" "routes"
+    (render-context-routes context))
+  (test-equal "typed page accessor" "page"
+    (render-context-page context))
+  (test-equal "typed anchor-prefix accessor" "anchor"
+    (render-context-anchor-prefix context))
+  (test-equal "typed site-url accessor" "site"
+    (render-context-site-url context))
+  (test-equal "typed default-locale accessor" "en"
+    (render-context-default-locale context))
+  (test-equal "typed hreflang accessor" #f
+    (render-context-hreflang? context))
+  (test-equal "typed language-switcher accessor" #t
+    (render-context-language-switcher? context))
+  (test-equal "typed translation-groups accessor" 'groups
+    (render-context-translation-groups context))
+  (test-equal "typed og-image accessor" "image"
+    (render-context-og-image context))
+  (test-equal "typed og-image-alt accessor" "alt"
+    (render-context-og-image-alt context))
+  (test-equal "typed locale accessor" "zh-Hans"
+    (render-context-locale context))
+  (test-equal "typed locale-object accessor" "locale-object"
+    (render-context-locale-object context))
+  (test-equal "typed messages accessor" "messages"
+    (render-context-messages context)))
+
 (let ((context (make-render-context #:hreflang? #t #:language-switcher? #f)))
   (test-equal "explicit #f is preserved"
     #f (render-context-ref context 'language-switcher?))
