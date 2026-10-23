@@ -84,7 +84,9 @@ A project's `project.scm` returns its configuration. From that directory:
 Set `#:default-prefix "jsk"` to create addresses such as `jsk-0001` and
 `jsk-000a`. `grove new math` selects another prefix. New trees need a title
 before building. Use `grove --help` for options and the
-[project reference](docs/project.md) for configuration.
+[project reference](docs/project.md) for configuration.  For a task-oriented
+map from “change X” to the right API, see
+[docs/customizing.md](docs/customizing.md).
 
 ## Explore
 
