@@ -46,8 +46,7 @@ artifact paths.
       (case language
         ((typst) (typst-source->svg source))
         ((latex) (latex-source->svg source))
-        (else (error "unknown math source language" language))))
-    #:dependencies (list "math/macros.typ" "fonts/site-fonts.toml")))
+        (else (error "unknown math source language" language)))))
 
 ;; Add it beside the HTML renderer in the project's renderer list.
 (make-site-options
@@ -62,6 +61,10 @@ artifact paths.
 The compiler ID defaults to `"project"`. Set `#:compiler-id` when a toolchain
 version or option can change independently of the project configuration and
 must invalidate the renderer cache.
+
+Add `#:dependencies` only for files the compiler actually reads, such as a
+project's shared Typst file or a local font configuration. Those paths must
+exist; Grove fingerprints them and associates them with the generated assets.
 
 The compiler functions are ordinary project Scheme procedures. They may call
 the `typst` executable, run a LaTeX toolchain, or use another service. Keep
