@@ -13,10 +13,10 @@ This is the shortest path from “I want to change X” to the right Grove API.
 | --- | --- | --- |
 | one element's HTML | an HTML presentation | `make-html-options #:presentation (make-html-presentation #:rules ...)` |
 | one element's text/gemtext output | backend rules using the shared rule API | `make-text-options` / `make-gemtext-options #:rules` |
-| the metadata line under a title | page-keyed chrome data | `make-html-chrome #:metadata-items` |
-| the site navigation | static SXML and route-aware links | `make-html-chrome #:site-nav` |
-| the home link | a declarative home-link value | `make-html-chrome #:home-link` |
-| tree headings or the table of contents | page-keyed chrome data | `make-html-chrome #:title-decorations` |
+| the metadata line under a title | page-specific presentation data | `make-html-presentation #:metadata-items` |
+| the site navigation | static SXML and route-aware links | `make-html-presentation #:site-nav` |
+| the home link | a declarative home-link value | `make-html-presentation #:home-link` |
+| tree headings or the table of contents | page-specific presentation data | `make-html-presentation #:title-decorations` |
 | locale, messages, or date formatting | renderer options | `make-html-options #:locale/#:messages` |
 | output paths | routes | `make-html-routes`, `make-text-routes`, `#:prefix` |
 | sitemap, feed, or graph | derived artifacts | `make-site-options #:derived` |
@@ -57,7 +57,7 @@ All of them take one options value:
 | lifetime | immutable configuration | one render pass |
 | shape | typed record | symbol alist with typed accessors |
 | read by | renderer entry points | rules and derived artifacts |
-| examples | style, rules, hooks, routes | forest, page, locale, messages |
+| examples | style, rules, presentation, routes | forest, page, locale, messages |
 
 Use `make-html-options` / `make-text-options` / `make-gemtext-options` for
 configuration.  Use `render-context-page`, `render-context-locale`, and the
@@ -88,10 +88,8 @@ for project-defined keys.
 (make-html-options
   #:presentation
   (make-html-presentation
-    #:chrome
-    (make-html-chrome
       #:metadata-items
-      '(("about" . ((li (@ (class "meta-item")) "author")))))))
+      '(("about" . ((li (@ (class "meta-item")) "author"))))))
 ```
 
 ### Add sitemap and feed

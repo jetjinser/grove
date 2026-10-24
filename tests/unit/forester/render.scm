@@ -186,10 +186,8 @@
           #:mathjax-src #f
           #:presentation
           (make-html-presentation
-            #:chrome
-            (make-html-chrome
               #:metadata-items
-              '(("algebra" . ((li (@ (class "meta-item")) "declared")))))))
+              '(("algebra" . ((li (@ (class "meta-item")) "declared"))))))
         "algebra")
       "<div class=\"metadata\"><ul><li class=\"meta-item\">declared</li></ul></div>"))
   (test-assert "at-exp link resolves to a page"
@@ -314,16 +312,15 @@
       (make-gemtext-renderer
         #:options (make-gemtext-options #:rules rules #:rules-id 'v1)))))
 
-(test-assert "declarative HTML chrome remains cacheable"
+(test-assert "declarative HTML presentation remains cacheable"
   (cached-renderer-cache?
     (make-html-renderer
       #:options
       (make-html-options
         #:presentation
         (make-html-presentation
-          #:chrome (make-html-chrome
                      #:title-decorations
-                     '(("algebra" . ((span "Algebra"))))))))))
+                     '(("algebra" . ((span "Algebra")))))))))
 
 (test-assert "HTML pages declare standards mode"
   (string-prefix? "<!DOCTYPE html>" (assoc-ref
@@ -950,11 +947,9 @@
                    #:routes routes
                    #:presentation
                    (make-html-presentation
-                     #:chrome
-                     (make-html-chrome
                        #:title-decorations
                        '(("overview" . ((span (@ (class "taxon")) "overview. ")
-                                         (span (@ (class "source")) "?"))))))))
+                                         (span (@ (class "source")) "?")))))))
                "target")))
   (test-assert "title-decoration decorates tree headings"
     (string-contains html
@@ -979,10 +974,8 @@
                    #:routes (make-html-routes)
                    #:presentation
                    (make-html-presentation
-                     #:chrome
-                     (make-html-chrome
                        #:title-decorations
-                       '(("annotated" . ((span (@ (class "summary")) "S"))))))))
+                       '(("annotated" . ((span (@ (class "summary")) "S")))))))
                "annotated")))
   (test-assert "title-decoration reads page metadata through the forest"
     (string-contains html "<span class=\"summary\">S</span>")))
@@ -997,10 +990,8 @@
                  #:html-attributes '((lang . "zh-CN"))
                  #:presentation
                  (make-html-presentation
-                   #:chrome
-                   (make-html-chrome
                      #:head '((link (@ (rel "alternate") (href "/feed.xml"))))
-                     #:site-nav '((div (@ (class "controls")) "Controls"))))
+                     #:site-nav '((div (@ (class "controls")) "Controls")))
                  #:article? #t
                  #:backmatter-details? #t)))
        (algebra-html (assoc-ref html "algebra"))
@@ -1029,11 +1020,9 @@
                         #:routes routes
                         #:presentation
                         (make-html-presentation
-                          #:chrome
-                          (make-html-chrome
                             #:home-link
                             (make-html-home-link '("Home")
-                              #:attributes '((class . "brand")))))))
+                              #:attributes '((class . "brand"))))))
                     "algebra")))
       (and (string-contains custom "<a class=\"brand\" href=\"/index.html\">Home</a></nav>")
            (not (string-contains custom "Linked Notes</a></nav>"))))))

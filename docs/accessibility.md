@@ -21,7 +21,7 @@ to them.
   named navigation whose current language carries `aria-current="true"`.
 - The site navigation link to the current page carries
   `aria-current="page"`. Use `make-html-nav-link` values in
-  `make-html-chrome #:site-nav`; the renderer resolves their routes and marks
+  `make-html-presentation #:site-nav`; the renderer resolves their routes and marks
   the current page while keeping navigation declarative and cacheable.
 - `@image` emits `<img>` with `alt` taken from the element's children; an
   image without children is decorative (`alt=""`).

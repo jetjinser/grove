@@ -146,12 +146,12 @@
                    (html-presentation-rules
                      (compose-html-presentations a b)))))))
 
-(let* ((first (make-html-chrome
+(let* ((first (make-html-presentation
                 #:head '((meta (@ (name "first"))))
                 #:site-nav '((span "first"))
                 #:title-decorations '(("p" . ((span "a"))))
                 #:metadata-items '(("p" . ((li "a"))))))
-       (second (make-html-chrome
+       (second (make-html-presentation
                  #:head '((meta (@ (name "second"))))
                  #:site-nav '((span "second"))
                  #:title-decorations '(("p" . ((span "b")))
@@ -159,56 +159,53 @@
                  #:metadata-items '(("p" . ((li "b"))))))
        (home-a (make-html-home-link '("A")))
        (home-b (make-html-home-link '("B")))
-       (a (make-html-presentation #:chrome first))
-       (b (make-html-presentation #:chrome second))
+       (a first)
+       (b second)
        (left (compose-html-presentations
                a (compose-html-presentations b empty-html-presentation)))
        (right (compose-html-presentations
                 (compose-html-presentations a b) empty-html-presentation)))
-  (test-equal "chrome appends head and navigation nodes"
+  (test-equal "presentation appends head and navigation nodes"
     '((meta (@ (name "first"))) (meta (@ (name "second"))))
-    (html-chrome-head (html-presentation-chrome left)))
-  (test-equal "chrome merges page fragments in declaration order"
+    (html-presentation-head left))
+  (test-equal "presentation merges page fragments in declaration order"
     '((span "a") (span "b"))
-    (html-chrome-title-decoration (html-presentation-chrome left) "p"))
-  (test-equal "chrome appends page metadata by page ID"
+    (html-presentation-title-decoration left "p"))
+  (test-equal "presentation appends page metadata by page ID"
     '((li "a") (li "b"))
-    (html-chrome-metadata-items (html-presentation-chrome left) "p"))
-  (test-equal "chrome composition is associative"
-    (list (html-chrome-head (html-presentation-chrome left))
-          (html-chrome-site-nav (html-presentation-chrome left))
-          (html-chrome-title-decorations (html-presentation-chrome left))
-          (html-chrome-metadata-item-map (html-presentation-chrome left)))
-    (list (html-chrome-head (html-presentation-chrome right))
-          (html-chrome-site-nav (html-presentation-chrome right))
-          (html-chrome-title-decorations (html-presentation-chrome right))
-          (html-chrome-metadata-item-map (html-presentation-chrome right))))
+    (html-presentation-metadata-items left "p"))
+  (test-equal "presentation composition is associative"
+    (list (html-presentation-head left)
+          (html-presentation-site-nav left)
+          (html-presentation-title-decorations left)
+          (html-presentation-metadata-item-map left))
+    (list (html-presentation-head right)
+          (html-presentation-site-nav right)
+          (html-presentation-title-decorations right)
+          (html-presentation-metadata-item-map right)))
   (test-equal "the rightmost declared home link wins"
     home-b
-    (html-chrome-home-link
-      (html-presentation-chrome
-        (compose-html-presentations
-          (make-html-presentation
-            #:chrome (make-html-chrome #:home-link home-a))
-          (make-html-presentation
-            #:chrome (make-html-chrome #:home-link home-b))))))
-  (test-equal "an absent page has no chrome fragments"
+    (html-presentation-home-link
+      (compose-html-presentations
+        (make-html-presentation #:home-link home-a)
+        (make-html-presentation #:home-link home-b))))
+  (test-equal "an absent page has no presentation fragments"
     '()
-    (html-chrome-title-decoration (html-presentation-chrome left) "absent")))
+    (html-presentation-title-decoration left "absent")))
 
-(test-error "chrome rejects procedure-valued SXML"
+(test-error "presentation rejects procedure-valued SXML"
   #t
-  (make-html-chrome #:head (list (lambda () '((meta))))))
+  (make-html-presentation #:head (list (lambda () '((meta))))))
 
-(test-error "chrome rejects duplicate SXML attributes" #t
-  (make-html-chrome
+(test-error "presentation rejects duplicate SXML attributes" #t
+  (make-html-presentation
     #:head '((meta (@ (name "viewport") (name "description"))))))
 
-(test-error "chrome rejects malformed dotted SXML nodes" #t
-  (make-html-chrome #:head (list (cons 'meta "not a child list"))))
+(test-error "presentation rejects malformed dotted SXML nodes" #t
+  (make-html-presentation #:head (list (cons 'meta "not a child list"))))
 
-(test-error "chrome rejects duplicate page IDs" #t
-  (make-html-chrome
+(test-error "presentation rejects duplicate page IDs" #t
+  (make-html-presentation
     #:metadata-items '(("page" . ((li "first")))
                        ("page" . ((li "second"))))))
 

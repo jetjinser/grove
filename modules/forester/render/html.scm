@@ -254,8 +254,8 @@ backlog report collects the mention."
       (string-append "#" (substring id (string-length "unstable-")))
       id))
 (define* (default-metadata-items page #:optional context)
-  "The stock metadata items: the page's publication dates. Render
-hooks replace this wholesale; compose with it to extend."
+  "The stock metadata items: the page's publication dates. Additional items
+from the HTML presentation are appended after these."
   (let ((published (assq-ref (site-page-metadata page) 'published))
         (updated (assq-ref (site-page-metadata page) 'updated)))
     `(,@(if published
@@ -270,22 +270,22 @@ hooks replace this wholesale; compose with it to extend."
                            context))))
             '()))))
 
-(define (chrome-title-decoration chrome page)
-  (html-chrome-title-decoration chrome (site-page-id page)))
+(define (presentation-title-decoration presentation page)
+  (html-presentation-title-decoration presentation (site-page-id page)))
 
-(define (chrome-metadata-items chrome page context)
+(define (presentation-metadata-items presentation page context)
   (append (default-metadata-items page context)
-          (html-chrome-metadata-items chrome (site-page-id page))))
+          (html-presentation-metadata-items presentation (site-page-id page))))
 
-(define (chrome-title-decoration-procedure chrome)
-  (lambda (_forest page) (chrome-title-decoration chrome page)))
+(define (presentation-title-decoration-procedure presentation)
+  (lambda (_forest page) (presentation-title-decoration presentation page)))
 
-(define (chrome-metadata-items-procedure chrome)
-  (lambda (page context) (chrome-metadata-items chrome page context)))
+(define (presentation-metadata-items-procedure presentation)
+  (lambda (page context) (presentation-metadata-items presentation page context)))
 
-(define (chrome-configuration chrome)
-  (let ((home-link (html-chrome-home-link chrome)))
-    (list (html-chrome-head chrome)
+(define (presentation-cache-identity presentation)
+  (let ((home-link (html-presentation-home-link presentation)))
+    (list (html-presentation-head presentation)
           (and home-link
                (list (html-home-link-content home-link)
                      (html-home-link-attributes home-link)))
@@ -295,9 +295,9 @@ hooks replace this wholesale; compose with it to extend."
                            (html-nav-link-label entry)
                            (html-nav-link-attributes entry))
                      entry))
-               (html-chrome-site-nav chrome))
-          (html-chrome-title-decorations chrome)
-          (html-chrome-metadata-item-map chrome))))
+               (html-presentation-site-nav presentation))
+          (html-presentation-title-decorations presentation)
+          (html-presentation-metadata-item-map presentation))))
 
 (define (site-nav-for-page routes entries page)
   (map (lambda (entry)
@@ -1081,7 +1081,7 @@ to the lane, and an in-place numbered marker links to it."
                             (cache? #t))
   "Build the immutable HTML renderer configuration.
 
-PRESENTATION contains HTML style, element rules, and declarative page chrome.
+PRESENTATION contains HTML style, element rules, and static site presentation data.
 Entry points take this value with #:options."
   (let ((presentation
           (or presentation
@@ -1097,7 +1097,7 @@ Entry points take this value with #:options."
 
 (define* (site->html forest #:key (options (make-html-options)))
   (let* ((presentation (html-options-presentation options))
-         (chrome (html-presentation-chrome presentation))
+         (presentation-data presentation)
          (style (html-presentation-style presentation))
          (highlighters (html-options-highlighters options))
          (routes (html-options-routes options))
@@ -1105,14 +1105,14 @@ Entry points take this value with #:options."
          (backmatter (html-options-backmatter options))
          (backmatter-labels (html-options-backmatter-labels options))
          (reference-taxon-id (html-options-reference-taxon-id options))
-         (title-decoration (chrome-title-decoration-procedure chrome))
+         (title-decoration (presentation-title-decoration-procedure presentation-data))
          (article? (html-options-article? options))
          (backmatter-details? (html-options-backmatter-details? options))
          (html-attributes (html-options-html-attributes options))
-         (head (html-chrome-head chrome))
-         (site-nav (html-chrome-site-nav chrome))
-         (home-link (html-chrome-home-link chrome))
-         (metadata-items (chrome-metadata-items-procedure chrome))
+         (head (html-presentation-head presentation))
+         (site-nav (html-presentation-site-nav presentation))
+         (home-link (html-presentation-home-link presentation))
+         (metadata-items (presentation-metadata-items-procedure presentation-data))
          (side-lane (html-options-side-lane options))
          (rules (html-presentation-rules presentation))
          (locale (html-options-locale options))
@@ -1171,7 +1171,7 @@ errors when the count outlives the list."
 
 (define* (render-html forest #:key (options (make-html-options)))
     (let* ((presentation (html-options-presentation options))
-          (chrome (html-presentation-chrome presentation))
+          (presentation-data presentation)
           (style (html-presentation-style presentation))
           (highlighters (html-options-highlighters options))
           (routes (html-options-routes options))
@@ -1179,14 +1179,14 @@ errors when the count outlives the list."
           (backmatter (html-options-backmatter options))
           (backmatter-labels (html-options-backmatter-labels options))
           (reference-taxon-id (html-options-reference-taxon-id options))
-          (title-decoration (chrome-title-decoration-procedure chrome))
+          (title-decoration (presentation-title-decoration-procedure presentation-data))
           (article? (html-options-article? options))
           (backmatter-details? (html-options-backmatter-details? options))
           (html-attributes (html-options-html-attributes options))
-          (head (html-chrome-head chrome))
-          (site-nav (html-chrome-site-nav chrome))
-          (home-link (html-chrome-home-link chrome))
-          (metadata-items (chrome-metadata-items-procedure chrome))
+          (head (html-presentation-head presentation))
+          (site-nav (html-presentation-site-nav presentation))
+          (home-link (html-presentation-home-link presentation))
+          (metadata-items (presentation-metadata-items-procedure presentation-data))
           (side-lane (html-options-side-lane options))
           (rules (html-presentation-rules presentation))
           (locale (html-options-locale options))
@@ -1241,7 +1241,7 @@ errors when the count outlives the list."
              (iota total 1)))))))
 (define* (make-html-renderer #:key (options (make-html-options)))
     (let* ((presentation (html-options-presentation options))
-          (chrome (html-presentation-chrome presentation))
+          (presentation-data presentation)
           (style (html-presentation-style presentation))
           (highlighters (html-options-highlighters options))
           (routes (html-options-routes options))
@@ -1249,14 +1249,14 @@ errors when the count outlives the list."
           (backmatter (html-options-backmatter options))
           (backmatter-labels (html-options-backmatter-labels options))
           (reference-taxon-id (html-options-reference-taxon-id options))
-          (title-decoration (chrome-title-decoration-procedure chrome))
+          (title-decoration (presentation-title-decoration-procedure presentation-data))
           (article? (html-options-article? options))
           (backmatter-details? (html-options-backmatter-details? options))
           (html-attributes (html-options-html-attributes options))
-          (head (html-chrome-head chrome))
-          (site-nav (html-chrome-site-nav chrome))
-          (home-link (html-chrome-home-link chrome))
-          (metadata-items (chrome-metadata-items-procedure chrome))
+          (head (html-presentation-head presentation))
+          (site-nav (html-presentation-site-nav presentation))
+          (home-link (html-presentation-home-link presentation))
+          (metadata-items (presentation-metadata-items-procedure presentation-data))
           (side-lane (html-options-side-lane options))
           (rules (html-presentation-rules presentation))
           (locale (html-options-locale options))
@@ -1284,7 +1284,7 @@ errors when the count outlives the list."
                   (html-index-url routes)
                   mathjax-src backmatter backmatter-labels reference-taxon-id
                   article? backmatter-details? html-attributes
-                  (chrome-configuration chrome)
+                  (presentation-cache-identity presentation-data)
                   side-lane (resolve-chrome-locale locale (resolve-chrome-catalog messages))
                   default-locale site-url og-image og-image-alt hreflang? language-switcher?
                   rules-id

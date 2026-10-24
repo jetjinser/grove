@@ -322,18 +322,16 @@ source without highlight markup. The `grove-highlights` Nix package includes
 the grammar, its matching upstream query, and the grammar's license; their
 version is fixed by `nix/flake.lock`.
 
-## HTML presentation chrome
+## HTML presentation
 
 The HTML renderer accepts presentation options instead of requiring projects to
 rewrite rendered markup. They are available on `render-html`, `site->html`, and
-`make-html-renderer`. The presentation carries static, composable chrome data:
+`make-html-renderer`. The presentation carries static, composable presentation data:
 
 ```scheme
 (make-html-options
   #:presentation
   (make-html-presentation
-    #:chrome
-    (make-html-chrome
       #:head '((link (@ (rel "alternate") (href "/feed.xml"))))
       #:site-nav (list (make-html-nav-link "about" "About"))
       #:home-link (make-html-home-link '("Home")
@@ -341,7 +339,7 @@ rewrite rendered markup. They are available on `render-html`, `site->html`, and
       #:title-decorations
       '(("about" . ((span (@ (class "taxon")) "guide. "))))
       #:metadata-items
-      '(("about" . ((li (@ (class "meta-item")) "Author")))))))
+      '(("about" . ((li (@ (class "meta-item")) "Author"))))))
 ```
 
 - `#:html-attributes` — an association list merged onto the root `<html>`

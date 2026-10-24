@@ -16,24 +16,19 @@
             make-html-home-link
             html-home-link-content
             html-home-link-attributes
-            html-chrome?
-            make-html-chrome
-            empty-html-chrome
-            compose-html-chromes
-            html-chrome-head
-            html-chrome-home-link
-            html-chrome-site-nav
-            html-chrome-title-decoration
-            html-chrome-title-decorations
-            html-chrome-metadata-items
-            html-chrome-metadata-item-map
             html-presentation?
             make-html-presentation
             empty-html-presentation
             compose-html-presentations
             html-presentation-style
             html-presentation-rules
-            html-presentation-chrome))
+            html-presentation-head
+            html-presentation-home-link
+            html-presentation-site-nav
+            html-presentation-title-decoration
+            html-presentation-title-decorations
+            html-presentation-metadata-items
+            html-presentation-metadata-item-map))
 
 (define-record-type <html-nav-link>
   (%make-html-nav-link page-id label attributes)
@@ -139,15 +134,6 @@ is a list of symbol/string pairs."
     (error "HTML home-link href is supplied by its route" attributes))
   (%make-html-home-link content attributes))
 
-(define-record-type <html-chrome>
-  (%make-html-chrome head home-link site-nav title-decorations metadata-items)
-  html-chrome?
-  (head html-chrome-head)
-  (home-link html-chrome-home-link)
-  (site-nav html-chrome-site-nav)
-  (title-decorations html-chrome-title-decorations)
-  (metadata-items html-chrome-metadata-item-map))
-
 (define (valid-page-sxml-map? entries)
   (and (list? entries)
        (every (lambda (entry)
@@ -157,21 +143,39 @@ is a list of symbol/string pairs."
        (= (length entries)
           (length (delete-duplicates (map car entries) string=?)))))
 
-(define* (make-html-chrome #:key (head '()) (home-link #f) (site-nav '())
-                           (title-decorations '()) (metadata-items '()))
-  "Build declarative HTML chrome values.
+(define-record-type <html-presentation>
+  (%make-html-presentation style rules head home-link site-nav
+                           title-decorations metadata-items)
+  html-presentation?
+  (style html-presentation-style)
+  (rules html-presentation-rules)
+  (head html-presentation-head)
+  (home-link html-presentation-home-link)
+  (site-nav html-presentation-site-nav)
+  (title-decorations html-presentation-title-decorations)
+  (metadata-items html-presentation-metadata-item-map))
+
+(define* (make-html-presentation #:key (style (make-html-style))
+                                 (rules empty-render-rules)
+                                 (head '()) (home-link #f) (site-nav '())
+                                 (title-decorations '()) (metadata-items '()))
+  "Build a declarative HTML presentation.
 
 HEAD and SITE-NAV are static SXML child lists. TITLE-DECORATIONS and
 METADATA-ITEMS map page IDs to static SXML child lists."
+  (unless (html-style? style)
+    (error "presentation style must be an HTML style" style))
+  (unless (render-rules? rules)
+    (error "presentation rules must be render rules" rules))
   (unless (and (static-sxml-list? head)
                (list? site-nav)
                (every (lambda (entry)
                         (or (html-nav-link? entry)
                             (static-sxml-node? entry)))
                       site-nav))
-    (error "HTML chrome head and navigation must be SXML lists" head site-nav))
+    (error "HTML presentation head and navigation must be SXML lists" head site-nav))
   (unless (or (not home-link) (html-home-link? home-link))
-    (error "HTML chrome home link must be an HTML home-link value or #f"
+    (error "HTML presentation home link must be an HTML home-link value or #f"
            home-link))
   (unless (valid-page-sxml-map? title-decorations)
     (error "HTML title decorations must map page IDs to SXML lists"
@@ -179,9 +183,8 @@ METADATA-ITEMS map page IDs to static SXML child lists."
   (unless (valid-page-sxml-map? metadata-items)
     (error "HTML metadata items must map page IDs to SXML lists"
            metadata-items))
-  (%make-html-chrome head home-link site-nav title-decorations metadata-items))
-
-(define empty-html-chrome (make-html-chrome))
+  (%make-html-presentation style rules head home-link site-nav
+                           title-decorations metadata-items))
 
 (define (merge-page-sxml base overlay)
   (fold (lambda (entry result)
@@ -195,56 +198,19 @@ METADATA-ITEMS map page IDs to static SXML child lists."
                 (append result (list entry)))))
         base overlay))
 
-(define (compose-html-chromes base overlay)
-  "Compose chrome data: lists append, page fragments append by ID, and the
-rightmost declared home link replaces earlier ones."
-  (unless (and (html-chrome? base) (html-chrome? overlay))
-    (error "HTML chromes can only be composed from HTML chrome values"
-           base overlay))
-  (%make-html-chrome
-    (append (html-chrome-head base) (html-chrome-head overlay))
-    (or (html-chrome-home-link overlay) (html-chrome-home-link base))
-    (append (html-chrome-site-nav base) (html-chrome-site-nav overlay))
-    (merge-page-sxml (html-chrome-title-decorations base)
-                     (html-chrome-title-decorations overlay))
-    (merge-page-sxml (html-chrome-metadata-item-map base)
-                     (html-chrome-metadata-item-map overlay))))
-
-(define (html-chrome-title-decoration chrome page-id)
+(define (html-presentation-title-decoration presentation page-id)
   (let ((entry (and page-id
                     (assoc page-id
-                           (html-chrome-title-decorations chrome)))))
+                           (html-presentation-title-decorations presentation)))))
     (if entry (cdr entry) '())))
 
-(define (html-chrome-metadata-items chrome page-id)
+(define (html-presentation-metadata-items presentation page-id)
   (let ((entry (and page-id
-                    (assoc page-id (html-chrome-metadata-item-map chrome)))))
+                    (assoc page-id
+                           (html-presentation-metadata-item-map presentation)))))
     (if entry (cdr entry) '())))
 
-;; A presentation is a product of independent components: stylesheets/assets
-;; and renderer rules.  Composition is componentwise, so the product monoid
-;; laws reduce to the laws of each component.
-
-(define-record-type <html-presentation>
-  (%make-html-presentation style rules chrome)
-  html-presentation?
-  (style html-presentation-style)
-  (rules html-presentation-rules)
-  (chrome html-presentation-chrome))
-
-(define* (make-html-presentation #:key (style (make-html-style))
-                                 (rules empty-render-rules)
-                                 (chrome empty-html-chrome))
-  (unless (html-style? style)
-    (error "presentation style must be an HTML style" style))
-  (unless (render-rules? rules)
-    (error "presentation rules must be render rules" rules))
-  (unless (html-chrome? chrome)
-    (error "presentation chrome must be HTML chrome" chrome))
-  (%make-html-presentation style rules chrome))
-
-(define empty-html-presentation
-  (make-html-presentation))
+(define empty-html-presentation (make-html-presentation))
 
 (define (compose-html-presentations base overlay)
   "Compose presentations by appending styles and layering rules.
@@ -257,6 +223,13 @@ Styles accumulate in order; later rules take precedence and may delegate."
     (compose-html-styles (html-presentation-style base)
                          (html-presentation-style overlay))
     (compose-render-rules (html-presentation-rules base)
-                        (html-presentation-rules overlay))
-    (compose-html-chromes (html-presentation-chrome base)
-                          (html-presentation-chrome overlay))))
+                          (html-presentation-rules overlay))
+    (append (html-presentation-head base) (html-presentation-head overlay))
+    (or (html-presentation-home-link overlay)
+        (html-presentation-home-link base))
+    (append (html-presentation-site-nav base)
+            (html-presentation-site-nav overlay))
+    (merge-page-sxml (html-presentation-title-decorations base)
+                     (html-presentation-title-decorations overlay))
+    (merge-page-sxml (html-presentation-metadata-item-map base)
+                     (html-presentation-metadata-item-map overlay))))

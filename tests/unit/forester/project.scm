@@ -640,10 +640,8 @@
                            #:mathjax-src #f
                            #:presentation
                            (make-html-presentation
-                             #:chrome
-                             (make-html-chrome
                                #:title-decorations
-                               `(("algebra" . ((span ,decoration)))))))))
+                               `(("algebra" . ((span ,decoration))))))))
                      #:output-directory presentation-output)))))
         (let ((first (build-project/report
                        (make-presentation-project "Chrome first"))))

@@ -93,10 +93,8 @@ after the built-in date items:
 (make-html-options
   #:presentation
   (make-html-presentation
-    #:chrome
-    (make-html-chrome
       #:metadata-items
-      '(("flora-page" . ((li (@ (class "meta-item")) "…author or source items…")))))))
+      '(("flora-page" . ((li (@ (class "meta-item")) "…author or source items…"))))))
 ```
 
 ## Composition API
