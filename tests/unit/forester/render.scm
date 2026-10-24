@@ -325,6 +325,26 @@
                      #:title-decorations
                      '(("algebra" . ((span "Algebra")))))))))
 
+(let* ((forest (make-forest (make-site (list algebra limits))))
+       (renderer-configurations-for
+        (lambda (messages)
+          (renderer-configurations
+            forest
+            (list (make-html-renderer
+                    #:options
+                    (make-html-options #:routes (make-html-routes)
+                                       #:messages messages
+                                       #:rules-id 'message-test))
+                  (make-text-renderer
+                    #:options (make-text-options #:messages messages))
+                  (make-gemtext-renderer
+                    #:options (make-gemtext-options #:messages messages)))))))
+  (test-assert "backmatter message changes invalidate renderer cache configurations"
+    (not (equal? (renderer-configurations-for
+                   (backmatter-messages "First label"))
+                 (renderer-configurations-for
+                   (backmatter-messages "Second label"))))))
+
 (test-assert "HTML pages declare standards mode"
   (string-prefix? "<!DOCTYPE html>" (assoc-ref
                                        (render-test-html
