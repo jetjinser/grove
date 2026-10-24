@@ -37,8 +37,6 @@
             default-metadata-items
             make-html-options
             html-options?
-            make-html-hooks
-            html-hooks?
             make-html-renderer))
 
 (define* (chrome-date text #:optional context)
@@ -227,10 +225,9 @@ backlog report collects the mention."
           #:context context
           #:style (content-element-style element)
           #:id-prefix anchor-prefix
-          #:metadata-items (metadata-items-for metadata-items target context)
+          #:metadata-items (metadata-items target context)
           #:title-decoration (if title-decoration
-                                 (call-hook title-decoration
-                                            (list forest target) context)
+                                 (title-decoration forest target)
                                  '())
           #:open? (if (assq 'open? (content-element-properties element))
                       (content-element-property element 'open?) #t))))
@@ -273,55 +270,63 @@ hooks replace this wholesale; compose with it to extend."
                            context))))
             '()))))
 
-(define (call-metadata-items metadata-items page context)
-  "Call a metadata hook with CONTEXT when it accepts two arguments.
+(define (chrome-title-decoration chrome page)
+  (html-chrome-title-decoration chrome (site-page-id page)))
 
-One-argument hooks run with CONTEXT as a scoped fallback so chrome helpers
-inside them still localize."
-  (let ((arity (procedure-minimum-arity metadata-items)))
-    (if (and arity
-             (let ((required (car arity))
-                   (optional (cadr arity))
-                   (rest? (caddr arity)))
-               (or rest? (>= (+ required optional) 2))))
-        (metadata-items page context)
-        (if context
-            (with-render-context context
-              (lambda () (metadata-items page)))
-            (metadata-items page)))))
+(define (chrome-metadata-items chrome page context)
+  (append (default-metadata-items page context)
+          (html-chrome-metadata-items chrome (site-page-id page))))
 
-(define (metadata-items-for metadata-items page context)
-  (if (eq? metadata-items default-metadata-items)
-      (metadata-items page context)
-      (call-metadata-items metadata-items page context)))
+(define (chrome-title-decoration-procedure chrome)
+  (lambda (_forest page) (chrome-title-decoration chrome page)))
 
-(define (call-hook hook arguments context)
-  "Call HOOK with ARGUMENTS plus CONTEXT when it accepts one more argument."
-  (let ((arity (procedure-minimum-arity hook)))
-    (if (and context arity
-             (let ((required (car arity))
-                   (optional (cadr arity))
-                   (rest? (caddr arity)))
-               (or rest? (>= (+ required optional)
-                             (1+ (length arguments))))))
-        (apply hook (append arguments (list context)))
-        (apply hook arguments))))
+(define (chrome-metadata-items-procedure chrome)
+  (lambda (page context) (chrome-metadata-items chrome page context)))
 
-(define-record-type <html-hooks>
-  (%make-html-hooks title-decoration home-link site-nav metadata-items)
-  html-hooks?
-  (title-decoration html-hooks-title-decoration)
-  (home-link html-hooks-home-link)
-  (site-nav html-hooks-site-nav)
-  (metadata-items html-hooks-metadata-items))
+(define (chrome-configuration chrome)
+  (let ((home-link (html-chrome-home-link chrome)))
+    (list (html-chrome-head chrome)
+          (and home-link
+               (list (html-home-link-content home-link)
+                     (html-home-link-attributes home-link)))
+          (map (lambda (entry)
+                 (if (html-nav-link? entry)
+                     (list 'nav-link (html-nav-link-page-id entry)
+                           (html-nav-link-label entry)
+                           (html-nav-link-attributes entry))
+                     entry))
+               (html-chrome-site-nav chrome))
+          (html-chrome-title-decorations chrome)
+          (html-chrome-metadata-item-map chrome))))
 
-(define* (make-html-hooks #:key
-                          (title-decoration #f)
-                          (home-link #f)
-                          (site-nav '())
-                          (metadata-items default-metadata-items))
-  "Build the HTML hook value used by the renderer options."
-  (%make-html-hooks title-decoration home-link site-nav metadata-items))
+(define (site-nav-for-page routes entries page)
+  (map (lambda (entry)
+         (if (html-nav-link? entry)
+             (let* ((link (site-nav-link routes
+                                         (html-nav-link-page-id entry)
+                                         (html-nav-link-label entry)
+                                         #:current-page (site-page-id page)))
+                    (attributes (html-nav-link-attributes entry)))
+               (if (null? attributes)
+                   link
+                   (cons 'a
+                     (cons (cons '@
+                             (append
+                               (map (lambda (attribute)
+                                      (list (car attribute) (cdr attribute)))
+                                    attributes)
+                               (cdadr link)))
+                           (cddr link)))))
+             entry))
+       entries))
+
+(define (home-link-sxml routes home-link)
+  (and home-link
+       `(a (@ ,@(map (lambda (attribute)
+                       (list (car attribute) (cdr attribute)))
+                     (html-home-link-attributes home-link))
+              (href ,(html-index-url routes)))
+          ,@(html-home-link-content home-link))))
 
 (define (metadata-sxml items)
   (if (null? items)
@@ -403,7 +408,7 @@ top-level taxon element; pages without one contribute nothing."
           (list `(ol (@ (class "tree-outline")) ,@outline)))
       #:anchor (string-append "backmatter-" class "-" (site-page-id page))
       #:depth 3
-      #:metadata-items (metadata-items-for metadata-items page context)
+      #:metadata-items (metadata-items page context)
       #:title-decoration (taxon-entry-sxml page)
       #:open? #f)))
 
@@ -513,8 +518,7 @@ top-level taxon element; pages without one contribute nothing."
                                                         position))
                              (decoration
                                (if title-decoration
-                                   (call-hook title-decoration
-                                            (list forest target) context)
+                                   (title-decoration forest target)
                                    '()))
                              (nested
                                (if (member target-id visited)
@@ -654,9 +658,7 @@ name, property, rel, or title."
                        (og-image-alt #f) (context #f))
   (unless (render-context? context)
     (error "html-document requires a render context" context))
-  (let* ((site-nav (if (procedure? site-nav)
-                       (call-hook site-nav (list current-page) context)
-                       site-nav))
+  (let* ((site-nav site-nav)
          (locale (render-context-ref context 'locale-object))
          (default-locale
            (render-context-ref context 'default-locale))
@@ -766,9 +768,7 @@ name, property, rel, or title."
          ,@(if (or home-title home-link (pair? site-nav) (pair? language-nav))
                (list `(nav (@ (aria-label ,(chrome-message 'nav-site context)))
                            ,@(cond
-                               (home-link (list (call-hook home-link
-                                                           (list (html-index-url routes))
-                                                           context)))
+                               (home-link (list home-link))
                                (home-title (list `(a (@ (href ,(html-index-url routes)))
                                                     ,home-title)))
                                (else '()))
@@ -890,10 +890,9 @@ to the lane, and an in-place numbered marker links to it."
                  #:anchor (string-append "tree-root-" (site-page-id page))
                  #:depth 1
                  #:context context
-                 #:metadata-items (metadata-items-for metadata-items page context)
+                 #:metadata-items (metadata-items page context)
                  #:title-decoration (if title-decoration
-                                        (call-hook title-decoration
-                                                   (list forest page) context)
+                                        (title-decoration forest page)
                                         '())))
          (article (append (list tree)
                           (if lane (side-lane-sxml lane) '())
@@ -918,9 +917,9 @@ to the lane, and an in-place numbered marker links to it."
         inline-stylesheets?
         #:html-attributes html-attributes
         #:head head
-        #:site-nav site-nav
+        #:site-nav (site-nav-for-page routes site-nav page)
         #:language-nav language-nav
-        #:home-link home-link
+        #:home-link (home-link-sxml routes home-link)
         #:current-page (site-page-id page)
         #:article? article?
         #:published (assq-ref (site-page-metadata page) 'published)
@@ -1024,11 +1023,11 @@ to the lane, and an in-place numbered marker links to it."
 
 (define-record-type <html-options>
   (%make-html-options highlighters routes mathjax-src backmatter
-                      backmatter-labels reference-taxon-id hooks
-                      article? backmatter-details? html-attributes head
+                      backmatter-labels reference-taxon-id
+                      article? backmatter-details? html-attributes
                       side-lane presentation locale messages settings default-locale
                       site-url og-image og-image-alt hreflang?
-                      language-switcher? rules-id hooks-id cache?)
+                      language-switcher? rules-id cache?)
   html-options?
   (highlighters html-options-highlighters)
   (routes html-options-routes)
@@ -1036,11 +1035,9 @@ to the lane, and an in-place numbered marker links to it."
   (backmatter html-options-backmatter)
   (backmatter-labels html-options-backmatter-labels)
   (reference-taxon-id html-options-reference-taxon-id)
-  (hooks html-options-hooks)
   (article? html-options-article?)
   (backmatter-details? html-options-backmatter-details?)
   (html-attributes html-options-html-attributes)
-  (head html-options-head)
   (side-lane html-options-side-lane)
   (presentation html-options-presentation)
   (locale html-options-locale)
@@ -1053,14 +1050,7 @@ to the lane, and an in-place numbered marker links to it."
   (hreflang? html-options-hreflang?)
   (language-switcher? html-options-language-switcher?)
   (rules-id html-options-rules-id)
-  (hooks-id html-options-hooks-id)
   (cache? html-options-cache?))
-
-(define (html-options-style options)
-  (html-presentation-style (html-options-presentation options)))
-
-(define (html-options-rules options)
-  (html-presentation-rules (html-options-presentation options)))
 
 (define* (make-html-options #:key
                             (highlighters (default-highlighters))
@@ -1069,11 +1059,9 @@ to the lane, and an in-place numbered marker links to it."
                             (backmatter default-backmatter-sections)
                             (backmatter-labels '())
                             (reference-taxon-id default-reference-taxon-id)
-                            (hooks (make-html-hooks))
                             (article? #f)
                             (backmatter-details? #f)
                             (html-attributes '())
-                            (head '())
                             (side-lane '())
                             (presentation #f)
                             (locale #f)
@@ -1090,43 +1078,43 @@ to the lane, and an in-place numbered marker links to it."
                             (hreflang? #t)
                             (language-switcher? #t)
                             (rules-id #f)
-                            (hooks-id #f)
                             (cache? #t))
   "Build the immutable HTML renderer configuration.
 
-PRESENTATION contains the HTML style and element rules. Entry points take this
-value with #:options."
+PRESENTATION contains HTML style, element rules, and declarative page chrome.
+Entry points take this value with #:options."
   (let ((presentation
           (or presentation
               (make-html-presentation #:style default-html-style))))
     (unless (html-presentation? presentation)
       (error "HTML options require an HTML presentation" presentation))
     (%make-html-options highlighters routes mathjax-src backmatter
-                        backmatter-labels reference-taxon-id hooks
-                        article? backmatter-details? html-attributes head
+                        backmatter-labels reference-taxon-id
+                        article? backmatter-details? html-attributes
                         side-lane presentation locale messages settings
                         default-locale site-url og-image og-image-alt hreflang?
-                        language-switcher? rules-id hooks-id cache?)))
+                        language-switcher? rules-id cache?)))
 
 (define* (site->html forest #:key (options (make-html-options)))
-  (let* ((style (html-options-style options))
+  (let* ((presentation (html-options-presentation options))
+         (chrome (html-presentation-chrome presentation))
+         (style (html-presentation-style presentation))
          (highlighters (html-options-highlighters options))
          (routes (html-options-routes options))
          (mathjax-src (html-options-mathjax-src options))
          (backmatter (html-options-backmatter options))
          (backmatter-labels (html-options-backmatter-labels options))
          (reference-taxon-id (html-options-reference-taxon-id options))
-         (hooks (html-options-hooks options))
-         (title-decoration (html-hooks-title-decoration hooks))
+         (title-decoration (chrome-title-decoration-procedure chrome))
          (article? (html-options-article? options))
          (backmatter-details? (html-options-backmatter-details? options))
          (html-attributes (html-options-html-attributes options))
-         (head (html-options-head options))
-         (site-nav (html-hooks-site-nav hooks))
-         (home-link (html-hooks-home-link hooks))
-         (metadata-items (html-hooks-metadata-items hooks))
+         (head (html-chrome-head chrome))
+         (site-nav (html-chrome-site-nav chrome))
+         (home-link (html-chrome-home-link chrome))
+         (metadata-items (chrome-metadata-items-procedure chrome))
          (side-lane (html-options-side-lane options))
-         (rules (html-options-rules options))
+         (rules (html-presentation-rules presentation))
          (locale (html-options-locale options))
          (messages (html-options-messages options))
          (default-locale (html-options-default-locale options))
@@ -1182,24 +1170,25 @@ errors when the count outlives the list."
                 (cons (list-head rest size) chunks))))))
 
 (define* (render-html forest #:key (options (make-html-options)))
-    (let* ((style (html-options-style options))
+    (let* ((presentation (html-options-presentation options))
+          (chrome (html-presentation-chrome presentation))
+          (style (html-presentation-style presentation))
           (highlighters (html-options-highlighters options))
           (routes (html-options-routes options))
           (mathjax-src (html-options-mathjax-src options))
           (backmatter (html-options-backmatter options))
           (backmatter-labels (html-options-backmatter-labels options))
           (reference-taxon-id (html-options-reference-taxon-id options))
-          (hooks (html-options-hooks options))
-          (title-decoration (html-hooks-title-decoration hooks))
+          (title-decoration (chrome-title-decoration-procedure chrome))
           (article? (html-options-article? options))
           (backmatter-details? (html-options-backmatter-details? options))
           (html-attributes (html-options-html-attributes options))
-          (head (html-options-head options))
-          (site-nav (html-hooks-site-nav hooks))
-          (home-link (html-hooks-home-link hooks))
-          (metadata-items (html-hooks-metadata-items hooks))
+          (head (html-chrome-head chrome))
+          (site-nav (html-chrome-site-nav chrome))
+          (home-link (html-chrome-home-link chrome))
+          (metadata-items (chrome-metadata-items-procedure chrome))
           (side-lane (html-options-side-lane options))
-          (rules (html-options-rules options))
+          (rules (html-presentation-rules presentation))
           (locale (html-options-locale options))
           (messages (html-options-messages options))
           (default-locale (html-options-default-locale options))
@@ -1251,24 +1240,25 @@ errors when the count outlives the list."
              forest-pages
              (iota total 1)))))))
 (define* (make-html-renderer #:key (options (make-html-options)))
-    (let* ((style (html-options-style options))
+    (let* ((presentation (html-options-presentation options))
+          (chrome (html-presentation-chrome presentation))
+          (style (html-presentation-style presentation))
           (highlighters (html-options-highlighters options))
           (routes (html-options-routes options))
           (mathjax-src (html-options-mathjax-src options))
           (backmatter (html-options-backmatter options))
           (backmatter-labels (html-options-backmatter-labels options))
           (reference-taxon-id (html-options-reference-taxon-id options))
-          (hooks (html-options-hooks options))
-          (title-decoration (html-hooks-title-decoration hooks))
+          (title-decoration (chrome-title-decoration-procedure chrome))
           (article? (html-options-article? options))
           (backmatter-details? (html-options-backmatter-details? options))
           (html-attributes (html-options-html-attributes options))
-          (head (html-options-head options))
-          (site-nav (html-hooks-site-nav hooks))
-          (home-link (html-hooks-home-link hooks))
-          (metadata-items (html-hooks-metadata-items hooks))
+          (head (html-chrome-head chrome))
+          (site-nav (html-chrome-site-nav chrome))
+          (home-link (html-chrome-home-link chrome))
+          (metadata-items (chrome-metadata-items-procedure chrome))
           (side-lane (html-options-side-lane options))
-          (rules (html-options-rules options))
+          (rules (html-presentation-rules presentation))
           (locale (html-options-locale options))
           (messages (html-options-messages options))
           (default-locale (html-options-default-locale options))
@@ -1278,16 +1268,10 @@ errors when the count outlives the list."
           (hreflang? (html-options-hreflang? options))
           (language-switcher? (html-options-language-switcher? options))
           (rules-id (html-options-rules-id options))
-          (hooks-id (html-options-hooks-id options))
-          (custom-hooks? (or title-decoration home-link
-                             (not (eq? metadata-items
-                                       default-metadata-items))))
           (effective-cache?
             (and (html-options-cache? options)
                  (or (eq? rules empty-render-rules)
-                     (and rules-id #t))
-                 (or (not custom-hooks?)
-                     (and hooks-id #t)))))
+                     (and rules-id #t)))))
       (validate-backmatter-sections backmatter)
       (check-reference-taxon-id reference-taxon-id)
       (let ((render (lambda (forest)
@@ -1299,10 +1283,11 @@ errors when the count outlives the list."
                   (or (html-home-page routes) (site-home (site forest)))
                   (html-index-url routes)
                   mathjax-src backmatter backmatter-labels reference-taxon-id
-                  article? backmatter-details? html-attributes head site-nav
+                  article? backmatter-details? html-attributes
+                  (chrome-configuration chrome)
                   side-lane (resolve-chrome-locale locale (resolve-chrome-catalog messages))
                   default-locale site-url og-image og-image-alt hreflang? language-switcher?
-                  rules-id hooks-id
+                  rules-id
                   (message-catalog-default (resolve-chrome-catalog messages))
                   (message-catalog-entries (resolve-chrome-catalog messages))
                   (map (lambda (entry)

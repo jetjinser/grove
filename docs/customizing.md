@@ -13,10 +13,10 @@ This is the shortest path from “I want to change X” to the right Grove API.
 | --- | --- | --- |
 | one element's HTML | an HTML presentation | `make-html-options #:presentation (make-html-presentation #:rules ...)` |
 | one element's text/gemtext output | backend rules using the shared rule API | `make-text-options` / `make-gemtext-options #:rules` |
-| the metadata line under a title | `metadata-items` hook | `make-html-hooks #:metadata-items` |
-| the site navigation | `site-nav` hook | `make-html-hooks #:site-nav` |
-| the home link | `home-link` hook | `make-html-hooks #:home-link` |
-| tree headings or the table of contents | `title-decoration` hook | `make-html-hooks #:title-decoration` |
+| the metadata line under a title | page-keyed chrome data | `make-html-chrome #:metadata-items` |
+| the site navigation | static SXML and route-aware links | `make-html-chrome #:site-nav` |
+| the home link | a declarative home-link value | `make-html-chrome #:home-link` |
+| tree headings or the table of contents | page-keyed chrome data | `make-html-chrome #:title-decorations` |
 | locale, messages, or date formatting | renderer options | `make-html-options #:locale/#:messages` |
 | output paths | routes | `make-html-routes`, `make-text-routes`, `#:prefix` |
 | sitemap, feed, or graph | derived artifacts | `make-site-options #:derived` |
@@ -85,14 +85,13 @@ for project-defined keys.
 ### Add a metadata item
 
 ```scheme
-(define hooks
-  (make-html-hooks
-    #:metadata-items
-    (lambda (page)
-      (append (default-metadata-items page)
-              (list `(li (@ (class "meta-item")) "author"))))))
-
-(make-html-options #:hooks hooks)
+(make-html-options
+  #:presentation
+  (make-html-presentation
+    #:chrome
+    (make-html-chrome
+      #:metadata-items
+      '(("about" . ((li (@ (class "meta-item")) "author")))))))
 ```
 
 ### Add sitemap and feed

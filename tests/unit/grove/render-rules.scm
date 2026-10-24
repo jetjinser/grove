@@ -146,6 +146,60 @@
                    (html-presentation-rules
                      (compose-html-presentations a b)))))))
 
+(let* ((first (make-html-chrome
+                #:head '((meta (@ (name "first"))))
+                #:site-nav '((span "first"))
+                #:title-decorations '(("p" . ((span "a"))))
+                #:metadata-items '(("p" . ((li "a"))))))
+       (second (make-html-chrome
+                 #:head '((meta (@ (name "second"))))
+                 #:site-nav '((span "second"))
+                 #:title-decorations '(("p" . ((span "b")))
+                                       ("q" . ((span "q"))))
+                 #:metadata-items '(("p" . ((li "b"))))))
+       (home-a (make-html-home-link '("A")))
+       (home-b (make-html-home-link '("B")))
+       (a (make-html-presentation #:chrome first))
+       (b (make-html-presentation #:chrome second))
+       (left (compose-html-presentations
+               a (compose-html-presentations b empty-html-presentation)))
+       (right (compose-html-presentations
+                (compose-html-presentations a b) empty-html-presentation)))
+  (test-equal "chrome appends head and navigation nodes"
+    '((meta (@ (name "first"))) (meta (@ (name "second"))))
+    (html-chrome-head (html-presentation-chrome left)))
+  (test-equal "chrome merges page fragments in declaration order"
+    '((span "a") (span "b"))
+    (html-chrome-title-decoration (html-presentation-chrome left) "p"))
+  (test-equal "chrome appends page metadata by page ID"
+    '((li "a") (li "b"))
+    (html-chrome-metadata-items (html-presentation-chrome left) "p"))
+  (test-equal "chrome composition is associative"
+    (list (html-chrome-head (html-presentation-chrome left))
+          (html-chrome-site-nav (html-presentation-chrome left))
+          (html-chrome-title-decorations (html-presentation-chrome left))
+          (html-chrome-metadata-item-map (html-presentation-chrome left)))
+    (list (html-chrome-head (html-presentation-chrome right))
+          (html-chrome-site-nav (html-presentation-chrome right))
+          (html-chrome-title-decorations (html-presentation-chrome right))
+          (html-chrome-metadata-item-map (html-presentation-chrome right))))
+  (test-equal "the rightmost declared home link wins"
+    home-b
+    (html-chrome-home-link
+      (html-presentation-chrome
+        (compose-html-presentations
+          (make-html-presentation
+            #:chrome (make-html-chrome #:home-link home-a))
+          (make-html-presentation
+            #:chrome (make-html-chrome #:home-link home-b))))))
+  (test-equal "an absent page has no chrome fragments"
+    '()
+    (html-chrome-title-decoration (html-presentation-chrome left) "absent")))
+
+(test-error "chrome rejects procedure-valued SXML"
+  #t
+  (make-html-chrome #:head (list (lambda () '((meta))))))
+
 
 (let* ((add-text
          (make-content-transform

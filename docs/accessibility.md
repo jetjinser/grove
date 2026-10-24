@@ -20,11 +20,9 @@ to them.
 - A language switcher is on by default when a page has translations; it is a
   named navigation whose current language carries `aria-current="true"`.
 - The site navigation link to the current page carries
-  `aria-current="page"`.  Use `site-nav-link` for project navigation, and
-  pass `#:site-nav` to `make-html-hooks` as a procedure of the current page id
-  so it can mark the active entry.  The data-driven `site-nav` helper returns
-  stable SXML; a procedure requires a `#:hooks-id` in the renderer options to
-  participate in the cache key.
+  `aria-current="page"`. Use `make-html-nav-link` values in
+  `make-html-chrome #:site-nav`; the renderer resolves their routes and marks
+  the current page while keeping navigation declarative and cacheable.
 - `@image` emits `<img>` with `alt` taken from the element's children; an
   image without children is decorative (`alt=""`).
 - Collapsible trees and backmatter use native `<details>/<summary>`, so

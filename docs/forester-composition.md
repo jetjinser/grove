@@ -86,18 +86,17 @@ the exact reference anchor.
 
 Tree headers and backmatter entries end in a metadata line. The stock items
 are the page's dates (`@published`/`@updated`); pages without dates render
-nothing. The HTML renderer accepts a `metadata-items` hook in
-`make-html-hooks`, a `page -> items` procedure whose items fill the `<ul>`; it
-replaces the stock hook, and `default-metadata-items` is exported to compose
-with:
+nothing. Add project metadata as static SXML keyed by page ID; Grove appends it
+after the built-in date items:
 
 ```scheme
-(define (flora-metadata-items page)
-  (append (default-metadata-items page)
-          (list `(li (@ (class "meta-item")) "…author or source items…"))))
-
 (make-html-options
-  #:hooks (make-html-hooks #:metadata-items flora-metadata-items))
+  #:presentation
+  (make-html-presentation
+    #:chrome
+    (make-html-chrome
+      #:metadata-items
+      '(("flora-page" . ((li (@ (class "meta-item")) "…author or source items…")))))))
 ```
 
 ## Composition API

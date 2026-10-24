@@ -322,36 +322,44 @@ source without highlight markup. The `grove-highlights` Nix package includes
 the grammar, its matching upstream query, and the grammar's license; their
 version is fixed by `nix/flake.lock`.
 
-## HTML presentation hooks
+## HTML presentation chrome
 
 The HTML renderer accepts presentation options instead of requiring projects to
 rewrite rendered markup. They are available on `render-html`, `site->html`, and
-`make-html-renderer`. Project hooks are one value:
+`make-html-renderer`. The presentation carries static, composable chrome data:
 
 ```scheme
 (make-html-options
-  #:hooks (make-html-hooks
-            #:site-nav ...
-            #:home-link ...
-            #:title-decoration ...))
+  #:presentation
+  (make-html-presentation
+    #:chrome
+    (make-html-chrome
+      #:head '((link (@ (rel "alternate") (href "/feed.xml"))))
+      #:site-nav (list (make-html-nav-link "about" "About"))
+      #:home-link (make-html-home-link '("Home")
+                    #:attributes '((class . "brand")))
+      #:title-decorations
+      '(("about" . ((span (@ (class "taxon")) "guide. "))))
+      #:metadata-items
+      '(("about" . ((li (@ (class "meta-item")) "Author")))))))
 ```
 
 - `#:html-attributes` — an association list merged onto the root `<html>`
   element, for example `'((lang . "zh-Hans"))`.
-- `#:head` — SXML nodes placed in `<head>` after the description and before the
-  stylesheets. Use it for viewport metadata, feed autodiscovery, or scripts that
-  must run before the first paint.
-- `site-nav` (in `make-html-hooks`) — SXML nodes appended inside the site `<nav>`.
-- `home-link` (in `make-html-hooks`) — replaces the default home link: a
-  procedure receiving the index URL and returning the anchor SXML. Provide it
-  when the navigation link needs attributes, icons, or markup beyond the site
-  title.
-- `title-decoration` (in `make-html-hooks`) — a procedure receiving the forest
-  and the tree's page record (every tree ID resolves to a page) and returning
-  SXML inserted before the title in tree headings and the table of contents.
-  This is the supported way to show per-tree frontmatter such as a taxon:
-  `(page-taxon page)` and `(page-tags page)` return the tree's own topic
-  elements without scanning the document.
+- `#:head` — static SXML nodes placed in `<head>` after the description and
+  before the stylesheets. Use it for viewport metadata or feed autodiscovery.
+- `#:site-nav` — static SXML nodes appended inside the site `<nav>`; use
+  `make-html-nav-link` for links whose route and current-page state Grove should
+  resolve.
+- `#:home-link` — a `make-html-home-link` value replaces the default link while
+  Grove supplies the route. Its content and attributes can add icons or
+  branding without a callback.
+- `#:title-decorations` — a page-ID-to-SXML map inserted before titles in tree
+  headings and the table of contents. Resolve page metadata while constructing
+  the presentation (for example, `(page-taxon page)`), then store the resulting
+  static markup by page ID.
+- `#:metadata-items` — a page-ID-to-SXML map appended after the built-in date
+  items in the metadata list.
 - `#:article?` — wraps the page tree and its backmatter in one `<article>`
   element, leaving the table of contents outside it.
 - `#:side-lane` — a list of content element kinds (e.g. `(sidenote)`).
@@ -367,11 +375,8 @@ rewrite rendered markup. They are available on `render-html`, `site->html`, and
 - `#:backmatter-details?` — renders each backmatter section as a collapsible
   `details`/`summary` block.
 
-The boolean and SXML-valued options participate in the renderer's cache
-configuration, so changing one invalidates cached pages. The procedure hooks
-(`home-link`, `title-decoration`, `metadata-items`) require a stable
-`#:hooks-id` in the options; without it the renderer disables caching instead
-of risking stale output.
+Chrome values are part of the presentation and its cache identity, so changing
+them invalidates cached pages without requiring a separate identity token.
 
 ## Packaging and measurement
 

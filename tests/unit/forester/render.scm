@@ -178,20 +178,20 @@
 (let* ((rendered (render-test-html (make-forest (make-site (list algebra limits)))))
        (algebra-html (assoc-ref rendered "algebra"))
        (limits-html (assoc-ref rendered "limits")))
-  (test-assert "metadata items are a user-extensible hook"
+  (test-assert "metadata items are declarative presentation data"
     (string-contains
       (assoc-ref
         (render-test-html
           (make-forest (make-site (list algebra limits)))
           #:mathjax-src #f
-          #:hooks
-          (make-html-hooks
-            #:metadata-items
-            (lambda (page)
-              (cons '(li (@ (class "meta-item")) "hooked")
-                    (default-metadata-items page)))))
+          #:presentation
+          (make-html-presentation
+            #:chrome
+            (make-html-chrome
+              #:metadata-items
+              '(("algebra" . ((li (@ (class "meta-item")) "declared")))))))
         "algebra")
-      "<div class=\"metadata\"><ul><li class=\"meta-item\">hooked</li></ul></div>"))
+      "<div class=\"metadata\"><ul><li class=\"meta-item\">declared</li></ul></div>"))
   (test-assert "at-exp link resolves to a page"
     (string-contains algebra-html "href=\"/limits.html\">limits</a>"))
   (test-assert "standalone pages use the open tree disclosure"
@@ -314,20 +314,16 @@
       (make-gemtext-renderer
         #:options (make-gemtext-options #:rules rules #:rules-id 'v1)))))
 
-(let ((hook (lambda (forest page) '())))
-  (test-assert "custom HTML hooks disable caching without a hooks id"
-    (not (cached-renderer-cache?
-           (make-html-renderer
-             #:options
-             (make-html-options
-               #:hooks (make-html-hooks #:title-decoration hook))))))
-  (test-assert "HTML hooks with an id stay cacheable"
-    (cached-renderer-cache?
-      (make-html-renderer
-        #:options
-        (make-html-options
-          #:hooks (make-html-hooks #:title-decoration hook)
-          #:hooks-id 'v1)))))
+(test-assert "declarative HTML chrome remains cacheable"
+  (cached-renderer-cache?
+    (make-html-renderer
+      #:options
+      (make-html-options
+        #:presentation
+        (make-html-presentation
+          #:chrome (make-html-chrome
+                     #:title-decorations
+                     '(("algebra" . ((span "Algebra"))))))))))
 
 (test-assert "HTML pages declare standards mode"
   (string-prefix? "<!DOCTYPE html>" (assoc-ref
@@ -952,15 +948,13 @@
                  #:options
                  (make-html-options
                    #:routes routes
-                   #:hooks
-                   (make-html-hooks
-                     #:title-decoration
-                     (lambda (forest page)
-                       (if (string=? (site-page-id page) "overview")
-                           `((span (@ (class "taxon")) "overview. ")
-                             (span (@ (class "source"))
-                               ,(or (site-page-source page) "?")))
-                           '())))))
+                   #:presentation
+                   (make-html-presentation
+                     #:chrome
+                     (make-html-chrome
+                       #:title-decorations
+                       '(("overview" . ((span (@ (class "taxon")) "overview. ")
+                                         (span (@ (class "source")) "?"))))))))
                "target")))
   (test-assert "title-decoration decorates tree headings"
     (string-contains html
@@ -983,13 +977,12 @@
                  #:options
                  (make-html-options
                    #:routes (make-html-routes)
-                   #:hooks
-                   (make-html-hooks
-                     #:title-decoration
-                     (lambda (forest page)
-                       (if (assq-ref (site-page-metadata page) 'summary)
-                           '((span (@ (class "summary")) "S"))
-                           '())))))
+                   #:presentation
+                   (make-html-presentation
+                     #:chrome
+                     (make-html-chrome
+                       #:title-decorations
+                       '(("annotated" . ((span (@ (class "summary")) "S"))))))))
                "annotated")))
   (test-assert "title-decoration reads page metadata through the forest"
     (string-contains html "<span class=\"summary\">S</span>")))
@@ -1002,41 +995,45 @@
                (make-html-options
                  #:routes routes
                  #:html-attributes '((lang . "zh-CN"))
-                 #:head '((link (@ (rel "alternate") (href "/feed.xml"))))
-                 #:hooks
-                 (make-html-hooks
-                   #:site-nav '((div (@ (class "controls")) "Controls")))
+                 #:presentation
+                 (make-html-presentation
+                   #:chrome
+                   (make-html-chrome
+                     #:head '((link (@ (rel "alternate") (href "/feed.xml"))))
+                     #:site-nav '((div (@ (class "controls")) "Controls"))))
                  #:article? #t
                  #:backmatter-details? #t)))
        (algebra-html (assoc-ref html "algebra"))
        (limits-html (assoc-ref html "limits")))
-  (test-assert "html-attributes hook sets document language"
+  (test-assert "html attributes set document language"
     (string-contains algebra-html "<html lang=\"zh-CN\">"))
-  (test-assert "head hook appends nodes to the document head"
+  (test-assert "presentation head appends nodes to the document head"
     (and (string-contains algebra-html "rel=\"alternate\"")
          (string-contains algebra-html "href=\"/feed.xml\"")))
-  (test-assert "site-nav hook appends controls to the site navigation"
+  (test-assert "presentation navigation appends controls to the site navigation"
     (string-contains algebra-html
       "<div class=\"controls\">Controls</div></nav>"))
-  (test-assert "article hook wraps the page tree and backmatter"
+  (test-assert "article option wraps the page tree and backmatter"
     (and (string-contains algebra-html
            "<article><section class=\"forest-tree-block page-tree\"")
          (string-contains algebra-html "</article>")))
-  (test-assert "backmatter-details hook makes backmatter collapsible"
+  (test-assert "backmatter-details option makes backmatter collapsible"
     (string-contains limits-html
       "<aside class=\"backmatter forest-tree-block backlinks\"><details open=\"open\"><summary><h2 class=\"forest-tree-title\">Backlinks</h2>"))
-  (test-assert "home-link hook replaces the default navigation link"
+  (test-assert "declarative home link replaces the default navigation link"
     (let ((custom (assoc-ref
                     (site->html
                       forest
                       #:options
                       (make-html-options
                         #:routes routes
-                        #:hooks
-                        (make-html-hooks
-                          #:home-link
-                          (lambda (href)
-                            `(a (@ (class "brand") (href ,href)) "Home")))))
+                        #:presentation
+                        (make-html-presentation
+                          #:chrome
+                          (make-html-chrome
+                            #:home-link
+                            (make-html-home-link '("Home")
+                              #:attributes '((class . "brand")))))))
                     "algebra")))
       (and (string-contains custom "<a class=\"brand\" href=\"/index.html\">Home</a></nav>")
            (not (string-contains custom "Linked Notes</a></nav>"))))))

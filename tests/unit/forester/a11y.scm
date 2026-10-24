@@ -82,8 +82,12 @@
       "property=\"article:modified_time\" content=\"2026-09-28\"")))
 
 (let ((page (render-page
-              #:head '((meta (@ (name "viewport") (content "width=1024")))
-                       (meta (@ (property "og:title") (content "Custom")))))))
+              #:presentation
+              (make-html-presentation
+                #:chrome
+                (make-html-chrome
+                  #:head '((meta (@ (name "viewport") (content "width=1024")))
+                           (meta (@ (property "og:title") (content "Custom")))))))))
   (test-assert "project head entries override generated defaults"
     (and (string-contains page "content=\"width=1024\"")
          (not (string-contains page "width=device-width"))
@@ -102,11 +106,13 @@
 
 (let ((page (render-page
               #:locale "zh-Hans"
-              #:hooks
-              (make-html-hooks
-                #:metadata-items
-                (lambda (target) (default-metadata-items target))))))
-  (test-assert "one-argument metadata hooks keep the page locale"
+              #:presentation
+              (make-html-presentation
+                #:chrome
+                (make-html-chrome
+                  #:metadata-items
+                  '(("root" . ((li (@ (class "meta-item")) "custom")))))))))
+  (test-assert "declarative metadata keeps localized defaults"
     (string-contains page "更新于 2026年9月28日")))
 
 (test-equal "backmatter headings localize"
@@ -128,13 +134,12 @@
 
 (let* ((routes (make-html-routes #:home-page "root"))
        (page (render-page
-               #:hooks
-               (make-html-hooks
-                 #:site-nav
-                 (lambda (current)
-                   (list (site-nav-link routes "root" "Home"
-                                        #:current-page current)))))))
-  (test-assert "site navigation procedures receive the current page"
+               #:presentation
+               (make-html-presentation
+                 #:chrome
+                 (make-html-chrome
+                   #:site-nav (list (make-html-nav-link "root" "Home")))))))
+  (test-assert "declarative site navigation marks the current page"
     (and (string-contains page "<nav aria-label=\"Site\">")
          (string-contains page "aria-current=\"page\""))))
 
