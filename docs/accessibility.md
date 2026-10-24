@@ -69,9 +69,9 @@ responsibilities.
 - **Page language and direction**: pass `#:locale` and the renderer derives
   `lang`/`dir`; `#:html-attributes` entries override the derived values.
   Without `lang`, screen readers guess the pronunciation.
-- **Navigation**: build entries with `site-nav-link`, or add
-  `aria-current` yourself.  The renderer cannot infer which project link
-  points at the current page.
+- **Navigation**: use `make-html-nav-link` values in
+  `make-html-presentation #:site-nav`. Grove resolves their routes and marks
+  the current page automatically; use static SXML for project controls.
 - **Rich content**: tables, forms, and other interactive components are
   authored as raw HTML or project renderers; their roles, labels, and
   keyboard behaviour are the project's responsibility.

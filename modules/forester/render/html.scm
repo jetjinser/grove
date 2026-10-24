@@ -30,11 +30,7 @@
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
   #:export (site->html
-            site-nav-link
-            site-nav
-            split-into-chunks
             render-html
-            default-metadata-items
             make-html-options
             html-options?
             make-html-renderer))
@@ -298,7 +294,7 @@ from the HTML presentation are appended after these."
 (define (site-nav-for-page routes entries page)
   (map (lambda (entry)
          (if (html-nav-link? entry)
-             (let* ((link (site-nav-link routes
+             (let* ((link (nav-link-sxml routes
                                          (html-nav-link-page-id entry)
                                          (html-nav-link-label entry)
                                          #:current-page (site-page-id page)))
@@ -543,25 +539,13 @@ top-level taxon element; pages without one contribute nothing."
                     (h2 ,(chrome-message 'nav-contents context))
                     (ol ,@items))))))
 
-(define* (site-nav-link routes id label #:key (current-page #f))
-  "A site navigation link to page ID, marked as current when it is
-CURRENT-PAGE.  #:site-nav may be a procedure of the current page ID so
-that navigation links can use this helper."
+(define* (nav-link-sxml routes id label #:key (current-page #f))
+  "Build route-aware SXML for a declarative navigation link."
   `(a (@ (href ,(html-page-url routes id))
          ,@(if (and current-page (string=? id current-page))
                '((aria-current "page"))
                '()))
       ,label))
-
-(define* (site-nav routes entries #:key (current-page #f))
-  "Build site navigation links from ENTRIES, an alist of page id to label.
-
-The result is stable SXML, so it participates in the renderer cache key
-better than a procedure recreated on every project load."
-  (map (lambda (entry)
-         (site-nav-link routes (car entry) (cdr entry)
-                        #:current-page current-page))
-       entries))
 
 (define default-mathjax-src
   "https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js")
@@ -1147,18 +1131,6 @@ Entry points take this value with #:options."
                             #:rules rules
                             #:context context)))
          (pages forest))))
-(define (split-into-chunks entries chunk-size)
-  "Split ENTRIES into consecutive groups of at most CHUNK-SIZE entries,
-preserving order.  The tail group may be shorter, so the tail walk uses
-the remaining length instead of the chunk size: this Guile's list-tail
-errors when the count outlives the list."
-  (let loop ((rest entries) (chunks '()))
-    (if (null? rest)
-        (reverse chunks)
-        (let ((size (min chunk-size (length rest))))
-          (loop (list-tail rest size)
-                (cons (list-head rest size) chunks))))))
-
 (define* (render-html forest #:key (options (make-html-options)))
     (let* ((presentation (html-options-presentation options))
           (presentation-data presentation)

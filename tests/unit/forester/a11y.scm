@@ -119,15 +119,6 @@
                            #:messages default-message-catalog))
     'references))
 
-(let ((routes (make-html-routes #:home-page "root")))
-  (test-assert "site navigation links mark the current page"
-    (member '(aria-current "page")
-            (cadr (site-nav-link routes "root" "Home" #:current-page "root"))))
-  (test-assert "site navigation links omit aria-current elsewhere"
-    (not (member '(aria-current "page")
-                 (cadr (site-nav-link routes "root" "Home"
-                                      #:current-page "other"))))))
-
 (let* ((routes (make-html-routes #:home-page "root"))
        (page (render-page
                #:presentation
@@ -206,12 +197,6 @@
                      "<time datetime=\"2026-09-27\">2026年9月27日</time>"))
   (test-assert "declared locales appear as Open Graph locales"
     (string-contains page "property=\"og:locale\" content=\"zh_CN\"")))
-
-(let ((routes (make-html-routes #:home-page "root")))
-  (test-assert "site-nav builds stable current-page markup"
-    (member '(aria-current "page")
-            (cadr (car (site-nav routes '(("root" . "Home"))
-                                 #:current-page "root"))))))
 
 (test-error "renderer locales reject non-tags" #t
   (resolve-chrome-locale 42 default-message-catalog))
