@@ -1006,7 +1006,7 @@ to the lane, and an in-place numbered marker links to it."
   (%make-html-options highlighters routes mathjax-src backmatter
                       backmatter-labels reference-taxon-id
                       article? backmatter-details? html-attributes
-                      side-lane presentation locale messages settings default-locale
+                      side-lane presentation locale messages default-locale
                       site-url og-image og-image-alt hreflang?
                       language-switcher? rules-id cache?)
   html-options?
@@ -1023,7 +1023,6 @@ to the lane, and an in-place numbered marker links to it."
   (presentation html-options-presentation)
   (locale html-options-locale)
   (messages html-options-messages)
-  (settings html-options-settings)
   (default-locale html-options-default-locale)
   (site-url html-options-site-url)
   (og-image html-options-og-image)
@@ -1072,7 +1071,7 @@ Entry points take this value with #:options."
     (%make-html-options highlighters routes mathjax-src backmatter
                         backmatter-labels reference-taxon-id
                         article? backmatter-details? html-attributes
-                        side-lane presentation locale messages settings
+                        side-lane presentation locale messages
                         default-locale site-url og-image og-image-alt hreflang?
                         language-switcher? rules-id cache?)))
 
@@ -1086,8 +1085,7 @@ Entry points take this value with #:options."
     #:og-image (html-options-og-image options)
     #:og-image-alt (html-options-og-image-alt options)
     #:locale (html-options-locale options)
-    #:messages (html-options-messages options)
-    #:translation-groups (translation-groups (pages forest))))
+    #:messages (html-options-messages options)))
 
 (define* (site->html forest #:key (options (make-html-options)))
   (let* ((presentation (html-options-presentation options))
