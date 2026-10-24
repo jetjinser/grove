@@ -10,14 +10,13 @@
             make-derived-artifact
             derived-artifact-name
             derived-artifact-configuration
-            compose-derived-artifacts
             render-derived-artifacts))
 
 ;; A derived artifact is an independent projection of the forest.  It is not
 ;; an HTML interpretation: its procedure receives the render context and the
 ;; forest and returns artifacts.  Its configuration procedure returns the data
-;; that identifies the artifact's inputs, for renderer caching.  Composition is
-;; list concatenation.
+;; that identifies the artifact's inputs, for renderer caching.  Collections
+;; of these values are ordinary ordered Scheme lists.
 
 (define-record-type <derived-artifact>
   (%make-derived-artifact name procedure configuration)
@@ -34,11 +33,6 @@
   (unless (procedure? configuration)
     (error "derived artifact configuration must be a procedure" configuration))
   (%make-derived-artifact name procedure configuration))
-
-(define (compose-derived-artifacts . artifacts)
-  (append-map (lambda (artifact)
-                (if (list? artifact) artifact (list artifact)))
-              artifacts))
 
 (define (render-derived-artifacts artifacts context forest)
   (unless (every derived-artifact? artifacts)

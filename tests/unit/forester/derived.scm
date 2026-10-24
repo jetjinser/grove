@@ -40,18 +40,6 @@
 
 (test-begin "forester derived artifacts")
 
-(test-equal "derived composition has an identity"
-  (compose-derived-artifacts (car artifacts))
-  (compose-derived-artifacts (car artifacts) (compose-derived-artifacts)))
-
-(test-equal "derived composition is associative"
-  (compose-derived-artifacts
-    (car artifacts)
-    (compose-derived-artifacts (cadr artifacts) (caddr artifacts)))
-  (compose-derived-artifacts
-    (compose-derived-artifacts (car artifacts) (cadr artifacts))
-    (caddr artifacts)))
-
 (let ((first (sitemap-derived #:routes routes #:sitemap-path "first.xml"))
       (second (sitemap-derived #:routes routes #:sitemap-path "second.xml")))
   (test-assert "derived configuration tracks the artifact path"

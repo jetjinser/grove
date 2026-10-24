@@ -19,8 +19,8 @@ rule type.
 
 - The procedure receives an explicit `render-context` and the forest.
 - It returns a list of artifacts.
-- `compose-derived-artifacts` concatenates artifact values/lists; the empty
-  composition is the identity.
+- Collections of derived artifacts are ordinary ordered Scheme lists. Use
+  `append`, `cons`, or list construction to combine them.
 - `render-derived-artifacts` runs each procedure and concatenates the results.
 
 ## Built-ins
