@@ -330,6 +330,7 @@
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
   (validate-chrome-options locale messages)
+  (validate-rules-id rules-id)
   (unless (render-rules? rules)
     (error "Forester Gemtext options require render rules" rules))
   (unless (boolean? cache?)

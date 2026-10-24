@@ -366,6 +366,12 @@
   (make-html-options #:default-locale ""))
 (test-error "HTML options reject invalid Open Graph image values" #t
   (make-html-options #:og-image 42))
+(test-error "HTML options reject unstable rules IDs" #t
+  (make-html-options #:rules-id '(unstable value)))
+(test-error "text options reject unstable rules IDs" #t
+  (make-text-options #:rules-id '(unstable value)))
+(test-error "Gemtext options reject unstable rules IDs" #t
+  (make-gemtext-options #:rules-id '(unstable value)))
 
 (let* ((forest (make-forest (make-site (list algebra limits)
                                        #:home "algebra")))

@@ -9,6 +9,7 @@
   #:export (resolve-chrome-locale
             resolve-chrome-catalog
             validate-chrome-options
+            validate-rules-id
             chrome-message
             chrome-message-format
             localized-backmatter-labels))
@@ -23,6 +24,14 @@
   (unless (message-catalog? messages)
     (error "renderer messages must be a message catalog" messages))
   #t)
+
+(define (validate-rules-id rules-id)
+  (unless (or (not rules-id)
+              (symbol? rules-id)
+              (and (string? rules-id) (not (string-null? rules-id))))
+    (error "renderer rules ID must be a symbol, non-empty string, or #f"
+           rules-id))
+  rules-id)
 
 (define (resolve-chrome-locale locale messages)
   (cond

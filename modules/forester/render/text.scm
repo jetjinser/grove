@@ -308,6 +308,7 @@ HTML renderer so text and HTML address occurrences identically."
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
   (validate-chrome-options locale messages)
+  (validate-rules-id rules-id)
   (unless (render-rules? rules)
     (error "Forester text options require render rules" rules))
   (unless (boolean? cache?)

@@ -1085,6 +1085,7 @@ Entry points take this value with #:options."
     (validate-backmatter-sections backmatter)
     (check-reference-taxon-id reference-taxon-id)
     (validate-chrome-options locale messages)
+    (validate-rules-id rules-id)
     (unless (valid-html-attributes? html-attributes)
       (error "HTML root attributes must be unique symbol/string pairs"
              html-attributes))
