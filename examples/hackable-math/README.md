@@ -48,8 +48,9 @@ presentation path. SMathML is different: its Racket DSL builds HTML/MathML
 structures for the browser rather than acting as a standalone typesetter. A
 project using it should bridge its structured output into a custom Grove HTML
 render rule, instead of routing it through this SVG renderer. That bridge and
-the SMathML package remain project-owned; the development manifest provides
-Racket so the project can choose and pin its package version.
+the SMathML package remain outside Grove's runtime dependencies. The Guix
+development manifest pins an upstream SMathML revision and exposes it directly
+to Racket; a project can reuse that revision or choose its own.
 
 The example renderer scans public Forest/page/content values, emits ordinary
 Grove artifacts, and puts formula inputs in its cache configuration. Each
