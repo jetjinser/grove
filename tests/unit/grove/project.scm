@@ -14,6 +14,7 @@
   #:use-module (grove output)
   #:use-module (grove project)
   #:use-module (grove project site)
+  #:use-module (grove pipeline)
   #:use-module (grove site))
 
 (define project-root
@@ -60,6 +61,26 @@
 (test-error "site options require a page reader at construction" #t
   (make-site-options #:source-directory "sources"
                      #:output-directory "output"))
+
+(define duplicate-pipelines
+  (list (make-asset-pipeline
+          #:name "math-assets" #:inputs '("math.typ")
+          #:procedure (lambda (_input emit) (emit "math/a.svg" "a")))
+        (make-asset-pipeline
+          #:name "math-assets" #:inputs '("math.typ")
+          #:procedure (lambda (_input emit) (emit "math/b.svg" "b")))))
+
+(test-error "site options reject duplicate asset pipeline names" #t
+  (make-site-options #:source-directory "sources"
+                     #:read-page (lambda (_) #f)
+                     #:output-directory "output"
+                     #:pipelines duplicate-pipelines))
+
+(test-error "generic projects reject duplicate asset pipeline names" #t
+  (make-project #:source-directory "sources"
+                #:read-source (lambda (_) #f)
+                #:output-directory "output"
+                #:pipelines duplicate-pipelines))
 
 (dynamic-wind
   (lambda ()

@@ -147,6 +147,13 @@
   (browse project-browse)
   (pipelines project-pipelines))
 
+(define (unique-pipeline-names? pipelines)
+  (let loop ((remaining pipelines) (seen '()))
+    (or (null? remaining)
+        (let ((name (asset-pipeline-name (car remaining))))
+          (and (not (member name seen string=?))
+               (loop (cdr remaining) (cons name seen)))))))
+
 (define* (make-project #:key
                        (source-directory #f)
                        (source-filter (lambda (filename)
@@ -184,8 +191,11 @@
                       renderers))
     (error "project renderers must be procedures or cached renderers"
            renderers))
-  (unless (and (list? pipelines) (every asset-pipeline? pipelines))
-    (error "project pipelines must be asset pipelines" pipelines))
+  (unless (and (list? pipelines)
+               (every asset-pipeline? pipelines)
+               (unique-pipeline-names? pipelines))
+    (error "project pipelines must be asset pipelines with unique names"
+           pipelines))
   (unless (string? output-directory)
     (error "project requires an output directory" output-directory))
   (unless (boolean? cache?)

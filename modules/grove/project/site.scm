@@ -48,6 +48,13 @@
   (browse site-options-browse)
   (locale site-options-locale))
 
+(define (unique-pipeline-names? pipelines)
+  (let loop ((remaining pipelines) (seen '()))
+    (or (null? remaining)
+        (let ((name (asset-pipeline-name (car remaining))))
+          (and (not (member name seen string=?))
+               (loop (cdr remaining) (cons name seen)))))))
+
 (define* (make-site-options #:key
                             (title "Site")
                             (description #f)
@@ -107,8 +114,11 @@ READ-PAGE and OUTPUT-DIRECTORY are required."
   (unless (or (not derived-context) (procedure? derived-context))
     (error "site derived context builder must be a procedure or #f"
            derived-context))
-  (unless (and (list? pipelines) (every asset-pipeline? pipelines))
-    (error "site pipelines must be asset pipelines" pipelines))
+  (unless (and (list? pipelines)
+               (every asset-pipeline? pipelines)
+               (unique-pipeline-names? pipelines))
+    (error "site pipelines must be asset pipelines with unique names"
+           pipelines))
   (unless (non-empty-string? output-directory)
     (error "site options require an output directory" output-directory))
   (unless (boolean? cache?)
