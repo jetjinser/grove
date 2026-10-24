@@ -5,44 +5,32 @@
 (define-module (grove content transform)
   #:use-module (grove ir)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-9)
-  #:export (content-transform?
-            make-content-transform
-            identity-content-transform
+  #:export (identity-content-transform
             compose-content-transforms
             transform-document))
 
-;; A content transform is an endomorphism on content documents.  It is a
-;; separate layer from rendering: transforms rewrite the content algebra,
-;; renderer rules interpret it.  Composition is ordinary function composition
-;; in application order, with the identity transform as the unit.
+;; A content transform is an ordinary endomorphism on content documents.
+;; Procedures are already composable Scheme values; this module supplies the
+;; domain-specific order and checks the content-document boundary.
 
-(define-record-type <content-transform>
-  (make-content-transform procedure)
-  content-transform?
-  (procedure content-transform-procedure))
-
-(define identity-content-transform
-  (make-content-transform identity))
+(define identity-content-transform identity)
 
 (define (compose-content-transforms . transforms)
-  (unless (every content-transform? transforms)
-    (error "content transforms can only be composed from transforms"
+  (unless (every procedure? transforms)
+    (error "content transforms must be procedures"
            transforms))
-  (make-content-transform
-    (lambda (document)
-      (let loop ((remaining transforms) (document document))
-        (if (null? remaining)
-            document
-            (loop (cdr remaining)
-                  ((content-transform-procedure (car remaining)) document)))))))
+  (lambda (document)
+    (fold (lambda (transform document)
+            (transform document))
+          document
+          transforms)))
 
 (define (transform-document transform document)
-  (unless (content-transform? transform)
-    (error "not a content transform" transform))
+  (unless (procedure? transform)
+    (error "content transform must be a procedure" transform))
   (unless (content-document? document)
     (error "content transform requires a content document" document))
-  (let ((result ((content-transform-procedure transform) document)))
+  (let ((result (transform document)))
     (unless (content-document? result)
       (error "content transform must return a content document" result))
     result))

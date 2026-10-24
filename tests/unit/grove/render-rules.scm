@@ -219,16 +219,19 @@
 
 
 (let* ((add-text
-         (make-content-transform
-           (lambda (document)
-             (make-content-document
-               (append (content-document-children document)
-                       (list (make-content-text "x")))))))
+         (lambda (document)
+           (make-content-document
+             (append (content-document-children document)
+                     (list (make-content-text "x"))))))
        (document (make-content-document '()))
        (composed (compose-content-transforms add-text add-text)))
   (test-equal "content transform identity"
     0 (length (content-document-children
                 (transform-document identity-content-transform document))))
+  (test-equal "empty transform composition is the identity"
+    (content-document-children document)
+    (content-document-children
+      (transform-document (compose-content-transforms) document)))
   (test-equal "content transforms compose in order"
     2 (length (content-document-children
                 (transform-document composed document))))
@@ -244,6 +247,13 @@
           (compose-content-transforms add-text add-text)
           add-text)
         document))))
+
+(test-error "content transforms must be procedures" #t
+  (compose-content-transforms 'not-a-procedure))
+
+(test-error "content transforms must return a content document" #t
+  (transform-document (lambda (document) 'not-a-document)
+                      (make-content-document '())))
 
 (define-image-sets image-sets
   (image-set "forest.jpg"
