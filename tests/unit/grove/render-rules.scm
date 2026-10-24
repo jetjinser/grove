@@ -38,7 +38,7 @@
         (next))))
 
 (define (render-with rules)
-  (content->sxml (image-element) #:internal-handlers (render-rules->internal-handlers rules)))
+  (content->sxml (image-element) #:rules rules))
 
 (define base
   (make-render-rules (list (cons 'image img-rule))))
@@ -74,8 +74,7 @@
 (test-assert "an overlay can delegate to the base rule"
   (let ((sxml (content->sxml
                 (image "missing.jpg" "A missing forest")
-                #:internal-handlers (render-rules->internal-handlers
-                             (compose-render-rules base overlay)))))
+                #:rules (compose-render-rules base overlay))))
     (and (pair? (memq 'img sxml))
          (not (memq 'picture sxml)))))
 
@@ -87,13 +86,12 @@
   (test-assert "rules receive an explicit context"
     (let ((sxml (content->sxml
                   (image-element)
-                  #:internal-handlers (render-rules->internal-handlers
-                               contextual
-                               #:context (make-render-context #:page "ctx")))))
+                  #:rules contextual
+                  #:context (make-render-context #:page "ctx"))))
       (and (pair? (memq 'p sxml))
            (string=? "ctx" (cadr (memq 'p sxml)))))))
 
-(test-assert "a rule set is usable as content handlers"
+(test-assert "content->sxml accepts a rule set directly"
   (let ((sxml (render-with (compose-render-rules base overlay))))
     (and (pair? (memq 'picture sxml))
          (any (lambda (node)
@@ -225,9 +223,9 @@
                      (list (make-content-text "x"))))))
        (document (make-content-document '()))
        (composed (compose-content-transforms add-text add-text)))
-  (test-equal "content transform identity"
+  (test-equal "identity is a valid content transform"
     0 (length (content-document-children
-                (transform-document identity-content-transform document))))
+                (transform-document identity document))))
   (test-equal "empty transform composition is the identity"
     (content-document-children document)
     (content-document-children

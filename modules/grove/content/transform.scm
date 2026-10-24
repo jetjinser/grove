@@ -5,15 +5,12 @@
 (define-module (grove content transform)
   #:use-module (grove ir)
   #:use-module (srfi srfi-1)
-  #:export (identity-content-transform
-            compose-content-transforms
+  #:export (compose-content-transforms
             transform-document))
 
 ;; A content transform is an ordinary endomorphism on content documents.
 ;; Procedures are already composable Scheme values; this module supplies the
 ;; domain-specific order and checks the content-document boundary.
-
-(define identity-content-transform identity)
 
 (define (compose-content-transforms . transforms)
   (unless (every procedure? transforms)

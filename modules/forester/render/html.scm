@@ -1095,6 +1095,19 @@ Entry points take this value with #:options."
                         default-locale site-url og-image og-image-alt hreflang?
                         language-switcher? rules-id cache?)))
 
+(define (make-html-render-context forest routes options)
+  (make-site-render-context forest
+    #:routes routes
+    #:site-url (html-options-site-url options)
+    #:default-locale (html-options-default-locale options)
+    #:hreflang? (html-options-hreflang? options)
+    #:language-switcher? (html-options-language-switcher? options)
+    #:og-image (html-options-og-image options)
+    #:og-image-alt (html-options-og-image-alt options)
+    #:locale (html-options-locale options)
+    #:messages (html-options-messages options)
+    #:translation-groups (translation-groups (pages forest))))
+
 (define* (site->html forest #:key (options (make-html-options)))
   (let* ((presentation (html-options-presentation options))
          (presentation-data presentation)
@@ -1115,27 +1128,7 @@ Entry points take this value with #:options."
          (metadata-items (presentation-metadata-items-procedure presentation-data))
          (side-lane (html-options-side-lane options))
          (rules (html-presentation-rules presentation))
-         (locale (html-options-locale options))
-         (messages (html-options-messages options))
-         (default-locale (html-options-default-locale options))
-         (site-url (html-options-site-url options))
-         (og-image (html-options-og-image options))
-         (og-image-alt (html-options-og-image-alt options))
-         (hreflang? (html-options-hreflang? options))
-         (language-switcher? (html-options-language-switcher? options)))
-    (let ((context
-          (make-site-render-context forest
-                                    #:routes routes
-                                    #:site-url site-url
-                                    #:default-locale default-locale
-                                    #:hreflang? hreflang?
-                                    #:language-switcher? language-switcher?
-                                    #:og-image og-image
-                                    #:og-image-alt og-image-alt
-                                    #:locale locale
-                                    #:messages messages
-                                    #:translation-groups
-                                    (translation-groups (pages forest)))))
+         (context (make-html-render-context forest routes options)))
     (validate-backmatter-sections backmatter)
     (check-reference-taxon-id reference-taxon-id)
     (set! routes (resolve-html-routes forest routes))
@@ -1156,7 +1149,7 @@ Entry points take this value with #:options."
                             #:side-lane side-lane
                             #:rules rules
                             #:context context)))
-         (pages forest)))))
+         (pages forest))))
 (define (split-into-chunks entries chunk-size)
   "Split ENTRIES into consecutive groups of at most CHUNK-SIZE entries,
 preserving order.  The tail group may be shorter, so the tail walk uses
@@ -1189,27 +1182,7 @@ errors when the count outlives the list."
           (metadata-items (presentation-metadata-items-procedure presentation-data))
           (side-lane (html-options-side-lane options))
           (rules (html-presentation-rules presentation))
-          (locale (html-options-locale options))
-          (messages (html-options-messages options))
-          (default-locale (html-options-default-locale options))
-          (site-url (html-options-site-url options))
-          (og-image (html-options-og-image options))
-          (og-image-alt (html-options-og-image-alt options))
-          (hreflang? (html-options-hreflang? options))
-          (language-switcher? (html-options-language-switcher? options)))
-      (let ((context
-          (make-site-render-context forest
-                                    #:routes routes
-                                    #:site-url site-url
-                                    #:default-locale default-locale
-                                    #:hreflang? hreflang?
-                                    #:language-switcher? language-switcher?
-                                    #:og-image og-image
-                                    #:og-image-alt og-image-alt
-                                    #:locale locale
-                                    #:messages messages
-                                    #:translation-groups
-                                    (translation-groups (pages forest)))))
+          (context (make-html-render-context forest routes options)))
     (validate-backmatter-sections backmatter)
     (check-reference-taxon-id reference-taxon-id)
     (set! routes (resolve-html-routes forest routes))
@@ -1238,7 +1211,7 @@ errors when the count outlives the list."
                             #:context context)
                  (page-source-paths forest page)))
              forest-pages
-             (iota total 1)))))))
+             (iota total 1))))))
 (define* (make-html-renderer #:key (options (make-html-options)))
     (let* ((presentation (html-options-presentation options))
           (presentation-data presentation)
@@ -1304,20 +1277,7 @@ errors when the count outlives the list."
                                    (html-style-artifacts style))))
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
-            (let ((context
-                    (make-site-render-context forest
-                                              #:routes routes
-                                              #:site-url site-url
-                                              #:default-locale default-locale
-                                              #:hreflang? hreflang?
-                                              #:language-switcher? language-switcher?
-                                              #:og-image og-image
-                                              #:og-image-alt og-image-alt
-                                              #:locale locale
-                                              #:messages messages
-                                              #:translation-groups
-                                              (translation-groups
-                                                (pages forest)))))
+            (let ((context (make-html-render-context forest routes options)))
               (if (any (lambda (entry)
                            (any (lambda (path) (member path changed string=?))
                                 (highlighter-inputs (cdr entry)))) highlighters)

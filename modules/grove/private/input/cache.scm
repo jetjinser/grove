@@ -184,6 +184,7 @@
         ((html-attributes? value)
          (list 'attributes (visit (html-attributes-assoc value))))
         ((html-tag? value) (list 'tag (html-tag-name value)))
+        ((html-void? value) '(html-void))
         ;; Preserve ordinary data as one datum. Only pairs containing IR records
         ;; need structural encoding; properties and source locations do not.
         ((pair? value)
@@ -209,6 +210,7 @@
     (('style name properties) (make-content-style name (unpack properties)))
     (('attributes assoc) (make-html-attributes (unpack assoc)))
     (('tag name) (make-html-tag name))
+    (('html-void) (make-html-void))
     (('pair first rest) (cons (unpack first) (unpack rest)))
     (('datum datum) datum)
     (_ (error "invalid cached content"))))

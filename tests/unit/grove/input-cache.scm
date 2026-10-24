@@ -159,6 +159,24 @@
             (list 'newline "\n" source)
             (list (content-layout-kind layout) (content-layout-raw layout)
                   (content-layout-source layout))))))
+    (parameterize ((current-input-cache
+                    (make-input-cache-context output #t '())))
+      (let ((document
+              (make-content-document
+                (list (make-content-element 'custom-void '()
+                        #:style (make-content-style #f
+                                 (list (make-html-void))))))))
+        (cached-document source "void-codec" '() (lambda () document)
+                         (lambda _ #t))
+        (let* ((decoded
+                 (cached-document source "void-codec" '()
+                   (lambda () (error "expected a cached void marker"))
+                   (lambda _ #t)))
+               (element (car (content-document-children decoded)))
+               (marker (car (content-style-properties
+                              (content-element-style element)))))
+          (test-assert "cache preserves the HTML void marker"
+            (html-void? marker)))))
     (let ((reads 0)
           (document (make-content-document
                       (list (make-content-element 'forest-query '()

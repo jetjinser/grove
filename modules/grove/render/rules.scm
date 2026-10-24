@@ -10,7 +10,6 @@
             empty-render-rules
             compose-render-rules
             render-rules-ref
-            render-rules->internal-handlers
             define-render-rules))
 
 ;; A renderer rule is a value, not a callback registration.  A rule maps a
@@ -80,26 +79,6 @@
   (unless (render-rules? rules)
     (error "not a render rule set" rules))
   (assq-ref (render-rules-map rules) kind))
-
-(define* (render-rules->internal-handlers rules #:key (context #f) (fallback #f))
-  "Internal adapter from RULES to content->sxml handlers.
-
-Public callers should pass #:rules to CONTENT->SXML or CONTENT->TEXT.  This
-adapter exists for the interpreter's internal handler layer; its name and
-signature may change."
-  (unless (render-rules? rules)
-    (error "not a render rule set" rules))
-  (unless (or (not fallback) (procedure? fallback))
-    (error "render rule fallback must be a procedure or #f" fallback))
-  (map (lambda (entry)
-         (cons (car entry)
-               (lambda (element children)
-                 ((cdr entry) context element children
-                  (lambda ()
-                    (if fallback
-                        (fallback element children)
-                        (error "no fallback render rule" (car entry))))))))
-       (render-rules-map rules)))
 
 (define-syntax define-render-rules
   (syntax-rules ()
