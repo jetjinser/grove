@@ -34,13 +34,9 @@ about *the environment of a render pass*, use a context.  If it is about
 
 | Function | Returns | Use when |
 | --- | --- | --- |
-| `site->html` | alist of page id → HTML string | tests, inspection, small tools |
-| `render-html` | list of artifacts | custom build pipelines without project caching |
-| `make-html-renderer` | cached renderer | `make-site-project #:renderers` |
-
-Text and gemtext follow the same shape: `site->text`, `render-text`,
-`make-text-renderer`; `site->gemtext`, `render-gemtext`,
-`make-gemtext-renderer`.
+| `site->html` / `site->text` / `site->gemtext` | alist of page id → rendered string; text and gemtext also include `"index"` | tests, inspection, small tools |
+| `render-html` / `render-text` / `render-gemtext` | complete list of build artifacts, including shared assets and indexes | custom build steps that need artifacts directly |
+| `make-html-renderer` / `make-text-renderer` / `make-gemtext-renderer` | cached renderer value | `make-site-project #:renderers` |
 
 All of them take one options value:
 
