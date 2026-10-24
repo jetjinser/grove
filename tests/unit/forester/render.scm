@@ -325,15 +325,15 @@
                      #:title-decorations
                      '(("algebra" . ((span "Algebra")))))))))
 
-(let* ((forest (make-forest (make-site (list algebra limits))))
+(let* ((forest (make-forest (make-site (list algebra limits)
+                                       #:home "algebra")))
        (renderer-configurations-for
         (lambda (messages)
           (renderer-configurations
             forest
             (list (make-html-renderer
                     #:options
-                    (make-html-options #:routes (make-html-routes)
-                                       #:messages messages
+                    (make-html-options #:messages messages
                                        #:rules-id 'message-test))
                   (make-text-renderer
                     #:options (make-text-options #:messages messages))
@@ -344,6 +344,18 @@
                    (backmatter-messages "First label"))
                  (renderer-configurations-for
                    (backmatter-messages "Second label"))))))
+
+(test-error "HTML options reject a missing routes value at construction"
+  #t
+  (make-html-options #:routes #f))
+
+(let* ((forest (make-forest (make-site (list algebra limits)
+                                       #:home "algebra")))
+       (artifacts (render-html forest #:options (make-html-options))))
+  (test-assert "HTML options derive the default route from the site home"
+    (find (lambda (artifact)
+            (string=? (artifact-path artifact) "index.html"))
+          artifacts)))
 
 (test-assert "HTML pages declare standards mode"
   (string-prefix? "<!DOCTYPE html>" (assoc-ref

@@ -52,8 +52,9 @@ files remain untouched. Writing is not transactional across the directory.
 
 A site declares its start tree once with
 `(make-site-project #:options (make-site-options #:home ID ...))`. HTML routes
-may then omit `#:home-page`; the HTML renderer resolves the index from the
-site. File-backed tree IDs are basenames without `.plant`; directories do not
+may omit `#:home-page`; if routes are omitted entirely, the default HTML routes
+are used. The HTML renderer resolves the index page from the site's home tree.
+File-backed tree IDs are basenames without `.plant`; directories do not
 qualify IDs. Named subtrees share that namespace. See
 [composition](forester-composition.md) for tree rules.
 

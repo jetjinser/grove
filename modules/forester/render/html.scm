@@ -1030,7 +1030,7 @@ to the lane, and an in-place numbered marker links to it."
 
 (define* (make-html-options #:key
                             (highlighters (default-highlighters))
-                            (routes #f)
+                            (routes (make-html-routes))
                             (mathjax-src default-mathjax-src)
                             (backmatter default-backmatter-sections)
                             (reference-taxon-id default-reference-taxon-id)
@@ -1061,6 +1061,8 @@ Entry points take this value with #:options."
   (let ((presentation
           (or presentation
               (make-html-presentation #:style default-html-style))))
+    (unless (html-routes? routes)
+      (error "HTML options require HTML routes" routes))
     (unless (html-presentation? presentation)
       (error "HTML options require an HTML presentation" presentation))
     (%make-html-options highlighters routes mathjax-src backmatter
