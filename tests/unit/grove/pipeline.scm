@@ -143,6 +143,53 @@
     (string->utf8 "beta-2")
     (artifact-content (cadr artifacts))))
 
+(let* ((stage-one
+        (make-asset-pipeline
+         #:name "independent-stage-one"
+         #:inputs (list input-a)
+         #:procedure
+         (lambda (in emit)
+           (emit "assets/intermediate.txt"
+                 (call-with-input-file (in input-a) get-string-all)))))
+       (stage-two
+        (make-asset-pipeline
+         #:name "independent-stage-two"
+         #:inputs '("assets/intermediate.txt")
+         #:procedure
+         (lambda (in emit)
+           (emit "assets/final.txt"
+                 (call-with-input-file (in "assets/intermediate.txt")
+                   get-string-all))))))
+  (test-assert "one pipeline cannot consume another pipeline's emitted artifact"
+    (catch #t
+      (lambda ()
+        (run-asset-pipelines (list stage-one stage-two)
+                             (current-project-key))
+        #f)
+      (lambda args #t))))
+
+(let ((result
+       (run-asset-pipelines
+        (list
+         (make-asset-pipeline
+          #:name "composed-stages"
+          #:version "stage-one-v1-stage-two-v1"
+          #:inputs (list input-a)
+          #:procedure
+          (lambda (in emit)
+            (let* ((source (call-with-input-file (in input-a) get-string-all))
+                   (intermediate (string-append source "\nstage-one"))
+                   (final (string-append intermediate "\nstage-two")))
+              (emit "assets/composed-intermediate.txt" intermediate)
+              (emit "assets/composed-final.txt" final)))))
+        (current-project-key))))
+  (test-equal "one Guile pipeline can compose and emit multiple stages"
+    '("assets/composed-intermediate.txt" "assets/composed-final.txt")
+    (map artifact-path (car result)))
+  (test-equal "the composed final artifact includes both stages"
+    "alpha\nstage-one\nstage-two"
+    (artifact-content (cadr (car result)))))
+
 (parameterize ((current-project-key "project-v2"))
   (let ((artifacts (car (run-pipelines "v2"))))
     (test-equal "a project fingerprint change re-runs" 4 runs)
