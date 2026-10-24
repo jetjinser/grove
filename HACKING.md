@@ -46,11 +46,9 @@ Enter the development shell with `nix develop ./nix` or
 track the same development tools, including optional Typst, Racket, and
 TeX Live tools for the hackable math example. Those compilers are not Grove
 runtime dependencies. The Guix manifest also exposes a pinned SMathML
-collection to Racket for that example. The container is required,
-not cosmetic: when the host already exports GUIX_LOCPATH or LANG, a
-plain `guix shell` inherits them and Guile cannot install a UTF-8
-locale, which mangles multilingual test fixtures. Inside the
-development shell:
+collection to Racket for that example. The manifest exposes locale data
+through `GUIX_LOCPATH`, including in a pure shell, so locale-aware tests do
+not depend on the host's locale setup. Inside the development shell:
 
 ```sh
 blue build

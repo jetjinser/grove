@@ -112,6 +112,40 @@ development environment without depending on it at runtime.")
 PLTCOLLECTS search path, alongside additional Racket collections.")
       (license license:asl2.0))))
 
+;; Guix's glibc-locales package installs locale data under lib/locale, but
+;; does not expose GUIX_LOCPATH as a search path.  A pure shell therefore
+;; needs a package that both brings in those data and declares their runtime
+;; lookup path.
+(define grove-glibc-locales
+  (let ((locales (specification->package "glibc-locales")))
+    (package
+      (name "grove-glibc-locales")
+      (version (package-version locales))
+      (source #f)
+      (build-system trivial-build-system)
+      (arguments
+       (list
+        #:modules '((guix build utils))
+        #:builder
+        #~(begin
+            (use-modules (guix build utils))
+            (let ((target (string-append #$output "/lib/locale"))
+                  (data (string-append #$(this-package-input "locales")
+                                       "/lib/locale")))
+              (mkdir-p (dirname target))
+              (symlink data target)))))
+      (inputs (list (list "locales" locales)))
+      (native-search-paths
+       (list (search-path-specification
+              (variable "GUIX_LOCPATH")
+              (files '("lib/locale")))))
+      (home-page "https://www.gnu.org/software/libc/")
+      (synopsis "Expose Guix locale data to pure shells")
+      (description
+       "Expose the locale data supplied by glibc-locales through
+GUIX_LOCPATH so locale-aware programs can use it in pure Guix shells.")
+      (license license:lgpl2.1+))))
+
 (define blue
   (package
     (name "blue")
@@ -357,6 +391,7 @@ Grove's highlighter consumes.")
 (packages->manifest
  (append
   (list blue faster-minikanren grove-highlights guile grove
+        grove-glibc-locales
         racket-smathml racket-vm-collections)
   (map specification->package
        (list ;;     /bin/sh and env for subprocess-spawning code under a
@@ -373,8 +408,4 @@ Grove's highlighter consumes.")
              "racket-minimal"
              "texlive-scheme-basic"
              "texlive-dvisvgm"
-             ;;     The test fixtures are multilingual; without locales
-             ;;     the C.UTF-8 that blue sets is unavailable and Unicode
-             ;;     text degrades to ??? in project builds.
-             "glibc-locales"
              "reuse"))))
