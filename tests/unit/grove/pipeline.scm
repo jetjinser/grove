@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit grove pipeline)
+  #:use-module (grove cache)
   #:use-module (grove output)
   #:use-module (grove pipeline)
   #:use-module (grove private input cache)
@@ -81,6 +82,19 @@
     (lambda (port) (display text port))))
 
 (test-begin "grove asset pipelines")
+
+(let ((cache (make-content-cache "pipeline-test")))
+  (test-equal "content cache starts empty" #f
+    (content-cache-ref cache "font-key"))
+  (test-assert "content cache stores byte values"
+    (content-cache-store! cache "font-key" (string->utf8 "font bytes")))
+  (test-equal "content cache restores verified byte values" "font bytes"
+    (utf8->string (content-cache-ref cache "font-key")))
+  (test-equal "content cache namespaces isolate keys" #f
+    (content-cache-ref (make-content-cache "other-pipeline") "font-key")))
+
+(test-error "content cache rejects empty keys" #t
+  (content-cache-ref (make-content-cache "pipeline-test") ""))
 
 (let* ((result (run-pipelines "v1"))
        (artifacts (car result))

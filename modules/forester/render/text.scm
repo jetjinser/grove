@@ -301,6 +301,17 @@ HTML renderer so text and HTML address occurrences identically."
                             (rules-id #f)
                             (cache? #t))
   "Immutable configuration for the Forester text renderer."
+  (unless (or (not prefix) (artifact-path? prefix))
+    (error "Forester text prefix must be a relative artifact path or #f" prefix))
+  (unless (text-routes? routes)
+    (error "Forester text options require text routes" routes))
+  (validate-backmatter-sections backmatter)
+  (check-reference-taxon-id reference-taxon-id)
+  (validate-chrome-options locale messages)
+  (unless (render-rules? rules)
+    (error "Forester text options require render rules" rules))
+  (unless (boolean? cache?)
+    (error "Forester text cache option must be a boolean" cache?))
   (%make-text-options prefix routes backmatter
                       reference-taxon-id locale messages rules rules-id
                       cache?))

@@ -1039,9 +1039,11 @@ to the lane, and an in-place numbered marker links to it."
                             (html-attributes '())
                             (side-lane '())
                             (presentation #f)
-                            (locale #f)
-                            (messages default-message-catalog)
                             (settings #f)
+                            (locale
+                              (and settings
+                                   (site-settings-default-locale settings)))
+                            (messages default-message-catalog)
                             (default-locale
                               (and settings
                                    (site-settings-default-locale settings)))
@@ -1063,6 +1065,29 @@ Entry points take this value with #:options."
               (make-html-presentation #:style default-html-style))))
     (unless (html-routes? routes)
       (error "HTML options require HTML routes" routes))
+    (validate-backmatter-sections backmatter)
+    (check-reference-taxon-id reference-taxon-id)
+    (validate-chrome-options locale messages)
+    (unless (and (list? highlighters)
+                 (every (lambda (entry)
+                          (and (pair? entry)
+                               (symbol? (car entry))
+                               (highlighter? (cdr entry))))
+                        highlighters)
+                 (= (length highlighters)
+                    (length (delete-duplicates (map car highlighters) eq?)))
+                 (boolean? article?)
+                 (boolean? backmatter-details?)
+                 (boolean? hreflang?)
+                 (boolean? language-switcher?)
+                 (boolean? cache?))
+      (error "HTML options contain invalid renderer values"))
+    (unless (or (not mathjax-src)
+                (and (non-empty-string? mathjax-src)
+                     (or (external-url? mathjax-src)
+                         (artifact-path? mathjax-src))))
+      (error "MathJax source must be a URL, relative artifact path, or #f"
+             mathjax-src))
     (unless (html-presentation? presentation)
       (error "HTML options require an HTML presentation" presentation))
     (%make-html-options highlighters routes mathjax-src backmatter

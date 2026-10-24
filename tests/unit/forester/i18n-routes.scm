@@ -173,6 +173,18 @@
          (string-contains sitemap "<loc>https://example.org/guide.html</loc>")
          (string-contains feed "<language>en</language>"))))
 
+(let* ((settings (make-site-settings #:site-url "https://example.org"
+                                     #:default-locale "zh-Hans"))
+       (html (assoc-ref (site->html forest
+                                    #:options
+                                    (make-html-options
+                                      #:settings settings
+                                      #:routes routes
+                                      #:mathjax-src #f))
+                       "home")))
+  (test-assert "HTML settings default the page locale when renderer locale is omitted"
+    (string-contains html "<html lang=\"zh-Hans\"")))
+
 (test-error "site settings reject an empty URL" #t
   (make-site-settings #:site-url ""))
 (test-error "site settings reject an empty locale" #t

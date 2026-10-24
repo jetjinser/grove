@@ -348,6 +348,12 @@
 (test-error "HTML options reject a missing routes value at construction"
   #t
   (make-html-options #:routes #f))
+(test-error "text options reject invalid backmatter at construction" #t
+  (make-text-options #:backmatter '(context context)))
+(test-error "Gemtext options reject invalid cache flags at construction" #t
+  (make-gemtext-options #:cache? 'yes))
+(test-error "renderer options reject invalid message catalogs at construction" #t
+  (make-text-options #:messages 'not-a-catalog))
 
 (let* ((forest (make-forest (make-site (list algebra limits)
                                        #:home "algebra")))

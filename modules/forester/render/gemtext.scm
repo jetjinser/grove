@@ -322,6 +322,18 @@
                                (rules-id #f)
                                (cache? #t))
   "Immutable configuration for the Forester Gemtext renderer."
+  (unless (or (not prefix) (artifact-path? prefix))
+    (error "Forester Gemtext prefix must be a relative artifact path or #f"
+           prefix))
+  (unless (text-routes? routes)
+    (error "Forester Gemtext options require text routes" routes))
+  (validate-backmatter-sections backmatter)
+  (check-reference-taxon-id reference-taxon-id)
+  (validate-chrome-options locale messages)
+  (unless (render-rules? rules)
+    (error "Forester Gemtext options require render rules" rules))
+  (unless (boolean? cache?)
+    (error "Forester Gemtext cache option must be a boolean" cache?))
   (%make-gemtext-options prefix routes backmatter
                          reference-taxon-id locale messages rules rules-id
                          cache?))

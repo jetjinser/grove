@@ -8,11 +8,21 @@
   #:use-module (forester backmatter)
   #:export (resolve-chrome-locale
             resolve-chrome-catalog
+            validate-chrome-options
             chrome-message
             chrome-message-format
             localized-backmatter-labels))
 
 ;; Chrome labels read their render context explicitly.
+
+(define (validate-chrome-options locale messages)
+  (unless (or (not locale) (locale? locale) (string? locale))
+    (error "renderer locale must be a locale, tag, or #f" locale))
+  (when (string? locale)
+    (make-locale locale))
+  (unless (message-catalog? messages)
+    (error "renderer messages must be a message catalog" messages))
+  #t)
 
 (define (resolve-chrome-locale locale messages)
   (cond

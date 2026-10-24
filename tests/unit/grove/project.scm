@@ -47,6 +47,20 @@
   (make-site-page "page" "Page" (make-content-document '())
     #:metadata '((summary . "first") (summary . "second"))))
 
+(test-error "site options validate cache flags at construction" #t
+  (make-site-options #:source-directory "sources"
+                     #:read-page (lambda (_) #f)
+                     #:output-directory "output"
+                     #:cache? 'yes))
+(test-error "site options validate transforms at construction" #t
+  (make-site-options #:source-directory "sources"
+                     #:read-page (lambda (_) #f)
+                     #:output-directory "output"
+                     #:transforms '(not-a-procedure)))
+(test-error "site options require a page reader at construction" #t
+  (make-site-options #:source-directory "sources"
+                     #:output-directory "output"))
+
 (dynamic-wind
   (lambda ()
     (setenv "XDG_CACHE_HOME" (string-append project-root "/.cache"))
