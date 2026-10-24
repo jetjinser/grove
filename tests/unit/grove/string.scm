@@ -15,4 +15,17 @@
 (test-assert "non-empty-string? rejects non-strings"
   (not (non-empty-string? #f)))
 
+(test-equal "grapheme-count handles empty text" 0
+  (grapheme-count ""))
+(test-equal "grapheme-count counts ordinary characters" 5
+  (grapheme-count "grove"))
+(test-equal "grapheme-count keeps combining marks with their base" 1
+  (grapheme-count "è̤"))
+(test-equal "grapheme-count handles canonically composed accents" 1
+  (grapheme-count "é"))
+(test-equal "grapheme-count keeps emoji ZWJ sequences together" 1
+  (grapheme-count "👩‍💻"))
+(test-error "grapheme-count rejects non-strings" #t
+  (grapheme-count #f))
+
 (test-end "grove string-fun")

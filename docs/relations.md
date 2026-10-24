@@ -128,7 +128,7 @@ reachability.
 
 `(forester site)` exposes two immutable relation snapshots on a Forest.
 `(content-node-relation forest)` stores one row for each content element:
-`(node-id page-id parent-id kind position properties text character-count plain-text?)`.
+`(node-id page-id parent-id kind position properties text character-count codepoint-count plain-text?)`.
 `(page-relation forest)` stores one row per page:
 `(page-id title metadata)`. The `nodeo` and `pageo` goals query those rows;
 `node-propertyo` and `page-metadatao` query the corresponding alists.
@@ -141,8 +141,11 @@ child slot in the original content list, so text and layout leaves can create
 gaps between element positions even though leaves have no rows or IDs.
 
 The `text` column is the concatenation of descendant text and layout leaves,
-without renderer-specific formatting. `character-count` is its Guile string
-length. `plain-text?` means that the element has no child content elements;
+without renderer-specific formatting. `character-count` counts Unicode
+extended grapheme clusters, the default user-perceived text units;
+`codepoint-count` is the Guile string length. UTF-8 byte length is a storage
+measure and can be computed from `(string->utf8 text)` when needed.
+`plain-text?` means that the element has no child content elements;
 text and layout leaves are allowed. Thus `plain-text-paragrapho` selects
 paragraphs without nested semantic elements, while `paragrapho` also includes
 paragraphs containing links, math, or other inline elements. `contains-texto`

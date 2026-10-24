@@ -74,7 +74,8 @@
                                    (map cdr child-results)))))
                   (cons (cons
                           (list id (site-page-id page) parent-id kind position
-                                properties text (string-length text)
+                                properties text (grapheme-count text)
+                                (string-length text)
                                 (element-plain-text? content))
                           (append-map car child-results))
                         text))))))))

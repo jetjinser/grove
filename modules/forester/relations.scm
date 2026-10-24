@@ -51,10 +51,10 @@
   (page-id title metadata))
 
 ;; Rows are (node-id page-id parent-id kind position properties text
-;; character-count plain-text?).
+;; character-count codepoint-count plain-text?).
 (define-relation-schema make-content-node-relation nodeo
   (node-id page-id parent-id kind position properties text
-   character-count plain-text?))
+   character-count codepoint-count plain-text?))
 
 ;; Rows are (term-id page-id anchor display-text): one defining
 ;; occurrence of a term, collected from dfn-tagged anchored elements.

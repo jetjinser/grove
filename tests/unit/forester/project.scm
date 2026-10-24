@@ -100,7 +100,7 @@
       "@use-modules[(tests unit forester linked commands)]\n@title{Unicode topics}\n@taxon[\"Straße\"]\n@paragraph{Unicode topics.}")
     (write-test-file
       (string-append source-directory "/unicode-accent.plant")
-      "@use-modules[(tests unit forester linked commands)]\n@title{Unicode accent}\n@taxon[\"café\"]\n@paragraph{Unicode accents.}"))
+      "@use-modules[(tests unit forester linked commands)]\n@title{Unicode accent}\n@taxon[\"café\"]\n@paragraph{è̤}"))
   (lambda ()
     (let* ((project
              (make-site-project
@@ -376,7 +376,7 @@
                     (kind 'math))
                   (node-propertyo nodes node-id 'display? display?)
                   (== display? #t))))
-            (test-equal "character counts use Unicode string length"
+            (test-equal "character counts use grapheme clusters"
               '(14)
               (query (character-count)
                 (exists (node-id text)
@@ -387,6 +387,18 @@
                     (text text)
                     (character-count character-count))
                   (contains-texto nodes node-id "范畴论"))))
+            (test-equal "a multi-codepoint Foochow letter is one character"
+              '((1 3))
+              (query (character-count codepoint-count)
+                (exists (node-id text)
+                  (nodeo nodes
+                    (node-id node-id)
+                    (page-id "unicode-accent")
+                    (kind 'paragraph)
+                    (text text)
+                    (character-count character-count)
+                    (codepoint-count codepoint-count))
+                  (contains-texto nodes node-id "è̤"))))
             (test-assert "content node IDs are dense in traversal order"
               (let ((ids
                       (query (node-id)

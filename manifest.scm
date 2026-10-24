@@ -31,6 +31,7 @@
              (guix packages))
 
 (define guile (specification->package "guile"))
+(define libunistring (specification->package "libunistring"))
 
 ;; SMathML is a Racket collection, rather than a standalone executable.
 ;; Keep its upstream revision fixed and expose the collection directory to
@@ -380,6 +381,7 @@ Grove's highlighter consumes.")
 (load "grove-package.scm")
 (define grove
   (make-grove blue guile faster-minikanren grove-highlights
+              libunistring
               (specification->package "guile-gcrypt")
               (specification->package "guile-ssh")
               (specification->package "guile-ts")
@@ -387,7 +389,7 @@ Grove's highlighter consumes.")
 
 (packages->manifest
  (append
-  (list blue faster-minikanren grove-highlights guile grove
+  (list blue faster-minikanren grove-highlights guile libunistring grove
         grove-glibc-locales
         racket-smathml racket-vm-collections)
   (map specification->package

@@ -7,7 +7,7 @@
 ;;; installs the CLI wrapper with the dependency paths it sees at build
 ;;; time, so every dependency must be visible in the build environment.
 
-(define* (make-grove blue guile faster-minikanren grove-highlights
+(define* (make-grove blue guile faster-minikanren grove-highlights libunistring
                      guile-gcrypt guile-ssh guile-ts coreutils
                      #:key
                      (version "0-unstable-2026-10-10")
@@ -169,7 +169,7 @@
     (native-inputs (list blue guile))
     (inputs
      (append
-      (list guile faster-minikanren grove-highlights)
+      (list guile faster-minikanren grove-highlights libunistring)
       (map specification->package
            (list "coreutils" "guile-gcrypt" "guile-ssh" "guile-ts"))))
     (synopsis "Static site generator for executable, forester-style notes")
