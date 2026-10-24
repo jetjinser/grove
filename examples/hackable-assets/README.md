@@ -8,8 +8,9 @@ asset pipeline. The adapter is [graphviz.scm](graphviz.scm), and the input is
 [diagram.dot](diagram.dot). Its integration test checks real SVG output,
 input-driven rebuilding, and reproducibility.
 
-The pipeline cache includes its declared `#:version`, but does not inspect the
-executable found through `PATH`. Replacing Graphviz while keeping the same
-version key reuses the old SVG; pin the tool in the project environment or
-change the key when the tool or rendering options change. The integration test
-also exercises this boundary with two stand-in `dot` executables.
+The adapter probes `dot -V` and includes the result in its cache identity, so
+project code does not need to repeat Graphviz's version. The project environment
+still needs to pin the tool if reproducible builds matter; Grove cannot infer
+whether a tool's reported version captures every behavior-affecting dependency.
+The integration test replaces a stand-in `dot` with a different reported
+version and verifies automatic cache invalidation.

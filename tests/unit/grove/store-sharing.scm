@@ -76,16 +76,26 @@
                  #:input input #:output out #:error err
                  #:environment
                  (cons (string-append "GROVE_STORE_DIR=" store)
+                   (cons (string-append "GROVE_CACHE_DIR=" root "/cache")
                        (filter (lambda (entry)
                                  (not (or (string-prefix? "GROVE_STORE_DIR=" entry)
                                           (string-prefix? "GROVE_CACHE_DIR=" entry))))
-                               (environ))))))
-          (let ((status (cdr (waitpid pid))))
-            (list (status:exit-val status)
-                  (call-with-input-file
-                    (format #f "~a/.out.~a" root run-counter) get-string-all)
-                  (call-with-input-file
-                    (format #f "~a/.err.~a" root run-counter) get-string-all)))))
+                               (environ)))))))
+          (let* ((status (cdr (waitpid pid)))
+                 (result
+                  (list (status:exit-val status)
+                        (call-with-input-file
+                          (format #f "~a/.out.~a" root run-counter)
+                          get-string-all)
+                        (call-with-input-file
+                          (format #f "~a/.err.~a" root run-counter)
+                          get-string-all)))
+                 (exit-value (car result)))
+            (unless (zero? exit-value)
+              (format (current-error-port)
+                      "store-sharing child exited ~a\nstdout:\n~a\nstderr:\n~a\n"
+                      exit-value (cadr result) (caddr result)))
+            result)))
       (lambda () (close-port input) (close-port out) (close-port err)))))
 
 (test-begin "shared content store")
@@ -98,18 +108,18 @@
           (wt-b (string-append root "/wt-b")))
       (setup-worktree wt-a)
       (setup-worktree wt-b)
-      (let ((result (run wt-a "build" "--profile" "--project" (string-append wt-a "/project.scm"))))
+      (let ((result (run wt-a "build" "--debug" "--profile" "--project" (string-append wt-a "/project.scm"))))
         (test-equal "the first checkout builds from a cold store" 0 (car result))
         (test-assert "the first checkout reads fresh"
           (string-contains (caddr result) "1 fresh")))
-      (let ((result (run wt-b "build" "--profile" "--project" (string-append wt-b "/project.scm"))))
+      (let ((result (run wt-b "build" "--debug" "--profile" "--project" (string-append wt-b "/project.scm"))))
         (test-equal "the second checkout builds successfully" 0 (car result))
         (test-assert "the second checkout reuses the shared analyses"
           (string-contains (caddr result) "1 reused")))
       (test-equal "artifacts are byte-identical across checkouts"
         (call-with-input-file (string-append wt-a "/build/page.html") get-string-all)
         (call-with-input-file (string-append wt-b "/build/page.html") get-string-all))
-      (let ((result (run wt-a "build" "--profile" "--project" (string-append wt-a "/project.scm"))))
+      (let ((result (run wt-a "build" "--debug" "--profile" "--project" (string-append wt-a "/project.scm"))))
         (test-equal "the first checkout still reuses after the share" 0 (car result))
         (test-assert "the first checkout's reuse is intact"
           (string-contains (caddr result) "1 reused")))))

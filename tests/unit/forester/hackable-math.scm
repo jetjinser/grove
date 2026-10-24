@@ -41,6 +41,37 @@
      (search (content-document-children value)))
     (else #f)))
 
+;; Unit tests exercise the adapter's command lines with deterministic stand-ins.
+;; Real Typst/TeX/Racket installations belong in the integration environment,
+;; not as ambient prerequisites for `blue check`.
+(define compiler-test-root
+  (string-append (or (getenv "TMPDIR") "/tmp")
+                 "/grove-math-tools-" (number->string (getpid))))
+(define compiler-test-bin (string-append compiler-test-root "/bin"))
+(define old-path (getenv "PATH"))
+
+(define (write-tool name body)
+  (let ((path (string-append compiler-test-bin "/" name)))
+    (call-with-output-file path (lambda (port) (display body port)))
+    (chmod path #o755)))
+
+(mkdir compiler-test-root)
+(mkdir compiler-test-bin)
+(write-tool "typst"
+  "#!/bin/sh\n[ \"$1\" = compile ] || exit 2\nprintf '%s\\n' '<svg>typst</svg>'\n")
+(write-tool "latex"
+  (string-append
+    "#!/bin/sh\nout=\nwhile [ $# -gt 0 ]; do\n"
+    "  if [ \"$1\" = -output-directory ]; then shift; out=$1; fi\n"
+    "  shift\ndone\n"
+    "[ -n \"$out\" ] || exit 2\n: > \"$out/main.dvi\"\n"))
+(write-tool "dvisvgm"
+  "#!/bin/sh\n[ -f \"$4\" ] || exit 2\nprintf '%s\\n' '<svg>latex</svg>'\n")
+(write-tool "racket"
+  "#!/bin/sh\nprintf '%s\\n' '<m:math xmlns:m=\"http://www.w3.org/1998/Math/MathML\"><m:mi>x</m:mi></m:math>'\n")
+(setenv "PATH"
+        (string-append compiler-test-bin ":" (or old-path "")))
+
 (test-begin "hackable source math")
 
 (let* ((source-root (dirname (getenv "GROVE_SRCDIR")))
@@ -152,11 +183,15 @@
   (test-equal "SMathML source has its own document node"
     'smathml (content-element-kind element))
   (test-equal "SMathML XML is bridged to Grove's HTML SXML"
-    '(math (@ (xmlns "http://www.w3.org/1998/Math/MathML"))
-      (mi "x"))
+    '(m:math (@ (xmlns:m "http://www.w3.org/1998/Math/MathML"))
+      (m:mi "x"))
     html))
 
 (test-error "Typst nodes reject empty source" #t
   (typst-math ""))
 
 (test-end "hackable source math")
+(if old-path
+    (setenv "PATH" old-path)
+    (unsetenv "PATH"))
+(system* "rm" "-rf" compiler-test-root)

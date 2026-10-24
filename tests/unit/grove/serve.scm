@@ -22,16 +22,6 @@
 (define helper (string-append root "/modules/probe/helper.scm"))
 (define control (string-append root "/control"))
 (define sources (getenv "GROVE_SRCDIR"))
-;;     Under the blue test driver these lifecycle tests fail: the
-;;     spawned serve is a grandchild of the driver, and libgcrypt's
-;;     hash call dies with ENOSYS in that instrumented context
-;;     ("gcry_md_hash_buffer: Function not implemented" at project
-;;     load) - every assertion then times out waiting for a serve
-;;     that never comes up.  Direct runs with the same environment
-;;     variables (coverage enabled, debug VM engine, GROVE_SRCDIR)
-;;     fingerprint fine, so the breakage needs the full driver
-;;     context and is not a Grove defect; production serve is
-;;     unaffected.  Run this file outside the driver to exercise it.
 (define processes '())
 (define port #f)
 (define (write-file path text)
