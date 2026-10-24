@@ -402,8 +402,8 @@ Grove's highlighter consumes.")
              "guile-gcrypt"
              "guile-quickcheck"
              "guile-ts"
-             ;; Optional compiler toolchains for the hackable math example.
-             ;; Grove itself remains independent of these tools.
+             ;; Optional tools for project-side integration experiments.
+             "graphviz"
              "typst"
              "racket-minimal"
              "texlive-scheme-basic"

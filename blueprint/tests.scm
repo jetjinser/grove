@@ -94,6 +94,7 @@
     "unit/grove/preview.scm"
     "unit/grove/preview-watch.scm"
     "unit/grove/pipeline.scm"
+    "unit/grove/graphviz-integration.scm"
     "unit/grove/build-lock.scm"
     "unit/grove/serve.scm"
     "unit/grove/platform.scm"

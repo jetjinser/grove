@@ -70,8 +70,8 @@
               self'.packages.grove-highlights
               self'.packages.grove
 
-              # Optional toolchains used by the hackable math example.
-              # They are development tools, not Grove runtime dependencies.
+              # Optional tools for project-side integration experiments.
+              graphviz
               typst
               racket-minimal
               texlive.combined.scheme-basic
