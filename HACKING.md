@@ -42,13 +42,9 @@ behavior and meaningful failures, rather than duplicating the implementation.
 Mathematical checks should use independent oracles where available.
 
 Enter the development shell with `nix develop ./nix` or
-`guix shell --container --pure -m manifest.scm`. The two environments
-track the same development tools, including optional Typst, Racket, and
-TeX Live tools for the hackable math example. Those compilers are not Grove
-runtime dependencies. The Guix manifest also exposes a pinned SMathML
-collection to Racket for that example. The manifest exposes locale data
-through `GUIX_LOCPATH`, including in a pure shell, so locale-aware tests do
-not depend on the host's locale setup. Inside the development shell:
+`guix shell --container --pure -m manifest.scm`. The Guix manifest exposes
+locale data through `GUIX_LOCPATH`, including in a pure shell. Inside the
+development shell:
 
 ```sh
 blue build
