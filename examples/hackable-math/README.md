@@ -36,13 +36,20 @@ renderer, and one HTML rule; a project supplies the compiler procedure.
 ```
 
 `compile-to-svg` is ordinary project code with the signature
-`(expression -> SVG string)`. It can call `typst`, invoke a LaTeX conversion
-command, or delegate to another service. A Racket-based SMathML adapter can
-serialize the expression to a process and return its MathML/SVG result. The
-compiler ID belongs to the project and should change whenever tool versions or
-options can change output. Files that affect compilation belong in
-`#:dependencies`; the build fingerprints them and records them as sources of
-each generated SVG.
+`(expression -> SVG string)`. It can call `typst`, invoke a LaTeX-to-SVG
+pipeline, or delegate to another service. The compiler ID belongs to the
+project and should change whenever tool versions or options can change output.
+Files that affect compilation belong in `#:dependencies`; the build
+fingerprints them and records them as sources of each generated SVG.
+
+This asset path fits Typst and standalone LaTeX output. Grove also has a
+native math content IR that renders to inline MathML, including a TeX-source
+presentation path. SMathML is different: its Racket DSL builds HTML/MathML
+structures for the browser rather than acting as a standalone typesetter. A
+project using it should bridge its structured output into a custom Grove HTML
+render rule, instead of routing it through this SVG renderer. That bridge and
+the SMathML package remain project-owned; the development manifest provides
+Racket so the project can choose and pin its package version.
 
 The example renderer scans public Forest/page/content values, emits ordinary
 Grove artifacts, and puts formula inputs in its cache configuration. Each

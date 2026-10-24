@@ -43,8 +43,9 @@ Mathematical checks should use independent oracles where available.
 
 Enter the development shell with `nix develop ./nix` or
 `guix shell --container --pure -m manifest.scm`. The two environments
-track the same dependency set; the nix flake additionally builds
-Racket-era tooling the Guix manifest omits. The container is required,
+track the same development tools, including optional Typst, Racket, and
+TeX Live tools for the hackable math example. Those compilers are not Grove
+runtime dependencies. The container is required,
 not cosmetic: when the host already exports GUIX_LOCPATH or LANG, a
 plain `guix shell` inherits them and Guile cannot install a UTF-8
 locale, which mangles multilingual test fixtures. Inside the

@@ -70,6 +70,13 @@
               self'.packages.grove-highlights
               self'.packages.grove
 
+              # Optional toolchains used by the hackable math example.
+              # They are development tools, not Grove runtime dependencies.
+              typst
+              racket-minimal
+              texlive.combined.scheme-basic
+              dvisvgm
+
               reuse
             ];
             env = [
