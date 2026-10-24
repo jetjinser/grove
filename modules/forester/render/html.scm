@@ -39,26 +39,22 @@
             html-options?
             make-html-renderer))
 
-(define* (chrome-date text #:optional context)
-  (let* ((context (or context (current-render-context)))
-         (locale (and context
-                      (render-context-ref context 'locale-object))))
+(define (chrome-date text context)
+  (let ((locale (render-context-ref context 'locale-object)))
     (if locale (format-date locale text #:style 'long) text)))
 
 (define (page-locale page)
   (assq-ref (site-page-metadata page) 'locale))
 
-(define* (translation-group forest page #:optional context)
+(define (translation-group page context)
   (let ((key (assq-ref (site-page-metadata page) 'translation)))
     (and key
-         (reverse (hash-ref (or (and context
-                                (render-context-ref context 'translation-groups))
-                                (translation-groups (pages forest)))
+         (reverse (hash-ref (render-context-translation-groups context)
                             key
                             '())))))
 
 (define (hreflang-links forest page routes context)
-  (let ((group (translation-group forest page context)))
+  (let ((group (translation-group page context)))
     (if (or (not group) (< (length group) 2))
         '()
         (append
@@ -82,7 +78,7 @@
                 '()))))))
 
 (define (alternate-og-locales forest page context)
-  (let ((group (translation-group forest page context)))
+  (let ((group (translation-group page context)))
     (if (not group)
         '()
         (let loop ((rest group) (acc '()))
@@ -96,7 +92,7 @@
                     (loop (cdr rest) acc))))))))
 
 (define (language-switcher-sxml forest page routes context)
-  (let ((group (translation-group forest page context)))
+  (let ((group (translation-group page context)))
     (if (or (not group) (< (length group) 2))
         '()
         `(nav (@ (class "language-switcher")
@@ -253,7 +249,7 @@ backlog report collects the mention."
   (if (string-prefix? "unstable-" id)
       (string-append "#" (substring id (string-length "unstable-")))
       id))
-(define* (default-metadata-items page #:optional context)
+(define (default-metadata-items page context)
   "The stock metadata items: the page's publication dates. Additional items
 from the HTML presentation are appended after these."
   (let ((published (assq-ref (site-page-metadata page) 'published))
@@ -408,6 +404,7 @@ top-level taxon element; pages without one contribute nothing."
           (list `(ol (@ (class "tree-outline")) ,@outline)))
       #:anchor (string-append "backmatter-" class "-" (site-page-id page))
       #:depth 3
+      #:context context
       #:metadata-items (metadata-items page context)
       #:title-decoration (taxon-entry-sxml page)
       #:open? #f)))

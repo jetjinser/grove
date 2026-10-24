@@ -12,8 +12,6 @@
             render-context-with
             render-context-without
             render-context-values
-            current-render-context
-            with-render-context
             render-context-forest
             render-context-routes
             render-context-page
@@ -44,19 +42,6 @@
   (%make-render-context values)
   render-context?
   (values render-context-values))
-
-;; Compatibility fallback for user-provided hooks that call chrome helpers
-;; without receiving a context.  Internal rendering always passes the explicit
-;; value; the parameter is thread-local and must not be used as primary state.
-(define current-render-context (make-parameter #f))
-
-(define (with-render-context context thunk)
-  (unless (render-context? context)
-    (error "not a render context" context))
-  (unless (procedure? thunk)
-    (error "with-render-context expects a thunk" thunk))
-  (parameterize ((current-render-context context))
-    (thunk)))
 
 (define default-render-context-values
   '((hreflang? . #t)

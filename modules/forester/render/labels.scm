@@ -12,9 +12,7 @@
             chrome-message-format
             localized-backmatter-labels))
 
-;; Chrome labels read the render context.  The optional-context variants are
-;; a compatibility path for callers that have no context yet; they fall back
-;; to the default catalog and the default locale instead of dynamic state.
+;; Chrome labels read their render context explicitly.
 
 (define (resolve-chrome-locale locale messages)
   (cond
@@ -28,35 +26,24 @@
       messages
       (merge-message-catalogs default-message-catalog messages)))
 
-(define* (chrome-message key #:optional context)
-  (let ((context (or context (current-render-context))))
-    (if context
-        (message (render-context-ref context 'messages)
-                 key
-                 (render-context-ref context 'locale))
-        (message default-message-catalog key "en"))))
+(define (chrome-message key context)
+  (message (render-context-ref context 'messages)
+           key
+           (render-context-ref context 'locale)))
 
-(define* (chrome-message-format key arguments #:optional context)
-  (let ((context (or context (current-render-context))))
-    (if context
-        (message-format (render-context-ref context 'messages)
-                        key arguments
-                        (render-context-ref context 'locale))
-        (message-format default-message-catalog key arguments "en"))))
+(define (chrome-message-format key arguments context)
+  (message-format (render-context-ref context 'messages)
+                  key arguments
+                  (render-context-ref context 'locale)))
 
-(define* (localized-backmatter-labels #:optional context)
+(define (localized-backmatter-labels context)
   "Default backmatter headings for the context catalog and locale."
-  (let ((context (or context (current-render-context))))
-    (let ((catalog (if context
-                       (render-context-ref context 'messages)
-                       default-message-catalog))
-          (locale (if context
-                      (render-context-ref context 'locale)
-                      "en")))
-      (map (lambda (section)
-             (cons section
-                   (message catalog
-                            (string->symbol
-                              (string-append "backmatter-" (symbol->string section)))
-                            locale)))
-           default-backmatter-sections))))
+  (let ((catalog (render-context-ref context 'messages))
+        (locale (render-context-ref context 'locale)))
+    (map (lambda (section)
+           (cons section
+                 (message catalog
+                          (string->symbol
+                            (string-append "backmatter-" (symbol->string section)))
+                          locale)))
+         default-backmatter-sections)))

@@ -43,7 +43,7 @@
                                    (og-image-alt #f)
                                    (locale #f)
                                    (messages default-message-catalog)
-                                   (translation-groups #f))
+                                   (translation-groups (translation-groups (pages forest))))
   "Build the site-level render context for FOREST.
 
 LOCALE and MESSAGES are resolved once, here, so renderers no longer read the
