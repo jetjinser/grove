@@ -33,16 +33,15 @@
 ;; is separate from the bilingual content itself, which is authored per tree.
 (define chrome-messages
   (make-message-catalog
-    '(("en" . ((context . "Context") (references . "References")
-               (backlinks . "Backlinks") (related . "Related")))
-      ("zh-Hans" . ((context . "语境") (references . "参考")
-                  (backlinks . "反向链接") (related . "相关"))))
+    '(("en" . ((backmatter-context . "Context")
+               (backmatter-references . "References")
+               (backmatter-backlinks . "Backlinks")
+               (backmatter-related . "Related")))
+      ("zh-Hans" . ((backmatter-context . "语境")
+                    (backmatter-references . "参考")
+                    (backmatter-backlinks . "反向链接")
+                    (backmatter-related . "相关"))))
     #:default "en"))
-
-(define (backmatter-labels locale)
-  (map (lambda (section)
-         (cons section (message chrome-messages section locale)))
-       '(context references backlinks related)))
 
 (define bilingual-style
   (compose-html-styles
@@ -78,8 +77,7 @@
                 #:presentation (make-html-presentation #:style bilingual-style)
                 #:routes bilingual-routes
                 #:html-attributes (locale-html-attributes default-locale)
-                #:backmatter-labels
-                (backmatter-labels (locale-tag default-locale))))
+                #:messages chrome-messages))
             (make-text-renderer
               #:options (make-text-options #:prefix "text")))
       #:output-directory output-directory)))

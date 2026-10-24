@@ -63,10 +63,6 @@
                                            "/share/racket/collects/SMathML")))
                 (mkdir-p target)
                 (copy-recursively "." target)))))))
-    (native-search-paths
-     (list (search-path-specification
-            (variable "PLTCOLLECTS")
-            (files '("share/racket/collects")))))
     (home-page "https://github.com/alpha-beta-eta/SMathML")
     (synopsis "Embedded Racket DSL for HTML and MathML")
     (description
@@ -104,7 +100,8 @@ development environment without depending on it at runtime.")
       (native-search-paths
        (list (search-path-specification
               (variable "PLTCOLLECTS")
-              (files '("share/racket/default-collects")))))
+              (files '("share/racket/collects"
+                       "share/racket/default-collects")))))
       (home-page "https://racket-lang.org/")
       (synopsis "Racket VM collection search path")
       (description
