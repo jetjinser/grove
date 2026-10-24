@@ -16,6 +16,7 @@
   #:use-module (forester render html)
   #:use-module (forester render rss)
   #:use-module (forester render sitemap)
+  #:use-module (forester render site)
   #:use-module (forester render text)
   #:use-module (forester site)
   #:use-module (grove input scribble)
@@ -683,27 +684,33 @@
                      (make-content-document
                        (list (make-content-element
                                'paragraph (list "Hello."))))))
-             (project
-               (make-site-project
-                 #:options
-                 (make-site-options
-                   #:title "Derived"
-                   #:collect-sources (lambda () '("virtual.plant"))
-                   #:read-page (lambda (_source) page)
-                   #:analyze make-forest
-                   #:derived-context
-                   (lambda (forest)
-                     (make-site-render-context
-                       forest
-                       #:site-url "https://derived.example"
-                       #:default-locale "en"
-                       #:locale "en"))
-                   #:derived
-                   (list (sitemap-derived #:routes routes)
-                         (rss-derived #:routes routes)
-                         (graph-derived))
-                   #:output-directory (string-append root "/output"))))
-             (artifacts (build-project project))
+             (make-derived-project
+               (lambda (settings)
+                 (make-site-project
+                   #:options
+                   (make-site-options
+                     #:title "Derived"
+                     #:collect-sources (lambda () '("virtual.plant"))
+                     #:read-page (lambda (_source) page)
+                     #:analyze make-forest
+                     #:derived-context
+                     (lambda (forest)
+                       (make-site-render-context
+                         forest
+                         #:settings settings
+                         #:locale "en"))
+                     #:derived
+                     (list (sitemap-derived #:settings settings #:routes routes)
+                           (rss-derived #:settings settings #:routes routes)
+                           (graph-derived))
+                     #:output-directory (string-append root "/output")))))
+             (settings
+               (make-site-settings
+                 #:site-url "https://derived.example"
+                 #:default-locale "en"))
+             (project (make-derived-project settings))
+             (initial-report (build-project/report project))
+             (artifacts (build-report-artifacts initial-report))
              (sitemap (find (lambda (artifact)
                               (string=? (artifact-path artifact)
                                         "sitemap.xml"))
@@ -713,7 +720,31 @@
           (map artifact-path artifacts))
         (test-assert "project derived artifacts use the project context"
           (string-contains (artifact-content sitemap)
-                           "https://derived.example"))))
+                           "https://derived.example"))
+        (let* ((updated-settings
+                (make-site-settings
+                  #:site-url "https://updated-derived.example"
+                  #:default-locale "zh-Hans"))
+               (updated-project (make-derived-project updated-settings))
+               (updated-report (build-project/report updated-project))
+               (affected (build-report-affected-artifacts updated-report))
+               (updated-sitemap
+                (find (lambda (artifact)
+                        (string=? (artifact-path artifact) "sitemap.xml"))
+                      (build-report-artifacts updated-report)))
+               (updated-feed
+                (read-test-file (string-append root "/output/feed.xml"))))
+          (test-assert "changed shared settings invalidate derived artifacts"
+            (and (member "sitemap.xml" affected string=?)
+                 (member "feed.xml" affected string=?)))
+          (test-assert "updated sitemap uses the changed shared settings"
+            (string-contains (artifact-content updated-sitemap)
+                             "https://updated-derived.example"))
+          (test-assert "updated feed uses the changed shared settings"
+            (and (string-contains updated-feed
+                                  "https://updated-derived.example")
+                 (string-contains updated-feed
+                                  "<language>zh-Hans</language>"))))))
     (lambda () (system* "rm" "-rf" root))))
 
 (test-end "forester project")
