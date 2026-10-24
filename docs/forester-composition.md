@@ -73,11 +73,11 @@ that order; empty sections are omitted:
 | Backlinks | Authored links to this tree. |
 | Related | Non-reference targets linked directly from this tree. |
 
-HTML/text renderers accept `#:backmatter` to select/order sections (an empty
-list disables them), message catalog entries to override headings, and
-`#:reference-taxon-id` to choose the reference classification. The default is
-`reference`, written `@taxon["reference"]`. HTML entries follow the forester
-entry anatomy: the target's taxon when its document declares one, the title
+HTML, text, and Gemtext renderers accept `#:backmatter` to select/order
+sections (an empty list disables them), message catalog entries to override
+headings, and `#:reference-taxon-id` to choose the reference classification.
+The default is `reference`, written `@taxon["reference"]`. HTML entries follow
+the forester entry anatomy: the target's taxon when its document declares one, the title
 link, and a dimmed `[tree-id]` slug; backlink entries show the link's text
 (falling back to the source title) with the source tree's slug, linking to
 the exact reference anchor.
