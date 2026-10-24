@@ -1043,6 +1043,11 @@ to the lane, and an in-place numbered marker links to it."
        (every symbol? kinds)
        (= (length kinds) (length (delete-duplicates kinds eq?)))))
 
+(define (require-html-options options who)
+  (unless (html-options? options)
+    (error (string-append who " requires HTML options") options))
+  options)
+
 (define* (make-html-options #:key
                             (highlighters (default-highlighters))
                             (routes (make-html-routes))
@@ -1145,7 +1150,8 @@ Entry points take this value with #:options."
     #:messages (html-options-messages options)))
 
 (define* (site->html forest #:key (options (make-html-options)))
-  (let* ((presentation (html-options-presentation options))
+  (let* ((_ (require-html-options options "site->html"))
+         (presentation (html-options-presentation options))
          (presentation-data presentation)
          (style (html-presentation-style presentation))
          (highlighters (html-options-highlighters options))
@@ -1186,7 +1192,8 @@ Entry points take this value with #:options."
                             #:context context)))
          (pages forest))))
 (define* (render-html forest #:key (options (make-html-options)))
-    (let* ((presentation (html-options-presentation options))
+    (let* ((_ (require-html-options options "render-html"))
+          (presentation (html-options-presentation options))
           (presentation-data presentation)
           (style (html-presentation-style presentation))
           (highlighters (html-options-highlighters options))
@@ -1235,7 +1242,8 @@ Entry points take this value with #:options."
              forest-pages
              (iota total 1))))))
 (define* (make-html-renderer #:key (options (make-html-options)))
-    (let* ((presentation (html-options-presentation options))
+    (let* ((_ (require-html-options options "make-html-renderer"))
+          (presentation (html-options-presentation options))
           (presentation-data presentation)
           (style (html-presentation-style presentation))
           (highlighters (html-options-highlighters options))

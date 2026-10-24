@@ -290,6 +290,11 @@ HTML renderer so text and HTML address occurrences identically."
   (rules-id text-options-rules-id)
   (cache? text-options-cache?))
 
+(define (require-text-options options who)
+  (unless (text-options? options)
+    (error (string-append who " requires text options") options))
+  options)
+
 (define* (make-text-options #:key
                             (prefix #f)
                             (routes (make-text-routes))
@@ -318,7 +323,8 @@ HTML renderer so text and HTML address occurrences identically."
                       cache?))
 
 (define* (site->text forest #:key (options (make-text-options)))
-  (let* ((routes (text-options-routes options))
+  (let* ((_ (require-text-options options "site->text"))
+         (routes (text-options-routes options))
          (backmatter (text-options-backmatter options))
          (reference-taxon-id (text-options-reference-taxon-id options))
          (locale (text-options-locale options))
@@ -345,7 +351,8 @@ HTML renderer so text and HTML address occurrences identically."
                (pages forest))))))
 
 (define* (render-text forest #:key (options (make-text-options)))
-  (let* ((routes (text-options-routes options))
+  (let* ((_ (require-text-options options "render-text"))
+         (routes (text-options-routes options))
          (backmatter (text-options-backmatter options))
          (reference-taxon-id (text-options-reference-taxon-id options))
          (locale (text-options-locale options))
@@ -375,7 +382,8 @@ HTML renderer so text and HTML address occurrences identically."
            (pages forest))))))
 
 (define* (make-text-renderer #:key (options (make-text-options)))
-  (let* ((prefix (text-options-prefix options))
+  (let* ((_ (require-text-options options "make-text-renderer"))
+         (prefix (text-options-prefix options))
          (routes (text-options-routes options))
          (backmatter (text-options-backmatter options))
          (reference-taxon-id (text-options-reference-taxon-id options))

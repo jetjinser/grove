@@ -372,6 +372,24 @@
   (make-text-options #:rules-id '(unstable value)))
 (test-error "Gemtext options reject unstable rules IDs" #t
   (make-gemtext-options #:rules-id '(unstable value)))
+(test-error "site->html rejects a value that is not HTML options" #t
+  (site->html #f #:options #f))
+(test-error "render-html rejects a value that is not HTML options" #t
+  (render-html #f #:options #f))
+(test-error "make-html-renderer rejects a value that is not HTML options" #t
+  (make-html-renderer #:options #f))
+(test-error "site->text rejects a value that is not text options" #t
+  (site->text #f #:options #f))
+(test-error "render-text rejects a value that is not text options" #t
+  (render-text #f #:options #f))
+(test-error "make-text-renderer rejects a value that is not text options" #t
+  (make-text-renderer #:options #f))
+(test-error "site->gemtext rejects a value that is not Gemtext options" #t
+  (site->gemtext #f #:options #f))
+(test-error "render-gemtext rejects a value that is not Gemtext options" #t
+  (render-gemtext #f #:options #f))
+(test-error "make-gemtext-renderer rejects a value that is not Gemtext options" #t
+  (make-gemtext-renderer #:options #f))
 
 (let* ((forest (make-forest (make-site (list algebra limits)
                                        #:home "algebra")))

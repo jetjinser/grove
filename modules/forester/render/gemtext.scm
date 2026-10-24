@@ -311,6 +311,11 @@
   (rules-id gemtext-options-rules-id)
   (cache? gemtext-options-cache?))
 
+(define (require-gemtext-options options who)
+  (unless (gemtext-options? options)
+    (error (string-append who " requires Gemtext options") options))
+  options)
+
 (define* (make-gemtext-options #:key
                                (prefix #f)
                                (routes (default-gemtext-routes))
@@ -340,7 +345,8 @@
                          cache?))
 
 (define* (site->gemtext forest #:key (options (make-gemtext-options)))
-  (let* ((routes (gemtext-options-routes options))
+  (let* ((_ (require-gemtext-options options "site->gemtext"))
+         (routes (gemtext-options-routes options))
          (backmatter (gemtext-options-backmatter options))
          (reference-taxon-id (gemtext-options-reference-taxon-id options))
          (locale (gemtext-options-locale options))
@@ -366,7 +372,8 @@
                (pages forest))))))
 
 (define* (render-gemtext forest #:key (options (make-gemtext-options)))
-  (let* ((routes (gemtext-options-routes options))
+  (let* ((_ (require-gemtext-options options "render-gemtext"))
+         (routes (gemtext-options-routes options))
          (backmatter (gemtext-options-backmatter options))
          (reference-taxon-id (gemtext-options-reference-taxon-id options))
          (locale (gemtext-options-locale options))
@@ -396,7 +403,8 @@
                (pages forest))))))
 
 (define* (make-gemtext-renderer #:key (options (make-gemtext-options)))
-  (let* ((prefix (gemtext-options-prefix options))
+  (let* ((_ (require-gemtext-options options "make-gemtext-renderer"))
+         (prefix (gemtext-options-prefix options))
          (routes (gemtext-options-routes options))
          (backmatter (gemtext-options-backmatter options))
          (reference-taxon-id (gemtext-options-reference-taxon-id options))
