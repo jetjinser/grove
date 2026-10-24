@@ -33,6 +33,15 @@
                    (lambda (name)
                      (not (member name '("." "..")))))))
 
+(define fake-bin (string-append root "/fake-bin"))
+(define fake-dot (string-append fake-bin "/dot"))
+
+(define (write-fake-dot marker)
+  (call-with-output-file fake-dot
+    (lambda (port)
+      (format port "#!/bin/sh\nprintf '%s\\n' '<svg>~a</svg>'\n" marker)))
+  (chmod fake-dot #o755))
+
 (setenv "GROVE_STORE_DIR" (string-append root "/store"))
 (current-project-key "graphviz-integration-v1")
 (mkdir root)
@@ -67,6 +76,26 @@
   (not (bytevector=?
          (artifact-content (car first))
          (artifact-content (car (render "graphviz-14.1.1-svg-v1")))))))
+
+(mkdir fake-bin)
+(let ((old-path (getenv "PATH")))
+  (dynamic-wind
+    (lambda ()
+      (setenv "PATH" (string-append fake-bin ":" old-path)))
+    (lambda ()
+      (parameterize ((current-project-key "graphviz-replaced-tool"))
+        (write-fake-dot "tool-one")
+        (let ((first (artifact-content (car (render "same-declared-version")))))
+          (write-fake-dot "tool-two")
+          (test-equal "replacing a tool without changing its cache key restores stale bytes"
+            first (artifact-content (car (render "same-declared-version"))))
+          (test-equal "declaring the new tool version runs the replacement"
+            (string->utf8 "<svg>tool-two</svg>\n")
+            (artifact-content (car (render "new-declared-version")))))))
+    (lambda ()
+      (if old-path
+          (setenv "PATH" old-path)
+          (unsetenv "PATH")))))
 
 (test-end "external tool asset pipeline")
 (system* "rm" "-rf" root)
