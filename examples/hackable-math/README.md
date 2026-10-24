@@ -3,65 +3,95 @@ SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 SPDX-License-Identifier: GPL-3.0-or-later
 -->
 
-# Hackable math output
+# Source math in `.plant`
 
-This example is a user-side extension. Grove does not depend on Typst, LaTeX,
-Racket, or SMathML. The extension defines one content constructor, one cached
-renderer, and one HTML rule; a project supplies the compiler procedure.
+This user-side extension lets an article carry source in the language its
+author prefers. Grove stores it as typed content; the project chooses how to
+compile and render it. Grove itself does not depend on Typst, LaTeX, Racket,
+or SMathML.
+
+```scribble
+@use-modules[(examples hackable-math extension)]
+
+@title{A formula in three source languages}
+
+@typst-math[#:asset-path "math/area-typst.svg"
+            #:alt "The integral of x squared"]{
+#set page(width: auto, height: auto, margin: 4pt)
+$ integral x^2 dif x $
+}
+
+@latex-math[#:asset-path "math/area-latex.svg"
+            #:alt "The integral of x squared"]{
+\[
+  \int x^2 \, dx
+\]
+}
+
+@smathml{
+  (display (Xml (Math (Mi "x"))))
+}
+```
+
+The `typst-math` and `latex-math` commands make `compiled-math` content nodes.
+`make-math-asset-renderer` finds those nodes and calls the project's compiler
+with `(language source)`. The compiler returns SVG text; the renderer records
+the article and declared dependency files as artifact sources. Its compiler ID
+must include tool versions and options that can change output.
 
 ```scheme
-(use-modules (examples hackable-math extension))
-
 (define math-renderer
   (make-math-asset-renderer
-    #:compiler compile-to-svg
-    #:compiler-id "typst-0.13; svg; font-profile-3"
+    #:compiler
+    (lambda (language source)
+      (case language
+        ((typst) (typst-source->svg source))
+        ((latex) (latex-source->svg source))
+        (else (error "unknown math source language" language))))
+    #:compiler-id "typst-0.13; latex-profile-2; svg-fonts-3"
     #:dependencies (list "math/macros.typ" "fonts/site-fonts.toml")))
 
-(define formula
-  (make-compiled-math "integral x^2 dx" "math/area.svg"
-                      #:alt "The integral of x squared"))
-
-(define html-options
-  (make-html-options
-    #:presentation
-    (make-html-presentation
-      #:rules math-html-rules)
-    #:rules-id 'math-html-v1))
-
+;; Add it beside the HTML renderer in the project's renderer list.
 (make-site-options
   #:renderers
   (list math-renderer
-        (make-html-renderer #:options html-options)))
+        (make-html-renderer
+          #:options (make-html-options
+                      #:presentation (make-html-presentation
+                                       #:style project-style)))))
 ```
 
-`compile-to-svg` is ordinary project code with the signature
-`(expression -> SVG string)`. It can call `typst`, invoke a LaTeX-to-SVG
-pipeline, or delegate to another service. The compiler ID belongs to the
-project and should change whenever tool versions or options can change output.
-Files that affect compilation belong in `#:dependencies`; the build
-fingerprints them and records them as sources of each generated SVG.
+The compiler functions are ordinary project Scheme procedures. They may call
+the `typst` executable, run a LaTeX toolchain, or use another service. Keep
+temporary-file handling, diagnostics, tool selection, and extra dependencies
+in project code, where they can be changed without changing Grove.
 
-This asset path fits Typst and standalone LaTeX output. Grove also has a
-native math content IR that renders to inline MathML, including a TeX-source
-presentation path. SMathML is different: its Racket DSL builds HTML/MathML
-structures for the browser rather than acting as a standalone typesetter. A
-project using it should bridge its structured output into a custom Grove HTML
-render rule, instead of routing it through this SVG renderer. That bridge and
-the SMathML package remain outside Grove's runtime dependencies. The Guix
-development manifest pins an upstream SMathML revision and exposes it directly
-to Racket; a project can reuse that revision or choose its own.
+SMathML has a different output shape: it produces HTML/MathML structures,
+not a standalone SVG. `@smathml` therefore creates a source-bearing node and
+`make-smathml-html-rules` accepts a project callback from Racket source to XML.
+The example's `smathml-source->xml` runs that source with its pinned SMathML
+collection; replace it when the project needs different Racket modules or
+process handling. The rule parses the XML as SXML and passes it to Grove's
+HTML serializer. Compose it with `math-html-rules` and include the
+Racket/SMathML version in the HTML renderer's `#:rules-id`:
 
-The example renderer scans public Forest/page/content values, emits ordinary
-Grove artifacts, and puts formula inputs in its cache configuration. Each
-artifact carries its page source. The HTML rule references the declared output
-path through the current route prefix. The same pattern can be adapted for
-other renderers or for a project-specific semantic math node.
+```scheme
+(define project-math-rules
+  (compose-render-rules
+    math-html-rules
+    (make-smathml-html-rules #:compile smathml-source->xml)))
 
-For source files that are already standalone assets, prefer
-`make-asset-pipeline`: its declared filesystem inputs are fingerprinted and
-its emitted bytes enter the same artifact store. The Forest-aware renderer
-shown here is useful when compiler inputs live inside content nodes.
+(make-html-options
+  #:presentation (make-html-presentation #:rules project-math-rules)
+  #:rules-id "typst-0.13; latex-profile-2; smathml-racket-1")
+```
 
-This is intentionally a small integration point, not a promise that one
-formula representation or compiler is right for every project.
+`smathml-source->xml` can launch Racket with the project's pinned SMathML
+collection, or be replaced by a different implementation. The adapter and
+toolchain remain project-owned. For standalone source files rather than code
+authored inside an article, use `make-asset-pipeline`: it fingerprints the
+declared files and publishes emitted bytes to Grove's artifact store.
+
+Grove also has its own math content IR and a TeX-source presentation path.
+Use that when its semantics fit; use these source nodes when the project needs
+the behavior or notation of another toolchain.

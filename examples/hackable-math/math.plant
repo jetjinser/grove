@@ -1,0 +1,26 @@
+@; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+@; SPDX-License-Identifier: GPL-3.0-or-later
+
+@use-modules[(examples hackable-math extension)]
+
+@title{Math source in a Forest article}
+
+@paragraph{Typst source:}
+@typst-math[#:asset-path "math/area-typst.svg"
+            #:alt "The integral of x squared"]{
+#set page(width: auto, height: auto, margin: 4pt)
+$ integral x^2 dif x $
+}
+
+@paragraph{LaTeX source:}
+@latex-math[#:asset-path "math/area-latex.svg"
+            #:alt "The integral of x squared"]{
+\[
+  \int x^2 \, dx
+\]
+}
+
+@paragraph{Racket source for a project SMathML adapter:}
+@smathml{
+(display (Xml (Math (Mi "x"))))
+}

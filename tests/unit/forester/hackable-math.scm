@@ -1,0 +1,134 @@
+;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+;;;
+;;; SPDX-License-Identifier: GPL-3.0-or-later
+
+(define-module (tests unit forester hackable-math)
+  #:use-module (ice-9 ftw)
+  #:use-module (ice-9 textual-ports)
+  #:use-module (system base language)
+  #:use-module (language scribble spec)
+  #:use-module (forester commands)
+  #:use-module (grove ir)
+  #:use-module (grove render rules)
+  #:use-module (examples hackable-math extension)
+  #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-13)
+  #:use-module (srfi srfi-64))
+
+(define environment (default-environment scribble))
+(eval '(use-modules (forester commands)
+                    (examples hackable-math extension))
+      environment)
+
+(define (evaluate source)
+  (scribble-evaluate-document (open-input-string source) environment))
+
+(define (find-kind value kind)
+  (define (search children)
+    (and (pair? children)
+         (or (find-kind (car children) kind)
+             (search (cdr children)))))
+  (cond
+    ((content-element? value)
+     (if (eq? (content-element-kind value) kind)
+         value
+         (search (content-element-children value))))
+    ((content-document? value)
+     (search (content-document-children value)))
+    (else #f)))
+
+(test-begin "hackable source math")
+
+(let* ((source-root (dirname (getenv "GROVE_SRCDIR")))
+       (sample (call-with-input-file
+                 (string-append source-root
+                   "/examples/hackable-math/math.plant")
+                 get-string-all))
+       (document (evaluate sample)))
+  (test-equal "the example plant contains both SVG source languages"
+    '(typst latex)
+    (let loop ((nodes (let find ((node document))
+                        (cond
+                          ((content-element? node)
+                           (append (if (eq? (content-element-kind node)
+                                            'compiled-math)
+                                       (list node)
+                                       '())
+                                   (append-map find
+                                     (content-element-children node))))
+                          ((content-document? node)
+                           (append-map find
+                             (content-document-children node)))
+                          (else '())))))
+      (if (null? nodes)
+          '()
+          (cons (content-element-property (car nodes) 'language)
+                (loop (cdr nodes))))))
+  (test-assert "the example plant contains a SMathML source node"
+    (find-kind document 'smathml)))
+
+(let* ((document
+        (evaluate
+          (string-append
+            "@typst-math[#:asset-path \"math/typst.svg\" #:alt \"square\"]{"
+            "#let f(x) = x^2\n$ integral f(x) dx $}")))
+       (element (find-kind document 'compiled-math)))
+  (test-equal "Typst in a plant becomes a typed content node"
+    'compiled-math (content-element-kind element))
+  (test-equal "Typst nodes retain their language for project compilers"
+    'typst (content-element-property element 'language))
+  (test-equal "Typst nodes retain their output path"
+    "math/typst.svg" (content-element-property element 'asset-path))
+  (test-equal "Typst source survives document reading"
+    "#let f(x) = x^2\n$ integral f(x) dx $"
+    (content->plain-text element)))
+
+(test-assert "project Typst adapter compiles inline source to SVG"
+  (string-contains
+    (typst-source->svg
+      (string-append
+        "#set page(width: auto, height: auto, margin: 4pt)\n"
+        "$ integral x^2 dif x $"))
+    "<svg"))
+
+(test-assert "project LaTeX adapter compiles inline source to SVG"
+  (string-contains
+    (latex-source->svg "\\[\\int x^2 \\, dx\\]")
+    "<svg"))
+
+(let* ((document
+        (evaluate
+          (string-append
+            "@latex-math[#:asset-path \"math/latex.svg\"]{"
+            "\\begin{aligned}x^2 + y^2 &= z^2\\end{aligned}}")))
+       (element (find-kind document 'compiled-math)))
+  (test-equal "LaTeX source is distinct from Typst source"
+    'latex (content-element-property element 'language))
+  (test-equal "LaTeX braces and commands survive document reading"
+    "\\begin{aligned}x^2 + y^2 &= z^2\\end{aligned}"
+    (content->plain-text element)))
+
+(let* ((document
+        (evaluate
+          "@smathml{(display (Xml (Math (Mi \"x\"))))}"))
+       (element (find-kind document 'smathml))
+       (rules
+         (make-smathml-html-rules
+           #:compile (lambda (source)
+                       (test-equal "SMathML compiler receives authored Racket"
+                         "(display (Xml (Math (Mi \"x\"))))" source)
+                       (smathml-source->xml source))))
+       (rule (render-rules-ref rules 'smathml))
+       (html (rule #f element (content-element-children element)
+                   (lambda () 'fallback))))
+  (test-equal "SMathML source has its own document node"
+    'smathml (content-element-kind element))
+  (test-equal "SMathML XML is bridged to Grove's HTML SXML"
+    '(math (@ (xmlns "http://www.w3.org/1998/Math/MathML"))
+      (mi "x"))
+    html))
+
+(test-error "Typst nodes require an output asset path" #t
+  (typst-math "#let f(x) = x"))
+
+(test-end "hackable source math")

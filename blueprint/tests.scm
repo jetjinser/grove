@@ -101,6 +101,7 @@
     "unit/forester/a11y.scm"
     "unit/forester/i18n-routes.scm"
     "unit/forester/commands.scm"
+    "unit/forester/hackable-math.scm"
     "unit/forester/composition.scm"
     "unit/forester/i18n.scm"
     "unit/forester/project.scm"
