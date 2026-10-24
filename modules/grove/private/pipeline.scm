@@ -18,18 +18,6 @@
             restore-boundary-bytes
             publish-boundary-bytes))
 
-;;     Pipeline outputs shadow same-path artifacts from renderers and
-;;     the previous state, and outputs retired from a pipeline's
-;;     current set must not resurrect from that state either.
-(define (merge-pipeline-artifacts pipeline-artifacts rendered retired-paths)
-  (if (and (null? pipeline-artifacts) (null? retired-paths))
-      rendered
-      (let ((shadowed (append (map artifact-path pipeline-artifacts)
-                              retired-paths)))
-        (append pipeline-artifacts
-                (remove (lambda (artifact)
-                          (member (artifact-path artifact) shadowed string=?))
-                        rendered)))))
 
 ;;     Run declared asset pipelines against the shared store.  Each
 ;;     pipeline's identity is its name, version, the project file's
