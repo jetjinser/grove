@@ -15,14 +15,12 @@ or SMathML.
 
 @title{A formula in three source languages}
 
-@typst-math[#:asset-path "math/area-typst.svg"
-            #:alt "The integral of x squared"]{
+@typst-math[#:alt "The integral of x squared"]{
 #set page(width: auto, height: auto, margin: 4pt)
 $ integral x^2 dif x $
 }
 
-@latex-math[#:asset-path "math/area-latex.svg"
-            #:alt "The integral of x squared"]{
+@latex-math[#:alt "The integral of x squared"]{
 \[
   \int x^2 \, dx
 \]
@@ -36,8 +34,9 @@ $ integral x^2 dif x $
 The `typst-math` and `latex-math` commands make `compiled-math` content nodes.
 `make-math-asset-renderer` finds those nodes and calls the project's compiler
 with `(language source)`. The compiler returns SVG text; the renderer records
-the article and declared dependency files as artifact sources. Its compiler ID
-must include tool versions and options that can change output.
+the article and declared dependency files as artifact sources. It derives a
+stable output path from the language and source, so authors do not choose
+artifact paths.
 
 ```scheme
 (define math-renderer
@@ -48,7 +47,6 @@ must include tool versions and options that can change output.
         ((typst) (typst-source->svg source))
         ((latex) (latex-source->svg source))
         (else (error "unknown math source language" language))))
-    #:compiler-id "typst-0.13; latex-profile-2; svg-fonts-3"
     #:dependencies (list "math/macros.typ" "fonts/site-fonts.toml")))
 
 ;; Add it beside the HTML renderer in the project's renderer list.
@@ -60,6 +58,10 @@ must include tool versions and options that can change output.
                       #:presentation (make-html-presentation
                                        #:style project-style)))))
 ```
+
+The compiler ID defaults to `"project"`. Set `#:compiler-id` when a toolchain
+version or option can change independently of the project configuration and
+must invalidate the renderer cache.
 
 The compiler functions are ordinary project Scheme procedures. They may call
 the `typst` executable, run a LaTeX toolchain, or use another service. Keep

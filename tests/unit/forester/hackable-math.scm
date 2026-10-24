@@ -8,7 +8,11 @@
   #:use-module (system base language)
   #:use-module (language scribble spec)
   #:use-module (forester commands)
+  #:use-module (forester site)
+  #:use-module (grove build)
   #:use-module (grove ir)
+  #:use-module (grove output)
+  #:use-module (grove site)
   #:use-module (grove render rules)
   #:use-module (examples hackable-math extension)
   #:use-module (srfi srfi-1)
@@ -70,15 +74,17 @@
 (let* ((document
         (evaluate
           (string-append
-            "@typst-math[#:asset-path \"math/typst.svg\" #:alt \"square\"]{"
+            "@typst-math[#:alt \"square\"]{"
             "#let f(x) = x^2\n$ integral f(x) dx $}")))
        (element (find-kind document 'compiled-math)))
   (test-equal "Typst in a plant becomes a typed content node"
     'compiled-math (content-element-kind element))
   (test-equal "Typst nodes retain their language for project compilers"
     'typst (content-element-property element 'language))
-  (test-equal "Typst nodes retain their output path"
-    "math/typst.svg" (content-element-property element 'asset-path))
+  (test-assert "Typst output paths are derived from language and source"
+    (let ((path (content-element-property element 'asset-path)))
+      (and (string-prefix? "assets/math/typst-" path)
+           (string-suffix? ".svg" path))))
   (test-equal "Typst source survives document reading"
     "#let f(x) = x^2\n$ integral f(x) dx $"
     (content->plain-text element)))
@@ -99,7 +105,29 @@
 (let* ((document
         (evaluate
           (string-append
-            "@latex-math[#:asset-path \"math/latex.svg\"]{"
+            "@typst-math{$ x^2 $}"
+            "@typst-math{$ x^2 $}")))
+       (page (make-site-page "math" "Math" document))
+       (forest (make-forest (make-site (list page))))
+       (compiler-calls 0)
+       (renderer
+         (make-math-asset-renderer
+           #:compiler (lambda (_language _source)
+                        (set! compiler-calls (+ compiler-calls 1))
+                        "<svg/>")))
+       (artifacts ((cached-renderer-procedure renderer) forest)))
+  (test-equal "repeated identical source shares one generated asset"
+    1 (length artifacts))
+  (test-equal "repeated identical source compiles only once"
+    1 compiler-calls)
+  (test-assert "generated SVG artifact uses the source-derived path"
+    (string-prefix? "assets/math/typst-"
+      (artifact-path (car artifacts)))))
+
+(let* ((document
+        (evaluate
+          (string-append
+            "@latex-math{"
             "\\begin{aligned}x^2 + y^2 &= z^2\\end{aligned}}")))
        (element (find-kind document 'compiled-math)))
   (test-equal "LaTeX source is distinct from Typst source"
@@ -128,7 +156,7 @@
       (mi "x"))
     html))
 
-(test-error "Typst nodes require an output asset path" #t
-  (typst-math "#let f(x) = x"))
+(test-error "Typst nodes reject empty source" #t
+  (typst-math ""))
 
 (test-end "hackable source math")

@@ -3,6 +3,7 @@
 
 (define-module (examples hackable-math extension)
   #:use-module (forester site)
+  #:use-module (gcrypt hash)
   #:use-module (grove build)
   #:use-module (grove ir)
   #:use-module (grove output)
@@ -16,6 +17,7 @@
   #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
+  #:use-module (rnrs bytevectors)
   #:use-module (language scribble command)
   #:use-module (sxml simple)
   #:export (typst-math
@@ -32,25 +34,36 @@
       (error who "requires non-empty source" source))
     source))
 
-(define (make-source-math language source asset-path alt)
-  (unless (artifact-path? asset-path)
-    (error "compiled math requires a relative asset path" asset-path))
+(define (content-hash text)
+  (let ((digest (sha256 (string->utf8 text)))
+        (digits "0123456789abcdef"))
+    (list->string
+      (append-map
+        (lambda (index)
+          (let ((byte (bytevector-u8-ref digest index)))
+            (list (string-ref digits (quotient byte 16))
+                  (string-ref digits (modulo byte 16)))))
+        (iota (bytevector-length digest))))))
+
+(define (source-asset-path language source)
+  (string-append "assets/math/" (symbol->string language) "-"
+                 (content-hash source) ".svg"))
+
+(define (make-source-math language source alt)
   (unless (or (not alt) (string? alt))
     (error "compiled math alternative text must be a string or #f" alt))
   (make-content-element 'compiled-math (list source)
-    #:properties `((asset-path . ,asset-path)
+    #:properties `((asset-path . ,(source-asset-path language source))
                    (alt . ,(or alt source))
                    (language . ,language))))
 
-(define*-public (typst-math #:key asset-path (alt #f) . source)
+(define*-public (typst-math #:key (alt #f) . source)
   "Put Typst source in the document and compile it to an SVG asset."
-  (make-source-math 'typst (source-string source "@typst-math")
-                    asset-path alt))
+  (make-source-math 'typst (source-string source "@typst-math") alt))
 
-(define*-public (latex-math #:key asset-path (alt #f) . source)
+(define*-public (latex-math #:key (alt #f) . source)
   "Put LaTeX source in the document and compile it to an SVG asset."
-  (make-source-math 'latex (source-string source "@latex-math")
-                    asset-path alt))
+  (make-source-math 'latex (source-string source "@latex-math") alt))
 
 (define*-public (smathml #:key (display? #f) . source)
   "Put Racket/SMathML source in the document for a project HTML rule."
@@ -169,17 +182,19 @@ output conventions."
                        (content->plain-text element))))
              (site-math forest))))
 
-(define* (make-math-asset-renderer #:key compiler compiler-id
+(define* (make-math-asset-renderer #:key compiler (compiler-id "project")
                                       (dependencies '()))
   "Return a cached renderer that turns compiled-math nodes into SVG artifacts.
 
-COMPILER maps a language symbol and source string to SVG text. COMPILER-ID should include
-the tool version and options that affect the output. DEPENDENCIES lists files
-read by the compiler, such as macro packages or font configuration."
+COMPILER maps a language symbol and source string to SVG text. Override
+COMPILER-ID when external tool versions or options can change independently
+of the project configuration. DEPENDENCIES lists additional files read by
+the compiler, such as macro packages or font configuration."
   (unless (procedure? compiler)
     (error "math asset renderer requires a compiler procedure" compiler))
   (unless (and (string? compiler-id) (not (string-null? compiler-id)))
-    (error "math asset renderer requires a stable compiler ID" compiler-id))
+    (error "math asset renderer compiler ID must be a non-empty string"
+           compiler-id))
   (unless (and (list? dependencies)
                (every (lambda (path)
                         (and (string? path) (not (string-null? path))))
@@ -188,23 +203,40 @@ read by the compiler, such as macro packages or font configuration."
            dependencies))
   (make-cached-renderer
     (lambda (forest)
-      (map
-        (lambda (entry)
+      (fold
+        (lambda (entry artifacts)
           (let* ((page (car entry))
                  (element (cdr entry))
-                 (path (content-element-property element 'asset-path)))
+                 (path (content-element-property element 'asset-path))
+                 (existing (find (lambda (artifact)
+                                   (string=? path (artifact-path artifact)))
+                                 artifacts))
+                 (page-source (site-page-source page))
+                 (sources (delete-duplicates
+                            (append (if page-source (list page-source) '())
+                                    dependencies
+                                    (if existing
+                                        (or (artifact-sources existing) '())
+                                        '()))
+                            string=?)))
             (unless (artifact-path? path)
               (error "compiled math node has an invalid asset path" path))
-            (let* ((svg (compiler (content-element-property element 'language)
-                                  (content->plain-text element)))
-                   (sources (delete-duplicates
-                              (if (site-page-source page)
-                                  (cons (site-page-source page) dependencies)
-                                  dependencies)
-                              string=?)))
-              (unless (string? svg)
-                (error "math compiler must return SVG text" svg))
-              (make-artifact path svg (and (pair? sources) sources)))))
+            (if existing
+                (map (lambda (artifact)
+                       (if (eq? artifact existing)
+                           (make-artifact path (artifact-content existing)
+                                          sources)
+                           artifact))
+                     artifacts)
+                (let ((svg (compiler
+                             (content-element-property element 'language)
+                             (content->plain-text element))))
+                  (unless (string? svg)
+                    (error "math compiler must return SVG text" svg))
+                  (cons (make-artifact path svg
+                                       (and (pair? sources) sources))
+                        artifacts)))))
+        '()
         (site-math forest)))
     #:configuration (lambda (forest) (math-configuration compiler-id forest))
     #:inputs (lambda () dependencies)))
