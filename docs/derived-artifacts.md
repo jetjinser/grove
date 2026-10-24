@@ -59,7 +59,8 @@ rule type.
 - `#:derived-context` is a procedure from forest to `render-context`; the default
   builds a context with only the forest.
 - Each constructor also accepts `#:site-url`, `#:default-locale`, and
-  `#:language` directly; explicit values win over the context.
+  `#:language` directly. Values resolve from the explicit artifact option,
+  then shared `#:settings`, then the render context.
 - The project wraps the list in a cached renderer.  Its configuration includes
   the artifact names plus each artifact's `derived-artifact-configuration`
   (path, routes, language, stylesheet, and site URL), so changing a derived

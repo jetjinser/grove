@@ -31,10 +31,10 @@
                                    (routes #f)
                                    (settings #f)
                                    (site-url
-                                     (and settings
+                                     (and (site-settings? settings)
                                           (site-settings-site-url settings)))
                                    (default-locale
-                                     (and settings
+                                     (and (site-settings? settings)
                                           (site-settings-default-locale
                                             settings)))
                                    (hreflang? #t)
@@ -50,6 +50,8 @@ LOCALE and MESSAGES are resolved once, here, so renderers no longer read the
 dynamic chrome parameters."
   (unless (forest? forest)
     (error "render context requires a forest" forest))
+  (unless (or (not settings) (site-settings? settings))
+    (error "render context settings must be site settings or #f" settings))
   (make-render-context
     #:forest forest
     #:routes routes

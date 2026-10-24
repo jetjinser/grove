@@ -189,4 +189,10 @@
   (make-site-settings #:site-url ""))
 (test-error "site settings reject an empty locale" #t
   (make-site-settings #:default-locale ""))
+(test-error "RSS rejects a non-settings value" #t
+  (render-rss forest #:settings 'not-site-settings
+              #:site-url "https://example.org"))
+(test-error "sitemap rejects a non-settings value" #t
+  (render-sitemap forest #:settings 'not-site-settings
+                  #:site-url "https://example.org"))
 (test-end "forester i18n routes")

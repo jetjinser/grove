@@ -113,16 +113,19 @@
 
 (define* (render-rss forest #:key (settings #f)
                             (site-url
-                              (and settings (site-settings-site-url settings)))
+                              (and (site-settings? settings)
+                                   (site-settings-site-url settings)))
                             (feed-path "feed.xml")
                             (routes (make-html-routes #:home-page "index"))
                             stylesheet-url
                             (stylesheet-type "text/xsl")
                             (language
-                              (and settings
+                              (and (site-settings? settings)
                                    (site-settings-default-locale settings))))
   (unless (forest? forest)
     (error "Forester RSS renderer requires a forest" forest))
+  (unless (or (not settings) (site-settings? settings))
+    (error "RSS settings must be site settings or #f" settings))
   (unless (web-url? site-url)
     (error "Forester RSS renderer requires an absolute HTTP(S) site URL"
            site-url))

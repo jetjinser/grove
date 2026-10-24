@@ -92,14 +92,17 @@
 
 (define* (render-sitemap forest #:key (settings #f)
                                 (site-url
-                                  (and settings (site-settings-site-url settings)))
+                                  (and (site-settings? settings)
+                                       (site-settings-site-url settings)))
                                 (sitemap-path "sitemap.xml")
                                 (routes (make-html-routes #:home-page "index"))
                                 (default-locale
-                                  (and settings
+                                  (and (site-settings? settings)
                                        (site-settings-default-locale settings))))
   (unless (forest? forest)
     (error "Forester sitemap renderer requires a forest" forest))
+  (unless (or (not settings) (site-settings? settings))
+    (error "Sitemap settings must be site settings or #f" settings))
   (unless (web-url? site-url)
     (error "Forester sitemap renderer requires an absolute HTTP(S) site URL"
            site-url))

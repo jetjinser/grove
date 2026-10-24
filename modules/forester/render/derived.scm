@@ -18,7 +18,13 @@
 
 (define* (sitemap-derived #:key (settings #f) (site-url #f)
                                   (sitemap-path "sitemap.xml")
-                                  (routes #f) (default-locale #f))
+                                  (routes #f)
+                                  (default-locale
+                                    (and (site-settings? settings)
+                                         (site-settings-default-locale
+                                           settings))))
+  (unless (or (not settings) (site-settings? settings))
+    (error "sitemap settings must be site settings or #f" settings))
   (let ((routes (or routes (make-html-routes #:home-page "index"))))
     (make-derived-artifact
       #:name "sitemap"
@@ -33,6 +39,9 @@
                         #:sitemap-path sitemap-path
                         #:routes routes
                         #:default-locale (or default-locale
+                                             (and settings
+                                                  (site-settings-default-locale
+                                                    settings))
                                              (render-context-ref context
                                                                  'default-locale))))
       #:configuration
@@ -43,6 +52,7 @@
                   (and settings (site-settings-site-url settings))
                   (render-context-ref context 'site-url))
               (or default-locale
+                  (and settings (site-settings-default-locale settings))
                   (render-context-ref context 'default-locale))
               (html-index-url routes)
               (html-route-table routes (map site-page-id (pages forest))))))))
@@ -51,7 +61,12 @@
                               (feed-path "feed.xml")
                               (routes #f) (stylesheet-url #f)
                               (stylesheet-type "text/xsl")
-                              (language #f))
+                              (language
+                                (and (site-settings? settings)
+                                     (site-settings-default-locale
+                                       settings))))
+  (unless (or (not settings) (site-settings? settings))
+    (error "RSS settings must be site settings or #f" settings))
   (let ((routes (or routes (make-html-routes #:home-page "index"))))
     (make-derived-artifact
       #:name "rss"
@@ -68,6 +83,8 @@
                     #:stylesheet-url stylesheet-url
                     #:stylesheet-type stylesheet-type
                     #:language (or language
+                                   (and settings
+                                        (site-settings-default-locale settings))
                                    (render-context-ref context 'locale))))
       #:configuration
       (lambda (context forest)
@@ -78,7 +95,9 @@
                   (render-context-ref context 'site-url))
               stylesheet-url
               stylesheet-type
-              (or language (render-context-ref context 'locale))
+              (or language
+                  (and settings (site-settings-default-locale settings))
+                  (render-context-ref context 'locale))
               (html-index-url routes)
               (html-route-table routes (map site-page-id (pages forest))))))))
 
