@@ -377,6 +377,10 @@ rewrite rendered markup. They are available on `render-html`, `site->html`, and
 
 Chrome values are part of the presentation and its cache identity, so changing
 them invalidates cached pages without requiring a separate identity token.
+Their SXML must be static and well-formed: procedures, duplicate attributes,
+and repeated page IDs are rejected when constructing the value. Composition
+appends head and navigation nodes, appends page fragments by page ID, and lets
+the rightmost declared home link replace earlier ones.
 
 ## Packaging and measurement
 

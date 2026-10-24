@@ -25,6 +25,7 @@
   #:use-module (grove project site)
   #:use-module (grove relation dsl)
   #:use-module (grove render html routes)
+  #:use-module (grove render html presentation)
   #:use-module (grove site))
 
 (define project-root
@@ -612,6 +613,58 @@
                  (not (file-exists?
                        (string-append cache-output-directory
                                       "/text/orphan.txt"))))))
+      (let* ((presentation-output
+               (string-append project-root "/presentation-cache-output"))
+             (routes
+               (make-html-routes
+                 #:home-page "algebra"
+                 #:page-path
+                 (lambda (id) (string-append "notes/" id ".html"))))
+             (make-presentation-project
+               (lambda (decoration)
+                 (make-site-project
+                   #:options
+                   (make-site-options
+                     #:title "Linked Notes"
+                     #:source-directory source-directory
+                     #:prepare (make-scribble-module-setup module-directory)
+                     #:read-page
+                     (make-page-reader (make-scribble-document-reader))
+                     #:analyze make-forest
+                     #:renderers
+                     (list
+                       (make-html-renderer
+                         #:options
+                         (make-html-options
+                           #:routes routes
+                           #:mathjax-src #f
+                           #:presentation
+                           (make-html-presentation
+                             #:chrome
+                             (make-html-chrome
+                               #:title-decorations
+                               `(("algebra" . ((span ,decoration)))))))))
+                     #:output-directory presentation-output)))))
+        (let ((first (build-project/report
+                       (make-presentation-project "Chrome first"))))
+          (test-assert "initial declarative chrome is rendered"
+            (and (build-report-rendered? first)
+                 (string-contains
+                   (read-test-file
+                     (string-append presentation-output "/index.html"))
+                   "Chrome first"))))
+        (let ((same (build-project/report
+                      (make-presentation-project "Chrome first"))))
+          (test-assert "identical declarative chrome reuses cached output"
+            (not (build-report-rendered? same))))
+        (let ((changed (build-project/report
+                         (make-presentation-project "Chrome changed"))))
+          (test-assert "changed declarative chrome invalidates cached output"
+            (and (build-report-rendered? changed)
+                 (string-contains
+                   (read-test-file
+                     (string-append presentation-output "/index.html"))
+                   "Chrome changed")))))
       (write-test-file
         (string-append source-directory "/broken.plant")
         (string-append

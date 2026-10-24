@@ -200,6 +200,26 @@
   #t
   (make-html-chrome #:head (list (lambda () '((meta))))))
 
+(test-error "chrome rejects duplicate SXML attributes" #t
+  (make-html-chrome
+    #:head '((meta (@ (name "viewport") (name "description"))))))
+
+(test-error "chrome rejects malformed dotted SXML nodes" #t
+  (make-html-chrome #:head (list (cons 'meta "not a child list"))))
+
+(test-error "chrome rejects duplicate page IDs" #t
+  (make-html-chrome
+    #:metadata-items '(("page" . ((li "first")))
+                       ("page" . ((li "second"))))))
+
+(test-error "home-link attributes cannot repeat names" #t
+  (make-html-home-link '("Home")
+    #:attributes '((class . "brand") (class . "logo"))))
+
+(test-error "navigation attributes cannot repeat names" #t
+  (make-html-nav-link "home" "Home"
+    #:attributes '((class . "first") (class . "second"))))
+
 
 (let* ((add-text
          (make-content-transform
