@@ -354,6 +354,18 @@
   (make-gemtext-options #:cache? 'yes))
 (test-error "renderer options reject invalid message catalogs at construction" #t
   (make-text-options #:messages 'not-a-catalog))
+(test-error "HTML options reject malformed root attributes at construction" #t
+  (make-html-options #:html-attributes '((lang . 42))))
+(test-error "HTML options reject duplicate root attributes at construction" #t
+  (make-html-options #:html-attributes '((lang . "en") (lang . "zh"))))
+(test-error "HTML options reject invalid side-lane kinds at construction" #t
+  (make-html-options #:side-lane '(sidenote "figure")))
+(test-error "HTML options reject invalid settings at construction" #t
+  (make-html-options #:settings 'not-site-settings))
+(test-error "HTML options reject invalid default locales at construction" #t
+  (make-html-options #:default-locale ""))
+(test-error "HTML options reject invalid Open Graph image values" #t
+  (make-html-options #:og-image 42))
 
 (let* ((forest (make-forest (make-site (list algebra limits)
                                        #:home "algebra")))

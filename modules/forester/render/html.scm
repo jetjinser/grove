@@ -1028,6 +1028,21 @@ to the lane, and an in-place numbered marker links to it."
   (rules-id html-options-rules-id)
   (cache? html-options-cache?))
 
+(define (valid-html-attributes? attributes)
+  (and (list? attributes)
+       (every (lambda (entry)
+                (and (pair? entry)
+                     (symbol? (car entry))
+                     (string? (cdr entry))))
+              attributes)
+       (= (length attributes)
+          (length (delete-duplicates (map car attributes) eq?)))))
+
+(define (valid-side-lane? kinds)
+  (and (list? kinds)
+       (every symbol? kinds)
+       (= (length kinds) (length (delete-duplicates kinds eq?)))))
+
 (define* (make-html-options #:key
                             (highlighters (default-highlighters))
                             (routes (make-html-routes))
@@ -1041,14 +1056,14 @@ to the lane, and an in-place numbered marker links to it."
                             (presentation #f)
                             (settings #f)
                             (locale
-                              (and settings
+                              (and (site-settings? settings)
                                    (site-settings-default-locale settings)))
                             (messages default-message-catalog)
                             (default-locale
-                              (and settings
+                              (and (site-settings? settings)
                                    (site-settings-default-locale settings)))
                             (site-url
-                              (and settings
+                              (and (site-settings? settings)
                                    (site-settings-site-url settings)))
                             (og-image #f)
                             (og-image-alt #f)
@@ -1063,11 +1078,30 @@ Entry points take this value with #:options."
   (let ((presentation
           (or presentation
               (make-html-presentation #:style default-html-style))))
+    (unless (or (not settings) (site-settings? settings))
+      (error "HTML settings must be site settings or #f" settings))
     (unless (html-routes? routes)
       (error "HTML options require HTML routes" routes))
     (validate-backmatter-sections backmatter)
     (check-reference-taxon-id reference-taxon-id)
     (validate-chrome-options locale messages)
+    (unless (valid-html-attributes? html-attributes)
+      (error "HTML root attributes must be unique symbol/string pairs"
+             html-attributes))
+    (unless (valid-side-lane? side-lane)
+      (error "HTML side-lane kinds must be unique symbols" side-lane))
+    (when default-locale
+      (unless (string? default-locale)
+        (error "HTML default locale must be a tag or #f" default-locale))
+      (make-locale default-locale))
+    (unless (or (not site-url) (non-empty-string? site-url))
+      (error "HTML site URL must be a non-empty string or #f" site-url))
+    (unless (or (not og-image) (non-empty-string? og-image))
+      (error "HTML Open Graph image must be a non-empty string or #f"
+             og-image))
+    (unless (or (not og-image-alt) (string? og-image-alt))
+      (error "HTML Open Graph image alt text must be a string or #f"
+             og-image-alt))
     (unless (and (list? highlighters)
                  (every (lambda (entry)
                           (and (pair? entry)
