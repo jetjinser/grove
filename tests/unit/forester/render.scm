@@ -25,12 +25,17 @@
   #:use-module (grove style)
   #:use-module (grove style html)
   #:use-module (grove output)
+  #:use-module (grove i18n)
   #:use-module (grove site)
   #:use-module (grove style)
   #:use-module (grove style html)
   #:use-module (tests unit forester fixtures))
 
 (test-begin "forester renderers")
+
+(define (backmatter-messages backlink-label)
+  (make-message-catalog
+    `(("en" . ((backmatter-backlinks . ,backlink-label))))))
 
 (let* ((forest (make-forest (make-site (list algebra limits))))
        (artifacts (render-gemtext forest))
@@ -70,8 +75,7 @@
                          #:options
                          (make-gemtext-options
                            #:backmatter '(backlinks)
-                           #:backmatter-labels
-                           '((backlinks . "Linked from"))))))))
+                           #:messages (backmatter-messages "Linked from")))))))
       (and (string-contains page "## Linked from")
            (not (string-contains page "## Related")))))
   (test-assert "Gemtext accepts renderer rules"
@@ -214,11 +218,11 @@
          (not (string-contains limits-html "<span>limits</span>"))))
   (test-assert "backlinks have a semantic heading"
     (string-contains limits-html "<h2>Backlinks</h2>"))
-  (test-assert "backmatter labels can be customized in HTML and text"
+  (test-assert "backmatter headings use the renderer message catalog"
     (and (string-contains
            (assoc-ref (render-test-html
                         (make-forest (make-site (list algebra limits)))
-                        #:backmatter-labels '((backlinks . "Link sources")))
+                        #:messages (backmatter-messages "Link sources"))
                       "limits")
            "<h2>Link sources</h2>")
          (string-contains
@@ -226,8 +230,7 @@
                         (make-forest (make-site (list algebra limits)))
                         #:options
                         (make-text-options
-                          #:backmatter-labels
-                          '((backlinks . "Link sources"))))
+                          #:messages (backmatter-messages "Link sources")))
                       "limits")
            "Link sources:")))
   (test-assert "inline math keeps TeX delimiters"

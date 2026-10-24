@@ -59,7 +59,7 @@ it, with `#:locale` as the site fallback, and projects extend it with
 
 A partial catalog is layered over the built-in one, so keys it does not
 name keep their default text.  The same catalog drives the backmatter
-headings; `#:backmatter-labels` remains available as an explicit override.
+headings; projects can override those keys through the same catalog.
 
 See [Design boundaries](design.md) for the split between Grove and project
 responsibilities.

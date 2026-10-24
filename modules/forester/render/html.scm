@@ -811,7 +811,7 @@ to the lane, and an in-place numbered marker links to it."
 (define (serialize-html-document sxml)
   (string-append "<!DOCTYPE html>\n" (sxml->html sxml)))
 
-(define* (page-html forest page style routes mathjax-src backmatter labels
+(define* (page-html forest page style routes mathjax-src backmatter
                     reference-taxon-id
                     #:optional (inline-stylesheets? #f) (highlighters '())
                     #:key (title-decoration #f) (article? #f) (backmatter-details? #f)
@@ -834,10 +834,7 @@ to the lane, and an in-place numbered marker links to it."
                                  (make-locale page-locale)
                                  (render-context-ref context 'locale-object))
              #:messages (render-context-ref context 'messages)))
-         (labels
-           (normalize-backmatter-labels
-             labels
-             #:defaults (localized-backmatter-labels context)))
+         (labels (localized-backmatter-labels context))
          (head (if (render-context-ref context 'hreflang?)
                    (append head (hreflang-links forest page routes context))
                    head))
@@ -913,7 +910,7 @@ to the lane, and an in-place numbered marker links to it."
                       '()
                       (list backmatter-fetch-script))))))
 
-(define* (render-html-changed forest style routes mathjax-src backmatter labels
+(define* (render-html-changed forest style routes mathjax-src backmatter
                              reference-taxon-id
                              changed old-artifacts highlighters
                              #:key (title-decoration #f) (article? #f)
@@ -962,7 +959,7 @@ to the lane, and an in-place numbered marker links to it."
                               (reuse-artifact path sources old-artifacts changed
                                 (lambda ()
                                   (page-html forest page style routes mathjax-src
-                                             backmatter labels reference-taxon-id #f highlighters
+                                             backmatter reference-taxon-id #f highlighters
                                              #:title-decoration title-decoration
                                              #:article? article?
                                              #:backmatter-details? backmatter-details?
@@ -1004,7 +1001,7 @@ to the lane, and an in-place numbered marker links to it."
 
 (define-record-type <html-options>
   (%make-html-options highlighters routes mathjax-src backmatter
-                      backmatter-labels reference-taxon-id
+                      reference-taxon-id
                       article? backmatter-details? html-attributes
                       side-lane presentation locale messages default-locale
                       site-url og-image og-image-alt hreflang?
@@ -1014,7 +1011,6 @@ to the lane, and an in-place numbered marker links to it."
   (routes html-options-routes)
   (mathjax-src html-options-mathjax-src)
   (backmatter html-options-backmatter)
-  (backmatter-labels html-options-backmatter-labels)
   (reference-taxon-id html-options-reference-taxon-id)
   (article? html-options-article?)
   (backmatter-details? html-options-backmatter-details?)
@@ -1037,7 +1033,6 @@ to the lane, and an in-place numbered marker links to it."
                             (routes #f)
                             (mathjax-src default-mathjax-src)
                             (backmatter default-backmatter-sections)
-                            (backmatter-labels '())
                             (reference-taxon-id default-reference-taxon-id)
                             (article? #f)
                             (backmatter-details? #f)
@@ -1069,7 +1064,7 @@ Entry points take this value with #:options."
     (unless (html-presentation? presentation)
       (error "HTML options require an HTML presentation" presentation))
     (%make-html-options highlighters routes mathjax-src backmatter
-                        backmatter-labels reference-taxon-id
+                        reference-taxon-id
                         article? backmatter-details? html-attributes
                         side-lane presentation locale messages
                         default-locale site-url og-image og-image-alt hreflang?
@@ -1095,7 +1090,6 @@ Entry points take this value with #:options."
          (routes (html-options-routes options))
          (mathjax-src (html-options-mathjax-src options))
          (backmatter (html-options-backmatter options))
-         (backmatter-labels (html-options-backmatter-labels options))
          (reference-taxon-id (html-options-reference-taxon-id options))
          (title-decoration (presentation-title-decoration-procedure presentation-data))
          (article? (html-options-article? options))
@@ -1115,7 +1109,7 @@ Entry points take this value with #:options."
     (map (lambda (page)
            (cons (site-page-id page)
                  (page-html forest page style routes mathjax-src
-                            backmatter backmatter-labels
+                            backmatter
                             reference-taxon-id #t highlighters
                             #:title-decoration title-decoration
                             #:article? article?
@@ -1137,7 +1131,6 @@ Entry points take this value with #:options."
           (routes (html-options-routes options))
           (mathjax-src (html-options-mathjax-src options))
           (backmatter (html-options-backmatter options))
-          (backmatter-labels (html-options-backmatter-labels options))
           (reference-taxon-id (html-options-reference-taxon-id options))
           (title-decoration (presentation-title-decoration-procedure presentation-data))
           (article? (html-options-article? options))
@@ -1164,7 +1157,7 @@ Entry points take this value with #:options."
                (make-artifact
                  (cdr (assoc (site-page-id page) route-table))
                  (page-html forest page style routes mathjax-src backmatter
-                            backmatter-labels reference-taxon-id #f highlighters
+                            reference-taxon-id #f highlighters
                             #:title-decoration title-decoration
                             #:article? article?
                             #:backmatter-details? backmatter-details?
@@ -1187,7 +1180,6 @@ Entry points take this value with #:options."
           (routes (html-options-routes options))
           (mathjax-src (html-options-mathjax-src options))
           (backmatter (html-options-backmatter options))
-          (backmatter-labels (html-options-backmatter-labels options))
           (reference-taxon-id (html-options-reference-taxon-id options))
           (title-decoration (presentation-title-decoration-procedure presentation-data))
           (article? (html-options-article? options))
@@ -1222,7 +1214,7 @@ Entry points take this value with #:options."
             (list 'html (site-title (site forest)) (site-description (site forest))
                   (or (html-home-page routes) (site-home (site forest)))
                   (html-index-url routes)
-                  mathjax-src backmatter backmatter-labels reference-taxon-id
+                  mathjax-src backmatter reference-taxon-id
                   article? backmatter-details? html-attributes
                   (presentation-cache-identity presentation-data)
                   side-lane (resolve-chrome-locale locale (resolve-chrome-catalog messages))
@@ -1250,7 +1242,7 @@ Entry points take this value with #:options."
                                 (highlighter-inputs (cdr entry)))) highlighters)
                     (render forest)
                     (render-html-changed forest style routes mathjax-src backmatter
-                                         backmatter-labels reference-taxon-id
+                                         reference-taxon-id
                                          changed old-artifacts highlighters
                                          #:title-decoration title-decoration
                                          #:article? article?

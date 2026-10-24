@@ -297,14 +297,13 @@
       (error "Gemtext routes produce duplicate output paths" paths))))
 
 (define-record-type <gemtext-options>
-  (%make-gemtext-options prefix routes backmatter backmatter-labels
+  (%make-gemtext-options prefix routes backmatter
                          reference-taxon-id locale messages rules rules-id
                          cache?)
   gemtext-options?
   (prefix gemtext-options-prefix)
   (routes gemtext-options-routes)
   (backmatter gemtext-options-backmatter)
-  (backmatter-labels gemtext-options-backmatter-labels)
   (reference-taxon-id gemtext-options-reference-taxon-id)
   (locale gemtext-options-locale)
   (messages gemtext-options-messages)
@@ -316,7 +315,6 @@
                                (prefix #f)
                                (routes (default-gemtext-routes))
                                (backmatter default-backmatter-sections)
-                               (backmatter-labels '())
                                (reference-taxon-id default-reference-taxon-id)
                                (locale #f)
                                (messages default-message-catalog)
@@ -324,14 +322,13 @@
                                (rules-id #f)
                                (cache? #t))
   "Immutable configuration for the Forester Gemtext renderer."
-  (%make-gemtext-options prefix routes backmatter backmatter-labels
+  (%make-gemtext-options prefix routes backmatter
                          reference-taxon-id locale messages rules rules-id
                          cache?))
 
 (define* (site->gemtext forest #:key (options (make-gemtext-options)))
   (let* ((routes (gemtext-options-routes options))
          (backmatter (gemtext-options-backmatter options))
-         (backmatter-labels (gemtext-options-backmatter-labels options))
          (reference-taxon-id (gemtext-options-reference-taxon-id options))
          (locale (gemtext-options-locale options))
          (messages (gemtext-options-messages options))
@@ -346,9 +343,7 @@
                                      #:routes routes
                                      #:locale locale
                                      #:messages messages))
-         (backmatter-labels
-           (normalize-backmatter-labels backmatter-labels
-             #:defaults (localized-backmatter-labels context))))
+         (backmatter-labels (localized-backmatter-labels context)))
     (cons (cons "index" (index->gemtext forest routes))
           (map (lambda (page)
                  (cons (site-page-id page)
@@ -360,7 +355,6 @@
 (define* (render-gemtext forest #:key (options (make-gemtext-options)))
   (let* ((routes (gemtext-options-routes options))
          (backmatter (gemtext-options-backmatter options))
-         (backmatter-labels (gemtext-options-backmatter-labels options))
          (reference-taxon-id (gemtext-options-reference-taxon-id options))
          (locale (gemtext-options-locale options))
          (messages (gemtext-options-messages options))
@@ -375,9 +369,7 @@
                                      #:routes routes
                                      #:locale locale
                                      #:messages messages))
-         (backmatter-labels
-           (normalize-backmatter-labels backmatter-labels
-             #:defaults (localized-backmatter-labels context))))
+         (backmatter-labels (localized-backmatter-labels context)))
     (cons (make-artifact (text-index-path routes)
                          (index->gemtext forest routes)
                          (source-paths forest))
@@ -394,7 +386,6 @@
   (let* ((prefix (gemtext-options-prefix options))
          (routes (gemtext-options-routes options))
          (backmatter (gemtext-options-backmatter options))
-         (backmatter-labels (gemtext-options-backmatter-labels options))
          (reference-taxon-id (gemtext-options-reference-taxon-id options))
          (locale (gemtext-options-locale options))
          (messages (gemtext-options-messages options))
@@ -422,7 +413,7 @@
                            (text-page-path routes (site-page-id page))))
                    (pages forest))
               (text-index-path routes)
-              backmatter backmatter-labels reference-taxon-id rules-id
+              backmatter reference-taxon-id rules-id
               (site-title (site forest)) (site-description (site forest))
               (resolve-chrome-locale locale (resolve-chrome-catalog messages))
               (message-catalog-default (resolve-chrome-catalog messages))

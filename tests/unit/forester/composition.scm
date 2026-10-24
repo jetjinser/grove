@@ -314,14 +314,6 @@
   (test-error "backmatter rejects duplicate sections" #t
     (site->text forest #:options
                 (make-text-options #:backmatter '(context context))))
-  (test-error "backmatter labels reject unknown sections" #t
-    (site->text forest #:options
-                (make-text-options
-                  #:backmatter-labels '((unknown . "Unknown")))))
-  (test-error "backmatter labels reject empty text" #t
-    (site->text forest #:options
-                (make-text-options
-                  #:backmatter-labels '((context . "")))))
   (test-equal "transclusions do not become ordinary link references"
     '()
     (outgoing-references forest "host"))

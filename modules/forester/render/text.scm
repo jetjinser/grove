@@ -248,14 +248,12 @@ HTML renderer so text and HTML address occurrences identically."
       (string-append prefix "/" name)
       name))
 
-(define (render-text-changed forest prefix routes backmatter backmatter-labels
+(define (render-text-changed forest prefix routes backmatter
                              reference-taxon-id rules context
                              changed old-artifacts)
-  (set! backmatter-labels
-    (normalize-backmatter-labels backmatter-labels
-      #:defaults (localized-backmatter-labels context)))
   (check-text-routes forest routes)
-  (let* ((site (site forest))
+  (let* ((backmatter-labels (localized-backmatter-labels context))
+         (site (site forest))
          (index-path (output-path prefix (text-index-path routes)))
          (index-sources (source-paths forest))
          (index-artifact
@@ -278,14 +276,13 @@ HTML renderer so text and HTML address occurrences identically."
     (cons index-artifact page-artifacts)))
 
 (define-record-type <text-options>
-  (%make-text-options prefix routes backmatter backmatter-labels
+  (%make-text-options prefix routes backmatter
                       reference-taxon-id locale messages rules rules-id
                       cache?)
   text-options?
   (prefix text-options-prefix)
   (routes text-options-routes)
   (backmatter text-options-backmatter)
-  (backmatter-labels text-options-backmatter-labels)
   (reference-taxon-id text-options-reference-taxon-id)
   (locale text-options-locale)
   (messages text-options-messages)
@@ -297,7 +294,6 @@ HTML renderer so text and HTML address occurrences identically."
                             (prefix #f)
                             (routes (make-text-routes))
                             (backmatter default-backmatter-sections)
-                            (backmatter-labels '())
                             (reference-taxon-id default-reference-taxon-id)
                             (locale #f)
                             (messages default-message-catalog)
@@ -305,14 +301,13 @@ HTML renderer so text and HTML address occurrences identically."
                             (rules-id #f)
                             (cache? #t))
   "Immutable configuration for the Forester text renderer."
-  (%make-text-options prefix routes backmatter backmatter-labels
+  (%make-text-options prefix routes backmatter
                       reference-taxon-id locale messages rules rules-id
                       cache?))
 
 (define* (site->text forest #:key (options (make-text-options)))
   (let* ((routes (text-options-routes options))
          (backmatter (text-options-backmatter options))
-         (backmatter-labels (text-options-backmatter-labels options))
          (reference-taxon-id (text-options-reference-taxon-id options))
          (locale (text-options-locale options))
          (messages (text-options-messages options))
@@ -327,9 +322,7 @@ HTML renderer so text and HTML address occurrences identically."
                                      #:routes routes
                                      #:locale locale
                                      #:messages messages))
-         (backmatter-labels
-           (normalize-backmatter-labels backmatter-labels
-             #:defaults (localized-backmatter-labels context)))
+         (backmatter-labels (localized-backmatter-labels context))
          (site (site forest)))
     (cons (cons "index" (index->text forest routes))
           (map (lambda (page)
@@ -342,7 +335,6 @@ HTML renderer so text and HTML address occurrences identically."
 (define* (render-text forest #:key (options (make-text-options)))
   (let* ((routes (text-options-routes options))
          (backmatter (text-options-backmatter options))
-         (backmatter-labels (text-options-backmatter-labels options))
          (reference-taxon-id (text-options-reference-taxon-id options))
          (locale (text-options-locale options))
          (messages (text-options-messages options))
@@ -354,9 +346,7 @@ HTML renderer so text and HTML address occurrences identically."
                                      #:routes routes
                                      #:locale locale
                                      #:messages messages))
-         (backmatter-labels
-           (normalize-backmatter-labels backmatter-labels
-             #:defaults (localized-backmatter-labels context)))
+         (backmatter-labels (localized-backmatter-labels context))
          (site (site forest))
          (sources (source-paths forest)))
     (check-text-routes forest routes)
@@ -376,7 +366,6 @@ HTML renderer so text and HTML address occurrences identically."
   (let* ((prefix (text-options-prefix options))
          (routes (text-options-routes options))
          (backmatter (text-options-backmatter options))
-         (backmatter-labels (text-options-backmatter-labels options))
          (reference-taxon-id (text-options-reference-taxon-id options))
          (locale (text-options-locale options))
          (messages (text-options-messages options))
@@ -403,14 +392,14 @@ HTML renderer so text and HTML address occurrences identically."
           (lambda (forest)
             (list 'text prefix (site-title (site forest)) (site-description (site forest))
                   (text-index-path routes)
-                  backmatter backmatter-labels reference-taxon-id rules-id
+                  backmatter reference-taxon-id rules-id
                   (resolve-chrome-locale locale (resolve-chrome-catalog messages))
                   (message-catalog-default (resolve-chrome-catalog messages))
                   (message-catalog-entries (resolve-chrome-catalog messages))))
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
             (render-text-changed forest prefix routes backmatter
-                                 backmatter-labels reference-taxon-id rules
+                                 reference-taxon-id rules
                                  (make-site-render-context
                                    forest
                                    #:routes routes

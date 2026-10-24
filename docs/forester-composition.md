@@ -74,7 +74,7 @@ that order; empty sections are omitted:
 | Related | Non-reference targets linked directly from this tree. |
 
 HTML/text renderers accept `#:backmatter` to select/order sections (an empty
-list disables them), `#:backmatter-labels` to override headings, and
+list disables them), message catalog entries to override headings, and
 `#:reference-taxon-id` to choose the reference classification. The default is
 `reference`, written `@taxon["reference"]`. HTML entries follow the forester
 entry anatomy: the target's taxon when its document declares one, the title
