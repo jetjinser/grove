@@ -44,11 +44,12 @@ readable and lets tools find it quickly. A second `@taxon` is an error; use
 
 `@describes` records an external entity identity, separate from the page's
 own URL and from ordinary links. For example, a literature page can declare
-`@describes{doi:10.1146/annurev.fluid.29.1.123}`. Grove retains the URI for
-queries and renders DOI URIs as links through `https://doi.org/`; HTTP(S) URIs
-link directly. Other absolute URIs remain visible as identifiers without an
-assumed resolver. Matching uses the declared URI string exactly, so choose one
-spelling consistently. Grove does not fetch metadata from the identifier.
+`@describes{doi:10.1146/annurev.fluid.29.1.123}`. The declared URI is the
+entity identity; its scheme guides link presentation. Grove links HTTP(S) URIs
+directly and presents DOI URIs through `https://doi.org/`. Other absolute URIs
+remain visible as identifiers without an assumed resolver. Grove retains the
+declared URI for queries and compares it exactly, so choose one spelling
+consistently. It does not fetch metadata from the identifier.
 
 ## Content
 
