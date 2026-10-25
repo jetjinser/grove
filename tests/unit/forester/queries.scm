@@ -9,6 +9,7 @@
   #:use-module (forester relations)
   #:use-module (forester site)
   #:use-module (grove ir)
+  #:use-module (grove relation dsl)
   #:use-module (grove site))
 
 (define (page-with-links id targets)
@@ -161,6 +162,13 @@
   (test-equal "described entity relation is part of the forest"
     2
     (length (described-entity-page-ids
-              (described-entity-relation forest) doi))))
+              (described-entity-relation forest) doi)))
+  (test-equal "described entities compose with page facts by page ID"
+    '(("first" "First") ("second" "Second"))
+    (query (id title)
+      (described-entityo (described-entity-relation forest)
+        (uri doi) (page-id id))
+      (pageo (page-relation forest)
+        (page-id id) (title title)))))
 
 (test-end "forester site queries")

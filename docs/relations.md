@@ -165,6 +165,22 @@ queries, or `(describing-pages forest uri)` to get matching page records in
 site order. Multiple pages may describe the same external entity; URI strings
 are compared exactly.
 
+Because described entities and page data are separate relations, join them
+through the page ID. This keeps entity matching composable with other page
+facts and content queries:
+
+```scheme
+(let ((entities (described-entity-relation forest))
+      (page-data (page-relation forest)))
+  (query (page-id title)
+    (described-entityo entities
+      (uri "doi:10.1146/annurev.fluid.29.1.123")
+      (page-id page-id))
+    (pageo page-data
+      (page-id page-id)
+      (title title))))
+```
+
 ```scheme
 (let ((nodes (content-node-relation forest))
       (page-data (page-relation forest)))
