@@ -9,13 +9,15 @@
   #:use-module (grove ir)
   #:use-module (grove string-fun)
   #:use-module (grove site)
+  #:use-module (web uri)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (make-page-reader
             document->tree-page))
 
 (define metadata-kinds
-  '(title summary og-image og-image-alt published updated tag taxon locale translation))
+  '(title summary og-image og-image-alt published updated tag taxon locale
+    translation describes))
 
 (define (metadata-element? child)
   (and (content-element? child)
@@ -91,6 +93,31 @@
       (error (format #f "Forester page ~a has more than one taxon" path)))
     (and (pair? taxa) (car taxa))))
 
+(define (describes-metadata elements path)
+  (let ((uris (map (lambda (element)
+                     (let ((value
+                             (string-trim-both
+                               (content-verbatim-string
+                                 (content-element-children element)))))
+                       (unless (non-empty-string? value)
+                         (error (format #f
+                                  "Forester page describes URI cannot be empty in ~a"
+                                  path)))
+                       (catch #t
+                         (lambda ()
+                           (let ((uri (string->uri value)))
+                             (unless (and (uri? uri) (uri-scheme uri))
+                               (error "URI requires a scheme" value))))
+                         (lambda (key . args)
+                           (error (format #f
+                                    "Forester page describes value must be an absolute URI in ~a: ~a"
+                                    path value))))
+                       value))
+                   (elements-of-kind elements 'describes))))
+    (when (not (= (length uris) (length (delete-duplicates uris string=?))))
+      (error (format #f "Forester page ~a repeats a describes URI" path)))
+    uris))
+
 (define* (document->tree-page id document source #:key title (metadata '()))
   "Extract a tree's direct frontmatter, retaining topic nodes as queryable IR."
   (let* ((children (content-document-children document))
@@ -102,7 +129,8 @@
          (published (date-metadata metadata-nodes 'published source))
          (updated (date-metadata metadata-nodes 'updated source))
          (locale (locale-metadata metadata-nodes 'locale source))
-         (translation (one-metadata-value metadata-nodes 'translation source)))
+         (translation (one-metadata-value metadata-nodes 'translation source))
+         (describes (describes-metadata metadata-nodes source)))
     ;; Topics stay in the body, but validation is identical for every tree.
     (topic-metadata metadata-nodes 'tag source)
     (taxon-metadata metadata-nodes source)
@@ -113,7 +141,7 @@
                   (and (content-element? child)
                        (memq (content-element-kind child)
                              '(title summary og-image og-image-alt published updated
-                               locale translation))))
+                               locale translation describes))))
                 children)
         (content-document-source document))
       source
@@ -125,7 +153,8 @@
                                  (cons 'published published)
                                  (cons 'updated updated)
                                  (cons 'locale locale)
-                                 (cons 'translation translation)))))))
+                                 (cons 'translation translation)
+                                 (cons 'describes (and (pair? describes) describes))))))))
 
 (define (page-from-document path document)
   (let ((filename (basename path)))

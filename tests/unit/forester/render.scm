@@ -1317,4 +1317,25 @@
                   forest
                   #:options (make-gemtext-options #:locale "en"))))))
 
+(let* ((doi "doi:10.1146/annurev.fluid.29.1.123")
+       (page (make-site-page "paper" "A paper"
+               (evaluate-document "@paragraph{A short note.}")
+               #:metadata `((describes . (,doi)))))
+       (forest (make-forest (make-site (list page))))
+       (html (assoc-ref
+               (site->html forest
+                 #:options (make-html-options
+                             #:routes (make-html-routes #:home-page "paper")
+                             #:mathjax-src #f))
+               "paper"))
+       (text (assoc-ref (site->text forest) "paper"))
+       (gemtext (assoc-ref (site->gemtext forest) "paper")))
+  (test-assert "HTML renders doi URIs as resolver links"
+    (and (string-contains html "class=\"describes\"")
+         (string-contains html "href=\"https://doi.org/10.1146/annurev.fluid.29.1.123\"")
+         (string-contains html "doi:10.1146/annurev.fluid.29.1.123")))
+  (test-assert "text and Gemtext expose described entity links"
+    (and (string-contains text "https://doi.org/10.1146/annurev.fluid.29.1.123")
+         (string-contains gemtext "=> https://doi.org/10.1146/annurev.fluid.29.1.123 doi:10.1146/annurev.fluid.29.1.123"))))
+
 (test-end "forester renderers")

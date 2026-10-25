@@ -32,6 +32,7 @@ Grove owns versus what a project supplies. Commands use `@name{body}` or
 | `@og-image-alt{...}` | Alternative text for `@og-image`; defaults to the page title. |
 | `@published{YYYY-MM-DD}` | Publication date. |
 | `@updated{YYYY-MM-DD}` | Last update; must not precede `@published`. |
+| `@describes{absolute-uri}` | External entity this tree describes; repeat for multiple entities. |
 | `@taxon["chapter"]` | One classification per page, rendered above the title. |
 | `@tag["i18n"]` | Free labels; repeat as needed. |
 | `@locale["zh-Hans"]` | Page language and direction. |
@@ -40,6 +41,14 @@ Grove owns versus what a project supplies. Commands use `@name{body}` or
 Metadata may appear anywhere, but keeping it at the top makes the page
 readable and lets tools find it quickly. A second `@taxon` is an error; use
 `@tag` for additional labels.
+
+`@describes` records an external entity identity, separate from the page's
+own URL and from ordinary links. For example, a literature page can declare
+`@describes{doi:10.1146/annurev.fluid.29.1.123}`. Grove retains the URI for
+queries and renders DOI URIs as links through `https://doi.org/`; HTTP(S) URIs
+link directly. Other absolute URIs remain visible as identifiers without an
+assumed resolver. Matching uses the declared URI string exactly, so choose one
+spelling consistently. Grove does not fetch metadata from the identifier.
 
 ## Content
 

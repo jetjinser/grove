@@ -16,6 +16,7 @@
   #:use-module ((forester composition) #:prefix composition:)
   #:use-module (forester relations)
   #:use-module (forester site)
+  #:use-module (forester input scribble)
   #:use-module (grove build)
   #:use-module (grove ir)
   #:use-module (grove render html)
@@ -40,6 +41,7 @@
   (test-equal "forest timings follow analysis order"
     '(identify-trees extract-trees occurrence-anchors equation-numbers
       references transclusions reference-index term-definitions page-index
+      described-entities
       content composition anchors term-mentions queries)
     (map car (reverse phases)))
   (test-assert "forest timings report nonnegative seconds"
@@ -56,6 +58,7 @@
   (test-equal "analysis timings flow through the parameter hook"
     '(identify-trees extract-trees occurrence-anchors equation-numbers
       references transclusions reference-index term-definitions page-index
+      described-entities
       content composition anchors term-mentions queries)
     (map car (reverse phases))))
 
@@ -593,5 +596,30 @@
   (test-equal "used codepoints collect titles and document text"
     (string->list " .OabceginotwÄ")
     (used-codepoints forest)))
+
+(let* ((page (document->tree-page
+               "roache"
+               (evaluate-document
+                 "@title{Quantification of Uncertainty}
+                  @describes{doi:10.1146/annurev.fluid.29.1.123}
+                  @paragraph{A useful paper.}")
+               "roache.plant")))
+  (test-equal "describes frontmatter is retained as URI metadata"
+    '("doi:10.1146/annurev.fluid.29.1.123")
+    (assq-ref (site-page-metadata page) 'describes))
+  (test-equal "describes frontmatter is removed from rendered body"
+    '(paragraph)
+    (map content-element-kind
+         (content-document-children (site-page-document page)))))
+
+(test-error "describes requires an absolute URI" #t
+  (document->tree-page "bad"
+    (evaluate-document "@title{Bad}@describes{relative-id}") "bad.plant"))
+
+(test-error "describes rejects duplicate URI declarations on one page" #t
+  (document->tree-page "bad"
+    (evaluate-document
+      "@title{Bad}@describes{doi:10.1146/x}@describes{doi:10.1146/x}")
+    "bad.plant"))
 
 (test-end "forester site")

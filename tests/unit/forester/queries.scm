@@ -149,4 +149,18 @@
     (and (string-contains message "missing")
          (string-contains message "host"))))
 
+(let* ((doi "doi:10.1146/annurev.fluid.29.1.123")
+       (first (make-site-page "first" "First" (make-content-document '())
+                #:metadata `((describes . (,doi)))))
+       (second (make-site-page "second" "Second" (make-content-document '())
+                 #:metadata `((describes . (,doi)))))
+       (forest (make-forest (make-site (list first second)))))
+  (test-equal "describing-pages returns all pages for one external entity"
+    '("first" "second")
+    (map site-page-id (describing-pages forest doi)))
+  (test-equal "described entity relation is part of the forest"
+    2
+    (length (described-entity-page-ids
+              (described-entity-relation forest) doi))))
+
 (test-end "forester site queries")

@@ -12,6 +12,7 @@
   #:use-module (forester render text routes)
   #:use-module (forester backmatter)
   #:use-module (forester render labels)
+  #:use-module (forester private entity-uri)
   #:use-module (forester render context)
   #:use-module (grove i18n)
   #:use-module (forester i18n)
@@ -45,6 +46,19 @@
       (string-append "=> " url
         (if (string-null? label) "" (string-append " " label))))
     "\n"))
+
+(define (describes-gemtext page context)
+  (let ((uris (or (assq-ref (site-page-metadata page) 'describes) '())))
+    (if (null? uris)
+        ""
+        (string-append
+          "\n" (title-line (chrome-message 'describes context))
+          (string-concatenate
+            (map (lambda (uri)
+                   (let ((href (entity-uri-href uri)))
+                     (if href (link-line href uri)
+                         (string-append uri "\n"))))
+                 uris))))))
 
 (define gemtext-uri-path-characters
   (string->char-set
@@ -284,6 +298,7 @@
                        (text-index-path routes)))
                    (chrome-message 'home context))
         "\n" body
+        (describes-gemtext page context)
         (page-backmatter forest page routes backmatter backmatter-labels
                          reference-taxon-id)
         (if (string-suffix? "\n" body) "" "\n")))))

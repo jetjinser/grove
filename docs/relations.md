@@ -159,6 +159,12 @@ case-insensitive and enumerated values are canonical. Page facts and content
 facts can be joined through their
 shared page ID:
 
+Forester also materializes `@describes` declarations as `(page-id uri)` rows
+in `(described-entity-relation forest)`. Use `described-entityo` in relational
+queries, or `(describing-pages forest uri)` to get matching page records in
+site order. Multiple pages may describe the same external entity; URI strings
+are compared exactly.
+
 ```scheme
 (let ((nodes (content-node-relation forest))
       (page-data (page-relation forest)))

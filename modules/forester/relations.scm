@@ -18,6 +18,9 @@
             make-page-relation
             pageo
             page-metadatao
+            make-described-entity-relation
+            described-entityo
+            described-entity-page-ids
             make-content-node-relation
             nodeo
             node-propertyo
@@ -49,6 +52,10 @@
 ;; Rows are (page-id title metadata).
 (define-relation-schema make-page-relation pageo
   (page-id title metadata))
+
+;; Rows are (page-id uri): a tree's declared subject entities.
+(define-relation-schema make-described-entity-relation described-entityo
+  (page-id uri))
 
 ;; Rows are (node-id page-id parent-id kind position properties text
 ;; character-count codepoint-count plain-text?).
@@ -102,6 +109,12 @@
            (metadata metadata))
     (list-membero entry metadata)
     (== `(,key . ,value) entry)))
+
+(define (described-entity-page-ids relation uri)
+  (delete-duplicates
+    (map car (hash-ref (force (list-ref (relation-indexes relation) 1))
+                       uri '()))
+    string=?))
 
 (define-relation (paragrapho relation node-id)
   (nodeo relation (node-id node-id) (kind 'paragraph)))

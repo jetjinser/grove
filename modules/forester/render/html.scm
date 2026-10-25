@@ -23,6 +23,7 @@
   #:use-module (grove site)
   #:use-module ((forester private content-index) #:prefix content-index:)
   #:use-module (forester backmatter)
+  #:use-module (forester private entity-uri)
   #:use-module (forester relations)
   #:use-module (grove style html)
   #:use-module (forester style html)
@@ -555,6 +556,21 @@ top-level taxon element; pages without one contribute nothing."
       (string-prefix? "http://" value)
       (string-prefix? "//" value)))
 
+(define (describes-sxml page context)
+  (let ((uris (or (assq-ref (site-page-metadata page) 'describes) '())))
+    (if (null? uris)
+        '()
+        (list
+          `(section (@ (class "describes"))
+             (h2 ,(chrome-message 'describes context))
+             (ul
+               ,@(map (lambda (uri)
+                        (let ((href (entity-uri-href uri)))
+                          `(li ,(if href
+                                    `(a (@ (href ,href)) (code ,uri))
+                                    `(code ,uri)))))
+                      uris)))))))
+
 (define (mathjax-script-url source routes)
   (and source
        (if (external-url? source)
@@ -873,6 +889,7 @@ to the lane, and an in-place numbered marker links to it."
                                         (title-decoration forest page)
                                         '())))
          (article (append (list tree)
+                          (describes-sxml page context)
                           (if lane (side-lane-sxml lane) '())
                           (backmatter-sxml forest page routes backmatter
                                            labels reference-taxon-id

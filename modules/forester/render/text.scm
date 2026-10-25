@@ -14,6 +14,7 @@
   #:use-module (forester render text routes)
   #:use-module (forester backmatter)
   #:use-module (forester render labels)
+  #:use-module (forester private entity-uri)
   #:use-module (forester render context)
   #:use-module (grove i18n)
   #:use-module (forester i18n)
@@ -95,6 +96,17 @@ HTML renderer so text and HTML address occurrences identically."
 
 (define (title-text title)
   (string-append title "\n" (make-string (string-length title) #\=) "\n"))
+
+(define (describes-text page context)
+  (let ((uris (or (assq-ref (site-page-metadata page) 'describes) '())))
+    (if (null? uris)
+        ""
+        (string-append
+          "\n" (chrome-message 'describes context) ":\n"
+          (string-concatenate
+            (map (lambda (uri)
+                   (string-append "- " (or (entity-uri-href uri) uri) "\n"))
+                 uris))))))
 
 (define (page-reference routes from-path page)
   (string-append (site-page-title page)
@@ -231,6 +243,7 @@ HTML renderer so text and HTML address occurrences identically."
       "\n\n"
       (table-of-contents-text forest page context)
       body
+      (describes-text page context)
       (backmatter-text forest page routes backmatter backmatter-labels
                        reference-taxon-id))))
 

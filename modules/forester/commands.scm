@@ -88,6 +88,10 @@
   "Group pages that translate one another under KEY."
   (make-content-element 'translation (list key) #:flow-kind 'block))
 
+(define-public (describes uri)
+  "Declare an absolute external URI for the entity this tree describes."
+  (make-content-element 'describes (list uri) #:flow-kind 'block))
+
 (define-public (forest-query query)
   "Record a query to run against the complete Forest after source analysis."
   (unless (procedure? query)

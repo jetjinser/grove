@@ -25,6 +25,8 @@
             site
             pages
             page-relation
+            described-entity-relation
+            describing-pages
             content-node-relation
             content-node
             topic-pages
@@ -103,7 +105,8 @@
 
 (define-record-type <forest>
   (%make-forest site pages reference-relation
-                composition page-index page-relation content-node-relation
+                composition page-index page-relation described-entity-relation
+                content-node-relation
                 content-node-index term-definition-relation
                 term-mention-relation query-page-ids)
   forest?
@@ -113,6 +116,7 @@
   (composition composition)
   (page-index page-index)
   (page-relation page-relation)
+  (described-entity-relation described-entity-relation)
   (content-node-relation content-node-relation)
   (content-node-index content-node-index)
   (term-definition-relation term-definition-relation)
@@ -307,6 +311,7 @@
             resolved-site resolved-pages
             (reference-relation forest) (composition forest)
             resolved-page-index (page-relation forest)
+            (described-entity-relation forest)
             (content-node-relation forest) (content-node-index forest)
             (term-definition-relation forest)
             (term-mention-relation forest)
@@ -588,6 +593,14 @@ anchors."
                           (site-page-title page)
                           (site-page-metadata page)))
                   pages))))
+         (described-entity-relation
+           (measure 'described-entities
+             (make-described-entity-relation
+               (append-map
+                 (lambda (page)
+                   (map (lambda (uri) (list (site-page-id page) uri))
+                        (or (assq-ref (site-page-metadata page) 'describes) '())))
+                 pages))))
          (content-node-state
            (measure 'content (call-with-values
              (lambda () (content-index:build-content-node-index pages))
@@ -679,12 +692,13 @@ anchors."
     (for-each
       (lambda (relation)
         (for-each force (relation-indexes relation)))
-      (list reference-relation page-relation
+      (list reference-relation page-relation described-entity-relation
             term-definition-relation term-mention-relation
             (car content-node-state)))
     (measure 'queries (resolve-forest-queries
       (%make-forest site pages
                     reference-relation composition page-index page-relation
+                    described-entity-relation
                     (car content-node-state)
                     (cadr content-node-state)
                     term-definition-relation term-mention-relation
@@ -700,6 +714,14 @@ anchors."
 Backmatter entry rendering resolves relation-sourced ids through this
 index instead of scanning the page list per entry."
   (hash-ref (page-index forest) id))
+
+(define (describing-pages forest uri)
+  "Return pages that declare they describe URI, in site order."
+  (let ((ids (id-member-set
+               (described-entity-page-ids
+                 (described-entity-relation forest) uri))))
+    (filter (lambda (page) (hash-ref ids (site-page-id page)))
+            (pages forest))))
 
 (define (subtree-definitions forest)
   (map (lambda (definition)
