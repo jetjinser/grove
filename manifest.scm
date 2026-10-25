@@ -378,18 +378,9 @@ file and generates the (grove highlight languages) registry module that
 Grove's highlighter consumes.")
       (license (list license:gpl3+ license:expat)))))
 
-(load "grove-package.scm")
-(define grove
-  (make-grove blue guile faster-minikanren grove-highlights
-              libunistring
-              (specification->package "guile-gcrypt")
-              (specification->package "guile-ssh")
-              (specification->package "guile-ts")
-              (specification->package "coreutils")))
-
 (packages->manifest
  (append
-  (list blue faster-minikanren grove-highlights guile libunistring grove
+  (list blue faster-minikanren grove-highlights guile libunistring
         grove-glibc-locales
         racket-smathml racket-vm-collections)
   (map specification->package
