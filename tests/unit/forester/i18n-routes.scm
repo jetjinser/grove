@@ -206,6 +206,22 @@
          (string-contains feed "<language>en</language>"))))
 
 (let* ((settings (make-site-settings #:site-url "https://example.org"
+                                     #:default-locale "en"))
+       (html (site->html forest
+                         #:options
+                         (make-html-options
+                           #:settings settings
+                           #:locale "zh-Hans"
+                           #:routes routes
+                           #:mathjax-src #f)))
+       (home (assoc-ref html "home"))
+       (guide (assoc-ref html "guide")))
+  (test-assert "page fallback locale and translation default are independent"
+    (and (string-contains home "<html lang=\"zh-Hans\"")
+         (string-contains guide
+                          "hreflang=\"x-default\" href=\"/guide.html\""))))
+
+(let* ((settings (make-site-settings #:site-url "https://example.org"
                                      #:default-locale "zh-Hans"))
        (html (assoc-ref (site->html forest
                                     #:options

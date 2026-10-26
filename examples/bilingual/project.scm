@@ -52,8 +52,6 @@
       #:stylesheets
       (list (make-artifact "style.css" style-css (list style-css-path))))))
 
-(define default-locale (make-locale "en"))
-
 (define bilingual-routes
   (make-html-routes))
 
@@ -77,7 +75,7 @@
             (make-html-options
               #:presentation (make-html-presentation #:style bilingual-style)
               #:routes bilingual-routes
-              #:html-attributes (locale-html-attributes default-locale)
+              #:locale "en"
               #:messages chrome-messages))
           (make-text-renderer
             #:options (make-text-options #:prefix "text")))
