@@ -623,4 +623,30 @@
       "@title{Bad}@describes{doi:10.1146/x}@describes{doi:10.1146/x}")
     "bad.plant"))
 
+(test-error "updated dates cannot precede published dates" #t
+  (document->tree-page "bad"
+    (evaluate-document
+      "@title{Bad}@published{2026-10-20}@updated{2026-10-19}")
+    "bad.plant"))
+
+(test-equal "published and updated dates may be equal"
+  '("2026-10-20" "2026-10-20")
+  (let ((page
+          (document->tree-page "equal-dates"
+            (evaluate-document
+              "@title{Equal}@published{2026-10-20}@updated{2026-10-20}")
+            "equal-dates.plant")))
+    (list (assq-ref (site-page-metadata page) 'published)
+          (assq-ref (site-page-metadata page) 'updated))))
+
+(test-equal "updated dates may follow published dates"
+  '("2026-10-20" "2026-10-21")
+  (let ((page
+          (document->tree-page "later-update"
+            (evaluate-document
+              "@title{Later}@published{2026-10-20}@updated{2026-10-21}")
+            "later-update.plant")))
+    (list (assq-ref (site-page-metadata page) 'published)
+          (assq-ref (site-page-metadata page) 'updated))))
+
 (test-end "forester site")

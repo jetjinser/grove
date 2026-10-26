@@ -131,6 +131,10 @@
          (locale (locale-metadata metadata-nodes 'locale source))
          (translation (one-metadata-value metadata-nodes 'translation source))
          (describes (describes-metadata metadata-nodes source)))
+    (when (and published updated (string<? updated published))
+      (error (format #f
+               "Forester page updated date ~a precedes published date ~a in ~a"
+               updated published source)))
     ;; Topics stay in the body, but validation is identical for every tree.
     (topic-metadata metadata-nodes 'tag source)
     (taxon-metadata metadata-nodes source)
