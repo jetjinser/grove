@@ -58,6 +58,8 @@
 
 (define renderer-configurations
   (@@ (grove build) renderer-configurations))
+(define cached-renderer?
+  (@@ (grove build) cached-renderer?))
 (define cached-renderer-cache?
   (@@ (grove build) cached-renderer-cache?))
 (define cached-renderer-configuration

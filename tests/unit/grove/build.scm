@@ -16,11 +16,18 @@
 
 (test-begin "grove build")
 
+(test-assert "cached renderer representation stays private"
+  (not (module-variable
+         (module-public-interface (resolve-module '(grove build)))
+         'cached-renderer?)))
+
 (test-error "cached renderers require procedures" #t
   (make-cached-renderer #f))
 
-(test-assert "default renderer configuration needs no key"
-  (cached-renderer? (make-cached-renderer (lambda (site) '()))))
+(test-equal "default renderer configuration is empty data"
+  '(())
+  (renderer-configurations
+    #f (list (make-cached-renderer (lambda (site) '())))))
 
 (test-error "incremental callbacks must be procedures" #t
   (make-cached-renderer (lambda (site) '())
