@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove render html routes)
+  #:use-module (grove private snapshot)
   #:use-module (grove string-fun)
   #:use-module (grove output)
   #:use-module (srfi srfi-9)
@@ -24,9 +25,15 @@
   (%make-html-routes page-path index-path url-prefix home-page)
   html-routes?
   (page-path html-page-path-procedure)
-  (index-path html-index-path)
+  (index-path html-index-path/raw)
   (url-prefix html-url-prefix)
-  (home-page html-home-page))
+  (home-page html-home-page/raw))
+
+(define (html-index-path routes)
+  (snapshot-data (html-index-path/raw routes)))
+
+(define (html-home-page routes)
+  (snapshot-data (html-home-page/raw routes)))
 
 (define* (make-html-routes
            #:key
@@ -44,7 +51,8 @@
                (string-prefix? "/" url-prefix)
                (string-suffix? "/" url-prefix))
     (error "HTML URL prefix must begin and end with /" url-prefix))
-  (%make-html-routes page-path index-path url-prefix home-page))
+  (%make-html-routes page-path (snapshot-data index-path)
+                     (snapshot-data url-prefix) (snapshot-data home-page)))
 
 (define (html-routes-with-home-page routes home-page)
   "Return ROUTES with an explicit home page, e.g. from the site."
@@ -55,7 +63,7 @@
   (%make-html-routes (html-page-path-procedure routes)
                      (html-index-path routes)
                      (html-url-prefix routes)
-                     home-page))
+                     (snapshot-data home-page)))
 
 (define (html-page-path routes id)
   (let ((path (if (and (html-home-page routes)

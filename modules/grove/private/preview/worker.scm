@@ -10,7 +10,7 @@
   #:use-module (grove private input cache)
   #:use-module (grove private project state)
   #:use-module (grove project diagnostic)
-  #:use-module (grove build state)
+  #:use-module (grove private build-state)
   #:use-module (grove output)
   #:use-module (grove private preview watch)
   #:use-module (ice-9 ftw)

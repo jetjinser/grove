@@ -4,7 +4,7 @@
 (define-module (tests unit grove input-cache)
   #:use-module (grove ir)
   #:use-module (grove build)
-  #:use-module (grove build state)
+  #:use-module (grove private build-state)
   #:use-module (grove style)
   #:use-module (grove style html)
   #:use-module (grove input scribble)

@@ -11,6 +11,7 @@
   #:use-module (forester render rss)
   #:use-module (forester render site)
   #:use-module (forester render sitemap)
+  #:use-module (forester render text routes)
   #:use-module (forester site)
   #:use-module (grove ir)
   #:use-module (grove output)
@@ -19,6 +20,37 @@
   #:use-module (tests unit forester fixtures))
 
 (test-begin "forester i18n routes")
+
+(let* ((index-path (string-copy "home.html"))
+       (home-page (string-copy "home"))
+       (routes (make-html-routes #:index-path index-path
+                                 #:home-page home-page)))
+  (string-set! index-path 0 #\x)
+  (string-set! home-page 0 #\x)
+  (test-equal "HTML routes snapshot and protect string configuration"
+    '("home.html" "home")
+    (list (html-index-path routes) (html-home-page routes)))
+  (let ((exposed-home (html-home-page routes)))
+    (string-set! exposed-home 0 #\x))
+  (test-equal "HTML route accessors return independent strings"
+    "home" (html-home-page routes)))
+
+(let* ((index-path (string-copy "index.txt"))
+       (routes (make-text-routes #:index-path index-path)))
+  (string-set! index-path 0 #\x)
+  (test-equal "text routes snapshot and protect index paths"
+    "index.txt" (text-index-path routes)))
+
+(let* ((site-url (string-copy "https://example.org"))
+       (locale (string-copy "en"))
+       (settings (make-site-settings #:site-url site-url
+                                     #:default-locale locale)))
+  (string-set! site-url 0 #\x)
+  (string-set! locale 0 #\x)
+  (test-equal "site settings snapshot string configuration"
+    '("https://example.org" "en")
+    (list (site-settings-site-url settings)
+          (site-settings-default-locale settings))))
 
 (define (make-page id locale translation)
   (make-site-page

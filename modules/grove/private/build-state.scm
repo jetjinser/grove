@@ -2,7 +2,7 @@
 ;;;
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(define-module (grove build state)
+(define-module (grove private build-state)
   #:use-module (grove output)
   #:use-module (grove private fingerprint)
   #:re-export (content-fingerprint file-fingerprint)

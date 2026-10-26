@@ -7,6 +7,7 @@
   #:use-module (grove i18n)
   #:use-module (grove content transform)
   #:use-module (grove project)
+  #:use-module (grove private snapshot)
   #:use-module (grove render context)
   #:use-module (grove render derived)
   #:use-module (grove site)
@@ -42,6 +43,20 @@
   "Build a Forester site project.
 
 READ-PAGE and OUTPUT-DIRECTORY are required."
+  ;;     These values are captured by the project callbacks below. Copy their
+  ;;     declarative containers now, while keeping caller procedures shared.
+  (set! title (snapshot-data title))
+  (set! description (snapshot-data description))
+  (set! source-directory (snapshot-data source-directory))
+  (set! extra-sources (snapshot-data extra-sources))
+  (set! transforms (snapshot-data transforms))
+  (set! renderers (snapshot-data renderers))
+  (set! derived (snapshot-data derived))
+  (set! pipelines (snapshot-data pipelines))
+  (set! output-directory (snapshot-data output-directory))
+  (set! default-prefix (snapshot-data default-prefix))
+  (set! home (snapshot-data home))
+  (set! locale (snapshot-data locale))
   (unless (non-empty-string? title)
     (error "site title must be a non-empty string" title))
   (unless (or (not description) (non-empty-string? description))

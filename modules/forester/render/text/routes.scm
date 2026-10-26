@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester render text routes)
+  #:use-module (grove private snapshot)
   #:use-module (grove output)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
@@ -17,7 +18,10 @@
   (%make-text-routes page-path index-path)
   text-routes?
   (page-path text-page-path-procedure)
-  (index-path text-index-path))
+  (index-path text-index-path/raw))
+
+(define (text-index-path routes)
+  (snapshot-data (text-index-path/raw routes)))
 
 (define* (make-text-routes #:key
                            (page-path (lambda (id)
@@ -27,7 +31,7 @@
     (error "text page path requires a procedure" page-path))
   (unless (artifact-path? index-path)
     (error "text index requires a relative path" index-path))
-  (%make-text-routes page-path index-path))
+  (%make-text-routes page-path (snapshot-data index-path)))
 
 (define (text-page-path routes id)
   (unless (text-routes? routes)

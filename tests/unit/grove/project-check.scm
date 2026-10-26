@@ -3,7 +3,7 @@
 
 (define-module (tests unit grove project-check)
   #:use-module (grove build)
-  #:use-module (grove build state)
+  #:use-module (grove private build-state)
   #:use-module (grove output)
   #:use-module (grove private cache-dir)
   #:use-module (grove project)

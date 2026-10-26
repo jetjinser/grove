@@ -63,6 +63,22 @@
   (run-asset-pipelines (list (make-figures-pipeline version))
                        (current-project-key)))
 
+(let* ((declared-inputs (list (string-copy input-a)))
+       (pipeline
+        (make-asset-pipeline
+          #:name "pipeline-snapshot"
+          #:inputs declared-inputs
+          #:procedure
+          (lambda (in emit)
+            (emit "snapshot.txt"
+                  (call-with-input-file (in input-a) get-string-all))))))
+  (set-car! declared-inputs input-b)
+  (let ((artifacts
+         (car (run-asset-pipelines (list pipeline) "snapshot-project"))))
+    (test-equal "asset pipelines snapshot declared input paths"
+      (canonicalize-path input-a)
+      (car (artifact-sources (car artifacts))))))
+
 (define (blob-files)
   (scandir (string-append store "/artifacts")
            (lambda (name)

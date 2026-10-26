@@ -8,7 +8,7 @@
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-64)
-  #:use-module (grove build state)
+  #:use-module (grove private build-state)
   #:use-module (grove output))
 
 (define state-directory

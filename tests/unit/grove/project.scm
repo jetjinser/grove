@@ -95,6 +95,49 @@
                 #:read-source (lambda (_) #f)
                 #:output-directory ""))
 
+(let* ((source-directory (string-copy "sources"))
+       (output-directory (string-copy "output"))
+       (default-prefix (string-copy "note"))
+       (extra-sources (list (string-copy "theme.css")))
+       (renderers (list (lambda (_) '())))
+       (project (make-project
+                  #:source-directory source-directory
+                  #:extra-sources extra-sources
+                  #:read-source (lambda (_) #f)
+                  #:renderers renderers
+                  #:output-directory output-directory
+                  #:default-prefix default-prefix)))
+  (string-set! source-directory 0 #\x)
+  (string-set! output-directory 0 #\x)
+  (string-set! default-prefix 0 #\x)
+  (set-car! extra-sources "changed.css")
+  (set-car! renderers #f)
+  (test-equal "projects snapshot caller-owned path and source values"
+    '("sources" "output" "note" ("theme.css"))
+    (list (project-source-directory project)
+          (project-output-directory project)
+          (project-default-prefix project)
+          (project-extra-sources project)))
+  (let ((exposed-sources (project-extra-sources project))
+        (exposed-renderers (project-renderers project)))
+    (set-car! exposed-sources "changed again.css")
+    (set-car! exposed-renderers #f))
+  (test-equal "project accessors return independent configuration containers"
+    '("theme.css" 1)
+    (list (car (project-extra-sources project))
+          (length (project-renderers project)))))
+
+(let* ((extra-sources (list (string-copy "theme.css")))
+       (project (make-site-project
+                  #:source-directory "sources"
+                  #:extra-sources extra-sources
+                  #:read-page (lambda (_) #f)
+                  #:output-directory "output")))
+  (set-car! extra-sources "changed.css")
+  (test-equal "site projects snapshot inputs captured by project callbacks"
+    '("theme.css")
+    (project-extra-sources project)))
+
 (test-error "generic projects reject duplicate asset pipeline names" #t
   (make-project #:source-directory "sources"
                 #:read-source (lambda (_) #f)

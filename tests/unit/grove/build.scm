@@ -5,12 +5,14 @@
 (define-module (tests unit grove build)
   #:use-module (srfi srfi-64)
   #:use-module (grove build)
-  #:use-module (grove build state)
+  #:use-module (grove private build-state)
   #:use-module (grove output)
   #:use-module (grove project))
 
 (define render-with-cache
   (@@ (grove project) render-with-cache))
+(define renderer-configurations
+  (@@ (grove build) renderer-configurations))
 
 (test-begin "grove build")
 
@@ -27,6 +29,15 @@
 (test-error "renderer input collectors must be procedures" #t
   (make-cached-renderer (lambda (site) '())
     #:inputs '()))
+
+(let* ((configuration (list (cons 'theme (string-copy "light"))))
+       (renderer
+        (make-cached-renderer (lambda (_) '())
+          #:configuration configuration)))
+  (set-cdr! (car configuration) "dark")
+  (test-equal "cached renderers snapshot declarative cache configuration"
+    '(((theme . "light")))
+    (renderer-configurations #f (list renderer))))
 
 (define render-calls 0)
 (define (plain-renderer model)

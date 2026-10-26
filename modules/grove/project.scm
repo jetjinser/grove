@@ -13,10 +13,11 @@
   #:use-module (grove private pipeline)
   #:use-module (grove private project state)
   #:use-module (grove build)
-  #:use-module (grove build state)
+  #:use-module (grove private build-state)
   #:use-module (grove collect)
   #:use-module (grove output)
   #:use-module (grove project diagnostic)
+  #:use-module (grove private snapshot)
   #:use-module (ice-9 binary-ports)
   #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-1)
@@ -117,20 +118,35 @@
                  output-directory cache? default-prefix tree-template browse
                  pipelines)
   project?
-  (source-directory project-source-directory)
+  (source-directory project-source-directory/raw)
   (source-filter project-source-filter)
   (collect-sources project-collect-sources)
   (prepare project-prepare)
-  (extra-sources project-extra-sources)
+  (extra-sources project-extra-sources/raw)
   (read-source project-read-source)
   (analyze project-analyze)
-  (renderers project-renderers)
-  (output-directory project-output-directory)
+  (renderers project-renderers/raw)
+  (output-directory project-output-directory/raw)
   (cache? project-cache?)
-  (default-prefix project-default-prefix)
+  (default-prefix project-default-prefix/raw)
   (tree-template project-tree-template)
   (browse project-browse)
   (pipelines project-pipelines))
+
+(define (project-source-directory project)
+  (snapshot-data (project-source-directory/raw project)))
+
+(define (project-extra-sources project)
+  (snapshot-data (project-extra-sources/raw project)))
+
+(define (project-renderers project)
+  (append (project-renderers/raw project) '()))
+
+(define (project-output-directory project)
+  (snapshot-data (project-output-directory/raw project)))
+
+(define (project-default-prefix project)
+  (snapshot-data (project-default-prefix/raw project)))
 
 (define (unique-pipeline-names? pipelines)
   (let loop ((remaining pipelines) (seen '()))
@@ -195,13 +211,15 @@
     (error "project tree template must be a procedure" tree-template))
   (unless (or (not browse) (procedure? browse))
     (error "project browse callback must be a procedure" browse))
-  (%make-project source-directory source-filter collect-sources prepare
-                 extra-sources read-source analyze
+  (%make-project (snapshot-data source-directory)
+                 source-filter collect-sources prepare
+                 (snapshot-data extra-sources) read-source analyze
                  (map (lambda (renderer)
                         (if (cached-renderer? renderer) renderer
                             (make-cached-renderer renderer))) renderers)
-                 output-directory cache? default-prefix tree-template browse
-                 pipelines))
+                 (snapshot-data output-directory) cache?
+                 (snapshot-data default-prefix) tree-template browse
+                 (snapshot-data pipelines)))
 
 (define* (project-with-options project
                                #:key

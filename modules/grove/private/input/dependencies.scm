@@ -3,7 +3,7 @@
 
 (define-module (grove private input dependencies)
   #:use-module (grove collect)
-  #:use-module (grove build state)
+  #:use-module (grove private build-state)
   #:use-module (grove private files)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)

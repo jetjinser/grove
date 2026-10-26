@@ -53,6 +53,20 @@
 
 (test-begin "forester derived artifacts")
 
+(let* ((name (string-copy "projection"))
+       (artifact
+        (make-derived-artifact
+          #:name name
+          #:procedure (lambda (_context _forest) '())
+          #:configuration (lambda (_context _forest) '()))))
+  (string-set! name 0 #\x)
+  (test-equal "derived artifact names are snapshots"
+    "projection" (derived-artifact-name artifact))
+  (let ((exposed-name (derived-artifact-name artifact)))
+    (string-set! exposed-name 0 #\x))
+  (test-equal "derived artifact name accessors return copies"
+    "projection" (derived-artifact-name artifact)))
+
 (let ((first (sitemap-derived #:routes routes #:sitemap-path "first.xml"))
       (second (sitemap-derived #:routes routes #:sitemap-path "second.xml")))
   (test-assert "derived configuration tracks the artifact path"

@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove pipeline)
+  #:use-module (grove private snapshot)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
@@ -38,4 +39,7 @@
     (error "asset pipeline inputs must be a list of paths" inputs))
   (unless (procedure? procedure)
     (error "asset pipeline requires a procedure" procedure))
-  (%make-asset-pipeline name version inputs procedure))
+  (%make-asset-pipeline (snapshot-data name)
+                       (snapshot-data version)
+                       (snapshot-data inputs)
+                       procedure))

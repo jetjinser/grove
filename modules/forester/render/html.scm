@@ -4,7 +4,7 @@
 
 (define-module (forester render html)
   #:use-module (grove build)
-  #:use-module (grove build state)
+  #:use-module (grove private build-state)
   #:use-module (grove i18n)
   #:use-module (grove string-fun)
   #:use-module (forester render artifact)

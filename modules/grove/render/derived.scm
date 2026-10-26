@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove render derived)
+  #:use-module (grove private snapshot)
   #:use-module (grove render context)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
@@ -21,9 +22,12 @@
 (define-record-type <derived-artifact>
   (%make-derived-artifact name procedure configuration)
   derived-artifact?
-  (name derived-artifact-name)
+  (name derived-artifact-name/raw)
   (procedure derived-artifact-procedure)
   (configuration derived-artifact-configuration))
+
+(define (derived-artifact-name artifact)
+  (snapshot-data (derived-artifact-name/raw artifact)))
 
 (define* (make-derived-artifact #:key name procedure configuration)
   (unless (and (string? name) (not (string-null? name)))
@@ -32,7 +36,7 @@
     (error "derived artifact procedure must be a procedure" procedure))
   (unless (procedure? configuration)
     (error "derived artifact configuration must be a procedure" configuration))
-  (%make-derived-artifact name procedure configuration))
+  (%make-derived-artifact (snapshot-data name) procedure configuration))
 
 (define (render-derived-artifacts artifacts context forest)
   (unless (every derived-artifact? artifacts)

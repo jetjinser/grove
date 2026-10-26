@@ -5,7 +5,7 @@
   #:use-module (ice-9 ftw)
   #:use-module (ice-9 textual-ports)
   #:use-module (ice-9 string-fun)
-  #:use-module (grove build state)
+  #:use-module (grove private build-state)
   #:use-module (grove private cache-dir)
   #:use-module (tests unit grove subprocess)
   #:use-module (srfi srfi-13)

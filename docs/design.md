@@ -34,11 +34,10 @@ the popover API for transient surfaces. Add small, focused JavaScript for the
 behaviour the platform does not provide. Do not add a styled UI framework to
 solve one widget.
 
-If a widget is only a visual preview, keep it out of the accessibility tree and
-remove interactive descendants. If it is interactive, it needs focus
-management, an accessible name, and a way to close it. The Flora link preview
-follows the visual-only rule: it is `aria-hidden`, contains no focusable
-descendants, and closes on Escape or focus leaving the link.
+If a widget is only a visual preview, keep it out of the accessibility tree,
+remove interactive descendants, and close it when its trigger loses focus or
+the user presses Escape. If it is interactive, it needs focus management, an
+accessible name, and a way to close it.
 
 ## Renderer rules
 
@@ -56,10 +55,11 @@ boundaries.
 [Derived artifacts](derived-artifacts.md) defines the projection layer for
 sitemap, RSS, and graph.
 
-## Composition audit
+## Composition model
 
-[Composition audit](composition.md) maps the existing features onto this model
-and lists the remaining gaps.
+[Composition model](composition.md) records the composition laws used by
+content transforms, renderer rules, presentations, contexts, derived artifacts,
+and asset pipelines.
 
 ## Resource identity
 

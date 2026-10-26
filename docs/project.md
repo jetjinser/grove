@@ -18,6 +18,10 @@ and rendering. `make-site-project` assembles page inputs into a site before
 calling its analyzer. All renderers receive the same model and return artifacts.
 `project-with-options` returns a project copy with an output-directory override,
 additional tracked inputs, or a cache setting; the original project is unchanged.
+Project constructors snapshot declared path strings and list containers, and
+configuration accessors return fresh copies of those values. Reader, analyzer,
+renderer, collector, and preparation procedures remain the project author's
+code and are retained as callbacks.
 
 The default collector walks recursively in sorted order, skipping hidden
 directories. The generic project filter skips dot-prefixed basenames; the site

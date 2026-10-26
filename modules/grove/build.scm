@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove build)
+  #:use-module (grove private snapshot)
   #:use-module (grove string-fun)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
@@ -29,7 +30,10 @@
     (error "incremental renderer must be a procedure or #f" render-changed))
   (unless (or (not inputs) (procedure? inputs))
     (error "renderer input collector must be a procedure or #f" inputs))
-  (%make-cached-renderer cache? configuration procedure render-changed inputs))
+  (%make-cached-renderer
+    cache?
+    (if (procedure? configuration) configuration (snapshot-data configuration))
+    procedure render-changed inputs))
 
 (define (renderer-configurations model renderers)
   ;; Configuration describes data, never procedure identity or memory addresses.
