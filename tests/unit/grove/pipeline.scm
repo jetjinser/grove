@@ -29,6 +29,7 @@
 (define runtime-script (string-append inputs-directory "/runtime.scm"))
 (define runs 0)
 (define runtime-runs 0)
+(define constant-runs 0)
 (define runtime-marker #f)
 
 (setenv "GROVE_STORE_DIR" store)
@@ -165,6 +166,22 @@
 (test-equal "editing a runtime-loaded Scheme dependency invalidates the cache"
   "two" (artifact-text (car (run-runtime-loaded-pipeline))))
 (test-equal "the changed runtime dependency reruns its pipeline" 2 runtime-runs)
+
+(define (run-constant-pipeline)
+  (car (run-asset-pipelines
+         (list (make-asset-pipeline
+                #:name "constant-output"
+                #:procedure
+                (lambda (_ emit)
+                  (set! constant-runs (+ constant-runs 1))
+                  (emit "constant.txt" "fixed"))))
+         (current-project-key))))
+
+(test-equal "a self-contained pipeline needs no declared file inputs"
+  "fixed" (artifact-text (car (run-constant-pipeline))))
+(test-equal "self-contained pipelines cache against their project identity"
+  "fixed" (artifact-text (car (run-constant-pipeline))))
+(test-equal "a cache hit skips a self-contained pipeline" 1 constant-runs)
 
 (let* ((result (run-pipelines "v1"))
        (artifacts (car result)))
