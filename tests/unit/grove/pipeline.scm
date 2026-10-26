@@ -106,6 +106,11 @@
 
 (test-begin "grove asset pipelines")
 
+(test-assert "asset pipeline representation stays private"
+  (not (module-variable
+         (module-public-interface (resolve-module '(grove pipeline)))
+         'asset-pipeline?)))
+
 (let ((merged
        (merge-pipeline-artifacts
         (list (make-artifact "shared.css" "pipeline"))

@@ -7,8 +7,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
-  #:export (make-asset-pipeline
-            asset-pipeline?))
+  #:export (make-asset-pipeline))
 
 ;;     An asset pipeline derives build assets with Scheme code: the
 ;;     procedure receives an input table (declared path -> materialized

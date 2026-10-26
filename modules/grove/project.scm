@@ -72,6 +72,8 @@
   (@@ (grove build) cached-renderer-inputs))
 (define asset-pipeline-name
   (@@ (grove pipeline) asset-pipeline-name))
+(define asset-pipeline?
+  (@@ (grove pipeline) asset-pipeline?))
 (define asset-pipeline-inputs
   (@@ (grove pipeline) asset-pipeline-inputs))
 
