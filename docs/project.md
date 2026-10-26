@@ -11,6 +11,25 @@ final expression returns a project; it must not run a build itself. Use
 for a site configuration, or the [catalog](../examples/catalog/project.scm)
 and [inventory](../examples/inventory/project.scm) for project-owned models.
 
+## Choose a project shape
+
+| If your project… | Start with… |
+| --- | --- |
+| reads arbitrary files into a project-owned model | `make-project` from `(grove project)` |
+| reads pages into Grove content, then analyzes and renders a site | `make-site-project` from `(grove project site)` |
+
+`make-project` is the general build lifecycle: collect inputs, prepare,
+read each input, analyze the resulting model, and run renderers that return
+artifacts. It does not require Grove's Content IR or a site model. The catalog
+and inventory examples show this shape.
+
+`make-site-project` adapts that lifecycle for pages. It builds `site-page?`
+values from the page reader, optionally transforms their Content IR, combines
+them into a `site?`, then passes the analyzed site model to renderers. Forester
+adds its linked-tree analysis on top of that site. Use this entry point when
+those page and content semantics are useful; there is no need to wrap an
+unrelated project model as a site.
+
 ## Execution and paths
 
 `make-project` connects source collection, preparation, reading, analysis,
