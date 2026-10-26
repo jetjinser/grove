@@ -40,6 +40,12 @@
     #:properties '((role . "status") (role . "note"))))
 (test-error "element flow kinds are constrained" #t
   (make-content-element 'paragraph '() #:flow-kind 'floating))
+(test-error "site construction rejects duplicate page IDs" #t
+  (make-site
+    (list (make-site-page "same" "First" (make-content-document '())
+            "first.plant")
+          (make-site-page "same" "Second" (make-content-document '())
+            "second.plant"))))
 
 (let* ((notice
          (make-content-element 'notice '("Hello")

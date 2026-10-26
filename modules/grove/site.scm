@@ -77,13 +77,17 @@
     (error "site sources must be a list of paths" sources))
   (unless (or (not home) (non-empty-string? home))
     (error "site home must be a page ID or #f" home))
-  (let* ((ids (map site-page-id pages))
-         (duplicate (find (lambda (id)
-                            (> (count (lambda (candidate)
-                                        (equal? id candidate))
-                                      ids)
-                               1))
-                          ids)))
+  (let* ((seen (make-hash-table))
+         (duplicate
+          (let loop ((remaining pages) (duplicate #f))
+            (if (null? remaining)
+                duplicate
+                (let ((id (site-page-id (car remaining))))
+                  (if (hash-ref seen id)
+                      (loop (cdr remaining) (or duplicate id))
+                      (begin
+                        (hash-set! seen id #t)
+                        (loop (cdr remaining) duplicate))))))))
     (when duplicate
       (error
         (format #f "duplicate site page id ~s in sources: ~{~a~^, ~}"
@@ -93,6 +97,6 @@
                      (filter (lambda (page)
                                (equal? duplicate (site-page-id page)))
                              pages)))))
-    (when (and home (not (member home ids string=?)))
+    (when (and home (not (hash-ref seen home)))
       (error "site home page was not found" home))
     (%make-site pages title sources description home)))
