@@ -111,6 +111,7 @@
     (write-test-file (string-append module-directory "/shared.plant") "module")
     (write-test-file (string-append source-directory "/first.plant") "first")
     (write-test-file (string-append source-directory "/second.plant") "second")
+    (write-test-file (string-append source-directory "/.draft.plant") "hidden")
     (write-test-file (string-append source-directory "/ignore.txt") "ignored"))
   (lambda ()
     (let* ((generic-events '())
@@ -223,6 +224,8 @@
             analyze
             render)
           events)
+        (test-assert "site default collection excludes hidden .plant files"
+          (not (member '(read ".draft") events)))
         (test-equal "project configuration selects the site title"
           "Configured"
           observed-site-title)
@@ -577,6 +580,7 @@
       (list (string-append module-directory "/shared.plant")
             (string-append source-directory "/first.plant")
             (string-append source-directory "/second.plant")
+            (string-append source-directory "/.draft.plant")
             (string-append source-directory "/third.plant")
             (string-append source-directory "/fourth.plant")
             (string-append source-directory "/ignore.txt")))

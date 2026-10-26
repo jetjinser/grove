@@ -20,10 +20,12 @@ calling its analyzer. All renderers receive the same model and return artifacts.
 additional tracked inputs, or a cache setting; the original project is unchanged.
 
 The default collector walks recursively in sorted order, skipping hidden
-directories. `#:source-filter` selects basenames; `#:collect-sources` supplies
-an ordered path list instead. `#:prepare` runs before reading and returns
-additional tracked paths. It can load shared modules, but does not import their
-commands into individual articles. `#:extra-sources` declares other inputs.
+directories. The generic project filter skips dot-prefixed basenames; the site
+project filter selects non-hidden `.plant` files. `#:source-filter` selects
+basenames; `#:collect-sources` supplies an ordered path list instead. `#:prepare`
+runs before reading and returns additional tracked paths. It can load shared
+modules, but does not import their commands into individual articles.
+`#:extra-sources` declares other inputs.
 
 CLI paths are relative to the invocation directory. Configured paths are
 relative to the project file throughout loading and synchronous execution.
