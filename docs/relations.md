@@ -126,12 +126,14 @@ reachability.
 
 ## Forester content and page queries
 
-`(forester site)` exposes two immutable relation snapshots on a Forest.
+`(forester site)` exposes three immutable relation snapshots on a Forest.
 `(content-node-relation forest)` stores one row for each content element:
 `(node-id page-id parent-id kind position properties text character-count codepoint-count plain-text?)`.
 `(page-relation forest)` stores one row per page:
-`(page-id title metadata)`. The `nodeo` and `pageo` goals query those rows;
-`node-propertyo` and `page-metadatao` query the corresponding alists.
+`(page-id title metadata)`. `(described-entity-relation forest)` stores one
+`(page-id uri)` row for each `@describes` declaration. The `nodeo`, `pageo`,
+and `described-entityo` goals query these rows; `node-propertyo` and
+`page-metadatao` query the corresponding alists.
 
 Only content elements receive node IDs. IDs are dense non-negative integers,
 assigned in preorder across pages in Forest order. They resolve through
@@ -156,18 +158,15 @@ extracts `@title`, `@summary`, `@published`, and `@updated` into the Grove
 page record. Tags and taxa stay in the content IR and are queried with
 `topic-membero`. Topics have one lowercase value; ground topic selectors are
 case-insensitive and enumerated values are canonical. Page facts and content
-facts can be joined through their
-shared page ID:
+facts can be joined through their shared page ID:
 
-Forester also materializes `@describes` declarations as `(page-id uri)` rows
-in `(described-entity-relation forest)`. Use `described-entityo` in relational
-queries, or `(describing-pages forest uri)` to get matching page records in
-site order. Multiple pages may describe the same external entity; URI strings
-are compared exactly.
+Use `described-entityo` in relational queries, or
+`(describing-pages forest uri)` to get matching page records in site order.
+Multiple pages may describe the same external entity; URI strings are compared
+exactly.
 
-Because described entities and page data are separate relations, join them
-through the page ID. This keeps entity matching composable with other page
-facts and content queries:
+Joining described entities with page data through the page ID keeps entity
+matching composable with other page facts and content queries:
 
 ```scheme
 (let ((entities (described-entity-relation forest))

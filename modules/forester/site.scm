@@ -148,7 +148,8 @@
 
 (define* (related-pages forest page-id
                         #:optional (reference-taxon-id "reference"))
-  "Return direct link targets except pages in the reference taxon."  (let ((reference-ids
+  "Return direct link targets except pages in the reference taxon."
+  (let ((reference-ids
           (id-member-set
             (map site-page-id
                  (topic-pages forest reference-taxon-id 'taxon)))))
