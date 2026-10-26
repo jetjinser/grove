@@ -62,26 +62,26 @@ optional: use `@use-commands` and `make-scribble-module-setup` when you want a
 named, reusable vocabulary assembled from local modules. Direct
 `@use-modules` imports need no project preparation step.
 
-`make-forester-project` uses the standard HTML renderer unless `#:renderers` is
-provided. Supplying that option replaces the standard renderer list; include an
-HTML renderer yourself if you still want HTML output. Use `make-site-project`
-when you need to compose the full site configuration explicitly. Forester
-projects can add cached site-wide outputs through `#:derived`; see the
-[customization guide](customizing.md#add-a-derived-site-artifact).
-
-For example, add plain-text output while retaining the default HTML renderer by
-listing both renderers:
+`make-forester-project` always includes its standard HTML renderer. Configure it
+with `#:html-options`, and add peer outputs with `#:additional-renderers`:
 
 ```scheme
 (use-modules (forester project)
-             (forester render html)
              (forester render text))
 
 (make-forester-project
   #:home "hello"
-  #:renderers (list (make-html-renderer)
-                    (make-text-renderer)))
+  #:additional-renderers (list (make-text-renderer)))
 ```
+
+The additional renderers receive the same analyzed Forest and return artifacts
+alongside HTML. `#:html-options` takes the usual value from
+`(forester render html)`; reuse its routes and site settings when configuring
+derived outputs such as a sitemap or feed. Use `make-site-project` when the
+project needs a fully chosen renderer set, a different reader or analyzer, or
+otherwise needs to compose the complete site lifecycle. Forester projects can
+also add cached site-wide outputs through `#:derived`; see the
+[customization guide](customizing.md#add-a-derived-site-artifact).
 
 ## Execution and paths
 
@@ -175,8 +175,8 @@ Tune the server with `--ssh-workers N` (concurrency, default 4),
 `--ssh-login-timeout S`, `--ssh-session-timeout S` (0 disables), and
 `--ssh-memory-limit BYTES` (each worker's address-space cap).
 
-Add a Gemtext renderer to `#:renderers` to emit static files for a Gemini
-server:
+Add a Gemtext renderer to `#:additional-renderers` in a Forester project, or
+include it in the complete `#:renderers` list passed to `make-site-project`:
 
 ```scheme
 (use-modules (forester render gemtext))

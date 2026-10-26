@@ -770,11 +770,24 @@
       (write-test-file
         (string-append root "/plants/hello.plant")
         "@use-modules[(forester commands)]\n@title{Hello}\n")
+      (write-test-file
+        (string-append root "/plants/topic.plant")
+        "@use-modules[(forester commands)]\n@title{Topic}\n")
       (write-test-file (string-append root "/input.txt") "external result"))
     (lambda ()
       (let* ((input (string-append root "/input.txt"))
              (output (string-append root "/output"))
              (text-output (string-append root "/text-output"))
+             (settings (make-site-settings #:site-url "https://notes.example"))
+             (routes
+               (make-html-routes
+                 #:home-page "hello"
+                 #:page-path
+                 (lambda (id)
+                   (if (string=? id "hello")
+                       "index.html"
+                       (string-append "notes/" id ".html")))))
+             (html-options (make-html-options #:routes routes #:settings settings))
              (pipeline
                (make-asset-pipeline
                  #:name "forester-pipeline"
@@ -795,10 +808,18 @@
                  #:home "hello"
                  #:source-directory (string-append root "/plants")
                  #:output-directory text-output
-                 #:renderers (list (make-html-renderer)
-                                   (make-text-renderer))))
+                 #:html-options html-options
+                 #:additional-renderers (list (make-text-renderer))
+                 #:derived
+                 (list (sitemap-derived #:settings settings #:routes routes))))
              (text-artifacts (build-project text-project))
-             (artifacts (build-project project)))
+             (artifacts (build-project project))
+             (text-html
+               (read-test-file (string-append text-output "/index.html")))
+             (topic-html
+               (read-test-file (string-append text-output "/notes/topic.html")))
+             (sitemap
+               (read-test-file (string-append text-output "/sitemap.xml"))))
         (test-assert "Forester projects can compose external asset pipelines"
           (and (member "assets/result.txt"
                        (map artifact-path artifacts)
@@ -814,7 +835,15 @@
           (and (member "index.html" (map artifact-path text-artifacts) string=?)
                (member "hello.txt"
                        (map artifact-path text-artifacts)
-                       string=?)))))
+                       string=?)
+               (member "notes/topic.html"
+                       (map artifact-path text-artifacts)
+                       string=?)))
+        (test-assert "Forester HTML options configure the default renderer"
+          (and (string-contains text-html "Hello")
+               (string-contains topic-html "Topic")
+               (string-contains sitemap
+                                "https://notes.example/notes/topic.html")))))
     (lambda () (system* "rm" "-rf" root))))
 
 (test-end "forester project")

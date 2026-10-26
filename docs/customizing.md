@@ -23,7 +23,8 @@ This is the shortest path from “I want to change X” to the right Grove API.
 | content before rendering | content transforms | `make-site-project #:transforms` |
 | copy a directory of static files | a renderer | `make-static-assets-renderer` |
 | generate files from declared inputs with an external tool | an asset pipeline | `#:pipelines` |
-| add a custom output format from the site model | a renderer returning artifacts | `make-site-project #:renderers` |
+| add an output format to a Forester site | a renderer returning artifacts | `make-forester-project #:additional-renderers` |
+| choose the complete renderer set for a site | a renderer list | `make-site-project #:renderers` |
 | project cache behavior | project options | `make-site-project #:cache?`, `#:output-directory` |
 | one renderer's cache behavior | cached renderer constructor | `make-*-renderer #:cache?`, `#:rules-id` |
 

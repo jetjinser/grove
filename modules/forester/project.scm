@@ -17,7 +17,8 @@
           (title "Site")
           (description #f)
           (prepare (lambda () '()))
-          (renderers #f)
+          (html-options (make-html-options))
+          (additional-renderers '())
           (derived '())
           (browse #f)
           (locale #f)
@@ -25,8 +26,8 @@
           (default-prefix #f)
           (tree-template #f))
   "Build a Forester project with standard HTML, derived artifacts, and pipelines.
-HOME is the tree ID rendered at the site index. RENDERERS replaces the
-standard HTML renderer when supplied."
+HOME is the tree ID rendered at the site index. HTML-OPTIONS configures the
+standard HTML renderer; ADDITIONAL-RENDERERS adds peer outputs alongside it."
   (unless (and (string? home) (> (string-length home) 0))
     (error "Forester project requires a non-empty home tree ID" home))
   (make-site-project
@@ -37,7 +38,8 @@ standard HTML renderer when supplied."
     #:prepare prepare
     #:read-page (make-page-reader (make-scribble-document-reader))
     #:analyze make-forest
-    #:renderers (or renderers (list (make-html-renderer)))
+    #:renderers (cons (make-html-renderer #:options html-options)
+                      additional-renderers)
     #:derived derived
     #:pipelines pipelines
     #:browse browse

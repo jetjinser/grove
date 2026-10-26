@@ -12,16 +12,18 @@ the work; drop lower only when you need to replace part of its behavior.
 | Task | Start here | Reach lower when… |
 | --- | --- | --- |
 | Write a Forester page | `(forester commands)` and `(language scribble commands)` in `.plant` | the page needs project-local Scheme modules or a new command vocabulary |
-| Configure the normal Forester site | `(forester project)` → `make-forester-project` | the reader, analysis, site model, or renderer composition needs changing |
+| Configure the normal Forester site | `(forester project)` → `make-forester-project` | the reader, analysis, or complete renderer set needs replacing |
 | Build a site from page documents | `(grove project site)` → `make-site-project` | the input is not a page or the model is project-specific |
 | Build an arbitrary file-based model | `(grove project)` → `make-project` | custom collection, reading, analysis, artifacts, or execution options are needed |
 | Change how content renders | the format's renderer options and `(grove render rules)` | the project needs a new output format or a different build stage |
 | Add a separate generated file | `#:derived` for a site projection; `#:pipelines` for tool-driven outputs | the project needs to own the full build lifecycle |
 | Write or extend math | `(grove math formula)` for formula text; `(grove math semantic)` for typed values; `(grove math notation)` for display layout | code needs to inspect reports, compose passes, or query rule relations |
 
-`make-forester-project` supplies the normal reader, forest analysis, HTML
-renderer, and source-creation behavior. `make-site-project` keeps the page and
-Content IR model while exposing those pieces for composition. `make-project`
+`make-forester-project` supplies the normal reader, forest analysis, default
+HTML renderer, and source-creation behavior. Configure the default HTML with
+`#:html-options` and add peer outputs with `#:additional-renderers`.
+`make-site-project` keeps the page and Content IR model while exposing the
+complete renderer set and other lifecycle stages for composition. `make-project`
 is the general lifecycle and does not require Grove's Content IR. See the
 [project reference](project.md) for callback contracts and examples.
 
