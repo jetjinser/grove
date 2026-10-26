@@ -122,7 +122,10 @@ Standalone reader calls evaluate normally; `check` bypasses published caches.
 Project files, imported modules, loader dependencies, framework source/data,
 compiled files, and effective renderer settings are fingerprinted automatically.
 Module search paths and absent preferred compiled files are also tracked.
-There are no user-maintained cache keys or version numbers.
+There are no user-maintained cache keys or version numbers for document and
+renderer caches. Asset pipelines also fingerprint the project file and its
+load-time inputs; set a pipeline's `#:version` when behavior depends on
+external toolchain state or runtime arguments Grove cannot inspect.
 
 Arbitrary Scheme I/O is not intercepted. Declare a file before reading it:
 
@@ -144,10 +147,10 @@ closure state. Built-in factories declare their settings themselves.
 Document entries live in the machine-global content store,
 `$XDG_CACHE_HOME/grove/store/input-cache` (override the base with
 `GROVE_STORE_DIR`), shared by every checkout and output directory of
-every project this user builds. Keys are content-derived — the project
-file's digest plus the project-relative document path — and tracked
-paths are normalized project-relative, so two checkouts of one project
-share document analyses. Rendered artifacts join the same store under
+every project this user builds. Keys are content-derived from the project's
+load-time inputs plus the project-relative document path; tracked paths are
+normalized project-relative, so two checkouts of one project share document
+analyses. Rendered artifacts join the same store under
 `artifacts/`: every build publishes the bytes it rendered under their
 content fingerprint, and builds restore missing output files from the
 store instead of re-rendering them, so deleting a build directory is

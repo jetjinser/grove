@@ -8,11 +8,12 @@ asset pipeline. The adapter is [graphviz.scm](graphviz.scm), and the input is
 [diagram.dot](diagram.dot). Its integration test checks real SVG output,
 input-driven rebuilding, and reproducibility.
 
-The adapter probes `dot -V` and includes the result in its cache identity, so
-project code does not need to repeat Graphviz's version. The project environment
-still needs to pin the tool if reproducible builds matter; Grove cannot infer
-whether a tool's reported version captures every behavior-affecting dependency.
-The adapter's `dot-svg-v1` prefix is its own behavior version; bump it when the
-conversion logic changes, even if Graphviz itself does not.
+Grove fingerprints project code imported at load time, including the adapter.
+The adapter probes `dot -V` and includes it in the cache identity because the
+external executable is outside that load graph. The project environment still
+needs to pin the tool if reproducible builds matter; Grove cannot infer whether
+a reported version captures every behavior-affecting dependency. The adapter's
+`dot-svg-v1` prefix is its own behavior version; bump it when the conversion
+logic changes in ways the source fingerprint does not capture.
 The integration test replaces a stand-in `dot` with a different reported
 version and verifies automatic cache invalidation.

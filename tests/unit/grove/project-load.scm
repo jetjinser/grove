@@ -10,6 +10,9 @@
 
 (define root (format #f "/tmp/grove-load-test-~a" (getpid)))
 (define config (string-append root "/project.scm"))
+(define pipeline-config (string-append root "/pipeline-project.scm"))
+(define pipeline-adapter (string-append root "/adapter.scm"))
+(define pipeline-output (string-append root "/pipeline-output/generated.txt"))
 (define caller (getcwd))
 (define environment (current-module))
 
@@ -27,6 +30,20 @@
                      (lambda (_) (list (make-artifact \"result.txt\" ~s)))))
   #:output-directory \"output\")\n" result)))
 
+(define (write-pipeline-project)
+  (write-file pipeline-config
+    "(use-modules (grove project) (grove build) (grove output) (grove pipeline) (ice-9 textual-ports))
+(load \"adapter.scm\")
+(make-project
+  #:source-directory \"pipeline-sources\"
+  #:read-source (lambda (path) (call-with-input-file path get-string-all))
+  #:pipelines
+    (list (make-asset-pipeline
+            #:name \"adapter\"
+            #:inputs '(\"pipeline-sources/input.txt\")
+            #:procedure emit-adapter-output))
+  #:output-directory \"pipeline-output\")\n"))
+
 (define (error-stage thunk)
   (catch 'grove-project-error thunk
     (lambda (_ error) (project-error-stage error))))
@@ -38,7 +55,12 @@
     (mkdir root)
     (mkdir (string-append root "/sources"))
     (write-file (string-append root "/sources/input.txt") "input")
-    (write-project "one"))
+    (write-project "one")
+    (mkdir (string-append root "/pipeline-sources"))
+    (write-file (string-append root "/pipeline-sources/input.txt") "pipeline input")
+    (write-file pipeline-adapter
+      "(define (emit-adapter-output _input emit) (emit \"generated.txt\" \"before\"))\n")
+    (write-pipeline-project))
   (lambda ()
     (call-with-loaded-project config
       (lambda (project)
@@ -62,6 +84,14 @@
         (test-equal "output override is relative to caller directory"
           (string-append caller "/preview") (project-output-directory project)))
       #:output-directory "preview")
+    (call-with-loaded-project pipeline-config build-project)
+    (test-equal "asset pipeline emits its initial output" "before"
+      (call-with-input-file pipeline-output get-string-all))
+    (write-file pipeline-adapter
+      "(define (emit-adapter-output _input emit) (emit \"generated.txt\" \"after\"))\n")
+    (call-with-loaded-project pipeline-config build-project)
+    (test-equal "editing an imported pipeline adapter invalidates cached output" "after"
+      (call-with-input-file pipeline-output get-string-all))
     (test-error "callback failures propagate" #t
       (call-with-loaded-project config (lambda (_) (error "callback failure"))))
     (test-equal "callback failure restores working directory" caller (getcwd))

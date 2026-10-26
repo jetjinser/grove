@@ -5,11 +5,29 @@
   #:use-module (grove project)
   #:use-module (grove project diagnostic)
   #:use-module (grove private project timing)
-  #:use-module (grove build state)
+  #:use-module (grove private fingerprint)
   #:use-module (grove private input cache)
   #:use-module (grove private input dependencies)
   #:use-module (ice-9 ftw)
+  #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-13)
   #:export (call-with-loaded-project))
+
+(define (project-load-key root paths)
+  (let* ((prefix (string-append root "/"))
+         (logical-path
+          (lambda (path)
+            (if (string-prefix? prefix path)
+                (substring path (string-length prefix))
+                path)))
+         (entries
+          (sort
+            (map (lambda (path)
+                   (list (logical-path path) (input-fingerprint path)))
+                 (delete-duplicates paths string=?))
+            (lambda (left right) (string<? (car left) (car right))))))
+    (content-fingerprint
+      (call-with-output-string (lambda (port) (write entries port))))))
 
 (define (read-project path)
   (save-module-excursion
@@ -50,7 +68,9 @@ OUTPUT-DIRECTORY, when supplied, is resolved relative to the caller's directory.
                           (lambda ()
                             (call-with-input-trace trace
                               (lambda () (read-project path))))))
-               (_ (current-project-key (file-fingerprint path)))
+               (_ (current-project-key
+                    (project-load-key (canonicalize-path (getcwd))
+                                      (trace-inputs trace))))
                (_ (let ((timings (current-analysis-timings)))
                     ;;     Profile mode: the project file's own
                     ;;     evaluation - style values, module loads,

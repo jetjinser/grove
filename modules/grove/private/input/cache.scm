@@ -22,9 +22,9 @@
 ;; A build scopes this parameter; checks and standalone reads never reuse results.
 (define current-input-cache (make-parameter #f))
 
-;; Set by the project loader: the content digest of the project file.
-;; Document cache keys derive from it, so two checkouts of one project
-;; - and only that project - meet on the same entries.
+;; Set by the project loader: a content digest of the project file and
+;; its load-time inputs. Document and asset-pipeline cache keys derive
+;; from it, so code imported by project.scm invalidates both safely.
 (define current-project-key (make-parameter #f))
 
 ;; Profile-mode accumulator: a hash the CLI installs and reads back
