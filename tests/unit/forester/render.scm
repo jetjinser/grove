@@ -384,6 +384,28 @@
   (make-html-options #:default-locale ""))
 (test-error "HTML options reject invalid Open Graph image values" #t
   (make-html-options #:og-image 42))
+(let* ((backmatter (list 'context))
+       (options (make-text-options #:backmatter backmatter))
+       (forest (make-forest (make-site (list algebra limits)))))
+  (set-car! backmatter 'invalid-section)
+  (test-assert "text options snapshot caller-owned backmatter lists"
+    (list? (site->text forest #:options options))))
+(let ((backmatter (cons 'context '())))
+  (set-cdr! backmatter backmatter)
+  (test-error "text options reject circular backmatter"
+    #t
+    (make-text-options #:backmatter backmatter)))
+(let* ((attributes (list (cons 'lang "en")))
+       (options
+         (make-html-options
+           #:routes (make-html-routes #:home-page "algebra")
+           #:html-attributes attributes))
+       (forest (make-forest (make-site (list algebra limits)))))
+  (set-cdr! (car attributes) "zh")
+  (test-assert "HTML options snapshot caller-owned attribute pairs"
+    (string-contains
+      (cdr (assoc "algebra" (site->html forest #:options options)))
+      "lang=\"en\"")))
 (test-error "HTML renderer rejects unstable rules IDs" #t
   (make-html-renderer #:rules-id '(unstable value)))
 (test-error "text renderer rejects unstable rules IDs" #t

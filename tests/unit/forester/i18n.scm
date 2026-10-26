@@ -93,6 +93,20 @@
 (test-error "message keys must be symbols" #t (message catalog "home"))
 (test-error "message rejects non-catalogs" #t (message '() 'home))
 
+(let* ((messages (list (cons 'home "Home")))
+       (catalog (make-message-catalog (list (cons "en" messages)))))
+  (set-cdr! (car messages) "Changed")
+  (test-equal "catalogs snapshot caller-owned message lists"
+    "Home" (message catalog 'home))
+  (let ((entries (message-catalog-entries catalog)))
+    (set-cdr! (car (cdar entries)) "Changed copy"))
+  (test-equal "catalog accessors do not expose mutable internal entries"
+    "Home" (message catalog 'home))
+  (let ((default (message-catalog-default catalog)))
+    (string-set! default 0 #\x))
+  (test-equal "catalog accessors do not expose mutable internal tags"
+    "en" (message-catalog-default catalog)))
+
 (define script-catalog
   (make-message-catalog
     '(("zh-Hant" . ((home . "首頁")))

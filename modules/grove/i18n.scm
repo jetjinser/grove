@@ -4,6 +4,7 @@
 
 (define-module (grove i18n)
   #:use-module (grove string-fun)
+  #:use-module (grove private snapshot)
   #:use-module ((scheme char) #:select (string-foldcase))
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
@@ -171,8 +172,14 @@ spellings."
 (define-record-type <message-catalog>
   (%make-message-catalog default entries)
   message-catalog?
-  (default message-catalog-default)
-  (entries message-catalog-entries))
+  (default message-catalog-default/raw)
+  (entries message-catalog-entries/raw))
+
+(define (message-catalog-default catalog)
+  (string-copy (message-catalog-default/raw catalog)))
+
+(define (message-catalog-entries catalog)
+  (snapshot-data (message-catalog-entries/raw catalog)))
 
 (define (valid-messages? messages)
   (and (list? messages)
@@ -204,10 +211,11 @@ spellings."
     (error "message catalog requires locale-tagged message lists" entries))
   (unless (non-empty-string? default)
     (error "message catalog default locale must be a non-empty string" default))
-  (let ((entries (map (lambda (entry)
-                        (cons (catalog-locale-key (car entry)) (cdr entry)))
-                      entries))
-        (default (catalog-locale-key default)))
+  (let ((entries (snapshot-data
+                   (map (lambda (entry)
+                          (cons (catalog-locale-key (car entry)) (cdr entry)))
+                        entries)))
+        (default (string-copy (catalog-locale-key default))))
     (%make-message-catalog default entries)))
 
 (define (locale-fallbacks tag)
@@ -231,14 +239,14 @@ then the key name."
   (let* ((locale (if (locale? locale)
                      (locale-tag locale)
                      (canonical-locale-tag locale)))
-         (entries (message-catalog-entries catalog))
+         (entries (message-catalog-entries/raw catalog))
          (lookup (lambda (tags)
                    (any (lambda (tag)
                           (let ((messages (assoc-ref entries tag)))
                             (and messages (assq-ref messages key))))
                         tags))))
     (or (lookup (locale-fallbacks locale))
-        (lookup (locale-fallbacks (message-catalog-default catalog)))
+        (lookup (locale-fallbacks (message-catalog-default/raw catalog)))
         (symbol->string key))))
 
 ;; Chrome messages for the renderers' navigation, skip link, tree labels,
@@ -313,8 +321,8 @@ then the key name."
 catalog keeps the built-in messages for everything it does not name."
   (unless (and (message-catalog? base) (message-catalog? override))
     (error "merge-message-catalogs requires two message catalogs" base override))
-  (let* ((base-entries (message-catalog-entries base))
-         (override-entries (message-catalog-entries override))
+  (let* ((base-entries (message-catalog-entries/raw base))
+         (override-entries (message-catalog-entries/raw override))
          (locales (delete-duplicates
                     (append (map car base-entries)
                             (map car override-entries))
@@ -325,7 +333,7 @@ catalog keeps the built-in messages for everything it does not name."
                    (merge-messages (or (assoc-ref base-entries locale) '())
                                    (or (assoc-ref override-entries locale) '()))))
            locales)
-      #:default (message-catalog-default override))))
+      #:default (message-catalog-default/raw override))))
 
 (define english-months
   '("January" "February" "March" "April" "May" "June"

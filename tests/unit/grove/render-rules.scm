@@ -46,6 +46,12 @@
 (define overlay
   (make-render-rules (list (cons 'image picture-rule))))
 
+(let* ((entry (cons 'image img-rule))
+       (rules (make-render-rules (list entry))))
+  (set-cdr! entry picture-rule)
+  (test-eq "rule sets snapshot their input association pairs"
+    img-rule (render-rules-ref rules 'image)))
+
 (test-equal "empty is the identity on the left"
   (render-with base)
   (render-with (compose-render-rules empty-render-rules base)))
@@ -191,6 +197,13 @@
     '()
     (html-presentation-title-decoration left "absent")))
 
+(let* ((head '((meta (@ (name "author")))))
+       (presentation (make-html-presentation #:head head)))
+  (set-car! head '(script "changed"))
+  (test-equal "presentations snapshot caller-owned SXML lists"
+    '((meta (@ (name "author"))))
+    (html-presentation-head presentation)))
+
 (test-error "presentation rejects procedure-valued SXML"
   #t
   (make-html-presentation #:head (list (lambda () '((meta))))))
@@ -214,6 +227,22 @@
 (test-error "navigation attributes cannot repeat names" #t
   (make-html-nav-link "home" "Home"
     #:attributes '((class . "first") (class . "second"))))
+
+(let* ((content (string-copy "body { color: red; }"))
+       (artifact (make-artifact "site.css" content))
+       (stylesheets (list artifact))
+       (style (make-html-style #:stylesheets stylesheets)))
+  (set-car! stylesheets (make-artifact "other.css" "body {}"))
+  (string-set! content 0 #\x)
+  (test-equal "HTML styles snapshot caller-owned artifact lists and content"
+    '("site.css" "body { color: red; }")
+    (let ((copy (car (html-style-stylesheets style))))
+      (list (artifact-path copy) (artifact-content copy))))
+  (let ((exposed (html-style-stylesheets style)))
+    (set-car! exposed (make-artifact "changed.css" "body {}")))
+  (test-equal "HTML style accessors return independent artifact snapshots"
+    "site.css"
+    (artifact-path (car (html-style-stylesheets style)))))
 
 
 (let* ((add-text

@@ -72,8 +72,8 @@ correctly. See [project.md](project.md#dependencies-and-caching).
 
 | | options | context |
 | --- | --- | --- |
-| lifetime | immutable configuration | one render pass |
-| shape | typed record | symbol alist with typed accessors |
+| lifetime | configuration snapshot | one render pass |
+| shape | typed record; list and string inputs are copied | symbol alist with typed accessors |
 | read by | renderer entry points | rules and derived artifacts |
 | examples | style, rules, presentation, routes | forest, page, locale, messages |
 

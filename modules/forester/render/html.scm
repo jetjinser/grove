@@ -14,6 +14,7 @@
   #:use-module (forester site)
   #:use-module (grove ir)
   #:use-module (grove output)
+  #:use-module (grove private snapshot)
   #:use-module (grove render html)
   #:use-module (grove render rules)
   #:use-module (grove render context)
@@ -1063,6 +1064,16 @@ to the lane, and an in-place numbered marker links to it."
     (error (string-append who " requires HTML options") options))
   options)
 
+(define (snapshot-html-presentation presentation)
+  (make-html-presentation
+    #:style (compose-html-styles (html-presentation-style presentation))
+    #:rules (html-presentation-rules presentation)
+    #:head (html-presentation-head presentation)
+    #:home-link (html-presentation-home-link presentation)
+    #:site-nav (html-presentation-site-nav presentation)
+    #:title-decorations (html-presentation-title-decorations presentation)
+    #:metadata-items (html-presentation-metadata-item-map presentation)))
+
 (define* (make-html-options #:key
                             (highlighters (default-highlighters))
                             (routes (make-html-routes))
@@ -1089,11 +1100,21 @@ to the lane, and an in-place numbered marker links to it."
                             (og-image-alt #f)
                             (hreflang? #t)
                             (language-switcher? #t))
-  "Build the immutable HTML renderer configuration.
+  "Build a validated HTML-renderer configuration snapshot.
 
 PRESENTATION contains HTML style, element rules, and static site presentation data.
 Entry points take this value with #:options."
-  (let ((presentation
+  (let* ((highlighters (snapshot-data highlighters))
+         (backmatter (snapshot-data backmatter))
+         (reference-taxon-id (snapshot-data reference-taxon-id))
+         (html-attributes (snapshot-data html-attributes))
+         (side-lane (snapshot-data side-lane))
+         (locale (snapshot-data locale))
+         (default-locale (snapshot-data default-locale))
+         (site-url (snapshot-data site-url))
+         (og-image (snapshot-data og-image))
+         (og-image-alt (snapshot-data og-image-alt))
+         (presentation
           (or presentation
               (make-html-presentation #:style default-html-style))))
     (unless (or (not settings) (site-settings? settings))
@@ -1144,7 +1165,8 @@ Entry points take this value with #:options."
     (%make-html-options highlighters routes mathjax-src backmatter
                         reference-taxon-id
                         article? backmatter-details? html-attributes
-                        side-lane presentation locale messages
+                        side-lane (snapshot-html-presentation presentation)
+                        locale messages
                         default-locale site-url og-image og-image-alt hreflang?
                         language-switcher?)))
 

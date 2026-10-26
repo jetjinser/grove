@@ -5,6 +5,7 @@
 (define-module (grove render rules)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
+  #:use-module (grove private snapshot)
   #:export (render-rules?
             make-render-rules
             empty-render-rules
@@ -46,7 +47,7 @@
            rules))
   (when (duplicate-kind? rules)
     (error "render rules cannot contain duplicate kinds" rules))
-  (%make-render-rules rules))
+  (%make-render-rules (snapshot-data rules)))
 
 (define empty-render-rules
   (make-render-rules '()))

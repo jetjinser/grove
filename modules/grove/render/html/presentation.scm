@@ -5,6 +5,7 @@
 (define-module (grove render html presentation)
   #:use-module (grove style html)
   #:use-module (grove render rules)
+  #:use-module (grove private snapshot)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:export (html-nav-link?
@@ -48,7 +49,9 @@
   (when (any (lambda (entry) (memq (car entry) '(href aria-current)))
             attributes)
     (error "HTML navigation attributes cannot override route state" attributes))
-  (%make-html-nav-link page-id label attributes))
+  (%make-html-nav-link (snapshot-data page-id)
+                       (snapshot-data label)
+                       (snapshot-data attributes)))
 
 (define (sxml-atom? value)
   (and (not (procedure? value))
@@ -132,7 +135,8 @@ is a list of symbol/string pairs."
            attributes))
   (when (assq 'href attributes)
     (error "HTML home-link href is supplied by its route" attributes))
-  (%make-html-home-link content attributes))
+  (%make-html-home-link (snapshot-data content)
+                        (snapshot-data attributes)))
 
 (define (valid-page-sxml-map? entries)
   (and (list? entries)
@@ -183,8 +187,23 @@ METADATA-ITEMS map page IDs to static SXML child lists."
   (unless (valid-page-sxml-map? metadata-items)
     (error "HTML metadata items must map page IDs to SXML lists"
            metadata-items))
-  (%make-html-presentation style rules head home-link site-nav
-                           title-decorations metadata-items))
+  (%make-html-presentation
+    style rules
+    (snapshot-data head)
+    (and home-link
+         (%make-html-home-link
+           (snapshot-data (html-home-link-content home-link))
+           (snapshot-data (html-home-link-attributes home-link))))
+    (map (lambda (entry)
+           (if (html-nav-link? entry)
+               (%make-html-nav-link
+                 (snapshot-data (html-nav-link-page-id entry))
+                 (snapshot-data (html-nav-link-label entry))
+                 (snapshot-data (html-nav-link-attributes entry)))
+               (snapshot-data entry)))
+         site-nav)
+    (snapshot-data title-decorations)
+    (snapshot-data metadata-items)))
 
 (define (merge-page-sxml base overlay)
   (fold (lambda (entry result)

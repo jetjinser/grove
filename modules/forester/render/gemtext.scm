@@ -6,6 +6,7 @@
   #:use-module (grove build)
   #:use-module (grove ir)
   #:use-module (grove output)
+  #:use-module (grove private snapshot)
   #:use-module (grove render text)
   #:use-module (grove render rules)
   #:use-module (grove render context)
@@ -336,7 +337,11 @@
                                (locale #f)
                                (messages default-message-catalog)
                                (rules empty-render-rules))
-  "Immutable configuration for the Forester Gemtext renderer."
+  "Build a validated Gemtext-renderer configuration snapshot."
+  (let* ((prefix (snapshot-data prefix))
+         (backmatter (snapshot-data backmatter))
+         (reference-taxon-id (snapshot-data reference-taxon-id))
+         (locale (snapshot-data locale)))
   (unless (or (not prefix) (artifact-path? prefix))
     (error "Forester Gemtext prefix must be a relative artifact path or #f"
            prefix))
@@ -348,7 +353,7 @@
   (unless (render-rules? rules)
     (error "Forester Gemtext options require render rules" rules))
   (%make-gemtext-options prefix routes backmatter
-                         reference-taxon-id locale messages rules))
+                         reference-taxon-id locale messages rules)))
 
 (define* (site->gemtext forest #:key (options (make-gemtext-options)))
   (let* ((_ (require-gemtext-options options "site->gemtext"))

@@ -4,6 +4,8 @@
 
 (define-module (grove style html)
   #:use-module (grove output)
+  #:use-module (grove private snapshot)
+  #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:export (html-style?
@@ -18,8 +20,21 @@
 (define-record-type <html-style>
   (%make-html-style stylesheets assets)
   html-style?
-  (stylesheets html-style-stylesheets)
-  (assets html-style-extra-assets))
+  (stylesheets html-style-stylesheets/raw)
+  (assets html-style-extra-assets/raw))
+
+(define (snapshot-artifact artifact)
+  (let ((path (snapshot-data (artifact-path artifact)))
+        (content (artifact-content artifact))
+        (sources (artifact-sources artifact)))
+    (if (string? content)
+        (make-artifact path (snapshot-data content)
+                       (snapshot-data sources))
+        (make-byte-artifact path (bytevector-copy content)
+                            (snapshot-data sources)))))
+
+(define (html-style-stylesheets style)
+  (map snapshot-artifact (html-style-stylesheets/raw style)))
 
 (define* (make-html-style #:key (stylesheets '()) (assets '()))
   (unless (and (list? stylesheets)
@@ -27,18 +42,19 @@
                (every artifact? stylesheets)
                (every artifact? assets))
     (error "HTML style requires artifact lists" stylesheets assets))
-  (%make-html-style stylesheets assets))
+  (%make-html-style (map snapshot-artifact (snapshot-data stylesheets))
+                    (map snapshot-artifact (snapshot-data assets))))
 
 (define (compose-html-styles . styles)
   (unless (every html-style? styles)
     (error "HTML styles can only be composed from HTML styles" styles))
   (make-html-style
     #:stylesheets (append-map html-style-stylesheets styles)
-    #:assets (append-map html-style-extra-assets styles)))
+    #:assets (append-map html-style-extra-assets/raw styles)))
 
 (define (html-style-artifacts style)
   (append (html-style-stylesheets style)
-          (html-style-extra-assets style)))
+          (map snapshot-artifact (html-style-extra-assets/raw style))))
 
 (define-record-type <html-attributes>
   (%make-html-attributes assoc)

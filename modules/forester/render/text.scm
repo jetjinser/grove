@@ -8,6 +8,7 @@
   #:use-module (forester site)
   #:use-module (grove ir)
   #:use-module (grove output)
+  #:use-module (grove private snapshot)
   #:use-module (grove render text)
   #:use-module (grove render rules)
   #:use-module (grove render context)
@@ -313,7 +314,11 @@ HTML renderer so text and HTML address occurrences identically."
                             (locale #f)
                             (messages default-message-catalog)
                             (rules empty-render-rules))
-  "Immutable configuration for the Forester text renderer."
+  "Build a validated text-renderer configuration snapshot."
+  (let* ((prefix (snapshot-data prefix))
+         (backmatter (snapshot-data backmatter))
+         (reference-taxon-id (snapshot-data reference-taxon-id))
+         (locale (snapshot-data locale)))
   (unless (or (not prefix) (artifact-path? prefix))
     (error "Forester text prefix must be a relative artifact path or #f" prefix))
   (unless (text-routes? routes)
@@ -324,7 +329,7 @@ HTML renderer so text and HTML address occurrences identically."
   (unless (render-rules? rules)
     (error "Forester text options require render rules" rules))
   (%make-text-options prefix routes backmatter
-                      reference-taxon-id locale messages rules))
+                      reference-taxon-id locale messages rules)))
 
 (define* (site->text forest #:key (options (make-text-options)))
   (let* ((_ (require-text-options options "site->text"))
