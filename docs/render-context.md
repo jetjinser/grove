@@ -49,16 +49,15 @@ own layers; merging them would turn the context into a new global state.
 text, or gemtext entry point builds one site-level context for that render pass
 and derives page contexts from it with `render-context-with`. Separate
 renderer entry points build their own contexts from their options. A project
-may provide `make-site-options #:derived-context` for its derived artifacts; that
+may provide `make-site-project #:derived-context` for its derived artifacts; that
 project context is not currently injected into the HTML, text, or gemtext
 renderers. Translation groups are derived from the forest by default and can
 be supplied explicitly when a project needs a different index. Locale and
 messages are resolved from the context builder's arguments.
 
-`make-site-options` accepts `#:derived` (derived-artifact values) and
-`#:derived-context` (a procedure of forest to render context); `make-site-project`
-takes that value with `#:options`.  The project wraps the derived values into a
-cached renderer that receives that context.
+`make-site-project` accepts `#:derived` (derived-artifact values) and
+`#:derived-context` (a procedure of forest to render context). The project wraps
+the derived values into a cached renderer that receives that context.
 
 ## Interpreter boundary
 

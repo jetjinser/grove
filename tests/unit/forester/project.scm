@@ -104,8 +104,6 @@
   (lambda ()
     (let* ((project
              (make-site-project
-               #:options
-               (make-site-options
                  #:title "Linked Notes"
                  #:source-directory source-directory
                #:prepare (make-scribble-module-setup module-directory)
@@ -145,7 +143,7 @@
                      #:page-path
                      (lambda (id)
                        (string-append "notes/" id ".html")))))
-                 #:output-directory output-directory)))
+                 #:output-directory output-directory))
            (artifacts (build-project project))
            (paths (map artifact-path artifacts))
            (algebra-html
@@ -503,8 +501,6 @@
              (file-exists? (string-append output-directory "/text/index.txt"))))
       (let* ((incremental-project
                (make-site-project
-                 #:options
-                 (make-site-options
                    #:source-directory source-directory
                    #:prepare (make-scribble-module-setup module-directory)
                  #:read-page
@@ -522,7 +518,7 @@
                               (string-append "notes/" id ".html")))))
                        (make-text-renderer
                          #:options (make-text-options #:prefix "text")))
-                 #:output-directory cache-output-directory)))
+                 #:output-directory cache-output-directory))
              (first (build-project/report incremental-project)))
         (test-assert "cached Forester HTML renderer performs initial render"
           (build-report-rendered? first))
@@ -636,8 +632,6 @@
              (make-presentation-project
                (lambda (decoration)
                  (make-site-project
-                   #:options
-                   (make-site-options
                      #:title "Linked Notes"
                      #:source-directory source-directory
                      #:prepare (make-scribble-module-setup module-directory)
@@ -655,7 +649,7 @@
                            (make-html-presentation
                                #:title-decorations
                                `(("algebra" . ((span ,decoration))))))))
-                     #:output-directory presentation-output)))))
+                     #:output-directory presentation-output))))
         (let ((first (build-project/report
                        (make-presentation-project "Chrome first"))))
           (test-assert "initial declarative chrome is rendered"
@@ -699,8 +693,6 @@
              (make-derived-project
                (lambda (settings)
                  (make-site-project
-                   #:options
-                   (make-site-options
                      #:title "Derived"
                      #:collect-sources (lambda () '("virtual.plant"))
                      #:read-page (lambda (_source) page)
@@ -715,7 +707,7 @@
                      (list (sitemap-derived #:settings settings #:routes routes)
                            (rss-derived #:settings settings #:routes routes)
                            (graph-derived))
-                     #:output-directory (string-append root "/output")))))
+                     #:output-directory (string-append root "/output"))))
              (settings
                (make-site-settings
                  #:site-url "https://derived.example"

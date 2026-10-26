@@ -48,18 +48,18 @@
   (make-site-page "page" "Page" (make-content-document '())
     #:metadata '((summary . "first") (summary . "second"))))
 
-(test-error "site options validate cache flags at construction" #t
-  (make-site-options #:source-directory "sources"
+(test-error "site projects validate cache flags at construction" #t
+  (make-site-project #:source-directory "sources"
                      #:read-page (lambda (_) #f)
                      #:output-directory "output"
                      #:cache? 'yes))
-(test-error "site options validate transforms at construction" #t
-  (make-site-options #:source-directory "sources"
+(test-error "site projects validate transforms at construction" #t
+  (make-site-project #:source-directory "sources"
                      #:read-page (lambda (_) #f)
                      #:output-directory "output"
                      #:transforms '(not-a-procedure)))
-(test-error "site options require a page reader at construction" #t
-  (make-site-options #:source-directory "sources"
+(test-error "site projects require a page reader at construction" #t
+  (make-site-project #:source-directory "sources"
                      #:output-directory "output"))
 
 (define duplicate-pipelines
@@ -70,8 +70,8 @@
           #:name "math-assets" #:inputs '("math.typ")
           #:procedure (lambda (_input emit) (emit "math/b.svg" "b")))))
 
-(test-error "site options reject duplicate asset pipeline names" #t
-  (make-site-options #:source-directory "sources"
+(test-error "site projects reject duplicate asset pipeline names" #t
+  (make-site-project #:source-directory "sources"
                      #:read-page (lambda (_) #f)
                      #:output-directory "output"
                      #:pipelines duplicate-pipelines))
@@ -154,8 +154,6 @@
           (observed-site-description #f))
       (let* ((project
                (make-site-project
-                 #:options
-                 (make-site-options
                    #:title "Configured"
                    #:description "A configured site description."
                    #:source-directory source-directory
@@ -196,7 +194,7 @@
                                 (list (site-page-source page))))
                             (site-pages site))
                        (list (make-artifact "opaque.txt" "opaque")))))
-                 #:output-directory output-directory)))
+                 #:output-directory output-directory))
              (report (build-project/report project))
              (artifacts (build-report-artifacts report)))
         (test-equal "project phases run modules, readers, analysis, renderers"
@@ -278,8 +276,6 @@
                    render #:configuration '(summary (precision . 1))))
                (cached-project
                (make-site-project
-                   #:options
-                   (make-site-options
                      #:source-directory source-directory
                      #:extra-sources (list external-source-path)
                    #:read-page
@@ -292,7 +288,7 @@
                      (set! analysis-count (+ analysis-count 1))
                      site)
                    #:renderers (list cached-renderer)
-                   #:output-directory cache-output-directory))))
+                   #:output-directory cache-output-directory)))
           (let ((first (build-project/report cached-project)))
             (test-equal "cached renderer runs on the first build"
               1 render-count)
@@ -360,8 +356,6 @@
                      render #:configuration '(summary (precision . 2))))
                  (changed-project
                  (make-site-project
-                     #:options
-                     (make-site-options
                        #:source-directory source-directory
                        #:extra-sources (list external-source-path)
                      #:read-page
@@ -373,7 +367,7 @@
                        (set! analysis-count (+ analysis-count 1))
                        site)
                      #:renderers (list changed-renderer)
-                     #:output-directory cache-output-directory)))
+                     #:output-directory cache-output-directory))
                  (key-change (build-project/report changed-project)))
             (test-equal "renderer configuration changes force rendering"
               5 render-count)
@@ -382,8 +376,6 @@
               (build-report-affected-artifacts key-change))
             (let* ((changed-project-key
                      (make-site-project
-                       #:options
-                       (make-site-options
                          #:source-directory source-directory
                          #:extra-sources (list external-source-path)
                        #:read-page
@@ -397,7 +389,7 @@
                          site)
                        #:renderers (list changed-renderer)
                        #:output-directory cache-output-directory
-                       #:cache? #f)))
+                       #:cache? #f))
                    (project-key-change
                      (build-project/report changed-project-key)))
               (test-equal "disabling project caching force rendering"
@@ -454,15 +446,13 @@
                            (site-pages site)))))))
                (incremental-project
                  (make-site-project
-                   #:options
-                   (make-site-options
                      #:source-directory source-directory
                      #:read-page
                    (lambda (path)
                      (let ((id (string-drop-right (basename path) (string-length ".plant"))))
                        (make-site-page id id (make-content-document '()) path)))
                    #:renderers (list incremental-renderer)
-                   #:output-directory incremental-output-directory))))
+                   #:output-directory incremental-output-directory)))
           (build-project/report incremental-project)
           (test-equal "incremental renderer performs initial full render"
             1 full-count)

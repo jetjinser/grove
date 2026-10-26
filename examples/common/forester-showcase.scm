@@ -36,30 +36,28 @@
          (settings (make-site-settings #:site-url site-url))
          (project
            (make-site-project
-             #:options
-             (make-site-options
-               #:title title
-               #:description description
-               #:source-directory source-directory
-               #:extra-sources
-               (list stylesheet-path
-                     (string-append directory "/../../common/forester-showcase.scm"))
-               #:prepare (make-scribble-module-setup module-directory)
-               #:read-page
-               (make-page-reader (make-scribble-document-reader))
-               #:analyze make-forest
-               #:renderers
-               (list (make-html-renderer
-                       #:options
-                       (make-html-options
-                         #:presentation (make-html-presentation #:style style)
-                         #:routes routes
-                         #:settings settings))
-                     (make-text-renderer
-                       #:options (make-text-options #:prefix "text")))
-               #:derived
-               (list (rss-derived #:settings settings #:routes routes)
-                     (sitemap-derived #:settings settings #:routes routes)
-                     (graph-derived #:path "forest-graph.scm"))
-               #:output-directory output-directory))))
+             #:title title
+             #:description description
+             #:source-directory source-directory
+             #:extra-sources
+             (list stylesheet-path
+                   (string-append directory "/../../common/forester-showcase.scm"))
+             #:prepare (make-scribble-module-setup module-directory)
+             #:read-page
+             (make-page-reader (make-scribble-document-reader))
+             #:analyze make-forest
+             #:renderers
+             (list (make-html-renderer
+                     #:options
+                     (make-html-options
+                       #:presentation (make-html-presentation #:style style)
+                       #:routes routes
+                       #:settings settings))
+                   (make-text-renderer
+                     #:options (make-text-options #:prefix "text")))
+             #:derived
+             (list (rss-derived #:settings settings #:routes routes)
+                   (sitemap-derived #:settings settings #:routes routes)
+                   (graph-derived #:path "forest-graph.scm"))
+             #:output-directory output-directory)))
     project))

@@ -56,39 +56,37 @@
 
 (define notes-project
   (make-site-project
-    #:options
-    (make-site-options
-      #:default-prefix "note"
-      #:title "Linked Notes"
-      #:description "Connected notes on mathematics and its ideas."
-      #:home "math-0001"
-      #:source-directory source-directory
-      #:extra-sources (list notes-css-path)
-      #:prepare
-      (make-scribble-module-setup module-directory)
-      #:read-page (make-page-reader read-document)
-      #:analyze make-forest
-      #:renderers
-      (list (make-html-renderer
-              #:options
-              (make-html-options
-                #:presentation (make-html-presentation #:style notes-style)
-                #:routes notes-routes
-                #:settings notes-settings))
-            (make-text-renderer
-              #:options
-              (make-text-options
-                #:prefix "text"
-                #:routes notes-text-routes))
-            (make-gemtext-renderer
-              #:options (make-gemtext-options #:prefix "gemini"))
-            (make-static-assets-renderer
-              #:source-directory (string-append examples-directory "/static")))
-      #:derived
-      (list (rss-derived #:settings notes-settings #:routes notes-routes)
-            (sitemap-derived #:settings notes-settings #:routes notes-routes)
-            (graph-derived #:path "forest-graph.scm"))
-      #:browse (make-forest-browser)
-      #:output-directory output-directory)))
+    #:default-prefix "note"
+    #:title "Linked Notes"
+    #:description "Connected notes on mathematics and its ideas."
+    #:home "math-0001"
+    #:source-directory source-directory
+    #:extra-sources (list notes-css-path)
+    #:prepare
+    (make-scribble-module-setup module-directory)
+    #:read-page (make-page-reader read-document)
+    #:analyze make-forest
+    #:renderers
+    (list (make-html-renderer
+            #:options
+            (make-html-options
+              #:presentation (make-html-presentation #:style notes-style)
+              #:routes notes-routes
+              #:settings notes-settings))
+          (make-text-renderer
+            #:options
+            (make-text-options
+              #:prefix "text"
+              #:routes notes-text-routes))
+          (make-gemtext-renderer
+            #:options (make-gemtext-options #:prefix "gemini"))
+          (make-static-assets-renderer
+            #:source-directory (string-append examples-directory "/static")))
+    #:derived
+    (list (rss-derived #:settings notes-settings #:routes notes-routes)
+          (sitemap-derived #:settings notes-settings #:routes notes-routes)
+          (graph-derived #:path "forest-graph.scm"))
+    #:browse (make-forest-browser)
+    #:output-directory output-directory))
 
 notes-project

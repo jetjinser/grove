@@ -51,7 +51,7 @@ preserves unchanged files and removes obsolete manifest-owned artifacts; other
 files remain untouched. Writing is not transactional across the directory.
 
 A site declares its start tree once with
-`(make-site-project #:options (make-site-options #:home ID ...))`. HTML routes
+`(make-site-project #:home ID ...)`. HTML routes
 may omit `#:home-page`; if routes are omitted entirely, the default HTML routes
 are used. The HTML renderer resolves the index page from the site's home tree.
 File-backed tree IDs are basenames without `.plant`; directories do not

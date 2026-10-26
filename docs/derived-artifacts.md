@@ -44,16 +44,14 @@ rule type.
 
 ```scheme
 (make-site-project
-  #:options
-  (make-site-options
-    #:derived (list (sitemap-derived #:routes routes)
-                    (rss-derived #:routes routes)
-                    (graph-derived))
-    #:derived-context (lambda (forest)
-                (make-site-render-context forest
-                  #:settings settings
-                  #:routes routes
-                  #:locale "en"))))
+  #:derived (list (sitemap-derived #:routes routes)
+                  (rss-derived #:routes routes)
+                  (graph-derived))
+  #:derived-context (lambda (forest)
+    (make-site-render-context forest
+      #:settings settings
+      #:routes routes
+      #:locale "en")))
 ```
 
 - `#:derived` is a list of `derived-artifact` values.
