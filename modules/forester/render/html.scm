@@ -25,6 +25,7 @@
   #:use-module ((forester private content-index) #:prefix content-index:)
   #:use-module (forester backmatter)
   #:use-module (forester private entity-uri)
+  #:use-module (forester private render-routes)
   #:use-module (forester relations)
   #:use-module (grove style html)
   #:use-module (forester style html)
@@ -948,7 +949,7 @@ to the lane, and an in-place numbered marker links to it."
   (when presentation
     (set! style (html-presentation-style presentation))
     (set! rules (html-presentation-rules presentation)))
-  (set! routes (resolve-html-routes forest routes))
+  (set! routes (resolve-site-routes forest routes))
   (check-html-input forest style routes mathjax-src)
   (let ((style-artifacts (html-style-artifacts style)))
     (let ((style-paths (map artifact-path style-artifacts)))
@@ -996,14 +997,6 @@ to the lane, and an in-place numbered marker links to it."
                                              #:context context)))))
                           (pages forest))))
               (append style-artifacts page-artifacts)))))))
-
-(define (resolve-html-routes forest routes)
-  (if (html-home-page routes)
-      routes
-      (let ((home (site-home (site forest))))
-        (unless home
-          (error "HTML routes need a home page; set it on the site or in the routes"))
-        (html-routes-with-home-page routes home))))
 
 (define (check-html-input forest style routes mathjax-src)
   (unless (forest? forest)
@@ -1193,7 +1186,7 @@ Entry points take this value with #:options."
          (presentation-data presentation)
          (style (html-presentation-style presentation))
          (highlighters (html-options-highlighters options))
-         (routes (html-options-routes options))
+         (routes (resolve-site-routes forest (html-options-routes options)))
          (mathjax-src (html-options-mathjax-src options))
          (backmatter (html-options-backmatter options))
          (reference-taxon-id (html-options-reference-taxon-id options))
@@ -1210,7 +1203,6 @@ Entry points take this value with #:options."
          (context (make-html-render-context forest routes options)))
     (validate-backmatter-sections backmatter)
     (check-reference-taxon-id reference-taxon-id)
-    (set! routes (resolve-html-routes forest routes))
     (check-html-input forest style routes mathjax-src)
     (map (lambda (page)
            (cons (site-page-id page)
@@ -1235,7 +1227,7 @@ Entry points take this value with #:options."
           (presentation-data presentation)
           (style (html-presentation-style presentation))
           (highlighters (html-options-highlighters options))
-          (routes (html-options-routes options))
+          (routes (resolve-site-routes forest (html-options-routes options)))
           (mathjax-src (html-options-mathjax-src options))
           (backmatter (html-options-backmatter options))
           (reference-taxon-id (html-options-reference-taxon-id options))
@@ -1252,7 +1244,6 @@ Entry points take this value with #:options."
           (context (make-html-render-context forest routes options)))
     (validate-backmatter-sections backmatter)
     (check-reference-taxon-id reference-taxon-id)
-    (set! routes (resolve-html-routes forest routes))
     (check-html-input forest style routes mathjax-src)
     (append
       (html-style-artifacts style)
@@ -1323,24 +1314,25 @@ Entry points take this value with #:options."
     (make-cached-renderer render #:cache? effective-cache?
           #:configuration
           (lambda (forest)
-            (list 'html (site-title (site forest)) (site-description (site forest))
-                  (or (html-home-page routes) (site-home (site forest)))
-                  (html-index-url routes)
-                  mathjax-src backmatter reference-taxon-id
-                  article? backmatter-details? html-attributes
-                  (presentation-cache-identity presentation-data)
-                  side-lane (resolve-chrome-locale locale (resolve-chrome-catalog messages))
-                  default-locale site-url og-image og-image-alt hreflang? language-switcher?
-                  rules-id
-                  (message-catalog-default (resolve-chrome-catalog messages))
-                  (message-catalog-entries (resolve-chrome-catalog messages))
-                  (map (lambda (entry)
-                         (list (car entry) (highlighter-configuration (cdr entry))))
-                       highlighters)
-                  (map (lambda (artifact)
-                         (list (artifact-path artifact)
-                               (content-fingerprint (artifact-content artifact))))
-                       (html-style-artifacts style))))
+            (let ((routes (resolve-site-routes forest routes)))
+              (list 'html (site-title (site forest)) (site-description (site forest))
+                    (html-home-page routes)
+                    (html-index-url routes)
+                    mathjax-src backmatter reference-taxon-id
+                    article? backmatter-details? html-attributes
+                    (presentation-cache-identity presentation-data)
+                    side-lane (resolve-chrome-locale locale (resolve-chrome-catalog messages))
+                    default-locale site-url og-image og-image-alt hreflang? language-switcher?
+                    rules-id
+                    (message-catalog-default (resolve-chrome-catalog messages))
+                    (message-catalog-entries (resolve-chrome-catalog messages))
+                    (map (lambda (entry)
+                           (list (car entry) (highlighter-configuration (cdr entry))))
+                         highlighters)
+                    (map (lambda (artifact)
+                           (list (artifact-path artifact)
+                                 (content-fingerprint (artifact-content artifact))))
+                         (html-style-artifacts style)))))
           #:inputs (lambda ()
                      (append
                        (append-map (lambda (entry) (highlighter-inputs (cdr entry))) highlighters)
@@ -1348,7 +1340,8 @@ Entry points take this value with #:options."
                                    (html-style-artifacts style))))
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
-            (let ((context (make-html-render-context forest routes options)))
+            (let* ((routes (resolve-site-routes forest routes))
+                   (context (make-html-render-context forest routes options)))
               (if (any (lambda (entry)
                            (any (lambda (path) (member path changed string=?))
                                 (highlighter-inputs (cdr entry)))) highlighters)

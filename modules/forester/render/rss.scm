@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester render rss)
+  #:use-module (forester private render-routes)
   #:use-module (grove build)
   #:use-module (forester render site)
   #:use-module (forester site)
@@ -121,7 +122,7 @@
                               (and (site-settings? settings)
                                    (site-settings-site-url settings)))
                             (feed-path "feed.xml")
-                            (routes (make-html-routes #:home-page "index"))
+                            (routes (make-html-routes))
                             stylesheet-url
                             (stylesheet-type "text/xsl")
                             (language
@@ -138,6 +139,7 @@
     (error "RSS feed path must be a relative artifact path" feed-path))
   (unless (html-routes? routes)
     (error "Forester RSS renderer requires HTML routes" routes))
+  (set! routes (resolve-site-routes forest routes))
   (when (and stylesheet-url (not (rss-stylesheet-url? stylesheet-url)))
     (error "RSS stylesheet URL must be a non-empty URL without whitespace"
            stylesheet-url))
@@ -160,7 +162,7 @@
 
 (define* (make-rss-renderer #:key (settings #f) (site-url #f)
                                (feed-path "feed.xml")
-                               (routes (make-html-routes #:home-page "index"))
+                               (routes (make-html-routes))
                                stylesheet-url
                                (stylesheet-type "text/xsl")
                                (language
@@ -172,9 +174,11 @@
                        (and settings (site-settings-site-url settings))))
          (configuration
            (lambda (forest)
-             (list 'rss feed-path site-url stylesheet-url stylesheet-type
-                   language (html-index-url routes)
-                   (html-route-table routes (map site-page-id (pages forest)))))))
+             (let ((routes (resolve-site-routes forest routes)))
+               (list 'rss feed-path site-url stylesheet-url stylesheet-type
+                     language (html-index-url routes)
+                     (html-route-table routes
+                                       (map site-page-id (pages forest))))))))
     (make-cached-renderer
       (lambda (forest)
         (render-rss forest #:site-url site-url #:feed-path feed-path

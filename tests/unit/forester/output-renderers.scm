@@ -36,7 +36,7 @@
 (let* ((settings (make-site-settings
                    #:site-url "https://example.org"
                    #:default-locale "en"))
-       (routes (make-html-routes #:home-page "guide-en"))
+       (routes (make-html-routes))
        (renderers
         (list (make-sitemap-renderer #:settings settings #:routes routes)
               (make-rss-renderer #:settings settings #:routes routes)
@@ -48,10 +48,32 @@
   (test-assert "sitemap renderer uses shared site settings"
     (let ((content (artifact-content (car artifacts))))
       (and (string-contains content "https://example.org")
+           (string-contains content "https://example.org/index.html")
            (string-contains content "hreflang=\"x-default\""))))
   (test-assert "RSS renderer uses shared site settings"
-    (string-contains (artifact-content (cadr artifacts))
-                     "<language>en</language>")))
+    (let ((content (artifact-content (cadr artifacts))))
+      (and (string-contains content "<language>en</language>")
+           (string-contains content
+                            "<link>https://example.org/index.html</link>")))))
+
+(let* ((settings (make-site-settings #:site-url "https://example.org"))
+       (routes (make-html-routes
+                 #:home-page "guide-zh"
+                 #:index-path "welcome.html"
+                 #:page-path (lambda (id)
+                               (string-append "pages/" id ".html"))))
+       (artifacts
+        (render-model
+          forest
+          (list (make-rss-renderer #:settings settings #:routes routes)
+                (make-sitemap-renderer #:settings settings #:routes routes)))))
+  (test-assert "explicit shared routes override the site's inferred home"
+    (and (string-contains (artifact-content (car artifacts))
+                          "https://example.org/welcome.html")
+         (string-contains (artifact-content (cadr artifacts))
+                          "https://example.org/welcome.html")
+         (string-contains (artifact-content (cadr artifacts))
+                          "https://example.org/pages/guide-en.html"))))
 
 (test-error "sitemap renderer rejects invalid settings at construction" #t
   (make-sitemap-renderer #:settings 'not-site-settings))

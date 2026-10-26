@@ -5,6 +5,7 @@
 (define-module (forester render sitemap)
   #:use-module (grove build)
   #:use-module (forester private date)
+  #:use-module (forester private render-routes)
   #:use-module (forester private web)
   #:use-module (forester render context)
   #:use-module (forester render site)
@@ -97,7 +98,7 @@
                                   (and (site-settings? settings)
                                        (site-settings-site-url settings)))
                                 (sitemap-path "sitemap.xml")
-                                (routes (make-html-routes #:home-page "index"))
+                                (routes (make-html-routes))
                                 (default-locale
                                   (and (site-settings? settings)
                                        (site-settings-default-locale settings))))
@@ -112,6 +113,7 @@
     (error "Sitemap path must be a relative artifact path" sitemap-path))
   (unless (html-routes? routes)
     (error "Forester sitemap renderer requires HTML routes" routes))
+  (set! routes (resolve-site-routes forest routes))
   ;;     home-page 是可选的：没有主页的项目不需要校验它存在。
   (unless (or (not (html-home-page routes))
               (find-page forest (html-home-page routes)))
@@ -126,7 +128,7 @@
 
 (define* (make-sitemap-renderer #:key (settings #f) (site-url #f)
                                   (sitemap-path "sitemap.xml")
-                                  (routes (make-html-routes #:home-page "index"))
+                                  (routes (make-html-routes))
                                   (default-locale
                                     (and (site-settings? settings)
                                          (site-settings-default-locale
@@ -137,9 +139,11 @@
                        (and settings (site-settings-site-url settings))))
          (configuration
            (lambda (forest)
-             (list 'sitemap sitemap-path site-url default-locale
-                   (html-index-url routes)
-                   (html-route-table routes (map site-page-id (pages forest)))))))
+             (let ((routes (resolve-site-routes forest routes)))
+               (list 'sitemap sitemap-path site-url default-locale
+                     (html-index-url routes)
+                     (html-route-table routes
+                                       (map site-page-id (pages forest))))))))
     (make-cached-renderer
       (lambda (forest)
         (render-sitemap forest #:site-url site-url

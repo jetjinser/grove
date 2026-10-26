@@ -30,6 +30,11 @@ The normal Forester project always includes HTML. `#:additional-renderers`
 adds peer formats and projections; a `make-site-project` instead receives the
 complete renderer list through `#:renderers`.
 
+When routes omit a home page, HTML, RSS, and sitemap renderers infer it from the
+analyzed site's `#:home`. You do not need to repeat the home tree ID in each
+renderer. If a project customizes page paths, pass the same route value to HTML,
+RSS, and sitemap so their canonical links agree.
+
 An extension can use a plain procedure from the analyzed model to an artifact
 list. Use `make-cached-renderer` when it needs cache configuration Grove cannot
 infer. Built-in renderers return cache-aware renderer values and include their
