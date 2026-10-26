@@ -179,6 +179,34 @@
           (display content port)
           (put-bytevector port content)))))
 
+(define (artifact-paths-overlap? left right)
+  (or (string=? left right)
+      (string-prefix? (string-append left "/") right)
+      (string-prefix? (string-append right "/") left)))
+
+(define (remove-empty-artifact-directories directory artifact-path)
+  (let loop ((parent (dirname artifact-path)))
+    (unless (string=? parent ".")
+      (let ((full-path (string-append directory "/" parent)))
+        (cond
+         ((not (file-exists? full-path))
+          (loop (dirname parent)))
+         ((not (file-is-directory? full-path)) #t)
+         ((null? (filter (lambda (entry)
+                           (not (member entry '("." ".."))))
+                         (scandir full-path)))
+          (rmdir full-path)
+          (loop (dirname parent))))))))
+
+(define (remove-stale-artifact! directory stale-path)
+  (let ((full-path (string-append directory "/" stale-path)))
+    (when (file-exists? full-path)
+      (when (file-is-directory? full-path)
+        (error "stale artifact path is a directory; refusing to remove"
+               full-path))
+      (delete-file full-path)
+      (remove-empty-artifact-directories directory stale-path))))
+
 (define (write-artifacts directory artifacts)
   (validate-artifacts artifacts)
   (let* ((paths (map artifact-path artifacts))
@@ -187,14 +215,29 @@
            (string-append cache-directory "/" artifact-manifest-name))
          (manifest-temp-path
            (string-append cache-directory "/" artifact-manifest-temp-name))
-         (previous-paths (read-artifact-manifest manifest-path)))
+         (previous-paths (read-artifact-manifest manifest-path))
+         (conflicting-stale-paths
+           (filter (lambda (stale-path)
+                     (and (not (member stale-path paths string=?))
+                          (any (lambda (path)
+                                 (artifact-paths-overlap? stale-path path))
+                               paths)))
+                   previous-paths)))
     (ensure-directory directory)
     (ensure-directory cache-directory)
+    ;;     Remove only manifest-owned paths that obstruct this build's
+    ;;     file/directory layout. Other stale outputs remain until all current
+    ;;     artifacts have been written.
+    (for-each (lambda (path) (remove-stale-artifact! directory path))
+              conflicting-stale-paths)
     (for-each
       (lambda (artifact)
         (let* ((path (string-append directory "/" (artifact-path artifact)))
                (content (artifact-content artifact))
                (fingerprint (content-fingerprint content)))
+          (when (and (file-exists? path) (file-is-directory? path))
+            (error "artifact path is occupied by a directory; refusing to replace"
+                   path))
           (ensure-directory (dirname path))
           (if (artifact-content-current? path content)
               ;;     The bytes are already in place; make sure the
@@ -218,16 +261,9 @@
       artifacts)
     (for-each
       (lambda (stale-path)
-        (unless (member stale-path paths string=?)
-          (let ((full-path (string-append directory "/" stale-path)))
-            ;;     Existence first: a stale path usually names a file
-            ;;     that is already gone (renamed or pruned elsewhere),
-            ;;     and file-is-directory? would stat it into an error.
-            (when (file-exists? full-path)
-              (when (file-is-directory? full-path)
-                (error "stale artifact path is a directory; refusing to remove"
-                       full-path))
-              (delete-file full-path)))))
+        (unless (or (member stale-path paths string=?)
+                    (member stale-path conflicting-stale-paths string=?))
+          (remove-stale-artifact! directory stale-path)))
       previous-paths)
     (write-artifact-manifest manifest-path manifest-temp-path paths)
     (delete-legacy-metadata directory)))

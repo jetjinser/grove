@@ -9,18 +9,22 @@
   #:use-module (srfi srfi-64)
   #:use-module (grove output))
 
-(define output-directory
+(define test-root
   (format #f "/tmp/grove-output-test-~a" (getpid)))
+(define output-directory (string-append test-root "/output"))
+(setenv "GROVE_CACHE_DIR" (string-append test-root "/cache"))
 (define output-path (string-append output-directory "/nested/page.txt"))
 (define obsolete-path (string-append output-directory "/obsolete.html"))
 (define unmanaged-path (string-append output-directory "/user.txt"))
-(define manifest-path (string-append output-directory "/.grove-artifacts"))
 (define binary-path (string-append output-directory "/images/pixel.bin"))
+(define transition-path (string-append output-directory "/transition"))
+(define transition-page-path
+  (string-append output-directory "/transition/page.html"))
 
 (test-begin "grove output")
 
 (dynamic-wind
-  (lambda () #t)
+  (lambda () (system* "rm" "-rf" test-root))
   (lambda ()
     (write-artifacts output-directory
       (list (make-artifact "nested/page.txt" "artifact content")
@@ -68,6 +72,30 @@
     (write-artifacts output-directory '())
     (test-assert "empty builds remove previously generated artifacts"
       (not (file-exists? output-path)))
+    (write-artifacts output-directory
+      (list (make-artifact "transition" "first as a file")))
+    (write-artifacts output-directory
+      (list (make-artifact "transition/page.html" "now nested")))
+    (test-equal "a prior artifact file can become an artifact directory"
+      "now nested"
+      (call-with-input-file transition-page-path get-string-all))
+    (write-artifacts output-directory
+      (list (make-artifact "transition" "now a file again")))
+    (test-equal "a prior artifact directory can become an artifact file"
+      "now a file again"
+      (call-with-input-file transition-path get-string-all))
+    (write-artifacts output-directory
+      (list (make-artifact "guard/owned.txt" "managed")))
+    (call-with-output-file (string-append output-directory "/guard/user.txt")
+      (lambda (port) (display "unmanaged" port)))
+    (test-error "artifact writer does not replace a directory with unmanaged files"
+      #t
+      (write-artifacts output-directory
+        (list (make-artifact "guard" "would replace the directory"))))
+    (test-equal "unmanaged files survive a blocked file/directory transition"
+      "unmanaged"
+      (call-with-input-file (string-append output-directory "/guard/user.txt")
+        get-string-all))
     (with-fluids ((%default-port-encoding "ISO-8859-1"))
       (let* ((text "平方 ◆:x")
              (artifacts (list (make-artifact "nested/page.txt" text))))
@@ -95,25 +123,6 @@
     (test-error "build state directory is reserved" #t
       (write-artifacts output-directory
         (list (make-artifact ".grove-build-state/data" "user data")))))
-  (lambda ()
-    (when (file-exists? output-path)
-      (delete-file output-path))
-    (for-each
-      (lambda (path)
-        (when (file-exists? path)
-          (delete-file path)))
-      (list obsolete-path unmanaged-path manifest-path
-            binary-path
-            (string-append output-directory "/.grove-artifacts.tmp")
-            (string-append output-directory "/.grove-build-state")
-            (string-append output-directory "/.grove-build-state.tmp")))
-    (let ((nested (string-append output-directory "/nested")))
-      (when (file-exists? nested)
-        (rmdir nested)))
-    (let ((images (string-append output-directory "/images")))
-      (when (file-exists? images)
-        (rmdir images)))
-    (when (file-exists? output-directory)
-      (rmdir output-directory))))
+  (lambda () (system* "rm" "-rf" test-root)))
 
 (test-end "grove output")
