@@ -38,9 +38,10 @@ Grove owns versus what a project supplies. Commands use `@name{body}` or
 | `@locale["zh-Hans"]` | Page language and direction. |
 | `@translation["intro"]` | Translation group key shared by parallel pages. |
 
-Metadata may appear anywhere, but keeping it at the top makes the page
-readable and lets tools find it quickly. A second `@taxon` is an error; use
-`@tag` for additional labels.
+Page metadata commands may appear anywhere among that tree's top-level forms;
+nested subtrees have their own metadata scope. Keeping page-level metadata at
+the top makes the source readable and lets tools find it quickly. A second
+`@taxon` is an error; use `@tag` for additional labels.
 
 `@describes` records an external entity identity, separate from the page's
 own URL and from ordinary links. For example, a literature page can declare
