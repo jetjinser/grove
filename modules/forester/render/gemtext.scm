@@ -388,6 +388,7 @@
 
 (define* (render-gemtext forest #:key (options (make-gemtext-options)))
   (let* ((_ (require-gemtext-options options "render-gemtext"))
+         (prefix (gemtext-options-prefix options))
          (routes (gemtext-options-routes options))
          (backmatter (gemtext-options-backmatter options))
          (reference-taxon-id (gemtext-options-reference-taxon-id options))
@@ -405,17 +406,19 @@
                                      #:locale locale
                                      #:messages messages))
          (backmatter-labels (localized-backmatter-labels context)))
-    (cons (make-artifact (text-index-path routes)
-                         (index->gemtext forest routes)
-                         (source-paths forest))
-          (map (lambda (page)
-                 (make-artifact
-                   (text-page-path routes (site-page-id page))
-                   (page->gemtext forest routes page backmatter
-                                  backmatter-labels reference-taxon-id
-                                  rules context)
-                   (page-source-paths forest page)))
-               (pages forest))))))
+    (let ((artifacts
+            (cons (make-artifact (text-index-path routes)
+                                 (index->gemtext forest routes)
+                                 (source-paths forest))
+                  (map (lambda (page)
+                         (make-artifact
+                           (text-page-path routes (site-page-id page))
+                           (page->gemtext forest routes page backmatter
+                                          backmatter-labels reference-taxon-id
+                                          rules context)
+                           (page-source-paths forest page)))
+                       (pages forest)))))
+      (if prefix (prefix-artifacts prefix artifacts) artifacts)))))
 
 (define* (make-gemtext-renderer #:key (options (make-gemtext-options)))
   (let* ((_ (require-gemtext-options options "make-gemtext-renderer"))
@@ -438,8 +441,7 @@
   (unless (or (not prefix) (artifact-path? prefix))
     (error "Gemtext output prefix must be a relative path or #f" prefix))
   (let ((render (lambda (forest)
-                  (let ((artifacts (render-gemtext forest #:options options)))
-                    (if prefix (prefix-artifacts prefix artifacts) artifacts)))))
+                  (render-gemtext forest #:options options))))
     (make-cached-renderer render #:cache? effective-cache?
       #:configuration
       (lambda (forest)

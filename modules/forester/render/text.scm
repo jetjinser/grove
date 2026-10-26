@@ -365,6 +365,7 @@ HTML renderer so text and HTML address occurrences identically."
 
 (define* (render-text forest #:key (options (make-text-options)))
   (let* ((_ (require-text-options options "render-text"))
+         (prefix (text-options-prefix options))
          (routes (text-options-routes options))
          (backmatter (text-options-backmatter options))
          (reference-taxon-id (text-options-reference-taxon-id options))
@@ -384,17 +385,19 @@ HTML renderer so text and HTML address occurrences identically."
          (site (site forest))
          (sources (source-paths forest)))
     (check-text-routes forest routes)
-    (cons
-      (make-artifact (text-index-path routes)
-                     (index->text forest routes)
-                     sources)
-      (map (lambda (page)
-             (make-artifact
-               (text-page-path routes (site-page-id page))
-               (page->text forest page routes backmatter backmatter-labels
-                           reference-taxon-id context #:rules rules)
-               (page-source-paths forest page)))
-           (pages forest))))))
+    (let ((artifacts
+            (cons
+              (make-artifact (text-index-path routes)
+                             (index->text forest routes)
+                             sources)
+              (map (lambda (page)
+                     (make-artifact
+                       (text-page-path routes (site-page-id page))
+                       (page->text forest page routes backmatter backmatter-labels
+                                   reference-taxon-id context #:rules rules)
+                       (page-source-paths forest page)))
+                   (pages forest)))))
+      (if prefix (prefix-artifacts prefix artifacts) artifacts)))))
 
 (define* (make-text-renderer #:key (options (make-text-options)))
   (let* ((_ (require-text-options options "make-text-renderer"))
@@ -414,10 +417,7 @@ HTML renderer so text and HTML address occurrences identically."
   (unless (text-routes? routes)
     (error "Forester text renderer requires text routes" routes))
   (let ((render (lambda (forest)
-                  (let ((artifacts (render-text forest #:options options)))
-                    (if prefix
-                        (prefix-artifacts prefix artifacts)
-                        artifacts))))
+                  (render-text forest #:options options)))
         (effective-cache?
           (and cache?
                (or (eq? rules empty-render-rules)

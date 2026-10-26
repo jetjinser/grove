@@ -970,6 +970,20 @@
   (test-assert "text index references configured page routes"
     (string-contains index "Alpha (notes/alpha.md)")))
 
+(let* ((forest (make-forest (make-site (list algebra limits))))
+       (text-artifacts
+         (render-text forest
+           #:options (make-text-options #:prefix "text")))
+       (gemtext-artifacts
+         (render-gemtext forest
+           #:options (make-gemtext-options #:prefix "gemini"))))
+  (test-equal "render-text applies its configured output prefix"
+    '("text/index.txt" "text/algebra.txt" "text/limits.txt")
+    (map artifact-path text-artifacts))
+  (test-equal "render-gemtext applies its configured output prefix"
+    '("gemini/index.gmi" "gemini/algebra.gmi" "gemini/limits.gmi")
+    (map artifact-path gemtext-artifacts)))
+
 
 (let* ((forest (make-forest (make-site (list algebra limits))))
        (routes (make-html-routes #:home-page "algebra")))
