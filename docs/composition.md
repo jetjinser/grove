@@ -42,6 +42,24 @@ and use Guile pattern matching when inspecting public records. Grove-specific
 combinators remain where they clarify domain behavior or enforce a boundary;
 they should not wrap a procedure or list without adding meaning.
 
+## Shared values and mutation
+
+Content, site, and analyzed-model values are shared between project callbacks;
+their list and string fields are ordinary mutable Scheme data. Constructors
+validate values when they are made, but Grove does not recursively freeze them
+or copy them on every accessor call. Treat these values as read-only after
+construction. A content transform is the intended place to derive changed
+content, using constructors such as `content-with-property` and
+`content-with-style`; renderers should interpret the same model without
+changing it. Mutating a shared model can make later renderers depend on
+renderer order and can bypass the guarantees of the constructors.
+
+Project and renderer configuration has a different ownership rule: Grove
+snapshots its declarative strings and list containers at construction because
+they define cache identity. Procedures and opaque extension values remain the
+project author's responsibility. This distinction keeps hot content traversal
+from copying trees while making build configuration stable after construction.
+
 ## Keep different semantics distinct
 
 - A content transform rewrites a document before interpretation; a render rule

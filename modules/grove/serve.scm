@@ -12,7 +12,7 @@
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (serve-project sweep-orphan-workspaces!))
+  #:export (serve-project))
 
 (define (milliseconds)
   (quotient (* 1000 (get-internal-real-time)) internal-time-units-per-second))
