@@ -18,6 +18,14 @@
             restore-boundary-bytes
             publish-boundary-bytes))
 
+(define asset-pipeline-name
+  (@@ (grove pipeline) asset-pipeline-name))
+(define asset-pipeline-version
+  (@@ (grove pipeline) asset-pipeline-version))
+(define asset-pipeline-inputs
+  (@@ (grove pipeline) asset-pipeline-inputs))
+(define asset-pipeline-procedure
+  (@@ (grove pipeline) asset-pipeline-procedure))
 
 ;;     Run declared asset pipelines against the shared store.  Each
 ;;     pipeline's identity is its name, version, the project file's

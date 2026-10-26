@@ -67,6 +67,8 @@
   (@@ (grove build) cached-renderer-render-changed))
 (define cached-renderer-inputs
   (@@ (grove build) cached-renderer-inputs))
+(define asset-pipeline-name
+  (@@ (grove pipeline) asset-pipeline-name))
 
 (define-record-type <project-input>
   (make-project-input path value)
