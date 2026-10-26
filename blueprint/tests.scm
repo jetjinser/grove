@@ -108,7 +108,7 @@
     "unit/forester/project.scm"
     "unit/forester/render.scm"
     "unit/forester/render-golden.scm"
-    "unit/forester/derived.scm"
+    "unit/forester/output-renderers.scm"
     "unit/forester/queries.scm"
     "unit/forester/relations.scm"
     "unit/forester/site.scm"

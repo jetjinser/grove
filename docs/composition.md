@@ -22,8 +22,8 @@ justify a distinct type.
 | Content transform | ordinary procedure: document → document | `compose-content-transforms` applies procedures left to right; `identity` is the unit | `transform-document` checks the input and result document |
 | Render rules | typed map from content kind to procedure | `compose-render-rules` layers an overlay over a base; `next` explicitly reaches the fallback | HTML, text, and gemtext interpreters |
 | HTML presentation | typed product of style, rules, head, navigation, and page fragments | `compose-html-presentations` combines each field according to its own law | HTML renderer |
-| Derived artifacts | ordered list of typed artifact producers | ordinary list operations such as `append` | `render-derived-artifacts` |
-| Render context | typed wrapper around an association list | `render-context-with` overlays keys; present `#f` remains distinct from absence | rules, renderers, and derived artifacts |
+| Site outputs | ordinary renderer procedures or cached renderer values | ordered renderer list | project build |
+| Render context | typed wrapper around an association list | `render-context-with` overlays keys; present `#f` remains distinct from absence | rules and renderers |
 | Asset pipelines | typed producer with name, version, inputs, and procedure | ordered independent producers; each producer may emit several artifacts | build pipeline with content-addressed caching |
 
 An HTML presentation is a product of distinct composition laws: styles and

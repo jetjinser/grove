@@ -6,10 +6,12 @@
              (ice-9 textual-ports)
              (forester browse)
              (forester input scribble)
-             (forester render derived)
+             (forester render graph)
              (forester render gemtext)
              (forester render html)
              (forester render site)
+             (forester render rss)
+             (forester render sitemap)
              (grove render static)
              (forester render text)
              (forester project new)
@@ -70,25 +72,23 @@
     #:read-page (make-page-reader read-document)
     #:analyze make-forest
     #:renderers
-    (list (make-html-renderer
-            #:options
-            (make-html-options
-              #:presentation (make-html-presentation #:style notes-style)
-              #:routes notes-routes
-              #:settings notes-settings))
-          (make-text-renderer
-            #:options
-            (make-text-options
-              #:prefix "text"
-              #:routes notes-text-routes))
-          (make-gemtext-renderer
-            #:options (make-gemtext-options #:prefix "gemini"))
-          (make-static-assets-renderer
-            #:source-directory (string-append examples-directory "/static")))
-    #:derived
-    (list (rss-derived #:settings notes-settings #:routes notes-routes)
-          (sitemap-derived #:settings notes-settings #:routes notes-routes)
-          (graph-derived #:path "forest-graph.scm"))
+    (append
+      (list (make-html-renderer
+              #:options
+              (make-html-options
+                #:presentation (make-html-presentation #:style notes-style)
+                #:routes notes-routes
+                #:settings notes-settings))
+            (make-text-renderer
+              #:options
+              (make-text-options #:prefix "text" #:routes notes-text-routes))
+            (make-gemtext-renderer
+              #:options (make-gemtext-options #:prefix "gemini"))
+            (make-static-assets-renderer
+              #:source-directory (string-append examples-directory "/static")))
+      (list (make-rss-renderer #:settings notes-settings #:routes notes-routes)
+            (make-sitemap-renderer #:settings notes-settings #:routes notes-routes)
+            (make-graph-renderer #:path "forest-graph.scm")))
     #:browse (make-forest-browser)
     #:output-directory output-directory))
 

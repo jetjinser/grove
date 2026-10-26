@@ -13,8 +13,8 @@
             make-site-render-context))
 
 ;; Each renderer entry point builds a site-level context for one render pass;
-;; page-level values are derived from it with render-context-with. Projects may
-;; separately provide a context builder for derived artifacts.
+;; page-level values are derived from it with render-context-with. Custom
+;; renderers can use the same helper when they need a site render context.
 
 (define (translation-groups pages)
   (let ((groups (make-hash-table)))

@@ -19,7 +19,7 @@ This is the shortest path from “I want to change X” to the right Grove API.
 | tree headings or the table of contents | page-specific presentation data | `make-html-presentation #:title-decorations` |
 | locale, messages, or date formatting | renderer options | `make-html-options #:locale/#:messages` |
 | output paths | routes | `make-html-routes`, `make-text-routes`, `#:prefix` |
-| a site-wide sitemap, feed, or graph projection | derived artifacts | Forester: `make-forester-project #:derived`; general sites: `make-site-project #:derived` |
+| a site-wide sitemap, feed, or graph projection | renderers | Forester: `make-forester-project #:additional-renderers`; general sites: `make-site-project #:renderers` |
 | content before rendering | content transforms | `make-site-project #:transforms` |
 | copy a directory of static files | a renderer | `make-static-assets-renderer` |
 | generate files from declared inputs with an external tool | an asset pipeline | `#:pipelines` |
@@ -33,23 +33,24 @@ about *the environment of a render pass*, use a context.  If it is about
 *reusable output policy*, use options or presentation.  If it is about
 *rewriting content*, use a transform.
 
-## Add a derived site artifact
+## Add a site output
 
-For a Forester project, pass derived artifacts directly and keep the standard
-HTML output:
+For a Forester project, add projection renderers and keep the standard HTML
+output:
 
 ```scheme
 (use-modules (forester project)
-             (forester render derived))
+             (forester render graph))
 
 (make-forester-project
   #:home "hello"
-  #:derived (list (graph-derived #:path "forest-graph.scm")))
+  #:additional-renderers
+  (list (make-graph-renderer #:path "forest-graph.scm")))
 ```
 
-Derived artifacts run against the analyzed forest and participate in Grove's
-renderer cache. Use `make-site-project #:derived` when building a non-Forester
-site or when you need lower-level site configuration.
+Projection renderers run against the analyzed forest and participate in
+Grove's renderer cache. Use `make-site-project #:renderers` when building a
+non-Forester site or when you need lower-level site configuration.
 
 ## Add output from an external tool
 
@@ -137,7 +138,7 @@ correctly. See [project.md](project.md#dependencies-and-caching).
 | --- | --- | --- |
 | lifetime | configuration snapshot | one render pass |
 | shape | typed record; list and string inputs are copied | symbol alist with typed accessors |
-| read by | renderer entry points | rules and derived artifacts |
+| read by | renderer entry points | rules and custom renderers |
 | examples | style, rules, presentation, routes | forest, page, locale, messages |
 
 Use `make-html-options` / `make-text-options` / `make-gemtext-options` for
@@ -177,9 +178,9 @@ for project-defined keys.
 
 ```scheme
 (make-site-project
-  #:derived
-  (list (sitemap-derived #:routes routes)
-        (rss-derived #:routes routes))
+  #:renderers
+  (list (make-sitemap-renderer #:routes routes)
+        (make-rss-renderer #:routes routes))
   #:output-directory "build")
 ```
 
@@ -221,6 +222,6 @@ the value again.
 
 - [renderer-rules.md](renderer-rules.md) — rules, composition, `next`.
 - [render-context.md](render-context.md) — contexts and the four context kinds.
-- [derived-artifacts.md](derived-artifacts.md) — sitemap, RSS, graph.
+- [site-outputs.md](site-outputs.md) — sitemap, RSS, graph, and renderer composition.
 - [project.md](project.md) — project options, cache, CLI.
 - [composition.md](composition.md) — the algebra behind the layers.

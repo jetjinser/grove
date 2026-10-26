@@ -16,7 +16,7 @@ the work; drop lower only when you need to replace part of its behavior.
 | Build a site from page documents | `(grove project site)` → `make-site-project` | the input is not a page or the model is project-specific |
 | Build an arbitrary file-based model | `(grove project)` → `make-project` | custom collection, reading, analysis, artifacts, or execution options are needed |
 | Change how content renders | the format's renderer options and `(grove render rules)` | the project needs a new output format or a different build stage |
-| Add a separate generated file | `#:derived` for a site projection; `#:pipelines` for tool-driven outputs | the project needs to own the full build lifecycle |
+| Add a model-derived output | a renderer in `#:additional-renderers` or `#:renderers` | the output depends on declared files or an external tool; use `#:pipelines` |
 | Write or extend math | `(grove math formula)` for formula text; `(grove math semantic)` for typed values; `(grove math notation)` for display layout | code needs to inspect reports, compose passes, or query rule relations |
 
 `make-forester-project` supplies the normal reader, forest analysis, default
@@ -34,11 +34,30 @@ inputs or configuration Grove cannot see through the model and tracked files.
 inside an existing renderer. See the [customization guide](customizing.md) for
 how these layers compose.
 
-The modules under `(grove private ...)` and `(forester private ...)` are
-implementation support for Grove and its bundled formats. Their bindings may
-change with those implementations. Public content interpreters accept render
-rules and context; stock renderers use private dispatch details for tree
-traversal and format-specific behavior.
+## API layers
+
+The modules form three user-facing layers rather than one umbrella module:
+
+- **Project entry points** provide defaults: `(forester project)` for the
+  standard Forester site, `(grove project site)` for custom page-based sites,
+  and `(grove project)` for arbitrary models.
+- **Composition points** are the intended extension seams: renderer
+  procedures, render rules, content transforms, Scribble modules, relations,
+  and asset pipelines. They use ordinary Scheme procedures and lists unless a
+  typed value adds validation or meaning.
+- **Domain modules** expose the useful pieces of a subsystem independently.
+  Math Formula is its writing facade; rule, proof, audit, and pass modules are
+  lower-level interfaces for projects building their own workflows.
+
+The `(grove private ...)` and `(forester private ...)` modules are internal.
+Public domain modules remain available for direct composition, but their
+presence does not make every low-level binding a recommended starting point.
+This API map is the supported route from a user task to the narrowest useful
+layer.
+
+Private bindings may change with their implementations. Public content
+interpreters accept render rules and context; stock renderers use private
+dispatch details for tree traversal and format-specific behavior.
 
 For math, Formula is the writing-oriented facade and Semantic constructors
 are the typed extension surface. `(grove math pipeline)` and the rule, proof,

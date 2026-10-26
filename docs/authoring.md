@@ -107,7 +107,7 @@ consistently. It does not fetch metadata from the identifier.
 ```
 
 - `@bilingual` folds the non-reader lanes by default; `@bi` is the project
-  alias, and both use the project's `#:locale` as the default reader.
+  alias, and both use the project's `#:reader-locale` as the default reader.
 - Pass `#:reader "en"` to override the reader for one block, or
   `#:mode 'parallel` for side-by-side lanes.
 - Tags are canonicalized: prefer `zh-Hans`/`zh-Hant`; `zh-CN` and `zh-TW` are

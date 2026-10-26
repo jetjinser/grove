@@ -3,13 +3,10 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove project site)
-  #:use-module (grove build)
   #:use-module (grove i18n)
   #:use-module (grove content transform)
   #:use-module (grove project)
   #:use-module (grove private snapshot)
-  #:use-module (grove render context)
-  #:use-module (grove render derived)
   #:use-module (grove site)
   #:use-module (grove string-fun)
   #:use-module (srfi srfi-1)
@@ -30,15 +27,13 @@
                             (analyze (lambda (site) site))
                             (transforms '())
                             (renderers '())
-                            (derived '())
-                            (derived-context #f)
                             (pipelines '())
                             output-directory
                             (cache? #t)
                             (home #f)
                             (browse #f)
                             (create-source #f)
-                            (locale #f))
+                            (reader-locale #f))
   "Build a project from Grove site pages.
 
 READ-PAGE constructs each page. ANALYZE receives the assembled Site and may
@@ -51,11 +46,10 @@ return any project model. READ-PAGE and OUTPUT-DIRECTORY are required."
   (set! extra-sources (snapshot-data extra-sources))
   (set! transforms (snapshot-data transforms))
   (set! renderers (snapshot-data renderers))
-  (set! derived (snapshot-data derived))
   (set! pipelines (snapshot-data pipelines))
   (set! output-directory (snapshot-data output-directory))
   (set! home (snapshot-data home))
-  (set! locale (snapshot-data locale))
+  (set! reader-locale (snapshot-data reader-locale))
   (unless (non-empty-string? title)
     (error "site title must be a non-empty string" title))
   (unless (or (not description) (non-empty-string? description))
@@ -79,54 +73,18 @@ return any project model. READ-PAGE and OUTPUT-DIRECTORY are required."
     (error "site analyzer must be a procedure" analyze))
   (unless (and (list? transforms) (every procedure? transforms))
     (error "site transforms must be procedures" transforms))
-  (unless (and (list? derived) (every derived-artifact? derived))
-    (error "site derived values must be derived artifacts" derived))
-  (unless (or (not derived-context) (procedure? derived-context))
-    (error "site derived context builder must be a procedure or #f"
-           derived-context))
   (unless (non-empty-string? output-directory)
     (error "site project requires an output directory" output-directory))
   (unless (or (not home) (non-empty-string? home))
     (error "site home must be a non-empty page ID or #f" home))
   (unless (or (not create-source) (procedure? create-source))
     (error "site source creator must be a procedure or #f" create-source))
-  (when locale
-    (unless (string? locale)
-      (error "site locale must be a tag or #f" locale))
-    (make-locale locale))
-  (let* ((locale-tag (and locale (locale-tag (make-locale locale))))
-         (build-derived-context
-           (or derived-context
-               (lambda (forest)
-                 (make-render-context #:forest forest))))
-         (context-forest #f)
-         (context-value #f)
-         (context-for
-           (lambda (forest)
-             (if (and context-forest (eq? context-forest forest))
-                 context-value
-                 (let ((value (build-derived-context forest)))
-                   (set! context-forest forest)
-                   (set! context-value value)
-                   value))))
-         (derived-renderer
-           (and (pair? derived)
-                (make-cached-renderer
-                  (lambda (forest)
-                    (render-derived-artifacts derived
-                                              (context-for forest)
-                                              forest))
-                  #:cache? cache?
-                  #:configuration
-                  (lambda (forest)
-                    (append
-                      (list 'derived (map derived-artifact-name derived))
-                      (append-map
-                        (lambda (artifact)
-                          ((derived-artifact-configuration artifact)
-                           (context-for forest)
-                           forest))
-                        derived)))))))
+  (when reader-locale
+    (unless (string? reader-locale)
+      (error "site reader locale must be a tag or #f" reader-locale))
+    (make-locale reader-locale))
+  (let ((locale-tag (and reader-locale
+                         (locale-tag (make-locale reader-locale)))))
     (make-project
       #:source-directory source-directory
       #:source-filter source-filter
@@ -161,9 +119,7 @@ return any project model. READ-PAGE and OUTPUT-DIRECTORY are required."
                (site (make-site pages #:title title #:description description
                                 #:sources sources #:home home)))
           (analyze site)))
-      #:renderers (if derived-renderer
-                      (append renderers (list derived-renderer))
-                      renderers)
+      #:renderers renderers
       #:pipelines pipelines
       #:output-directory output-directory
       #:cache? cache?

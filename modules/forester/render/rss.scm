@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester render rss)
+  #:use-module (grove build)
   #:use-module (forester render site)
   #:use-module (forester site)
   #:use-module (forester private web)
@@ -16,7 +17,8 @@
   #:use-module (srfi srfi-19)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (render-rss))
+  #:export (render-rss
+            make-rss-renderer))
 
 (define content->text/internal
   (@@ (grove render text) content->text/internal))
@@ -155,3 +157,27 @@
              (rss-document site home-url items stylesheet-url stylesheet-type
                            language))))
     (list (make-artifact feed-path content (source-paths forest)))))
+
+(define* (make-rss-renderer #:key (settings #f) (site-url #f)
+                               (feed-path "feed.xml")
+                               (routes (make-html-routes #:home-page "index"))
+                               stylesheet-url
+                               (stylesheet-type "text/xsl")
+                               (language
+                                 (and (site-settings? settings)
+                                      (site-settings-default-locale settings))))
+  (unless (or (not settings) (site-settings? settings))
+    (error "RSS settings must be site settings or #f" settings))
+  (let* ((site-url (or site-url
+                       (and settings (site-settings-site-url settings))))
+         (configuration
+           (lambda (forest)
+             (list 'rss feed-path site-url stylesheet-url stylesheet-type
+                   language (html-index-url routes)
+                   (html-route-table routes (map site-page-id (pages forest)))))))
+    (make-cached-renderer
+      (lambda (forest)
+        (render-rss forest #:site-url site-url #:feed-path feed-path
+                    #:routes routes #:stylesheet-url stylesheet-url
+                    #:stylesheet-type stylesheet-type #:language language))
+      #:configuration configuration)))

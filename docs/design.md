@@ -50,15 +50,15 @@ registered as callbacks.
 [Render context](render-context.md) defines the four context layers and their
 boundaries.
 
-## Derived artifacts
+## Site outputs
 
-[Derived artifacts](derived-artifacts.md) defines the projection layer for
+[Site outputs](site-outputs.md) defines the renderer projection layer for
 sitemap, RSS, and graph.
 
 ## Composition model
 
 [Composition model](composition.md) records the composition laws used by
-content transforms, renderer rules, presentations, contexts, derived artifacts,
+content transforms, renderer rules, presentations, contexts, site outputs,
 and asset pipelines.
 
 ## Resource identity

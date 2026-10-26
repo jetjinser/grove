@@ -12,8 +12,7 @@
   #:use-module (forester input scribble)
   #:use-module (forester relations)
   #:use-module (forester render gemtext)
-  #:use-module (forester render derived)
-  #:use-module (forester render context)
+  #:use-module (forester render graph)
   #:use-module (forester render html)
   #:use-module (forester render rss)
   #:use-module (forester render sitemap)
@@ -124,7 +123,8 @@
                  (make-scribble-document-reader))
                #:analyze make-forest
                #:renderers
-               (list (make-html-renderer
+               (append
+                (list (make-html-renderer
                        #:options
                        (make-html-options
                          #:routes
@@ -137,9 +137,8 @@
                        #:options (make-text-options #:prefix "text"))
                      (make-gemtext-renderer
                        #:options (make-gemtext-options #:prefix "gemini")))
-               #:derived
-               (list
-                 (rss-derived
+                (list
+                 (make-rss-renderer
                    #:site-url "https://notes.example"
                    #:routes
                    (make-html-routes
@@ -147,14 +146,14 @@
                      #:page-path
                      (lambda (id)
                        (string-append "notes/" id ".html"))))
-                 (sitemap-derived
+                 (make-sitemap-renderer
                    #:site-url "https://notes.example"
                    #:routes
                    (make-html-routes
                      #:home-page "algebra"
                      #:page-path
                      (lambda (id)
-                       (string-append "notes/" id ".html")))))
+                       (string-append "notes/" id ".html"))))))
                  #:output-directory output-directory))
            (artifacts (build-project project))
            (paths (map artifact-path artifacts))
@@ -709,16 +708,10 @@
                      #:collect-sources (lambda () '("virtual.plant"))
                      #:read-page (lambda (_source) page)
                      #:analyze make-forest
-                     #:derived-context
-                     (lambda (forest)
-                       (make-site-render-context
-                         forest
-                         #:settings settings
-                         #:locale "en"))
-                     #:derived
-                     (list (sitemap-derived #:settings settings #:routes routes)
-                           (rss-derived #:settings settings #:routes routes)
-                           (graph-derived))
+                     #:renderers
+                     (list (make-sitemap-renderer #:settings settings #:routes routes)
+                           (make-rss-renderer #:settings settings #:routes routes)
+                           (make-graph-renderer))
                      #:output-directory (string-append root "/output"))))
              (settings
                (make-site-settings
@@ -731,10 +724,10 @@
                               (string=? (artifact-path artifact)
                                         "sitemap.xml"))
                             artifacts)))
-        (test-equal "project renders derived artifacts"
+        (test-equal "project runs output renderers"
           '("sitemap.xml" "feed.xml" "forest-graph.scm")
           (map artifact-path artifacts))
-        (test-assert "project derived artifacts use the project context"
+        (test-assert "projection renderers use shared settings"
           (string-contains (artifact-content sitemap)
                            "https://derived.example"))
         (let* ((updated-settings
@@ -750,13 +743,13 @@
                       (build-report-artifacts updated-report)))
                (updated-feed
                 (read-test-file (string-append root "/output/feed.xml"))))
-          (test-assert "changed shared settings invalidate derived artifacts"
+          (test-assert "changed settings invalidate projection renderers"
             (and (member "sitemap.xml" affected string=?)
                  (member "feed.xml" affected string=?)))
-          (test-assert "updated sitemap uses the changed shared settings"
+          (test-assert "updated sitemap uses its changed settings"
             (string-contains (artifact-content updated-sitemap)
                              "https://updated-derived.example"))
-          (test-assert "updated feed uses the changed shared settings"
+          (test-assert "updated feed uses its changed settings"
             (and (string-contains updated-feed
                                   "https://updated-derived.example")
                  (string-contains updated-feed
@@ -802,16 +795,16 @@
                  #:source-directory (string-append root "/plants")
                  #:output-directory output
                  #:pipelines (list pipeline)
-                 #:derived (list (graph-derived))))
+                 #:additional-renderers (list (make-graph-renderer))))
              (text-project
                (make-forester-project
                  #:home "hello"
                  #:source-directory (string-append root "/plants")
                  #:output-directory text-output
                  #:html-options html-options
-                 #:additional-renderers (list (make-text-renderer))
-                 #:derived
-                 (list (sitemap-derived #:settings settings #:routes routes))))
+                 #:additional-renderers
+                 (list (make-text-renderer)
+                       (make-sitemap-renderer #:settings settings #:routes routes))))
              (text-artifacts (build-project text-project))
              (artifacts (build-project project))
              (text-html
@@ -826,7 +819,7 @@
                        string=?)
                (string=? "external result"
                  (read-test-file (string-append output "/assets/result.txt")))))
-        (test-assert "Forester projects add derived artifacts and keep default HTML"
+        (test-assert "Forester projects add peer renderers and keep default HTML"
           (and (member "index.html" (map artifact-path artifacts) string=?)
                (member "forest-graph.scm"
                        (map artifact-path artifacts)

@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester render graph)
+  #:use-module (grove build)
   #:use-module (forester site)
   #:use-module ((forester composition) #:prefix composition:)
   #:use-module (grove output)
@@ -10,7 +11,8 @@
   #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-1)
   #:export (site->graph
-            render-graph))
+            render-graph
+            make-graph-renderer))
 
 
 
@@ -64,3 +66,8 @@
               (write (site->graph forest) port)
               (newline port)))))
     (list (make-artifact path content (source-paths forest)))))
+
+(define* (make-graph-renderer #:key (path "forest-graph.scm"))
+  (make-cached-renderer
+    (lambda (forest) (render-graph forest #:path path))
+    #:configuration (list 'graph path)))

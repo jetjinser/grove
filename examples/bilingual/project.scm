@@ -62,7 +62,7 @@
     #:create-source (make-forester-source-creator
                       #:source-directory source-directory
                       #:default-prefix "bi")
-    #:locale "en"
+    #:reader-locale "en"
     #:title "Bilingual Notes"
     #:description "One idea in two languages, shown side by side."
     #:home "hello"

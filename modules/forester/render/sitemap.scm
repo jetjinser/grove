@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester render sitemap)
+  #:use-module (grove build)
   #:use-module (forester private date)
   #:use-module (forester private web)
   #:use-module (forester render context)
@@ -13,7 +14,8 @@
   #:use-module (grove site)
   #:use-module (sxml simple)
   #:use-module (srfi srfi-1)
-  #:export (render-sitemap))
+  #:export (render-sitemap
+            make-sitemap-renderer))
 
 (define (page-lastmod page)
   (let ((updated (assq-ref (site-page-metadata page) 'updated)))
@@ -121,3 +123,26 @@
          (content (sitemap-document base routes route-table groups
                                     default-locale (pages forest))))
     (list (make-artifact sitemap-path content (source-paths forest)))))
+
+(define* (make-sitemap-renderer #:key (settings #f) (site-url #f)
+                                  (sitemap-path "sitemap.xml")
+                                  (routes (make-html-routes #:home-page "index"))
+                                  (default-locale
+                                    (and (site-settings? settings)
+                                         (site-settings-default-locale
+                                           settings))))
+  (unless (or (not settings) (site-settings? settings))
+    (error "sitemap settings must be site settings or #f" settings))
+  (let* ((site-url (or site-url
+                       (and settings (site-settings-site-url settings))))
+         (configuration
+           (lambda (forest)
+             (list 'sitemap sitemap-path site-url default-locale
+                   (html-index-url routes)
+                   (html-route-table routes (map site-page-id (pages forest)))))))
+    (make-cached-renderer
+      (lambda (forest)
+        (render-sitemap forest #:site-url site-url
+                        #:sitemap-path sitemap-path #:routes routes
+                        #:default-locale default-locale))
+      #:configuration configuration)))
