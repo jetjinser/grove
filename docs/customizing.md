@@ -22,7 +22,7 @@ This is the shortest path from “I want to change X” to the right Grove API.
 | sitemap, feed, or graph | derived artifacts | `make-site-options #:derived` |
 | content before rendering | content transforms | `make-site-options #:transforms` |
 | static files or generated assets | a renderer or pipeline | `make-static-assets-renderer`, `#:pipelines` |
-| a new output format | a renderer | `(lambda (forest) ...)` + `make-cached-renderer` |
+| a new site output format | a renderer returning artifacts | `#:renderers` on `make-site-options` |
 | build/cache behavior | project options | `make-site-options #:cache?`, `#:output-directory` |
 
 If the change is about *how one node is interpreted*, use rules.  If it is
@@ -45,6 +45,26 @@ All of them take one options value:
 (render-html forest #:options (make-html-options ...))
 (make-html-renderer #:options (make-html-options ...))
 ```
+
+### Write a renderer
+
+A site renderer is an ordinary procedure from the analyzed site model to a list
+of artifacts. Artifact paths are relative to the project's output directory.
+For example, a text summary can be added alongside the built-in renderers:
+
+```scheme
+(use-modules (grove output))
+
+(define (summary-renderer forest)
+  ;; forest->summary is supplied by the project.
+  (list (make-artifact "summary.txt" (forest->summary forest))))
+```
+
+Pass `summary-renderer` in `make-site-options`'s `#:renderers` list. Grove
+wraps plain renderer procedures for caching. Use `make-cached-renderer` when
+the renderer reads inputs outside the model or needs an explicit cache
+configuration; declare those inputs there so Grove can invalidate its output
+correctly. See [project.md](project.md#dependencies-and-caching).
 
 ## Options vs context
 
