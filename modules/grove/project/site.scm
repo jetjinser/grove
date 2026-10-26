@@ -40,9 +40,10 @@
                             (home #f)
                             (browse #f)
                             (locale #f))
-  "Build a Forester site project.
+  "Build a project from Grove site pages.
 
-READ-PAGE and OUTPUT-DIRECTORY are required."
+READ-PAGE constructs each page. ANALYZE receives the assembled Site and may
+return any project model. READ-PAGE and OUTPUT-DIRECTORY are required."
   ;;     These values are captured by the project callbacks below. Copy their
   ;;     declarative containers now, while keeping caller procedures shared.
   (set! title (snapshot-data title))
