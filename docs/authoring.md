@@ -26,7 +26,7 @@ Grove owns versus what a project supplies. Commands use `@name{body}` or
 
 | Command | Meaning |
 | --- | --- |
-| `@title{...}` | Page or section title; required for a page and for every subtree. |
+| `@title{...}` | Page, section, or subtree title; each requires exactly one direct title. |
 | `@summary{...}` | Description used by `<meta>`, Open Graph, and feeds. |
 | `@og-image{assets/cover.png}` | Open Graph image; external URLs pass through, relative paths resolve against the site URL. |
 | `@og-image-alt{...}` | Alternative text for `@og-image`; defaults to the page title. |
