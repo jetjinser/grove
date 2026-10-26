@@ -27,7 +27,12 @@ same semantic operations for text input.
 Import `(grove math semantic)`, `(grove math formula)`, and
 `(grove math notation)` with the respective prefixes. The
 [math-derivations example](../examples/showcases/math-derivations/project.scm)
-shows executable usage.
+shows executable usage. For direct control, `(grove math pipeline)` runs the
+same calculations on Semantic values and returns structured reports with
+results, diagnostics, derivations, and audit evidence; its checkers return
+structured verification results. Formula is the convenient text-reading and
+article-writing facade; use the pipeline when code needs to inspect or compose
+those results.
 
 Formula text accepts identifiers, integer numerals, function calls,
 parentheses, unary minus, powers, equations, and the operators `+`, `-`, `*`,
