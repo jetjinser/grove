@@ -63,21 +63,12 @@
       content composition anchors term-mentions queries)
     (map car (reverse phases))))
 
-(define (document-paragraph-texts document)
-  (map (lambda (paragraph)
-         (content-text-value
-           (car (content-element-children paragraph))))
-       (filter (lambda (element)
-                 (and (content-element? element)
-                      (eq? (content-element-kind element) 'paragraph)))
-               (content-document-children document))))
-
 (test-error "HTML routes reject an empty home page ID" #t
   (make-html-routes #:home-page ""))
 
-(let* ((document (evaluate-document "@lipsum{}"))
-       (page (make-site-page "lipsum" "Lipsum" document))
-       (forest (make-forest (make-site (list page) #:home "lipsum")))
+(let* ((document (evaluate-document "@paragraph{Home page.}"))
+       (page (make-site-page "home" "Home" document))
+       (forest (make-forest (make-site (list page) #:home "home")))
        (artifacts (render-html forest
                               #:options
                               (make-html-options
@@ -87,51 +78,15 @@
             (string=? "index.html" (artifact-path artifact)))
           artifacts)))
 
-(let* ((document (evaluate-document "@lipsum{}"))
-       (page (make-site-page "lipsum" "Lipsum" document))
-       (forest (make-forest (make-site (list page))))
-       (paragraph (car (content-document-children document)))
-       (text (car (content-element-children paragraph)))
-       (source (content-text-source text)))
-  (test-equal "top-level @lipsum text becomes ordinary paragraphs"
-    150
-    (length (document-paragraph-texts document)))
-  (test-equal "@lipsum paragraphs use paragraph IR"
-    'paragraph
-    (content-element-kind paragraph))
-  (test-assert "@lipsum records its corpus as an IR source"
-    source)
-  (test-assert "@lipsum corpus participates in page cache dependencies"
-    (member source (page-source-paths forest page) string=?))
-  (test-assert "@lipsum provides the classic opening text"
-    (string-prefix?
-      "Lorem ipsum dolor sit amet, consectetuer adipiscing elit."
-      (content-text-value text))))
-
-(let* ((document (evaluate-document "@lipsum[1-3]{}"))
-       (paragraphs (document-paragraph-texts document)))
-  (test-assert "@lipsum selects a paragraph range"
-    (and (= (length paragraphs) 3)
-         (string-contains (car paragraphs) "Curabitur dictum gravida mauris.")
-         (string-prefix? "Nam dui ligula" (cadr paragraphs))
-         (string-prefix? "Nulla malesuada porttitor diam"
-                         (caddr paragraphs)))))
-
-(test-assert "@lipsum selects a single paragraph"
-  (string-prefix?
-    "Nam dui ligula"
-    (car (document-paragraph-texts
-           (evaluate-document "@lipsum[2]{}")))))
-
-(test-error "@lipsum rejects reversed paragraph ranges" #t
-  (evaluate-document "@lipsum[3-2]{}"))
-
-(test-error "@lipsum rejects ranges beyond its corpus" #t
-  (evaluate-document "@lipsum[1-151]{}"))
-
-(test-equal "@lipsum without a range returns all 150 paragraphs"
-  (document-paragraph-texts (evaluate-document "@lipsum[1-150]{}"))
-  (document-paragraph-texts (evaluate-document "@lipsum{}")))
+(let* ((body
+         (make-content-element 'paragraph
+           (list (make-content-text "Authored body." "notes/body.scm"))
+           #:flow-kind 'block))
+       (page (make-site-page "authored" "Authored"
+               (make-content-document (list body))))
+       (forest (make-forest (make-site (list page)))))
+  (test-assert "content text sources participate in page dependencies"
+    (member "notes/body.scm" (page-source-paths forest page) string=?)))
 
 (test-error "unresolved links fail site analysis" #t
   (make-forest

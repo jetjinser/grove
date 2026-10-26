@@ -395,25 +395,18 @@
   (let ((document
           (evaluate-document
             env
-            "@use-modules[(forester commands)]\n@(map paragraph (text-paragraphs (lipsum \"1-3\")))")))
+            "@use-modules[(forester commands)]\n@(map paragraph '(\"First paragraph.\" \"Second paragraph.\" \"Third paragraph.\"))")))
     (let ((paragraphs (filter content-element?
                               (content-document-children document))))
     (test-equal "Scheme expression lists splice into the document flow"
       '(paragraph paragraph paragraph)
       (map content-element-kind paragraphs))
     (test-assert "commands can be mapped over text without constructing IR"
-      (and (string-prefix?
-             "Lorem ipsum"
-             (content-verbatim-string
-               (content-element-children (car paragraphs))))
-           (string-prefix?
-             "Nam dui ligula"
-             (content-verbatim-string
-               (content-element-children (cadr paragraphs))))
-           (string-prefix?
-             "Nulla malesuada porttitor diam"
-             (content-verbatim-string
-               (content-element-children (caddr paragraphs)))))))))
+      (equal? '("First paragraph." "Second paragraph." "Third paragraph.")
+        (map (lambda (paragraph)
+               (content-verbatim-string
+                 (content-element-children paragraph)))
+             paragraphs))))))
 
 (let ((env (default-environment scribble)))
   (let ((document

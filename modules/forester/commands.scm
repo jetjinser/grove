@@ -8,7 +8,6 @@
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-26) ; cut(e)
   #:use-module (ice-9 match)
-  #:use-module (ice-9 rdelim)
   #:use-module (ice-9 string-fun)
   #:use-module (ice-9 optargs)
   #:use-module (grove ir)
@@ -29,50 +28,6 @@
 (define-public (og-image-alt . body)
   (make-content-element 'og-image-alt body #:flow-kind 'block))
 
-
-(define lipsum-source
-  (search-path %load-path "forester/data/lipsum-la.txt"))
-
-(define +lipsum-paragraphs+
-  (let* ([text       (include-text "forester/data/lipsum-la.txt")]
-         [normalized (string-replace-substring text "\n\n" "\x1e")]
-         [raw-paras  (string-split normalized #\x1e)])
-    (map (lambda (p) (string-join (string-tokenize p) " "))
-         raw-paras)))
-
-(define (lipsum-selector->range selector)
-  (define text
-    (cond [(string? selector) selector]
-          [(symbol? selector) (symbol->string selector)]
-          [(number? selector) (number->string selector)]
-          [else ""]))
-
-  (define range-pair
-    (match (map string->number (string-split text #\-))
-      [((? integer? a))                (cons a a)]
-      [((? integer? a) (? integer? b)) (cons a b)]
-      [_                               (error "Invalid Lipsum selector format"
-                                              selector)]))
-
-  (match-let ([(a . b) range-pair]
-              [total   (length +lipsum-paragraphs+)])
-    (unless (and (> a 0) (>= b a) (<= b total))
-      (error "Lipsum paragraph range out of bounds" selector total)))
-
-  range-pair)
-
-(define-public (lipsum . options)
-  (define range
-    (match options
-      [()  (cons 1 (length +lipsum-paragraphs+))]
-      [(s) (lipsum-selector->range s)]
-      [_   (error "Lipsum accepts at most one paragraph range selector" options)]))
-
-  (match-let* ([(a . b)  range]
-               [count    (+ (- b a) 1)]
-               [selected (take (drop +lipsum-paragraphs+ (- a 1)) count)]
-               [text     (string-join selected "\n\n")])
-    (make-content-text text lipsum-source)))
 
 (define-public (published date)
   (make-content-element 'published (list date) #:flow-kind 'block))

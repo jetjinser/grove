@@ -94,10 +94,6 @@
       forester-source-files)
     (list
       (template-file
-        (inputs "forester/data/lipsum-la.txt")
-        (outputs "forester/data/lipsum-la.txt")
-        (install-location #%~(string-append #%?guile-module-dir "/forester/data")))
-      (template-file
         (inputs "forester/style/default.css")
         (outputs "forester/style/default.css")
         (install-location #%~(string-append #%?guile-module-dir "/forester/style")))
