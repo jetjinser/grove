@@ -293,7 +293,11 @@
   (test-assert "text rules with an id stay cacheable"
     (cached-renderer-cache?
       (make-text-renderer
-        #:options (make-text-options #:rules rules #:rules-id 'v1)))))
+        #:options (make-text-options #:rules rules)
+        #:rules-id 'v1)))
+  (test-assert "text renderer can disable its cache explicitly"
+    (not (cached-renderer-cache?
+           (make-text-renderer #:cache? #f)))))
 
 (let ((rules (make-render-rules
                (list (cons 'paragraph
@@ -309,8 +313,10 @@
       (make-html-renderer
         #:options
         (make-html-options
-          #:presentation (make-html-presentation #:rules rules)
-          #:rules-id 'v1))))
+          #:presentation (make-html-presentation #:rules rules))
+        #:rules-id 'v1)))
+  (test-assert "HTML renderer can disable its cache explicitly"
+    (not (cached-renderer-cache? (make-html-renderer #:cache? #f))))
   (test-assert "custom gemtext rules disable caching without a rules id"
     (not (cached-renderer-cache?
            (make-gemtext-renderer
@@ -318,7 +324,10 @@
   (test-assert "gemtext rules with an id stay cacheable"
     (cached-renderer-cache?
       (make-gemtext-renderer
-        #:options (make-gemtext-options #:rules rules #:rules-id 'v1)))))
+        #:options (make-gemtext-options #:rules rules)
+        #:rules-id 'v1)))
+  (test-assert "Gemtext renderer can disable its cache explicitly"
+    (not (cached-renderer-cache? (make-gemtext-renderer #:cache? #f)))))
 
 (test-assert "declarative HTML presentation remains cacheable"
   (cached-renderer-cache?
@@ -338,8 +347,8 @@
             forest
             (list (make-html-renderer
                     #:options
-                    (make-html-options #:messages messages
-                                       #:rules-id 'message-test))
+                    (make-html-options #:messages messages)
+                    #:rules-id 'message-test)
                   (make-text-renderer
                     #:options (make-text-options #:messages messages))
                   (make-gemtext-renderer
@@ -355,8 +364,12 @@
   (make-html-options #:routes #f))
 (test-error "text options reject invalid backmatter at construction" #t
   (make-text-options #:backmatter '(context context)))
-(test-error "Gemtext options reject invalid cache flags at construction" #t
-  (make-gemtext-options #:cache? 'yes))
+(test-error "Gemtext renderer rejects invalid cache flags at construction" #t
+  (make-gemtext-renderer #:cache? 'yes))
+(test-error "HTML renderer rejects invalid cache flags at construction" #t
+  (make-html-renderer #:cache? 'yes))
+(test-error "text renderer rejects invalid cache flags at construction" #t
+  (make-text-renderer #:cache? 'yes))
 (test-error "renderer options reject invalid message catalogs at construction" #t
   (make-text-options #:messages 'not-a-catalog))
 (test-error "HTML options reject malformed root attributes at construction" #t
@@ -371,12 +384,12 @@
   (make-html-options #:default-locale ""))
 (test-error "HTML options reject invalid Open Graph image values" #t
   (make-html-options #:og-image 42))
-(test-error "HTML options reject unstable rules IDs" #t
-  (make-html-options #:rules-id '(unstable value)))
-(test-error "text options reject unstable rules IDs" #t
-  (make-text-options #:rules-id '(unstable value)))
-(test-error "Gemtext options reject unstable rules IDs" #t
-  (make-gemtext-options #:rules-id '(unstable value)))
+(test-error "HTML renderer rejects unstable rules IDs" #t
+  (make-html-renderer #:rules-id '(unstable value)))
+(test-error "text renderer rejects unstable rules IDs" #t
+  (make-text-renderer #:rules-id '(unstable value)))
+(test-error "Gemtext renderer rejects unstable rules IDs" #t
+  (make-gemtext-renderer #:rules-id '(unstable value)))
 (test-error "site->html rejects a value that is not HTML options" #t
   (site->html #f #:options #f))
 (test-error "render-html rejects a value that is not HTML options" #t

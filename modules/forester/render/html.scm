@@ -1022,7 +1022,7 @@ to the lane, and an in-place numbered marker links to it."
                       article? backmatter-details? html-attributes
                       side-lane presentation locale messages default-locale
                       site-url og-image og-image-alt hreflang?
-                      language-switcher? rules-id cache?)
+                      language-switcher?)
   html-options?
   (highlighters html-options-highlighters)
   (routes html-options-routes)
@@ -1041,9 +1041,7 @@ to the lane, and an in-place numbered marker links to it."
   (og-image html-options-og-image)
   (og-image-alt html-options-og-image-alt)
   (hreflang? html-options-hreflang?)
-  (language-switcher? html-options-language-switcher?)
-  (rules-id html-options-rules-id)
-  (cache? html-options-cache?))
+  (language-switcher? html-options-language-switcher?))
 
 (define (valid-html-attributes? attributes)
   (and (list? attributes)
@@ -1090,9 +1088,7 @@ to the lane, and an in-place numbered marker links to it."
                             (og-image #f)
                             (og-image-alt #f)
                             (hreflang? #t)
-                            (language-switcher? #t)
-                            (rules-id #f)
-                            (cache? #t))
+                            (language-switcher? #t))
   "Build the immutable HTML renderer configuration.
 
 PRESENTATION contains HTML style, element rules, and static site presentation data.
@@ -1107,7 +1103,6 @@ Entry points take this value with #:options."
     (validate-backmatter-sections backmatter)
     (check-reference-taxon-id reference-taxon-id)
     (validate-chrome-options locale messages)
-    (validate-rules-id rules-id)
     (unless (valid-html-attributes? html-attributes)
       (error "HTML root attributes must be unique symbol/string pairs"
              html-attributes))
@@ -1136,8 +1131,7 @@ Entry points take this value with #:options."
                  (boolean? article?)
                  (boolean? backmatter-details?)
                  (boolean? hreflang?)
-                 (boolean? language-switcher?)
-                 (boolean? cache?))
+                 (boolean? language-switcher?))
       (error "HTML options contain invalid renderer values"))
     (unless (or (not mathjax-src)
                 (and (non-empty-string? mathjax-src)
@@ -1152,7 +1146,7 @@ Entry points take this value with #:options."
                         article? backmatter-details? html-attributes
                         side-lane presentation locale messages
                         default-locale site-url og-image og-image-alt hreflang?
-                        language-switcher? rules-id cache?)))
+                        language-switcher?)))
 
 (define (make-html-render-context forest routes options)
   (make-site-render-context forest
@@ -1258,7 +1252,9 @@ Entry points take this value with #:options."
                  (page-source-paths forest page)))
              forest-pages
              (iota total 1))))))
-(define* (make-html-renderer #:key (options (make-html-options)))
+(define* (make-html-renderer #:key (options (make-html-options))
+                            (rules-id #f)
+                            (cache? #t))
     (let* ((_ (require-html-options options "make-html-renderer"))
           (presentation (html-options-presentation options))
           (presentation-data presentation)
@@ -1286,11 +1282,13 @@ Entry points take this value with #:options."
           (og-image-alt (html-options-og-image-alt options))
           (hreflang? (html-options-hreflang? options))
           (language-switcher? (html-options-language-switcher? options))
-          (rules-id (html-options-rules-id options))
           (effective-cache?
-            (and (html-options-cache? options)
+            (and cache?
                  (or (eq? rules empty-render-rules)
                      (and rules-id #t)))))
+      (validate-rules-id rules-id)
+      (unless (boolean? cache?)
+        (error "Forester HTML renderer cache option must be a boolean" cache?))
       (validate-backmatter-sections backmatter)
       (check-reference-taxon-id reference-taxon-id)
       (let ((render (lambda (forest)

@@ -203,7 +203,11 @@ derives the page context per page; rules receive it through `#:context`.
 
 Project rules override the default interpretation; no core codec knowledge is
 involved. Cached renderers disable caching when project rules are present unless
-the options carry a stable `#:rules-id` (a symbol or non-empty string). Declarative HTML presentation data is part of the
+their constructor receives a stable `#:rules-id` (a symbol or non-empty string).
+Pass `#:cache? #f` to `make-html-renderer`, `make-text-renderer`, or
+`make-gemtext-renderer` to disable renderer caching. These are cache controls,
+so they live on the cached renderer constructors rather than render options.
+Declarative HTML presentation data is part of the
 presentation and therefore part of its cache identity. This applies to HTML,
 text, and gemtext. Derived artifacts require a `#:configuration` procedure so
 their inputs are part of the cache identity.

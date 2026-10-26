@@ -313,8 +313,7 @@
 
 (define-record-type <gemtext-options>
   (%make-gemtext-options prefix routes backmatter
-                         reference-taxon-id locale messages rules rules-id
-                         cache?)
+                         reference-taxon-id locale messages rules)
   gemtext-options?
   (prefix gemtext-options-prefix)
   (routes gemtext-options-routes)
@@ -322,9 +321,7 @@
   (reference-taxon-id gemtext-options-reference-taxon-id)
   (locale gemtext-options-locale)
   (messages gemtext-options-messages)
-  (rules gemtext-options-rules)
-  (rules-id gemtext-options-rules-id)
-  (cache? gemtext-options-cache?))
+  (rules gemtext-options-rules))
 
 (define (require-gemtext-options options who)
   (unless (gemtext-options? options)
@@ -338,9 +335,7 @@
                                (reference-taxon-id default-reference-taxon-id)
                                (locale #f)
                                (messages default-message-catalog)
-                               (rules empty-render-rules)
-                               (rules-id #f)
-                               (cache? #t))
+                               (rules empty-render-rules))
   "Immutable configuration for the Forester Gemtext renderer."
   (unless (or (not prefix) (artifact-path? prefix))
     (error "Forester Gemtext prefix must be a relative artifact path or #f"
@@ -350,14 +345,10 @@
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
   (validate-chrome-options locale messages)
-  (validate-rules-id rules-id)
   (unless (render-rules? rules)
     (error "Forester Gemtext options require render rules" rules))
-  (unless (boolean? cache?)
-    (error "Forester Gemtext cache option must be a boolean" cache?))
   (%make-gemtext-options prefix routes backmatter
-                         reference-taxon-id locale messages rules rules-id
-                         cache?))
+                         reference-taxon-id locale messages rules))
 
 (define* (site->gemtext forest #:key (options (make-gemtext-options)))
   (let* ((_ (require-gemtext-options options "site->gemtext"))
@@ -420,7 +411,9 @@
                        (pages forest)))))
       (if prefix (prefix-artifacts prefix artifacts) artifacts)))))
 
-(define* (make-gemtext-renderer #:key (options (make-gemtext-options)))
+(define* (make-gemtext-renderer #:key (options (make-gemtext-options))
+                               (rules-id #f)
+                               (cache? #t))
   (let* ((_ (require-gemtext-options options "make-gemtext-renderer"))
          (prefix (gemtext-options-prefix options))
          (routes (gemtext-options-routes options))
@@ -429,11 +422,13 @@
          (locale (gemtext-options-locale options))
          (messages (gemtext-options-messages options))
          (rules (gemtext-options-rules options))
-         (rules-id (gemtext-options-rules-id options))
          (effective-cache?
-           (and (gemtext-options-cache? options)
+           (and cache?
                 (or (eq? rules empty-render-rules)
                     (and rules-id #t)))))
+  (validate-rules-id rules-id)
+  (unless (boolean? cache?)
+    (error "Forester Gemtext renderer cache option must be a boolean" cache?))
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
   (unless (text-routes? routes)

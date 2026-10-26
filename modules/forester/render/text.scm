@@ -290,8 +290,7 @@ HTML renderer so text and HTML address occurrences identically."
 
 (define-record-type <text-options>
   (%make-text-options prefix routes backmatter
-                      reference-taxon-id locale messages rules rules-id
-                      cache?)
+                      reference-taxon-id locale messages rules)
   text-options?
   (prefix text-options-prefix)
   (routes text-options-routes)
@@ -299,9 +298,7 @@ HTML renderer so text and HTML address occurrences identically."
   (reference-taxon-id text-options-reference-taxon-id)
   (locale text-options-locale)
   (messages text-options-messages)
-  (rules text-options-rules)
-  (rules-id text-options-rules-id)
-  (cache? text-options-cache?))
+  (rules text-options-rules))
 
 (define (require-text-options options who)
   (unless (text-options? options)
@@ -315,9 +312,7 @@ HTML renderer so text and HTML address occurrences identically."
                             (reference-taxon-id default-reference-taxon-id)
                             (locale #f)
                             (messages default-message-catalog)
-                            (rules empty-render-rules)
-                            (rules-id #f)
-                            (cache? #t))
+                            (rules empty-render-rules))
   "Immutable configuration for the Forester text renderer."
   (unless (or (not prefix) (artifact-path? prefix))
     (error "Forester text prefix must be a relative artifact path or #f" prefix))
@@ -326,14 +321,10 @@ HTML renderer so text and HTML address occurrences identically."
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
   (validate-chrome-options locale messages)
-  (validate-rules-id rules-id)
   (unless (render-rules? rules)
     (error "Forester text options require render rules" rules))
-  (unless (boolean? cache?)
-    (error "Forester text cache option must be a boolean" cache?))
   (%make-text-options prefix routes backmatter
-                      reference-taxon-id locale messages rules rules-id
-                      cache?))
+                      reference-taxon-id locale messages rules))
 
 (define* (site->text forest #:key (options (make-text-options)))
   (let* ((_ (require-text-options options "site->text"))
@@ -399,7 +390,9 @@ HTML renderer so text and HTML address occurrences identically."
                    (pages forest)))))
       (if prefix (prefix-artifacts prefix artifacts) artifacts)))))
 
-(define* (make-text-renderer #:key (options (make-text-options)))
+(define* (make-text-renderer #:key (options (make-text-options))
+                            (rules-id #f)
+                            (cache? #t))
   (let* ((_ (require-text-options options "make-text-renderer"))
          (prefix (text-options-prefix options))
          (routes (text-options-routes options))
@@ -407,9 +400,10 @@ HTML renderer so text and HTML address occurrences identically."
          (reference-taxon-id (text-options-reference-taxon-id options))
          (locale (text-options-locale options))
          (messages (text-options-messages options))
-         (rules (text-options-rules options))
-         (rules-id (text-options-rules-id options))
-         (cache? (text-options-cache? options)))
+         (rules (text-options-rules options)))
+  (validate-rules-id rules-id)
+  (unless (boolean? cache?)
+    (error "Forester text renderer cache option must be a boolean" cache?))
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
   (unless (or (not prefix) (artifact-path? prefix))
