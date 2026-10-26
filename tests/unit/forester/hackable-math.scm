@@ -19,6 +19,9 @@
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64))
 
+(define cached-renderer-procedure
+  (@@ (grove build) cached-renderer-procedure))
+
 (define environment (default-environment scribble))
 (eval '(use-modules (forester commands)
                     (examples hackable-math extension))

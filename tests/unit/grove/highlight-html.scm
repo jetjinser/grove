@@ -9,6 +9,15 @@
              (tests unit forester fixtures)
              (srfi srfi-1) (srfi srfi-13) (srfi srfi-64))
 
+(define cached-renderer-procedure
+  (@@ (grove build) cached-renderer-procedure))
+(define cached-renderer-render-changed
+  (@@ (grove build) cached-renderer-render-changed))
+(define cached-renderer-inputs
+  (@@ (grove build) cached-renderer-inputs))
+(define cached-renderer-configuration
+  (@@ (grove build) cached-renderer-configuration))
+
 (define grammar
   (or (getenv "GROVE_TEST_SCHEME_GRAMMAR")
       (car (highlighter-configuration (assq-ref (default-highlighters) 'scheme)))))

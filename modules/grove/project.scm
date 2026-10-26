@@ -57,6 +57,16 @@
 
 (define renderer-configurations
   (@@ (grove build) renderer-configurations))
+(define cached-renderer-cache?
+  (@@ (grove build) cached-renderer-cache?))
+(define cached-renderer-configuration
+  (@@ (grove build) cached-renderer-configuration))
+(define cached-renderer-procedure
+  (@@ (grove build) cached-renderer-procedure))
+(define cached-renderer-render-changed
+  (@@ (grove build) cached-renderer-render-changed))
+(define cached-renderer-inputs
+  (@@ (grove build) cached-renderer-inputs))
 
 (define-record-type <project-input>
   (make-project-input path value)

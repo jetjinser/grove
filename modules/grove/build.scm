@@ -9,11 +9,6 @@
   #:use-module (srfi srfi-9)
   #:export (render-model
             cached-renderer?
-            cached-renderer-cache?
-            cached-renderer-configuration
-            cached-renderer-procedure
-            cached-renderer-render-changed
-            cached-renderer-inputs
             make-cached-renderer))
 
 (define-record-type <cached-renderer>

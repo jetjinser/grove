@@ -33,6 +33,8 @@
 
 (define renderer-configurations
   (@@ (grove build) renderer-configurations))
+(define cached-renderer-cache?
+  (@@ (grove build) cached-renderer-cache?))
 
 (test-begin "forester renderers")
 

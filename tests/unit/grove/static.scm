@@ -11,6 +11,13 @@
   #:use-module (grove build)
   #:use-module (grove render static))
 
+(define cached-renderer-procedure
+  (@@ (grove build) cached-renderer-procedure))
+(define cached-renderer-inputs
+  (@@ (grove build) cached-renderer-inputs))
+(define cached-renderer-render-changed
+  (@@ (grove build) cached-renderer-render-changed))
+
 (define static-root (format #f "/tmp/grove-static-test-~a" (getpid)))
 (define source-directory (string-append static-root "/static"))
 (define asset-path (string-append source-directory "/images/data.bin"))
