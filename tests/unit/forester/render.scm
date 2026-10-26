@@ -387,6 +387,8 @@
   (site->text #f #:options #f))
 (test-error "render-text rejects a value that is not text options" #t
   (render-text #f #:options #f))
+(test-error "render-text rejects a value that is not a forest" #t
+  (render-text #f))
 (test-error "make-text-renderer rejects a value that is not text options" #t
   (make-text-renderer #:options #f))
 (test-error "site->gemtext rejects a value that is not Gemtext options" #t

@@ -373,6 +373,8 @@ HTML renderer so text and HTML address occurrences identically."
          (rules (text-options-rules options)))
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
+  (unless (forest? forest)
+    (error "Forester text renderer requires a forest" forest))
   (let* ((context
            (make-site-render-context forest
                                      #:routes routes
