@@ -30,6 +30,45 @@ adds its linked-tree analysis on top of that site. Use this entry point when
 those page and content semantics are useful; there is no need to wrap an
 unrelated project model as a site.
 
+## Smallest Forester site
+
+A one-page HTML site needs a page reader, Forester's analyzer, an HTML renderer,
+and an explicit home page. Direct imports keep the first setup to one project
+file and one page:
+
+```scheme
+;; project.scm
+(use-modules (forester input scribble)
+             (forester render html)
+             (forester site)
+             (grove input scribble)
+             (grove project site))
+
+(make-site-project
+  #:source-directory "plants"
+  #:home "hello"
+  #:read-page (make-page-reader (make-scribble-document-reader))
+  #:analyze make-forest
+  #:renderers (list (make-html-renderer))
+  #:output-directory "build")
+```
+
+```scribble
+@; plants/hello.plant
+@use-modules[(forester commands) (language scribble commands)]
+
+@title{Hello, Grove}
+
+This is a first page.
+```
+
+Run `grove check` and then `grove build` from the project directory. The home
+ID selects the tree rendered at `index.html`; Grove does not guess which page
+should represent the site. A project-local command manifest is optional: use
+`@use-commands` and `make-scribble-module-setup` when you want a named,
+reusable vocabulary assembled from local modules. Direct `@use-modules` imports
+need no project preparation step.
+
 ## Execution and paths
 
 `make-project` connects source collection, preparation, reading, analysis,
