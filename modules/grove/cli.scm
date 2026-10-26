@@ -349,7 +349,7 @@ with HELP overrides keyed by command."
                                   "grove: serving SSH browsing on port ~a~%"
                                   ssh-port)
                           ;; Analyze once; worker processes inherit the model.
-                          (let ((analysis (analyze-project project)))
+                          (let ((model (analyze-project project)))
                             ((ssh-ref 'serve-ssh)
                             #:port ssh-port
                             #:host-key host-key-path
@@ -362,7 +362,7 @@ with HELP overrides keyed by command."
                            #:handler
                            (lambda (input output)
                              ((project-browse project)
-                              (project-analysis-model analysis)
+                              model
                                #:input input #:output output)))
                           0)))
                      (begin (browse-project project) 0))))))))

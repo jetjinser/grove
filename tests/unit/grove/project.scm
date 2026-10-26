@@ -514,10 +514,10 @@
                  (set! view-events (append view-events (list 'browse model)))
                  (format output "browsed ~a\n" (cadr model)))
                #:output-directory view-output-directory)))
-      (let ((analysis (analyze-project view-project)))
+      (let ((model (analyze-project view-project)))
         (test-equal "analyze-project runs the analysis without renderers"
           '(model 0)
-          (project-analysis-model analysis))
+          model)
         (test-equal "analyze-project invokes no renderer" '() view-events)
         (test-assert "analyze-project writes no output directory"
           (not (file-exists? view-output-directory))))

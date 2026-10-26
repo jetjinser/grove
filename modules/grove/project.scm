@@ -55,8 +55,6 @@
             rebuild-from-forest
             render-with-cache
             analyze-project
-            project-analysis?
-            project-analysis-model
             browse-project))
 
 (define-record-type <project-input>
@@ -520,10 +518,10 @@
                 (append artifacts current)
                 (append owners current-owners))))))
 
-(define* (analyze-project project #:key (write? #f)
-                          (progress (lambda (stage path) #t)))
+(define* (analyze-project/result project write?
+                                #:key (progress (lambda (stage path) #t)))
   "Collect, read, and analyze PROJECT without rendering or writing outputs.
-Return a project-analysis holding the analyzed model."
+Return the internal analysis record used by the build pipeline."
   (unless (project? project)
     (error "project analysis requires a Grove project" project))
   (parameterize ((current-input-fingerprints (make-hash-table)))
@@ -567,6 +565,11 @@ Return a project-analysis holding the analyzed model."
       (%make-project-analysis source-paths prepared-sources inputs context
                               model trace input-cache-context))))
 
+(define* (analyze-project project #:key (progress (lambda (stage path) #t)))
+  "Return PROJECT's analyzed model without rendering or writing outputs."
+  (project-analysis-model
+    (analyze-project/result project #f #:progress progress)))
+
 (define* (browse-project project #:key (progress (lambda (stage path) #t))
                          (input (current-input-port))
                          (output (current-output-port)))
@@ -574,8 +577,8 @@ Return a project-analysis holding the analyzed model."
   (let ((browse (project-browse project)))
     (unless (procedure? browse)
       (error "project does not define a #:browse callback"))
-    (let ((analysis (analyze-project project #:write? #f #:progress progress)))
-      (browse (project-analysis-model analysis) #:input input #:output output))))
+    (let ((model (analyze-project project #:progress progress)))
+      (browse model #:input input #:output output))))
 
 ;;     Pipeline outputs that vanished from a pipeline's current set
 ;;     must not resurrect from the previous build's state: previous
@@ -604,7 +607,7 @@ Return a project-analysis holding the analyzed model."
                 (delete-duplicates
                   (project-extra-sources project)
                   string=?)))
-         (analysis (analyze-project project #:write? write? #:progress progress))
+         (analysis (analyze-project/result project write? #:progress progress))
          (source-paths (project-analysis-source-paths analysis))
          (prepared-sources (project-analysis-prepared-sources analysis))
          (inputs (project-analysis-inputs analysis))

@@ -58,8 +58,9 @@ File-backed tree IDs are basenames without `.plant`; directories do not
 qualify IDs. Named subtrees share that namespace. See
 [composition](forester-composition.md) for tree rules.
 
-`analyze-project` runs collection, preparation, reading, and analysis without
-rendering or touching published state. `browse-project` uses it and calls the
+`analyze-project` returns the analyzed model after collection, preparation,
+reading, and analysis, without rendering or touching published state.
+`browse-project` uses it and calls the
 project's optional `#:browse` callback with the analyzed model, input, and
 output ports. Grove's `grove browse` command drives this path; a Forester
 project wires `#:browse (make-forest-browser)` to read the Forest directly in
