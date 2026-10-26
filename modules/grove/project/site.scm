@@ -55,8 +55,9 @@ READ-PAGE and OUTPUT-DIRECTORY are required."
     (error "site source filter must be a procedure" source-filter))
   (unless (procedure? prepare)
     (error "site prepare step must be a procedure" prepare))
-  (unless (and (list? extra-sources) (every string? extra-sources))
-    (error "site extra sources must be a list of paths" extra-sources))
+  (unless (and (list? extra-sources) (every non-empty-string? extra-sources))
+    (error "site extra sources must be a list of non-empty paths"
+           extra-sources))
   (unless (procedure? read-page)
     (error "site project requires a page reader" read-page))
   (unless (procedure? analyze)
