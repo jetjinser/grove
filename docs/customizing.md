@@ -32,6 +32,36 @@ about *the environment of a render pass*, use a context.  If it is about
 *reusable output policy*, use options or presentation.  If it is about
 *rewriting content*, use a transform.
 
+## Add output from an external tool
+
+Keep the tool invocation in project Scheme and describe its inputs and output
+as an asset pipeline. A `make-asset-pipeline` value from `(grove pipeline)` can
+be passed to the compact Forester constructor, which keeps its standard reader,
+analyzer, and HTML renderer:
+
+```scheme
+;; diagram-pipeline is a project-owned asset-pipeline value.
+(make-forester-project
+  #:home "hello"
+  #:pipelines (list diagram-pipeline))
+```
+
+The [Graphviz adapter](../examples/hackable-assets/graphviz.scm) is a small
+example: it declares a source file, runs `dot`, and emits the SVG as an ordinary
+Grove artifact. A pipeline procedure receives an input lookup and an `emit`
+callback; it can use any executable or library available to the project. Grove
+tracks declared files and loaded Scheme code. Include tool identity in the
+pipeline's `#:version` when Grove cannot observe it, as the Graphviz adapter
+does.
+
+Use a Scheme expression in `.plant` when the tool's result belongs inline in
+that document. Use a pipeline when the result should be a separate build file.
+Both keep the integration code in the project. For inline expressions, declare
+file reads with `depend-on!` from `(grove input scribble)` and opt out of reader
+caching when behavior depends on untracked external state. Pipelines use Grove's
+artifact validation and content-addressed cache; declare opaque tool identity
+with `#:version`.
+
 ## Three renderer entry points
 
 | Function | Returns | Use when |

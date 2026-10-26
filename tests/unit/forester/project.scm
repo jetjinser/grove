@@ -8,6 +8,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64)
+  #:use-module (forester project)
   #:use-module (forester input scribble)
   #:use-module (forester relations)
   #:use-module (forester render gemtext)
@@ -22,6 +23,7 @@
   #:use-module (grove input scribble)
   #:use-module (grove ir)
   #:use-module (grove output)
+  #:use-module (grove pipeline)
   #:use-module (grove project)
   #:use-module (grove project site)
   #:use-module (grove relation dsl)
@@ -749,6 +751,40 @@
                                   "https://updated-derived.example")
                  (string-contains updated-feed
                                   "<language>zh-Hans</language>"))))))
+    (lambda () (system* "rm" "-rf" root))))
+
+(let ((root (mkdtemp "/tmp/forester-pipeline-project-test-XXXXXX")))
+  (dynamic-wind
+    (lambda ()
+      (mkdir (string-append root "/plants"))
+      (write-test-file
+        (string-append root "/plants/hello.plant")
+        "@use-modules[(forester commands)]\n@title{Hello}\n")
+      (write-test-file (string-append root "/input.txt") "external result"))
+    (lambda ()
+      (let* ((input (string-append root "/input.txt"))
+             (output (string-append root "/output"))
+             (pipeline
+               (make-asset-pipeline
+                 #:name "forester-pipeline"
+                 #:inputs (list input)
+                 #:procedure
+                 (lambda (in emit)
+                   (emit "assets/result.txt"
+                         (call-with-input-file (in input) get-string-all)))))
+             (project
+               (make-forester-project
+                 #:home "hello"
+                 #:source-directory (string-append root "/plants")
+                 #:output-directory output
+                 #:pipelines (list pipeline)))
+             (artifacts (build-project project)))
+        (test-assert "Forester projects can compose external asset pipelines"
+          (and (member "assets/result.txt"
+                       (map artifact-path artifacts)
+                       string=?)
+               (string=? "external result"
+                 (read-test-file (string-append output "/assets/result.txt")))))))
     (lambda () (system* "rm" "-rf" root))))
 
 (test-end "forester project")

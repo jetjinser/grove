@@ -48,12 +48,25 @@ the development shell while those dependencies remain installed.
 
 ## Write and build
 
-A `.plant` document uses Scribble-style at-expressions:
+A minimal Forester project has a `project.scm` and a page under `plants/`:
+
+```sh
+mkdir -p plants
+```
 
 ```scheme
+;; project.scm
+(use-modules (forester project))
+(make-forester-project #:title "My notes"
+                       #:home "hello"
+                       #:default-prefix "note")
+```
+
+```scribble
+;; plants/hello.plant
 @use-modules[(forester commands) (language scribble commands)]
 
-@title{A first note}
+@title{Hello, Grove}
 @tag["example"]
 
 Ordinary text becomes a paragraph.
@@ -66,7 +79,19 @@ Ordinary text becomes a paragraph.
 See @link["an-idea"]{the idea}, or embed it with @transclude["an-idea"].
 ```
 
-A project's `project.scm` returns its configuration. From that directory:
+From the project directory, run `grove check` and `grove build`. The `#:home`
+ID selects the page rendered at `index.html`; the project constructor supplies
+the standard reader, analyzer, and HTML renderer. `grove serve` builds and
+previews the site locally.
+
+To add a tree, run `grove new`, then fill the required `@title{}` in its new
+file before building.
+
+For custom project models, renderers, transformations, and external-tool
+pipelines, see the [project reference](docs/project.md) and
+[customization guide](docs/customizing.md).
+
+Other project commands:
 
 | Command | Purpose |
 | --- | --- |

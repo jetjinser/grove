@@ -20,9 +20,10 @@
           (renderers #f)
           (browse #f)
           (locale #f)
+          (pipelines '())
           (default-prefix #f)
           (tree-template #f))
-  "Build a Forester project with the standard reader, forest, and HTML output."
+  "Build a Forester project with standard HTML and optional asset pipelines."
   (make-site-project
     #:title title
     #:description description
@@ -32,6 +33,7 @@
     #:read-page (make-page-reader (make-scribble-document-reader))
     #:analyze make-forest
     #:renderers (or renderers (list (make-html-renderer)))
+    #:pipelines pipelines
     #:browse browse
     #:locale locale
     #:create-source
