@@ -55,6 +55,9 @@
             analyze-project
             browse-project))
 
+(define renderer-configurations
+  (@@ (grove build) renderer-configurations))
+
 (define-record-type <project-input>
   (make-project-input path value)
   project-input?

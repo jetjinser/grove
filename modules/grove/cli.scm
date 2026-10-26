@@ -382,21 +382,17 @@ with HELP overrides keyed by command."
                                         (lambda (phase)
                                           (progress 'analysis-phase-start
                                                     phase))))
-                         (parameterize ((current-render-progress
-                                          (lambda (done total path)
-                                            (progress 'render-page
-                                                      (list done total path)))))
-                           (parameterize ((current-input-cache-timings timings))
-                             (call-with-loaded-project filename
-                               (lambda (project)
-                                 (let ((report
-                                         (if checking?
-                                             (check-project project #:progress progress)
-                                             (build-project/report project #:progress progress))))
-                                   (cons (and (not checking?)
-                                              (canonicalize-path (project-output-directory project)))
-                                         report)))
-                               #:output-directory (assq-ref options 'output)))))))))
+                         (parameterize ((current-input-cache-timings timings))
+                           (call-with-loaded-project filename
+                             (lambda (project)
+                               (let ((report
+                                       (if checking?
+                                           (check-project project #:progress progress)
+                                           (build-project/report project #:progress progress))))
+                                 (cons (and (not checking?)
+                                            (canonicalize-path (project-output-directory project)))
+                                       report)))
+                             #:output-directory (assq-ref options 'output))))))))
                (output (car result))
                (report (cdr result)))
           (print-cli-summary report (- (cli-seconds) started)

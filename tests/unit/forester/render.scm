@@ -31,6 +31,9 @@
   #:use-module (grove style html)
   #:use-module (tests unit forester fixtures))
 
+(define renderer-configurations
+  (@@ (grove build) renderer-configurations))
+
 (test-begin "forester renderers")
 
 (define (backmatter-messages backlink-label)

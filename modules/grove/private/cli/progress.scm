@@ -201,22 +201,6 @@ whole process lifetime, no sampling needed."
                  (format #f "~18a ~a" (car detail)
                          (format-duration (cdr detail)))
                  port))))
-        ((render-page)
-         ;;     Page-level progress. A terminal gets a transient bar;
-         ;;     a redirected run gets one line per page, which also
-         ;;     exposes a single slow page.
-         (let* ((done (car detail)) (total (cadr detail))
-                (path (caddr detail))
-                (bar-width (max 4 (min 28 (- columns 40))))
-                (message (format #f "~a ~d/~d: ~a"
-                           (progress-bar done total bar-width) done total path)))
-           (clear-progress)
-           (if terminal?
-               (begin
-                 (status-line port "Rendering" message "1;36")
-                 (set! active? #t)
-                 (force-output port))
-               (print-cli-status "Rendering" message port))))
         ((render-renderer)
          ;;     One line per renderer: artifacts and wall time locate a
          ;;     slow renderer without per-page noise.
