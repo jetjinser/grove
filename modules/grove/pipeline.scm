@@ -13,10 +13,10 @@
 ;;     procedure receives an input table (declared path -> materialized
 ;;     path) and an emit sink (artifact path -> bytes), and Grove turns
 ;;     what it emits into ordinary content-addressed artifacts. The
-;;     project file and declared inputs participate in the cache key.
-;;     #:version is an explicit invalidation token for behavior that the
-;;     project load inputs cannot fingerprint, such as a change in the
-;;     external toolchain or runtime arguments.
+;;     project file, declared inputs, and Scheme files loaded during
+;;     execution participate in cache validation. #:version is an explicit
+;;     invalidation token for behavior Grove cannot observe, such as changes
+;;     in the external toolchain, environment, or runtime arguments.
 
 (define-record-type <asset-pipeline>
   (%make-asset-pipeline name version inputs procedure)

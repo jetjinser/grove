@@ -100,9 +100,13 @@
     (lambda args #f)))
 
 (define (restore-pipeline-artifacts identity inputs)
-  (let ((index (read-boundary-index identity)))
+  (let ((index (read-pipeline-index identity)))
     (and index
-         (let loop ((entries index) (artifacts '()))
+         (every (lambda (dependency)
+                  (equal? (cadr dependency)
+                          (input-fingerprint (car dependency))))
+                (car index))
+         (let loop ((entries (cadr index)) (artifacts '()))
            (if (null? entries)
                (reverse artifacts)
                (let* ((entry (car entries))
@@ -112,6 +116,42 @@
                             (cons (make-byte-artifact
                                    (car entry) bytes (map cdr inputs))
                                   artifacts)))))))))
+
+(define (read-pipeline-index identity)
+  ;; Runtime Scheme loads are discovered while the procedure runs. Keep their
+  ;; fingerprints beside this pipeline's outputs; the shared boundary index
+  ;; remains a plain artifact-path table for the other cache users.
+  (catch #t
+    (lambda ()
+      (let ((path (artifact-blob-path identity)))
+        (and (file-exists? path)
+             (call-with-input-file path
+               (lambda (port)
+                 (let ((index (read port)))
+                   (and (list? index)
+                        (= (length index) 4)
+                        (eq? (car index) 'grove-pipeline-index)
+                        (= (cadr index) 1)
+                        (list? (caddr index))
+                        (every (lambda (entry)
+                                 (and (list? entry)
+                                      (= (length entry) 2)
+                                      (string? (car entry))
+                                      (pipeline-fingerprint? (cadr entry))))
+                               (caddr index))
+                        (list? (cadddr index))
+                        (every (lambda (entry)
+                                 (and (pair? entry)
+                                      (artifact-path? (car entry))
+                                      (pipeline-fingerprint? (cdr entry))))
+                               (cadddr index))
+                        (list (caddr index) (cadddr index)))))))))
+    (lambda args #f)))
+
+(define (write-pipeline-index identity dependencies entries)
+  (publish-artifact-blob! identity
+    (lambda (port)
+      (write (list 'grove-pipeline-index 1 dependencies entries) port))))
 
 (define (run-pipeline-procedure pipeline identity inputs)
   (let ((entries '()) (artifacts '()))
@@ -134,18 +174,26 @@
     ;;     A procedure result is ignored on purpose: outputs reach
     ;;     Grove only through emit, which keeps the content
     ;;     addressing honest even when a tool wrote stray files.
-    ((asset-pipeline-procedure pipeline)
-     (lambda (declared)
-       (or (assoc-ref inputs declared)
-           (error "asset pipeline asked for an undeclared input" declared)))
-     emit)
-    (let ((entry-list (reverse entries))
-          (artifact-list (reverse artifacts)))
-      (unless (pair? entry-list)
-        (error "asset pipeline emitted no outputs"
-               (asset-pipeline-name pipeline)))
-      (write-boundary-index identity entry-list)
-      artifact-list)))
+    (let ((trace (make-hash-table)))
+      (call-with-input-trace trace
+        (lambda ()
+          ((asset-pipeline-procedure pipeline)
+           (lambda (declared)
+             (or (assoc-ref inputs declared)
+                 (error "asset pipeline asked for an undeclared input" declared)))
+           emit)))
+      (let ((entry-list (reverse entries))
+            (artifact-list (reverse artifacts))
+            (dependencies
+             (sort (map (lambda (path)
+                          (list path (input-fingerprint path)))
+                        (trace-inputs trace))
+                   (lambda (left right) (string<? (car left) (car right))))))
+        (unless (pair? entry-list)
+          (error "asset pipeline emitted no outputs"
+                 (asset-pipeline-name pipeline)))
+        (write-pipeline-index identity dependencies entry-list)
+        artifact-list))))
 
 (define (run-asset-pipelines pipelines project-key)
   "Run every declared asset pipeline; return (artifacts . owners),

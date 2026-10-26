@@ -123,9 +123,10 @@ Project files, imported modules, loader dependencies, framework source/data,
 compiled files, and effective renderer settings are fingerprinted automatically.
 Module search paths and absent preferred compiled files are also tracked.
 There are no user-maintained cache keys or version numbers for document and
-renderer caches. Asset pipelines also fingerprint the project file and its
-load-time inputs; set a pipeline's `#:version` when behavior depends on
-external toolchain state or runtime arguments Grove cannot inspect.
+renderer caches. Asset pipelines also fingerprint the project file, its
+load-time inputs, declared files, and Scheme files loaded while the pipeline
+runs. Set a pipeline's `#:version` when behavior depends on external toolchain
+state, environment variables, or runtime arguments Grove cannot inspect.
 
 Arbitrary Scheme I/O is not intercepted. Declare a file before reading it:
 

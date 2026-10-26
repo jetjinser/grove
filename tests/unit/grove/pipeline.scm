@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit grove pipeline)
+  #:declarative? #f
   #:use-module (grove cache)
   #:use-module (grove output)
   #:use-module (grove pipeline)
@@ -25,7 +26,10 @@
 (define inputs-directory (string-append root "/inputs"))
 (define input-a (string-append inputs-directory "/a.txt"))
 (define input-b (string-append inputs-directory "/b.txt"))
+(define runtime-script (string-append inputs-directory "/runtime.scm"))
 (define runs 0)
+(define runtime-runs 0)
+(define runtime-marker #f)
 
 (setenv "GROVE_STORE_DIR" store)
 (current-project-key "project-v1")
@@ -35,6 +39,8 @@
   (lambda (port) (display "alpha" port)))
 (call-with-output-file input-b
   (lambda (port) (display "beta" port)))
+(call-with-output-file runtime-script
+  (lambda (port) (display "(set! runtime-marker \"one\")\n" port)))
 
 (define (make-figures-pipeline version)
   (make-asset-pipeline
@@ -66,10 +72,10 @@
                (call-with-input-file
                    (string-append store "/artifacts/" name)
                  read))))
-    (and (list? sexp)
-         (pair? sexp)
-         (pair? (car sexp))
-         (string? (caar sexp)))))
+    (and (pair? sexp)
+         (or (eq? (car sexp) 'grove-pipeline-index)
+             (and (pair? (car sexp))
+                  (string? (caar sexp)))))))
 
 (define (index-blobs)
   (filter blob->index? (blob-files)))
@@ -131,6 +137,34 @@
   (test-equal "owners name the pipeline"
     '("figures" "figures")
     (map cdr owners)))
+
+(define (run-runtime-loaded-pipeline)
+  (car (run-asset-pipelines
+         (list (make-asset-pipeline
+                #:name "runtime-load"
+                #:inputs (list input-a)
+                #:procedure
+                (lambda (in emit)
+                  (set! runtime-runs (+ runtime-runs 1))
+                  (load runtime-script)
+                  (emit "runtime.txt" runtime-marker))))
+         (current-project-key))))
+
+(define (artifact-text artifact)
+  (let ((content (artifact-content artifact)))
+    (if (string? content) content (utf8->string content))))
+
+(test-equal "the first execution loads its runtime Scheme dependency"
+  "one" (artifact-text (car (run-runtime-loaded-pipeline))))
+(test-equal "unchanged runtime Scheme does not rerun the procedure"
+  "one" (artifact-text (car (run-runtime-loaded-pipeline))))
+(test-equal "unchanged runtime Scheme loads reuse cached output"
+  1 runtime-runs)
+(call-with-output-file runtime-script
+  (lambda (port) (display "(set! runtime-marker \"two\")\n" port)))
+(test-equal "editing a runtime-loaded Scheme dependency invalidates the cache"
+  "two" (artifact-text (car (run-runtime-loaded-pipeline))))
+(test-equal "the changed runtime dependency reruns its pipeline" 2 runtime-runs)
 
 (let* ((result (run-pipelines "v1"))
        (artifacts (car result)))
