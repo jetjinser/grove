@@ -35,7 +35,8 @@ rule type.
 
 - Sitemap uses the context site URL and default locale.
 - RSS uses the context site URL and language, plus explicit stylesheet options.
-- Graph is a pure data projection; it needs no render rules.
+- Graph is a pure Scheme-datum projection (`forest-graph`), not an RDF
+  serialization; it needs no render rules.
 
 ## Project wiring
 

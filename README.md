@@ -9,8 +9,8 @@ Grove is a Scheme toolkit for building documents and other file-based projects.
 A project supplies a reader, an optional analyzer, and renderers. Grove tracks
 inputs and writes their outputs.
 
-Forester adds linked writing: each `.plant` file is a tree, with a title and a
-stable address. Trees can contain subtrees, link to one another, and embed other
+Forester adds linked writing: each `.plant` file is a tree with a title and an
+ID. Trees can contain subtrees, link to one another, and embed other
 trees. Ordinary prose becomes paragraphs; Scheme expressions make documents
 programmable. The same content can produce HTML, text, feeds, and other formats.
 

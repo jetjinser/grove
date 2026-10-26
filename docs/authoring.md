@@ -85,7 +85,8 @@ consistently. It does not fetch metadata from the identifier.
 }
 ```
 
-- `@subtree[#:id "..."]` is addressable and should carry a stable, unique id.
+- `@subtree[#:id "..."]` gives the subtree an explicit, unique ID for links
+  and transclusion.
 - `@subtree{...}` without `#:id` receives a position-dependent `unstable-N`
   id. That is fine for pure structure, but never link to it; use `@section`
   for grouping that needs no address.

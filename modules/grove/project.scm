@@ -29,7 +29,6 @@
             project-tree-template
             project-default-prefix
             project-renderers
-            project-pipelines
             collect-project-sources
             project-extra-sources
             project-output-directory
@@ -58,7 +57,6 @@
             render-with-cache
             last-build-model
             last-analysis-inputs
-            project-renderer-identity
             analyze-project
             project-analysis?
             project-analysis-model

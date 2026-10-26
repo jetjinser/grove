@@ -22,8 +22,9 @@ between building and checking. Caching must preserve this behavior, not create
 a second execution model.
 
 Document structure consists of trees, not a separate heading or section
-hierarchy. Titles belong to trees. Keep durable tree IDs distinct from local
-HTML anchors. Root and subtree prose use the same paragraph decoder.
+hierarchy. Titles belong to trees. Explicit tree IDs can support durable
+references; generated IDs may shift. Keep tree IDs distinct from local HTML
+anchors. Root and subtree prose use the same paragraph decoder.
 
 Give each pass and IR a clear responsibility. Semantic math carries meaning;
 Notation carries layout. Formula is an optional frontend producing Semantic
@@ -41,9 +42,9 @@ Find the owning module and existing tests before editing. Test observable
 behavior and meaningful failures, rather than duplicating the implementation.
 Mathematical checks should use independent oracles where available.
 
-Enter the development shell with `nix develop ./nix` or
-`guix shell --container --pure -m manifest.scm`. The Guix manifest exposes
-locale data through `GUIX_LOCPATH`, including in a pure shell. The smaller
+Enter the development shell with `nix develop` or
+`guix time-machine -C channels.scm -- shell -m manifest.scm`. The Guix manifest
+exposes locale data through `GUIX_LOCPATH`. The smaller
 optional external-tool environment is in `integration-manifest.scm`; add it
 with `-m integration-manifest.scm` when running the real Typst, LaTeX, or
 SMathML experiments. It contains only the LaTeX kernel and `amsmath`, not the
