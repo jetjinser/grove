@@ -2,7 +2,8 @@
 ;;;
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-;; XXX: dunno how to do this in blueprint itself in a correct way
+;; The command builder below forwards %load-path to its Guile child; include
+;; the checkout modules here so that the child can load Grove from this tree.
 (add-to-load-path (string-append (dirname (current-filename)) "/modules"))
 
 (use-modules (blue types blueprint)
