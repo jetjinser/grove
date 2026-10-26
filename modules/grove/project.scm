@@ -174,9 +174,13 @@
                (or source-directory collect-sources))
     (error "project requires a source directory or collector"
            source-directory collect-sources))
+  (when (and source-directory (not (non-empty-string? source-directory)))
+    (error "project source directory must be a non-empty path"
+           source-directory))
   (unless (procedure? prepare)
     (error "project prepare hook must be a procedure" prepare))
-  (unless (and (list? extra-sources) (every string? extra-sources))
+  (unless (and (list? extra-sources)
+               (every non-empty-string? extra-sources))
     (error "project extra sources must be a list of paths" extra-sources))
   (unless (procedure? read-source)
     (error "project requires a source reader" read-source))
@@ -194,8 +198,8 @@
                (unique-pipeline-names? pipelines))
     (error "project pipelines must be asset pipelines with unique names"
            pipelines))
-  (unless (string? output-directory)
-    (error "project requires an output directory" output-directory))
+  (unless (non-empty-string? output-directory)
+    (error "project requires a non-empty output directory" output-directory))
   (unless (boolean? cache?)
     (error "project cache option must be a boolean" cache?))
   (unless (or (not default-prefix) (non-empty-string? default-prefix))

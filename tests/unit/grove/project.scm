@@ -76,6 +76,20 @@
                      #:output-directory "output"
                      #:pipelines duplicate-pipelines))
 
+(test-error "generic projects reject empty source paths" #t
+  (make-project #:source-directory ""
+                #:read-source (lambda (_) #f)
+                #:output-directory "output"))
+(test-error "generic projects reject empty extra source paths" #t
+  (make-project #:source-directory "sources"
+                #:extra-sources '("")
+                #:read-source (lambda (_) #f)
+                #:output-directory "output"))
+(test-error "generic projects reject empty output paths" #t
+  (make-project #:source-directory "sources"
+                #:read-source (lambda (_) #f)
+                #:output-directory ""))
+
 (test-error "generic projects reject duplicate asset pipeline names" #t
   (make-project #:source-directory "sources"
                 #:read-source (lambda (_) #f)
