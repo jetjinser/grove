@@ -25,7 +25,6 @@
             make-relation
             relation-arity
             relation-facts
-            relation-indexes
             relationo))
 
 (define-record-type <relation>
@@ -33,7 +32,7 @@
   relation?
   (arity relation-arity)
   (facts relation-facts)
-  (indexes relation-indexes))
+  (indexes %relation-indexes))
 
 (define (make-index facts position)
   ;;     Rows within one key keep their facts order: walk in reverse so
@@ -115,7 +114,7 @@
     (error "relation goal arity does not match relation"
            (relation-arity relation) (length terms)))
   (let find-candidates ((remaining terms)
-                        (indexes (relation-indexes relation)))
+                        (indexes (%relation-indexes relation)))
     (if (null? remaining)
         (membero terms (relation-facts relation))
         (if (ground-term? (car remaining))

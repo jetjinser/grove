@@ -4,6 +4,7 @@
 
 (define-module (forester relations)
   #:use-module (grove i18n)
+  #:use-module (grove private relation)
   #:use-module (grove relation dsl)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
@@ -112,8 +113,7 @@
 
 (define (described-entity-page-ids relation uri)
   (delete-duplicates
-    (map car (hash-ref (force (list-ref (relation-indexes relation) 1))
-                       uri '()))
+    (map car (relation-index-rows relation 1 uri))
     string=?))
 
 (define-relation (paragrapho relation node-id)
@@ -234,52 +234,39 @@
                 (label label))
     (== fixed-source-page-id source-page-id)))
 
-;; Reference queries read the materialized column indexes that
-;; make-relation builds lazily per column. Solving the same rows
-;; through the solver costs ~0.2s per query on a large site; an index
-;; lookup is constant.
-(define (reference-column-index relation position)
-  (force (list-ref (relation-indexes relation) position)))
-
 (define (incoming-reference-rows relation target-page-id)
-  (hash-ref (reference-column-index relation 2) target-page-id '()))
+  (relation-index-rows relation 2 target-page-id))
 
 (define (incoming-reference-keys relation target-page-id)
   (map (lambda (row) (list (car row) (cadr row)))
        (incoming-reference-rows relation target-page-id)))
 
 (define (outgoing-reference-rows relation source-page-id)
-  (hash-ref (reference-column-index relation 0) source-page-id '()))
+  (relation-index-rows relation 0 source-page-id))
 
 (define (outgoing-reference-ids relation source-page-id)
   (map cadr (outgoing-reference-rows relation source-page-id)))
 
 (define (backlink-page-ids relation target-page-id)
   (delete-duplicates
-    (map car (hash-ref (reference-column-index relation 2)
-                       target-page-id '()))
+    (map car (incoming-reference-rows relation target-page-id))
     equal?))
 
 (define (common-backlink-page-ids relation left-page-id right-page-id)
   (let ((right-sources (make-hash-table)))
     (for-each
       (lambda (row) (hash-set! right-sources (car row) #t))
-      (hash-ref (reference-column-index relation 2) right-page-id '()))
+      (incoming-reference-rows relation right-page-id))
     (delete-duplicates
       (filter (lambda (source) (hash-ref right-sources source))
-              (map car (hash-ref (reference-column-index relation 2)
-                                 left-page-id '())))
+              (map car (incoming-reference-rows relation left-page-id)))
       equal?)))
-
-;; Term queries read the same materialized column indexes.
-(define (term-column-index relation position)
-  (force (list-ref (relation-indexes relation) position)))
 
 ;; One term's defining occurrences as (page-id anchor display-text),
 ;; in document order of collection. The relation's term-id column is
 ;; the query key and projects out of the rows.
 (define (term-definition-rows relation term-id)
-  (map cdr (hash-ref (term-column-index relation 0) term-id '())))
+  (map cdr (relation-index-rows relation 0 term-id)))
 
 ;; Terms whose defining occurrences disagree: more than one defining
 ;; page, or display texts that differ - an in-passing definition that
@@ -306,7 +293,7 @@
 
 ;; One term's mentioning pages as (source-page-id resolved?).
 (define (term-mention-rows relation term-id)
-  (map cdr (hash-ref (term-column-index relation 0) term-id '())))
+  (map cdr (relation-index-rows relation 0 term-id)))
 
 ;; Term-ids the corpus points at but nothing defines, each with its
 ;; mentioning pages - the definition backlog.  A mention counts as
@@ -368,8 +355,7 @@
   ;;     Breadth-first closure over the source index. The solver's
   ;;     path enumeration is exponential in branchy graphs; the target
   ;;     set is what callers want.
-  (let ((source-index (reference-column-index relation 0)))
-    (let loop ((pending (list source-page-id))
+  (let loop ((pending (list source-page-id))
                (seen (list source-page-id))
                (seen-set (let ((table (make-hash-table)))
                            (hash-set! table source-page-id #t)
@@ -383,7 +369,7 @@
                    (filter (lambda (target)
                              (not (hash-ref seen-set target)))
                            (delete-duplicates
-                             (map caddr (hash-ref source-index id '()))
+                             (map caddr (outgoing-reference-rows relation id))
                              equal?))))
             (loop (append targets (cdr pending))
                   (append (reverse targets) seen)
@@ -391,4 +377,4 @@
                     (for-each
                       (lambda (target) (hash-set! seen-set target #t))
                       targets)
-                    seen-set)))))))
+                    seen-set))))))

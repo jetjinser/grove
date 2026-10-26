@@ -9,6 +9,11 @@
 
 (test-begin "grove relation")
 
+(test-assert "relation indexes are not part of the public interface"
+  (not (module-variable
+         (module-public-interface (resolve-module '(grove relation)))
+         'relation-indexes)))
+
 (define links
   (make-relation
     '((alpha beta)

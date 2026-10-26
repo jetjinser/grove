@@ -34,6 +34,11 @@
 
 (test-begin "grove relation DSL")
 
+(test-assert "relation DSL does not re-export relation indexes"
+  (not (module-variable
+         (module-public-interface (resolve-module '(grove relation dsl)))
+         'relation-indexes)))
+
 (let ((edges
         (make-edge-relation
           '((first left)

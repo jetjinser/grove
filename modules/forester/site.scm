@@ -6,6 +6,7 @@
   #:use-module (grove string-fun)
   #:use-module (grove ir)
   #:use-module (grove site)
+  #:use-module (grove private relation)
   #:use-module (grove project)
   #:use-module (grove private project timing)
   #:use-module (grove style)
@@ -691,8 +692,7 @@ anchors."
     ;;     rendering reads them in parallel and a concurrent force would
     ;;     race inside the promise.
     (for-each
-      (lambda (relation)
-        (for-each force (relation-indexes relation)))
+      warm-relation-indexes!
       (list reference-relation page-relation described-entity-relation
             term-definition-relation term-mention-relation
             (car content-node-state)))
