@@ -99,6 +99,14 @@ they applied. Supply assumptions in its argument when required:
 checks establish only what the supported rules and calculation domain justify;
 they do not prove assumptions or validate an external mathematical model.
 
+The registered rules are also available as relational data through
+`(grove math catalog)`. Import `(grove relation dsl)` to query rules by group,
+execution mode, input operator, required premise, or semantic-check status.
+`math-rule->content` renders a rule's declaration and guards as ordinary Grove
+content. The [inference-rules example](../examples/showcases/math-derivations/plants/inference-rules.plant)
+builds a page from these queries, using the same registry as the rewrite
+engine rather than maintaining a separate catalog.
+
 Derivation commands can show the result alone, a compact view, or the full
 steps. Long step lists are presented in a collapsible subtree. If a rule cannot
 apply or a required premise is missing, `#:on-error 'show` displays the
