@@ -20,7 +20,7 @@
             check-chain check-polynomial-rule check-polynomial-derivation
             check-polynomial-step check-polynomial-derivative check-polynomial-antiderivative
             polynomial-check->content
-            compute check-equation solve-poisson differentiate partial partial-derivative))
+            compute check-equation solve-poisson differentiate partial))
 
 ;; Public Formula helpers are adapters: parse fragments once, then call the
 ;; Semantic API. The parser itself lives in `formula reader` so Semantic
@@ -214,9 +214,6 @@
     (core:math-partial (read source) (read coordinate)
       #:assumptions (parse-assumptions (list assumptions))
       #:max-steps max-steps #:max-term-size max-term-size)))
-
-(define-public (partial-derivative source coordinate . options)
-  (apply partial source coordinate options))
 
 (define-public antiderivative
   (lambda* (source coordinate #:key (assumptions '()) (max-steps 128) (max-term-size 8192))
