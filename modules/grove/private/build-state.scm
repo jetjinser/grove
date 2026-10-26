@@ -4,6 +4,7 @@
 
 (define-module (grove private build-state)
   #:use-module (grove output)
+  #:use-module (grove private files)
   #:use-module (grove private fingerprint)
   #:re-export (content-fingerprint file-fingerprint)
   #:use-module (rnrs bytevectors)

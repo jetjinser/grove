@@ -24,8 +24,7 @@
             artifact-sources
             prefix-artifacts
             validate-artifacts
-            write-artifacts)
-  #:re-export (ensure-directory))
+            write-artifacts))
 
 (define-record-type <artifact>
   (%make-artifact path content sources)
