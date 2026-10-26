@@ -128,6 +128,9 @@ load-time inputs, declared files, and Scheme files loaded while the pipeline
 runs. A self-contained pipeline can omit `#:inputs`. Set a pipeline's
 `#:version` when behavior depends on external toolchain
 state, environment variables, or runtime arguments Grove cannot inspect.
+Pipeline artifacts and build reports retain the file inputs and loaded Scheme
+dependencies, so cache invalidation and affected-artifact reporting use the
+same dependency set.
 
 Arbitrary Scheme I/O is not intercepted. Declare a file before reading it:
 

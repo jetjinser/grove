@@ -155,10 +155,20 @@
   (let ((content (artifact-content artifact)))
     (if (string? content) content (utf8->string content))))
 
+(define first-runtime-artifact (car (run-runtime-loaded-pipeline)))
 (test-equal "the first execution loads its runtime Scheme dependency"
-  "one" (artifact-text (car (run-runtime-loaded-pipeline))))
+  "one" (artifact-text first-runtime-artifact))
+(test-assert "newly executed artifacts retain runtime Scheme provenance"
+  (member (canonicalize-path runtime-script)
+          (artifact-sources first-runtime-artifact)
+          string=?))
+(define cached-runtime-artifact (car (run-runtime-loaded-pipeline)))
 (test-equal "unchanged runtime Scheme does not rerun the procedure"
-  "one" (artifact-text (car (run-runtime-loaded-pipeline))))
+  "one" (artifact-text cached-runtime-artifact))
+(test-assert "restored artifacts retain runtime Scheme provenance"
+  (member (canonicalize-path runtime-script)
+          (artifact-sources cached-runtime-artifact)
+          string=?))
 (test-equal "unchanged runtime Scheme loads reuse cached output"
   1 runtime-runs)
 (call-with-output-file runtime-script

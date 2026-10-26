@@ -69,6 +69,8 @@
   (@@ (grove build) cached-renderer-inputs))
 (define asset-pipeline-name
   (@@ (grove pipeline) asset-pipeline-name))
+(define asset-pipeline-inputs
+  (@@ (grove pipeline) asset-pipeline-inputs))
 
 (define-record-type <project-input>
   (make-project-input path value)
@@ -628,6 +630,25 @@ Return the internal analysis record used by the build pipeline."
          (analysis-trace (project-analysis-trace analysis))
          (model (project-analysis-model analysis))
          (input-cache-context (project-analysis-input-cache-context analysis))
+         (pipeline-result
+           (parameterize ((current-input-fingerprints (make-hash-table)))
+             (run-asset-pipelines (project-pipelines project)
+                                  (current-project-key))))
+         (pipeline-artifacts (car pipeline-result))
+         (pipeline-owners (cdr pipeline-result))
+         (pipeline-declared-sources
+           (delete-duplicates
+             (append-map
+               (lambda (pipeline)
+                 (map depend-on! (asset-pipeline-inputs pipeline)))
+               (project-pipelines project))
+             string=?))
+         (pipeline-runtime-sources
+           (lset-difference
+             string=?
+             (delete-duplicates (append-map artifact-sources pipeline-artifacts)
+                                string=?)
+             pipeline-declared-sources))
          (state-directory
            (grove-cache-directory (project-output-directory project)))
          (state-path
@@ -644,6 +665,7 @@ Return the internal analysis record used by the build pipeline."
          (declared-sources
            (delete-duplicates
              (append prepared-sources source-paths
+                     pipeline-declared-sources
                      (append-map
                        (lambda (renderer)
                          (if (and (cached-renderer? renderer)
@@ -660,7 +682,11 @@ Return the internal analysis record used by the build pipeline."
          ;;     processes, so they are compared by content, not path.
          (runtime-sources
            (lset-difference string=?
-                            (input-cache-dependencies input-cache-context)
+                            (delete-duplicates
+                              (append
+                                (input-cache-dependencies input-cache-context)
+                                pipeline-runtime-sources)
+                              string=?)
                             declared-sources))
          (current-sources
            (append
@@ -679,16 +705,6 @@ Return the internal analysis record used by the build pipeline."
          (removed (caddr source-changes))
          (changed (append added modified removed))
           (identity (project-renderer-identity project model))
-          ;;     Asset pipelines produce artifacts from declared inputs;
-          ;;     their identity covers the project file, so an edit
-          ;;     re-runs them.  Every output carries the inputs as its
-          ;;     sources, riding the ordinary invalidation machinery.
-          (pipeline-result
-            (parameterize ((current-input-fingerprints (make-hash-table)))
-              (run-asset-pipelines (project-pipelines project)
-                                   (current-project-key))))
-          (pipeline-artifacts (car pipeline-result))
-          (pipeline-owners (cdr pipeline-result))
           (retired (retired-pipeline-paths pipeline-artifacts previous-artifacts))
           (cache-ready?
            (and identity previous-state

@@ -43,6 +43,11 @@
   (map (lambda (path) (cons path (depend-on! path)))
        (asset-pipeline-inputs pipeline)))
 
+(define (pipeline-artifact-sources inputs dependencies)
+  (delete-duplicates
+    (append (map cdr inputs) (map car dependencies))
+    string=?))
+
 (define (pipeline-identity pipeline project-key input-table)
   (content-fingerprint
    (call-with-output-string
@@ -106,6 +111,7 @@
                   (equal? (cadr dependency)
                           (input-fingerprint (car dependency))))
                 (car index))
+         (let ((sources (pipeline-artifact-sources inputs (car index))))
          (let loop ((entries (cadr index)) (artifacts '()))
            (if (null? entries)
                (reverse artifacts)
@@ -114,8 +120,8 @@
                  (and bytes
                       (loop (cdr entries)
                             (cons (make-byte-artifact
-                                   (car entry) bytes (map cdr inputs))
-                                  artifacts)))))))))
+                                   (car entry) bytes sources)
+                                  artifacts))))))))))
 
 (define (read-pipeline-index identity)
   ;; Runtime Scheme loads are discovered while the procedure runs. Keep their
@@ -193,7 +199,13 @@
           (error "asset pipeline emitted no outputs"
                  (asset-pipeline-name pipeline)))
         (write-pipeline-index identity dependencies entry-list)
-        artifact-list))))
+        (map (lambda (artifact)
+               ((if (string? (artifact-content artifact))
+                    make-artifact make-byte-artifact)
+                (artifact-path artifact)
+                (artifact-content artifact)
+                (pipeline-artifact-sources inputs dependencies)))
+             artifact-list)))))
 
 (define (run-asset-pipelines pipelines project-key)
   "Run every declared asset pipeline; return (artifacts . owners),

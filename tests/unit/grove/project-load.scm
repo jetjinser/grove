@@ -5,6 +5,7 @@
   #:use-module (grove project)
   #:use-module (grove project load)
   #:use-module (grove project diagnostic)
+  #:use-module (grove output)
   #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-64))
 
@@ -15,6 +16,7 @@
 (define pipeline-output (string-append root "/pipeline-output/generated.txt"))
 (define caller (getcwd))
 (define environment (current-module))
+(define first-pipeline-report #f)
 
 (define (write-file path text)
   (call-with-output-file path (lambda (port) (display text port))))
@@ -33,7 +35,8 @@
 (define (write-pipeline-project)
   (write-file pipeline-config
     "(use-modules (grove project) (grove build) (grove output) (grove pipeline) (ice-9 textual-ports))
-(load \"adapter.scm\")
+(define pipeline-environment (current-module))
+(define pipeline-output \"unset\")
 (make-project
   #:source-directory \"pipeline-sources\"
   #:read-source (lambda (path) (call-with-input-file path get-string-all))
@@ -41,7 +44,13 @@
     (list (make-asset-pipeline
             #:name \"adapter\"
             #:inputs '(\"pipeline-sources/input.txt\")
-            #:procedure emit-adapter-output))
+            #:procedure (lambda (_input emit)
+                         (save-module-excursion
+                           (lambda ()
+                             (set-current-module pipeline-environment)
+                             (load \"adapter.scm\")))
+                         (emit \"generated.txt\"
+                               (module-ref pipeline-environment 'pipeline-output)))))
   #:output-directory \"pipeline-output\")\n"))
 
 (define (error-stage thunk)
@@ -59,7 +68,7 @@
     (mkdir (string-append root "/pipeline-sources"))
     (write-file (string-append root "/pipeline-sources/input.txt") "pipeline input")
     (write-file pipeline-adapter
-      "(define (emit-adapter-output _input emit) (emit \"generated.txt\" \"before\"))\n")
+      "(set! pipeline-output \"before\")\n")
     (write-pipeline-project))
   (lambda ()
     (call-with-loaded-project config
@@ -84,12 +93,41 @@
         (test-equal "output override is relative to caller directory"
           (string-append caller "/preview") (project-output-directory project)))
       #:output-directory "preview")
-    (call-with-loaded-project pipeline-config build-project)
+    (call-with-loaded-project pipeline-config
+      (lambda (project)
+        (set! first-pipeline-report (build-project/report project))))
     (test-equal "asset pipeline emits its initial output" "before"
       (call-with-input-file pipeline-output get-string-all))
+    (test-assert "runtime Scheme inputs appear in build source provenance"
+      (member (canonicalize-path pipeline-adapter)
+              (build-report-sources first-pipeline-report)))
+    (test-assert "runtime Scheme inputs appear in artifact provenance"
+      (member (canonicalize-path pipeline-adapter)
+              (artifact-sources
+                (car (build-report-artifacts first-pipeline-report)))))
     (write-file pipeline-adapter
-      "(define (emit-adapter-output _input emit) (emit \"generated.txt\" \"after\"))\n")
-    (call-with-loaded-project pipeline-config build-project)
+      "(set! pipeline-output \"before\") ; adapter revision two\n")
+    (call-with-loaded-project pipeline-config
+      (lambda (project)
+        (let ((same-output (build-project/report project)))
+          (test-equal "runtime adapter edits are listed as modified sources"
+            (list (canonicalize-path pipeline-adapter))
+            (build-report-modified-sources same-output))
+          (test-equal "runtime adapter edits affect their generated artifact"
+            '("generated.txt")
+            (build-report-affected-artifacts same-output)))))
+    (test-equal "an unchanged pipeline byte survives an adapter edit" "before"
+      (call-with-input-file pipeline-output get-string-all))
+    (write-file pipeline-adapter "(set! pipeline-output \"after\")\n")
+    (call-with-loaded-project pipeline-config
+      (lambda (project)
+        (let ((changed-output (build-project/report project)))
+          (test-equal "changed pipeline inputs remain visible after a cache miss"
+            (list (canonicalize-path pipeline-adapter))
+            (build-report-modified-sources changed-output))
+          (test-equal "changed pipeline bytes affect the generated artifact"
+            '("generated.txt")
+            (build-report-affected-artifacts changed-output)))))
     (test-equal "editing an imported pipeline adapter invalidates cached output" "after"
       (call-with-input-file pipeline-output get-string-all))
     (test-error "callback failures propagate" #t
