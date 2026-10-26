@@ -34,7 +34,9 @@ unrelated project model as a site.
 ## Smallest Forester site
 
 A one-page HTML site needs an explicit home page. The Forester constructor
-supplies the standard reader, analyzer, and HTML renderer:
+requires its home tree ID and supplies the standard reader, analyzer, and HTML
+renderer. Omitting the ID or passing an empty string fails when the project is
+constructed, before a build starts:
 
 ```scheme
 ;; project.scm
@@ -58,6 +60,11 @@ needs to assemble these pieces itself. A project-local command manifest is
 optional: use `@use-commands` and `make-scribble-module-setup` when you want a
 named, reusable vocabulary assembled from local modules. Direct
 `@use-modules` imports need no project preparation step.
+
+`make-forester-project` uses the standard HTML renderer unless `#:renderers` is
+provided. Supplying that option replaces the standard renderer list; include an
+HTML renderer yourself if you still want HTML output. Use `make-site-project`
+when you need to compose the full site configuration explicitly.
 
 ## Execution and paths
 

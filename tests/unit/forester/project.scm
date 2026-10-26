@@ -59,6 +59,16 @@
 
 (test-begin "forester project")
 
+(test-assert "Forester projects require a home tree ID"
+  (exception-contains?
+    (lambda () (make-forester-project))
+    "requires a non-empty home tree ID"))
+
+(test-assert "Forester project home tree ID cannot be empty"
+  (exception-contains?
+    (lambda () (make-forester-project #:home ""))
+    "requires a non-empty home tree ID"))
+
 (dynamic-wind
   (lambda ()
     (setenv "XDG_CACHE_HOME" (string-append project-root "/.cache"))

@@ -23,7 +23,11 @@
           (pipelines '())
           (default-prefix #f)
           (tree-template #f))
-  "Build a Forester project with standard HTML and optional asset pipelines."
+  "Build a Forester project with standard HTML and optional asset pipelines.
+HOME is the tree ID rendered at the site index. RENDERERS replaces the
+standard HTML renderer when supplied."
+  (unless (and (string? home) (> (string-length home) 0))
+    (error "Forester project requires a non-empty home tree ID" home))
   (make-site-project
     #:title title
     #:description description

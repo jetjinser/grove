@@ -106,8 +106,9 @@ Other project commands:
 (plus `--host-key` and `--authorized-keys`); see
 [docs/project.md](docs/project.md) for host keys, limits, and concurrency.
 
-Forester projects can set `#:default-prefix "jsk"` to create addresses such
-as `jsk-0001` and `jsk-000a`; `grove new math` selects another prefix. Other
+Forester projects can set `#:default-prefix "jsk"` so `grove new` creates
+addresses such as `jsk-0001` and `jsk-000a`; without a configured default,
+provide a prefix, as in `grove new math`. Other
 projects can define their own source-creation callback, or omit this command.
 New Forester trees need a title before building. Use `grove --help` for options
 and the [project reference](docs/project.md) for configuration. For a task-oriented
