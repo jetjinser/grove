@@ -774,6 +774,7 @@
     (lambda ()
       (let* ((input (string-append root "/input.txt"))
              (output (string-append root "/output"))
+             (text-output (string-append root "/text-output"))
              (pipeline
                (make-asset-pipeline
                  #:name "forester-pipeline"
@@ -787,14 +788,33 @@
                  #:home "hello"
                  #:source-directory (string-append root "/plants")
                  #:output-directory output
-                 #:pipelines (list pipeline)))
+                 #:pipelines (list pipeline)
+                 #:derived (list (graph-derived))))
+             (text-project
+               (make-forester-project
+                 #:home "hello"
+                 #:source-directory (string-append root "/plants")
+                 #:output-directory text-output
+                 #:renderers (list (make-html-renderer)
+                                   (make-text-renderer))))
+             (text-artifacts (build-project text-project))
              (artifacts (build-project project)))
         (test-assert "Forester projects can compose external asset pipelines"
           (and (member "assets/result.txt"
                        (map artifact-path artifacts)
                        string=?)
                (string=? "external result"
-                 (read-test-file (string-append output "/assets/result.txt")))))))
+                 (read-test-file (string-append output "/assets/result.txt")))))
+        (test-assert "Forester projects add derived artifacts and keep default HTML"
+          (and (member "index.html" (map artifact-path artifacts) string=?)
+               (member "forest-graph.scm"
+                       (map artifact-path artifacts)
+                       string=?)))
+        (test-assert "Forester projects compose HTML and text renderers"
+          (and (member "index.html" (map artifact-path text-artifacts) string=?)
+               (member "hello.txt"
+                       (map artifact-path text-artifacts)
+                       string=?)))))
     (lambda () (system* "rm" "-rf" root))))
 
 (test-end "forester project")

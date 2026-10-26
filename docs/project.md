@@ -64,7 +64,23 @@ named, reusable vocabulary assembled from local modules. Direct
 `make-forester-project` uses the standard HTML renderer unless `#:renderers` is
 provided. Supplying that option replaces the standard renderer list; include an
 HTML renderer yourself if you still want HTML output. Use `make-site-project`
-when you need to compose the full site configuration explicitly.
+when you need to compose the full site configuration explicitly. Forester
+projects can add cached site-wide outputs through `#:derived`; see the
+[customization guide](customizing.md#add-a-derived-site-artifact).
+
+For example, add plain-text output while retaining the default HTML renderer by
+listing both renderers:
+
+```scheme
+(use-modules (forester project)
+             (forester render html)
+             (forester render text))
+
+(make-forester-project
+  #:home "hello"
+  #:renderers (list (make-html-renderer)
+                    (make-text-renderer)))
+```
 
 ## Execution and paths
 

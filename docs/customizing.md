@@ -19,7 +19,7 @@ This is the shortest path from “I want to change X” to the right Grove API.
 | tree headings or the table of contents | page-specific presentation data | `make-html-presentation #:title-decorations` |
 | locale, messages, or date formatting | renderer options | `make-html-options #:locale/#:messages` |
 | output paths | routes | `make-html-routes`, `make-text-routes`, `#:prefix` |
-| a site-wide sitemap, feed, or graph projection | derived artifacts | `make-site-project #:derived` |
+| a site-wide sitemap, feed, or graph projection | derived artifacts | Forester: `make-forester-project #:derived`; general sites: `make-site-project #:derived` |
 | content before rendering | content transforms | `make-site-project #:transforms` |
 | copy a directory of static files | a renderer | `make-static-assets-renderer` |
 | generate files from declared inputs with an external tool | an asset pipeline | `#:pipelines` |
@@ -31,6 +31,24 @@ If the change is about *how one node is interpreted*, use rules.  If it is
 about *the environment of a render pass*, use a context.  If it is about
 *reusable output policy*, use options or presentation.  If it is about
 *rewriting content*, use a transform.
+
+## Add a derived site artifact
+
+For a Forester project, pass derived artifacts directly and keep the standard
+HTML output:
+
+```scheme
+(use-modules (forester project)
+             (forester render derived))
+
+(make-forester-project
+  #:home "hello"
+  #:derived (list (graph-derived #:path "forest-graph.scm")))
+```
+
+Derived artifacts run against the analyzed forest and participate in Grove's
+renderer cache. Use `make-site-project #:derived` when building a non-Forester
+site or when you need lower-level site configuration.
 
 ## Add output from an external tool
 

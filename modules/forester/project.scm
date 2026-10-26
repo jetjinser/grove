@@ -18,12 +18,13 @@
           (description #f)
           (prepare (lambda () '()))
           (renderers #f)
+          (derived '())
           (browse #f)
           (locale #f)
           (pipelines '())
           (default-prefix #f)
           (tree-template #f))
-  "Build a Forester project with standard HTML and optional asset pipelines.
+  "Build a Forester project with standard HTML, derived artifacts, and pipelines.
 HOME is the tree ID rendered at the site index. RENDERERS replaces the
 standard HTML renderer when supplied."
   (unless (and (string? home) (> (string-length home) 0))
@@ -37,6 +38,7 @@ standard HTML renderer when supplied."
     #:read-page (make-page-reader (make-scribble-document-reader))
     #:analyze make-forest
     #:renderers (or renderers (list (make-html-renderer)))
+    #:derived derived
     #:pipelines pipelines
     #:browse browse
     #:locale locale
