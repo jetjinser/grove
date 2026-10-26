@@ -26,8 +26,7 @@
   #:export (project?
             make-project
             project-source-directory
-            project-tree-template
-            project-default-prefix
+            project-create-source
             project-renderers
             collect-project-sources
             project-extra-sources
@@ -114,13 +113,9 @@
   (input-cache-context project-analysis-input-cache-context))
 
 (define-record-type <project>
-  ;;     New fields append at the end: compiled callers inline the
-  ;;     slot positions of the fields they read, so inserting in the
-  ;;     middle silently re-maps every later field for them.
   (%make-project source-directory source-filter collect-sources prepare
                  extra-sources read-source analyze renderers
-                 output-directory cache? default-prefix tree-template browse
-                 pipelines)
+                 output-directory cache? browse pipelines create-source)
   project?
   (source-directory project-source-directory/raw)
   (source-filter project-source-filter)
@@ -132,10 +127,9 @@
   (renderers project-renderers/raw)
   (output-directory project-output-directory/raw)
   (cache? project-cache?)
-  (default-prefix project-default-prefix/raw)
-  (tree-template project-tree-template)
   (browse project-browse)
-  (pipelines project-pipelines))
+  (pipelines project-pipelines)
+  (create-source project-create-source))
 
 (define (project-source-directory project)
   (snapshot-data (project-source-directory/raw project)))
@@ -148,9 +142,6 @@
 
 (define (project-output-directory project)
   (snapshot-data (project-output-directory/raw project)))
-
-(define (project-default-prefix project)
-  (snapshot-data (project-default-prefix/raw project)))
 
 (define (unique-pipeline-names? pipelines)
   (let loop ((remaining pipelines) (seen '()))
@@ -172,9 +163,8 @@
                        (pipelines '())
                        output-directory
                        (cache? #t)
-                       (default-prefix #f)
-                       (tree-template #f)
-                       (browse #f))
+                       (browse #f)
+                       (create-source #f))
   (unless (and (or (not source-directory) (string? source-directory))
                (procedure? source-filter)
                (or (not collect-sources) (procedure? collect-sources))
@@ -209,21 +199,18 @@
     (error "project requires a non-empty output directory" output-directory))
   (unless (boolean? cache?)
     (error "project cache option must be a boolean" cache?))
-  (unless (or (not default-prefix) (non-empty-string? default-prefix))
-    (error "project default prefix must be a non-empty string" default-prefix))
-  (unless (or (not tree-template) (procedure? tree-template))
-    (error "project tree template must be a procedure" tree-template))
   (unless (or (not browse) (procedure? browse))
     (error "project browse callback must be a procedure" browse))
+  (unless (or (not create-source) (procedure? create-source))
+    (error "project source creator must be a procedure or #f" create-source))
   (%make-project (snapshot-data source-directory)
                  source-filter collect-sources prepare
                  (snapshot-data extra-sources) read-source analyze
                  (map (lambda (renderer)
                         (if (cached-renderer? renderer) renderer
                             (make-cached-renderer renderer))) renderers)
-                 (snapshot-data output-directory) cache?
-                 (snapshot-data default-prefix) tree-template browse
-                 (snapshot-data pipelines)))
+                 (snapshot-data output-directory) cache? browse
+                 (snapshot-data pipelines) create-source))
 
 (define* (project-with-options project
                                #:key
@@ -246,9 +233,8 @@
     #:pipelines (project-pipelines project)
     #:output-directory output-directory
     #:cache? cache?
-    #:default-prefix (project-default-prefix project)
-    #:tree-template (project-tree-template project)
-    #:browse (project-browse project)))
+    #:browse (project-browse project)
+    #:create-source (project-create-source project)))
 
 (define (read-source-with-context path read-source)
   (call-with-project-stage 'read path (lambda () (read-source path))))

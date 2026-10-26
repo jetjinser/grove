@@ -35,10 +35,9 @@
                             (pipelines '())
                             output-directory
                             (cache? #t)
-                            (default-prefix #f)
-                            (tree-template #f)
                             (home #f)
                             (browse #f)
+                            (create-source #f)
                             (locale #f))
   "Build a project from Grove site pages.
 
@@ -55,7 +54,6 @@ return any project model. READ-PAGE and OUTPUT-DIRECTORY are required."
   (set! derived (snapshot-data derived))
   (set! pipelines (snapshot-data pipelines))
   (set! output-directory (snapshot-data output-directory))
-  (set! default-prefix (snapshot-data default-prefix))
   (set! home (snapshot-data home))
   (set! locale (snapshot-data locale))
   (unless (non-empty-string? title)
@@ -90,6 +88,8 @@ return any project model. READ-PAGE and OUTPUT-DIRECTORY are required."
     (error "site project requires an output directory" output-directory))
   (unless (or (not home) (non-empty-string? home))
     (error "site home must be a non-empty page ID or #f" home))
+  (unless (or (not create-source) (procedure? create-source))
+    (error "site source creator must be a procedure or #f" create-source))
   (when locale
     (unless (string? locale)
       (error "site locale must be a tag or #f" locale))
@@ -167,6 +167,5 @@ return any project model. READ-PAGE and OUTPUT-DIRECTORY are required."
       #:pipelines pipelines
       #:output-directory output-directory
       #:cache? cache?
-      #:default-prefix default-prefix
-      #:tree-template tree-template
-      #:browse browse)))
+      #:browse browse
+      #:create-source create-source)))

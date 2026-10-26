@@ -5,6 +5,7 @@
 (use-modules (ice-9 textual-ports)
              (forester input scribble)
              (forester render html)
+             (forester project new)
              (forester render text)
              (forester site)
              (forester style html)
@@ -58,7 +59,9 @@
 
 (define bilingual-project
   (make-site-project
-    #:default-prefix "bi"
+    #:create-source (make-forester-source-creator
+                      #:source-directory source-directory
+                      #:default-prefix "bi")
     #:locale "en"
     #:title "Bilingual Notes"
     #:description "One idea in two languages, shown side by side."

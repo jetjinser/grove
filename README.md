@@ -75,16 +75,17 @@ A project's `project.scm` returns its configuration. From that directory:
 | `grove serve` | Preview at `http://127.0.0.1:8080/` and rebuild after edits. |
 | `grove browse` | Analyze the project and browse its model in the terminal. |
 | `grove ssh-keygen` | Generate an RSA host key for `grove browse --ssh`. |
-| `grove new` | Create a tree using the project's default prefix. |
+| `grove new` | Ask the project to create a source file. |
 
 `grove browse` can also serve the same browser over SSH with `--ssh PORT`
 (plus `--host-key` and `--authorized-keys`); see
 [docs/project.md](docs/project.md) for host keys, limits, and concurrency.
 
-Set `#:default-prefix "jsk"` to create addresses such as `jsk-0001` and
-`jsk-000a`. `grove new math` selects another prefix. New trees need a title
-before building. Use `grove --help` for options and the
-[project reference](docs/project.md) for configuration.  For a task-oriented
+Forester projects can set `#:default-prefix "jsk"` to create addresses such
+as `jsk-0001` and `jsk-000a`; `grove new math` selects another prefix. Other
+projects can define their own source-creation callback, or omit this command.
+New Forester trees need a title before building. Use `grove --help` for options
+and the [project reference](docs/project.md) for configuration. For a task-oriented
 map from “change X” to the right API, see
 [docs/customizing.md](docs/customizing.md).
 

@@ -12,6 +12,7 @@
              (forester render site)
              (grove render static)
              (forester render text)
+             (forester project new)
              (forester render text routes)
              (forester site)
              (grove input scribble)
@@ -56,7 +57,9 @@
 
 (define notes-project
   (make-site-project
-    #:default-prefix "note"
+    #:create-source (make-forester-source-creator
+                      #:source-directory source-directory
+                      #:default-prefix "note")
     #:title "Linked Notes"
     #:description "Connected notes on mathematics and its ideas."
     #:home "math-0001"

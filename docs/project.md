@@ -17,6 +17,7 @@ and [inventory](../examples/inventory/project.scm) for project-owned models.
 | --- | --- |
 | reads arbitrary files into a project-owned model | `make-project` from `(grove project)` |
 | reads pages into Grove content, then analyzes and renders a site | `make-site-project` from `(grove project site)` |
+| reads and analyzes Forester `.plant` trees with standard HTML output | `make-forester-project` from `(forester project)` |
 
 `make-project` is the general build lifecycle: collect inputs, prepare,
 read each input, analyze the resulting model, and run renderers that return
@@ -32,25 +33,13 @@ unrelated project model as a site.
 
 ## Smallest Forester site
 
-A one-page HTML site needs a page reader, Forester's analyzer, an HTML renderer,
-and an explicit home page. Direct imports keep the first setup to one project
-file and one page:
+A one-page HTML site needs an explicit home page. The Forester constructor
+supplies the standard reader, analyzer, and HTML renderer:
 
 ```scheme
 ;; project.scm
-(use-modules (forester input scribble)
-             (forester render html)
-             (forester site)
-             (grove input scribble)
-             (grove project site))
-
-(make-site-project
-  #:source-directory "plants"
-  #:home "hello"
-  #:read-page (make-page-reader (make-scribble-document-reader))
-  #:analyze make-forest
-  #:renderers (list (make-html-renderer))
-  #:output-directory "build")
+(use-modules (forester project))
+(make-forester-project #:home "hello")
 ```
 
 ```scribble
@@ -64,10 +53,11 @@ This is a first page.
 
 Run `grove check` and then `grove build` from the project directory. The home
 ID selects the tree rendered at `index.html`; Grove does not guess which page
-should represent the site. A project-local command manifest is optional: use
-`@use-commands` and `make-scribble-module-setup` when you want a named,
-reusable vocabulary assembled from local modules. Direct `@use-modules` imports
-need no project preparation step.
+should represent the site. `make-site-project` remains available when a project
+needs to assemble these pieces itself. A project-local command manifest is
+optional: use `@use-commands` and `make-scribble-module-setup` when you want a
+named, reusable vocabulary assembled from local modules. Direct
+`@use-modules` imports need no project preparation step.
 
 ## Execution and paths
 
@@ -332,36 +322,38 @@ Complete renderer hits skip `render`. CLI formatting uses the same events.
 
 ## Tree creation
 
-`#:default-prefix` supplies the prefix for `grove new`. Explicit prefixes
-contain lowercase ASCII letters, digits, and internal hyphens. IDs use lowercase
-base36 with at least four digits. Creation takes the largest matching source
-suffix plus one, without filling gaps; deleting the maximum can reuse its number.
-Destination files are scanned too, and exclusive creation never overwrites them.
+`grove new` delegates source creation to the project's `#:create-source`
+procedure. Grove does not choose a source format or template. A generic project
+may omit this callback; `grove new` then reports that creation is unavailable.
+The procedure receives the optional positional prefix and destination and
+returns the path to print. This keeps naming and file-format rules with the
+project that owns them.
 
-The default destination is `source-directory`; collector-only projects require
-`--dest`. It must exist. Creation evaluates configuration but not article
-readers, preparation, analysis, or renderers. It prints the absolute path.
-The default template imports `(forester commands)` and includes an empty title
-and today's publication date. Fill in the title before building.
-
-A project can supply `#:tree-template`, a procedure receiving the allocated ID
-and the local date as strings and returning the complete UTF-8 source text:
+Forester provides that policy in `(forester project new)`. The default
+constructor installs it automatically; advanced `make-site-project` users can
+install it directly:
 
 ```scheme
-#:tree-template
-(lambda (id date)
-  (string-append
-    "@use-modules[(flora commands) (language scribble commands)]\n\n"
-    "@title{}\n"
-    "@published{" date "}\n"))
+(use-modules (forester project new))
+
+(make-forester-source-creator
+  #:source-directory "plants"
+  #:default-prefix "note"
+  #:template
+  (lambda (id date)
+    (string-append
+      "@use-modules[(flora commands) (language scribble commands)]\n\n"
+      "@title{}\n"
+      "@published{" date "}\n")))
 ```
 
-The example is configuration for a consumer that provides `(flora commands)`;
-Grove does not depend on that module. The callback can use the ID in the source,
-add metadata, or return text loaded from a project template file. `#:prepare`
-loads project modules for later imports; it does not import them into each
-article. Consequently, a template must include the imports its commands need.
-Template errors or non-string results fail before creating a file.
+The creator scans the source and destination directories for existing `.plant`
+IDs, allocates a four-digit lowercase base36 suffix, and uses exclusive file
+creation to avoid overwrites. Its default template imports
+`(forester commands)`, leaves the title empty, and adds today's publication
+date. A custom template receives the allocated ID and local date and must return
+UTF-8 source text. Imports used by each article belong in the template;
+`#:prepare` loads modules for the build but does not import them into articles.
 
 ## Highlighting
 

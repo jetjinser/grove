@@ -216,7 +216,7 @@ with HELP overrides keyed by command."
          (else (usage-error "unknown command or option: ~a" argument)))))))
 
 (define command-synopses
-  '(("new" . "Usage: grove new [PREFIX] [OPTIONS]\n\nCreate a tree using PREFIX or the project default, with an increasing base36 ID.\n")
+  '(("new" . "Usage: grove new [PREFIX] [OPTIONS]\n\nAsk the project to create a source, optionally using PREFIX.\n")
     ("build" . "Usage: grove build [OPTIONS]\n\nBuild the project and update its outputs.\n")
     ("check" . "Usage: grove check [OPTIONS]\n\nRead, analyze, render, and validate without writing outputs.\n")
     ("serve" . "Usage: grove serve [OPTIONS]\n\nServe successful build outputs on localhost and watch for changes.\n")
@@ -305,9 +305,8 @@ with HELP overrides keyed by command."
                                     (string-append (getcwd) "/" destination)))))
          (call-with-loaded-project filename
            (lambda (project)
-             (display (create-tree project
-                        #:prefix (or (assq-ref options 'prefix)
-                                     (project-default-prefix project))
+             (display (create-source project
+                        #:prefix (assq-ref options 'prefix)
                         #:destination (or destination
                                           (project-source-directory project))))
              (newline)))

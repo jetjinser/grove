@@ -97,7 +97,7 @@
 
 (let* ((source-directory (string-copy "sources"))
        (output-directory (string-copy "output"))
-       (default-prefix (string-copy "note"))
+       (source-creator (lambda (_prefix _destination) "created"))
        (extra-sources (list (string-copy "theme.css")))
        (renderers (list (lambda (_) '())))
        (project (make-project
@@ -106,18 +106,17 @@
                   #:read-source (lambda (_) #f)
                   #:renderers renderers
                   #:output-directory output-directory
-                  #:default-prefix default-prefix)))
+                  #:create-source source-creator)))
   (string-set! source-directory 0 #\x)
   (string-set! output-directory 0 #\x)
-  (string-set! default-prefix 0 #\x)
   (set-car! extra-sources "changed.css")
   (set-car! renderers #f)
   (test-equal "projects snapshot caller-owned path and source values"
-    '("sources" "output" "note" ("theme.css"))
+    '("sources" "output" ("theme.css") #t)
     (list (project-source-directory project)
           (project-output-directory project)
-          (project-default-prefix project)
-          (project-extra-sources project)))
+          (project-extra-sources project)
+          (eq? (project-create-source project) source-creator)))
   (let ((exposed-sources (project-extra-sources project))
         (exposed-renderers (project-renderers project)))
     (set-car! exposed-sources "changed again.css")

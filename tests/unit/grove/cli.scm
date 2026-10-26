@@ -215,7 +215,7 @@
         (test-equal "CLI check does not repair or overwrite that state" before (snapshot))))
     ;; Creation needs only filenames, even when all execution hooks fail.
     (write-file config
-      "(use-modules (grove project site))\n(make-site-project #:source-directory \"sources\" #:default-prefix \"jsk\" #:prepare (lambda () (error \"must not prepare\")) #:read-page (lambda (_) (error \"must not read\")) #:analyze (lambda (_) (error \"must not analyze\")) #:output-directory \"output\")\n")
+      "(use-modules (forester project))\n(make-forester-project #:source-directory \"sources\" #:default-prefix \"jsk\" #:prepare (lambda () (error \"must not prepare\")) #:output-directory \"output\" #:home \"hello\")\n")
     (mkdir (string-append root "/sources/nested"))
     (write-file (string-append root "/sources/nested/jsk-000z.plant") "invalid source")
     (write-file (string-append root "/sources/jsk-invalid!.plant") "ignored suffix")
@@ -254,8 +254,8 @@
     ;; Exercise generated source through the real document/page reader.
     (mkdir (string-append root "/template-sources"))
     (write-file config
-      "(use-modules (grove project site) (grove input scribble) (forester input scribble))\n(make-site-project #:source-directory \"template-sources\" #:default-prefix \"tutorial\" #:tree-template (lambda (id date) (string-append \"@use-modules[(forester commands) (language scribble commands)]\\n@title{教程：\" id \"}\\n@published{\" date \"}\\nHello.\\n\")) #:read-page (make-page-reader (make-scribble-document-reader)) #:output-directory \"output\")\n")
-    (test-equal "site projects preserve custom templates through CLI loading" 0
+      "(use-modules (forester project))\n(make-forester-project #:source-directory \"template-sources\" #:default-prefix \"tutorial\" #:tree-template (lambda (id date) (string-append \"@use-modules[(forester commands) (language scribble commands)]\\n@title{教程：\" id \"}\\n@published{\" date \"}\\nHello.\\n\")) #:output-directory \"output\" #:home \"tutorial-0001\")\n")
+      (test-equal "Forester projects preserve custom templates through CLI loading" 0
       (car (run "new" "--project" config)))
     (test-assert "custom templates receive the allocated ID and preserve Unicode"
       (string-contains
@@ -264,8 +264,8 @@
     (test-equal "custom generated article passes real reading and analysis" 0
       (car (run "check" "--project" config)))
     (write-file config
-      "(use-modules (grove project site) (grove input scribble) (forester input scribble))\n(make-site-project #:source-directory \"template-sources\" #:default-prefix \"plain\" #:read-page (make-page-reader (make-scribble-document-reader)) #:output-directory \"output\")\n")
-    (test-equal "default template creates an article with explicit imports" 0
+      "(use-modules (forester project))\n(make-forester-project #:source-directory \"template-sources\" #:default-prefix \"plain\" #:output-directory \"output\" #:home \"plain-0001\")\n")
+      (test-equal "default Forester template creates an article with explicit imports" 0
       (car (run "new" "--project" config)))
     (let ((path (string-append root "/template-sources/plain-0001.plant")))
       (write-file path
@@ -277,14 +277,16 @@
       (for-each
         (lambda (template)
           (write-file config
-            (string-replace-substring valid-config "#:default-prefix"
-              (string-append "#:tree-template " template " #:default-prefix")))
+            (string-replace-substring valid-config "#:default-prefix \"plain\""
+              (string-append "#:tree-template " template
+                             " #:default-prefix \"plain\"")))
           (test-equal "invalid templates fail before creating a file" 1
             (car (run "new" "--project" config)))
           (test-assert "failed template leaves no empty article"
             (not (file-exists? (string-append root "/template-sources/plain-0002.plant")))))
         '("(lambda (id date) 42)" "(lambda (id date) (error \"template failure\"))" "42")))
-    (write-file config original-config)
+    (write-file config
+      "(use-modules (forester project))\n(make-forester-project #:source-directory \"sources\" #:output-directory \"output\" #:home \"hello\")\n")
     (test-equal "missing default prefix requires an explicit prefix" 1
       (car (run "new" "--project" config)))
     (test-equal "explicit prefix works without a default" 0
@@ -298,12 +300,16 @@
     (test-assert "occupied directory remains intact"
       (file-is-directory? (string-append root "/sources/note-0002.plant")))
     (write-file config
-      "(use-modules (grove project))\n(make-project #:collect-sources (lambda () '()) #:default-prefix \"jsk\" #:read-source (lambda (_) (error \"must not read\")) #:output-directory \"output\")\n")
-    (test-equal "collector-only projects require an explicit destination" 1
+      "(use-modules (grove project))\n(make-project #:collect-sources (lambda () '()) #:read-source (lambda (_) (error \"must not read\")) #:output-directory \"output\")\n")
+    (test-equal "generic projects cannot accidentally create Forester trees" 1
       (car (run "new" "--project" config)))
-    (test-equal "collector-only projects scan existing destination IDs"
-      (string-append root "/new-destination/jsk-0013.plant\n")
-      (cadr (run "new" "--project" config "--dest" (string-append root "/new-destination"))))
+    (test-equal "generic source creation is delegated to the project" 0
+      (begin
+        (write-file config
+          "(use-modules (grove project))\n(make-project #:collect-sources (lambda () '()) #:read-source (lambda (_) #f) #:output-directory \"output\" #:create-source (lambda (prefix destination) (format #f \"~s:~s\" prefix destination)))\n")
+        (car (run "new" "--project" config))))
+    (test-equal "generic creator receives the command arguments"
+      "#f:#f\n" (cadr (run "new" "--project" config)))
     (write-file config "(throw 'misc-error #f \"~A\" (list (make-string 2000 #\\x)) #f)\n")
     (let ((short (run "build" "--project" config))
           (debug (run "build" "--project" config "--debug")))
