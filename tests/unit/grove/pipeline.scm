@@ -83,6 +83,19 @@
 
 (test-begin "grove asset pipelines")
 
+(let ((merged
+       (merge-pipeline-artifacts
+        (list (make-artifact "shared.css" "pipeline"))
+        (list (make-artifact "shared.css" "renderer")
+              (make-artifact "page.html" "page"))
+        '())))
+  (test-equal "pipeline artifacts take precedence over renderer paths"
+    '("shared.css" "page.html")
+    (map artifact-path merged))
+  (test-equal "pipeline precedence keeps the emitted content"
+    "pipeline"
+    (artifact-content (car merged))))
+
 (let ((cache (make-content-cache "pipeline-test")))
   (test-equal "content cache starts empty" #f
     (content-cache-ref cache "font-key"))

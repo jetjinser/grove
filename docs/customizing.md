@@ -19,10 +19,11 @@ This is the shortest path from “I want to change X” to the right Grove API.
 | tree headings or the table of contents | page-specific presentation data | `make-html-presentation #:title-decorations` |
 | locale, messages, or date formatting | renderer options | `make-html-options #:locale/#:messages` |
 | output paths | routes | `make-html-routes`, `make-text-routes`, `#:prefix` |
-| sitemap, feed, or graph | derived artifacts | `make-site-options #:derived` |
+| a site-wide sitemap, feed, or graph projection | derived artifacts | `make-site-options #:derived` |
 | content before rendering | content transforms | `make-site-options #:transforms` |
-| static files or generated assets | a renderer or pipeline | `make-static-assets-renderer`, `#:pipelines` |
-| a new site output format | a renderer returning artifacts | `#:renderers` on `make-site-options` |
+| copy a directory of static files | a renderer | `make-static-assets-renderer` |
+| generate files from declared inputs with an external tool | an asset pipeline | `#:pipelines` |
+| add a custom output format from the site model | a renderer returning artifacts | `#:renderers` on `make-site-options` |
 | build/cache behavior | project options | `make-site-options #:cache?`, `#:output-directory` |
 
 If the change is about *how one node is interpreted*, use rules.  If it is

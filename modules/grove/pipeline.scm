@@ -17,9 +17,10 @@
 ;;     procedure receives an input table (declared path -> materialized
 ;;     path) and an emit sink (artifact path -> bytes), and Grove turns
 ;;     what it emits into ordinary content-addressed artifacts.  The
-;;     procedure is part of the project file, so editing it invalidates
-;;     the pipeline through the project's own fingerprint; #:version is
-;;     a coarse additional bump for toolchain-facing changes.
+;;     The project file and declared inputs participate in the cache key.
+;;     #:version is the explicit invalidation token for behavior that the
+;;     project-file fingerprint cannot see, such as an adapter defined in an
+;;     imported module or a change in the external toolchain.
 
 (define-record-type <asset-pipeline>
   (%make-asset-pipeline name version inputs procedure)

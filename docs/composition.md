@@ -56,8 +56,10 @@ they should not wrap a procedure or list without adding meaning.
   artifacts. They belong to the build interpreter, not to a pure value
   composition protocol. Pipeline order is execution order, not a dependency
   graph: one pipeline cannot declare another pipeline's emitted artifact as an
-  input. Compose dependent stages inside one producer procedure, or declare a
-  real source file as the shared input to independent producers.
+  input. Pipeline artifacts take precedence over same-path renderer artifacts;
+  duplicate paths emitted by two pipelines fail artifact validation. Compose
+  dependent stages inside one producer procedure, or declare a real source
+  file as the shared input to independent producers.
 - The content algebra remains a free set of constructors; sequencing it as a
   monad would conflate content structure with rendering order.
 

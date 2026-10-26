@@ -12,5 +12,7 @@ The adapter probes `dot -V` and includes the result in its cache identity, so
 project code does not need to repeat Graphviz's version. The project environment
 still needs to pin the tool if reproducible builds matter; Grove cannot infer
 whether a tool's reported version captures every behavior-affecting dependency.
+The adapter's `dot-svg-v1` prefix is its own behavior version; bump it when the
+conversion logic changes, even if Graphviz itself does not.
 The integration test replaces a stand-in `dot` with a different reported
 version and verifies automatic cache invalidation.
