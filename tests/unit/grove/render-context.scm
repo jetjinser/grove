@@ -8,6 +8,11 @@
 
 (test-begin "grove render context")
 
+(test-assert "context association storage stays private"
+  (not (module-variable
+         (module-public-interface (resolve-module '(grove render context)))
+         'render-context-values)))
+
 (let ((context (make-render-context #:page "p" #:custom-key "v")))
   (test-equal "construction keeps known keys"
     "p" (render-context-ref context 'page))

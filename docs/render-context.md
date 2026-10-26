@@ -38,6 +38,9 @@ own layers; merging them would turn the context into a new global state.
   key to inherit it; use `render-context-without` to remove a key.
 - Unknown namespaced keys are allowed, so projects can add data without
   changing the core record.
+- The context is shared with rules and derived artifacts for the duration of a
+  render pass. Treat it and its values as read-only; use `render-context-with`
+  or `render-context-without` to derive a context with different bindings.
 - Rules receive `(context element children next)` and use
   `render-context-ref` for named fields.
 - Chrome helpers and renderer callbacks receive the render context explicitly.

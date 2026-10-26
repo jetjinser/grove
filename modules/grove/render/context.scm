@@ -11,7 +11,6 @@
             render-context-has?
             render-context-with
             render-context-without
-            render-context-values
             render-context-forest
             render-context-routes
             render-context-page
