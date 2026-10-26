@@ -32,10 +32,10 @@ to them.
   does not rewrite source.
 - Documents carry a viewport meta tag, Open Graph title/description/type, an
   absolute `og:image` when the page has `@og-image` or the site supplies
-  `#:og-image` (on `site->html`, `render-html`, or `make-html-renderer`) and a
-  site URL is configured, and `article:published_time` when the page has a
-  publication date.  The image alt comes from `@og-image-alt`,
-  the site's `#:og-image-alt`, or the page title.  A `#:site-url` adds the
+  `#:og-image` in `make-html-options` and a site URL is configured, and
+  `article:published_time` when the page has a publication date. The image alt
+  comes from `@og-image-alt`, the site's `#:og-image-alt`, or the page title.
+  A `#:site-url` in `make-html-options` adds the
   canonical link and `og:url`; without it no absolute URL is invented.
 - The default stylesheet hides the skip link until it is focused and keeps
   `:focus-visible` outlines visible.
@@ -51,10 +51,12 @@ it, with `#:locale` as the site fallback, and projects extend it with
 
 ```scheme
 (make-html-renderer
-  #:locale "zh-Hans"
-  #:messages (make-message-catalog
-              '(("zh-Hans" . ((nav-site . "站内导航"))))
-              #:default "zh-Hans"))
+  #:options
+  (make-html-options
+    #:locale "zh-Hans"
+    #:messages (make-message-catalog
+                '(("zh-Hans" . ((nav-site . "站内导航"))))
+                #:default "zh-Hans")))
 ```
 
 A partial catalog is layered over the built-in one, so keys it does not

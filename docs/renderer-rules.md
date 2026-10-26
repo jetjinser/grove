@@ -162,8 +162,8 @@ counterpart:
 
 ```scheme
 (content->text document #:rules rules)
-(site->text forest #:rules rules)
-(site->gemtext forest #:rules rules)
+(site->text forest #:options (make-text-options #:rules rules))
+(site->gemtext forest #:options (make-gemtext-options #:rules rules))
 ```
 
 The text adapter receives the rendered body as `children`; `next` delegates to

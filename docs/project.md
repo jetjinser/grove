@@ -313,12 +313,16 @@ association list of language symbols and values created by `(grove highlight)`:
 (define scheme-highlight
   (make-highlighter "/absolute/path/scheme.so" "tree_sitter_scheme"
     "(symbol) @variable (number) @number"))
-(make-html-renderer #:routes routes
-  #:highlighters (list (cons 'scheme scheme-highlight)))
+(make-html-renderer
+  #:options
+  (make-html-options
+    #:routes routes
+    #:highlighters (list (cons 'scheme scheme-highlight))))
 ```
 
-Import `(grove highlight)` alongside `(forester render html)`. The same option
-is available on `render-html`, `site->html`, and Grove's `content->sxml`.
+Import `(grove highlight)` alongside `(forester render html)`. Configure
+`render-html`, `site->html`, and `make-html-renderer` through
+`make-html-options`; Grove's `content->sxml` accepts `#:highlighters` directly.
 Use `#:highlighters '()` to disable the defaults, or combine your mapping with
 `(default-highlighters)` to keep Scheme support. Without a configured
 highlighter, a named language produces a warning and plain code. Blocks without
