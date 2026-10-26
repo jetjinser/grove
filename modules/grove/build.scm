@@ -44,6 +44,9 @@
             renderers)))
 
 (define (render-model model renderers)
+  "Apply RENDERERS to MODEL in order and concatenate their artifact lists.
+This invokes rendering only; it does not collect inputs, cache results, or
+write artifacts."
   (apply append
     (map (lambda (renderer)
            ((if (cached-renderer? renderer)
