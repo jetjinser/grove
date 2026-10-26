@@ -43,8 +43,12 @@ Mathematical checks should use independent oracles where available.
 
 Enter the development shell with `nix develop ./nix` or
 `guix shell --container --pure -m manifest.scm`. The Guix manifest exposes
-locale data through `GUIX_LOCPATH`, including in a pure shell. Inside the
-development shell:
+locale data through `GUIX_LOCPATH`, including in a pure shell. The smaller
+optional external-tool environment is in `integration-manifest.scm`; add it
+with `-m integration-manifest.scm` when running the real Typst, LaTeX, or
+SMathML experiments. It contains only the LaTeX kernel and `amsmath`, not the
+full basic TeX Live scheme. With Nix, use `nix develop .#integrations` for the
+same optional tools. Inside the default development shell:
 
 ```sh
 blue build

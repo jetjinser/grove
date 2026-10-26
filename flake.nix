@@ -32,6 +32,53 @@
           lib,
           ...
         }:
+        let
+          corePackages = with pkgs; [
+            guile
+            (guile-ssh.overrideAttrs (old: {
+              version = "1.0.0";
+              src = fetchFromGitHub {
+                owner = "artyom-poptsov";
+                repo = "guile-ssh";
+                rev = "03cfa463a275803c64ee84168c3d126a65f65796";
+                hash = "sha256-gaCFQxn69KENqdET/331Bnznl9uNwgUO2xuIE4Zpxgo=";
+              };
+              nativeBuildInputs = old.nativeBuildInputs
+                ++ [ autoreconfHook pkg-config ];
+            }))
+            guile-gcrypt
+            guile-quickcheck
+            self'.packages.blue
+            self'.packages.faster-minikanren
+            self'.packages.guile-ts
+            self'.packages.grove-highlights
+            self'.packages.grove
+            reuse
+          ];
+          integrationPackages = with pkgs; [
+            graphviz
+            typst
+            racket-minimal
+            dvisvgm
+            (texlive.combine {
+              inherit (texlive) latex-bin amsmath;
+            })
+          ];
+          guileEnvironment = [
+            {
+              name = "GUILE_LOAD_PATH";
+              prefix = "$DEVSHELL_DIR/${pkgs.guile.siteDir}";
+            }
+            {
+              name = "GUILE_LOAD_COMPILED_PATH";
+              prefix = "$DEVSHELL_DIR/${pkgs.guile.siteCcacheDir}";
+            }
+            {
+              name = "GUILE_EXTENSIONS_PATH";
+              prefix = "$DEVSHELL_DIR/lib/guile/${builtins.baseNameOf pkgs.guile.siteDir}/extensions";
+            }
+          ];
+        in
         {
           packages = lib.packagesFromDirectoryRecursive {
             inherit (pkgs) callPackage;
@@ -49,50 +96,12 @@
             };
           };
           devshells.default = {
-            packages = with pkgs; [
-              guile
-              (guile-ssh.overrideAttrs (old: {
-                version = "1.0.0";
-                src = fetchFromGitHub {
-                  owner = "artyom-poptsov";
-                  repo = "guile-ssh";
-                  rev = "03cfa463a275803c64ee84168c3d126a65f65796";
-                  hash = "sha256-gaCFQxn69KENqdET/331Bnznl9uNwgUO2xuIE4Zpxgo=";
-                };
-                nativeBuildInputs = old.nativeBuildInputs
-                  ++ [ autoreconfHook pkg-config ];
-              }))
-              guile-gcrypt
-              guile-quickcheck
-              self'.packages.blue
-              self'.packages.faster-minikanren
-              self'.packages.guile-ts
-              self'.packages.grove-highlights
-              self'.packages.grove
-
-              # Optional tools for project-side integration experiments.
-              graphviz
-              typst
-              racket-minimal
-              texlive.combined.scheme-basic
-              dvisvgm
-
-              reuse
-            ];
-            env = [
-              {
-                name = "GUILE_LOAD_PATH";
-                prefix = "$DEVSHELL_DIR/${pkgs.guile.siteDir}";
-              }
-              {
-                name = "GUILE_LOAD_COMPILED_PATH";
-                prefix = "$DEVSHELL_DIR/${pkgs.guile.siteCcacheDir}";
-              }
-              {
-                name = "GUILE_EXTENSIONS_PATH";
-                prefix = "$DEVSHELL_DIR/lib/guile/${builtins.baseNameOf pkgs.guile.siteDir}/extensions";
-              }
-            ];
+            packages = corePackages;
+            env = guileEnvironment;
+          };
+          devshells.integrations = {
+            packages = corePackages ++ integrationPackages;
+            env = guileEnvironment;
           };
         };
 

@@ -8,3 +8,9 @@ Typst, LaTeX, and SMathML source in `.plant` articles. It is not a Grove core
 API. The sample is [math.plant](math.plant); the implementation is
 [extension.scm](extension.scm); executable checks are in
 [`tests/unit/forester/hackable-math.scm`](../../tests/unit/forester/hackable-math.scm).
+
+The unit test uses stand-in executables and does not need the external tools.
+To run the real renderers, enter Grove's optional Guix environment with
+`guix shell -m manifest.scm -m integration-manifest.scm` from the repository
+root, or use `nix develop .#integrations`. These provide Typst, Racket with
+SMathML, and a minimal LaTeX kernel plus `amsmath` and `dvisvgm`.
