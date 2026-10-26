@@ -30,6 +30,9 @@
             gemtext-options?
             make-gemtext-renderer))
 
+(define content->text/internal
+  (@@ (grove render text) content->text/internal))
+
 (define (default-gemtext-routes)
   (make-text-routes
     #:page-path (lambda (id) (string-append id ".gmi"))
@@ -120,9 +123,7 @@
         (set! pending-links '())
         (string-append body
           (if (null? links) "" (string-append "\n" (string-concatenate links))))))
-    (append
-     bilingual-text-handlers
-     `((tag . ,(lambda (_ body) ""))
+    `((tag . ,(lambda (_ body) ""))
       (taxon . ,(lambda (_ body) ""))
       (item . ,(lambda (_ body)
                  (flush-links
@@ -189,10 +190,10 @@
                                             ""))
                                       "\n" body
                                       (if (string-suffix? "\n" body) "" "\n")
-                                      (marked-line #\F "```") "\n")))))))
+                                      (marked-line #\F "```") "\n"))))))
 
 (define (page-body forest routes page rules context)
-  (content->text (site-page-document page)
+  (content->text/internal (site-page-document page)
     #:internal-handlers (page-content-handlers forest routes page)
     #:rules rules
     #:context (render-context-with context
@@ -362,7 +363,8 @@
          (reference-taxon-id (gemtext-options-reference-taxon-id options))
          (locale (gemtext-options-locale options))
          (messages (gemtext-options-messages options))
-         (rules (gemtext-options-rules options)))
+         (rules (compose-render-rules bilingual-text-rules
+                                      (gemtext-options-rules options))))
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
   (unless (forest? forest)
@@ -390,7 +392,8 @@
          (reference-taxon-id (gemtext-options-reference-taxon-id options))
          (locale (gemtext-options-locale options))
          (messages (gemtext-options-messages options))
-         (rules (gemtext-options-rules options)))
+         (rules (compose-render-rules bilingual-text-rules
+                                      (gemtext-options-rules options))))
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
   (unless (forest? forest)

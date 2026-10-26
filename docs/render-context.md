@@ -64,7 +64,8 @@ the derived values into a cached renderer that receives that context.
 
 ## Interpreter boundary
 
-- `next` in a rule walks composed rules, then the internal handler layer, then
+- `next` in a rule walks composed rules, then the stock renderer's private
+  handlers, then
   the built-in interpretation.  A rule that only wants to adjust one kind can
   call `(next)` and delegate the rest.
 - Trees and transclusions use lazy structural recursion and stay outside the

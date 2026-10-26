@@ -5,7 +5,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # Project reference
 
-For setup and CLI usage, see the [README](../README.md). The project file's
+For setup and CLI usage, see the [README](../README.md) and the
+[API map](api.md). The project file's
 final expression returns a project; it must not run a build itself. Use
 [`examples/linked-notes/project.scm`](../examples/linked-notes/project.scm)
 for a site configuration, or the [catalog](../examples/catalog/project.scm)
@@ -225,6 +226,9 @@ Plain renderer callbacks are assumed deterministic under tracked inputs.
 `make-cached-renderer` adds `#:inputs` and `#:configuration` (data or a
 model-to-data procedure), or disables caching. Grove cannot infer hidden
 closure state. Built-in factories declare their settings themselves.
+Most project code should pass a plain renderer procedure and leave cache
+configuration alone. Add explicit inputs or configuration only when a custom
+renderer depends on data outside the analyzed model and tracked project files.
 
 Document entries live in the machine-global content store,
 `$XDG_CACHE_HOME/grove/store/input-cache` (override the base with

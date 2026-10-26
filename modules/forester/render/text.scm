@@ -30,11 +30,14 @@
             text-options?
             make-text-renderer))
 
+;; Forester supplies the tree-aware lazy handlers; ordinary extensions use
+;; render rules through the public (grove render text) entry point.
+(define content->text/internal
+  (@@ (grove render text) content->text/internal))
+
 (define (page-content-handlers forest routes page)
   (let ((references (outgoing-references forest (site-page-id page))))
-    (append
-     bilingual-text-handlers
-     `((tag . ,(lambda (_element _body) ""))
+    `((tag . ,(lambda (_element _body) ""))
       (taxon . ,(lambda (_element _body) ""))
       (image . ,(lambda (element body)
                  (if (string-null? (string-trim-both body))
@@ -59,7 +62,7 @@
                           (text-relative-path (text-page-path routes (site-page-id page))
                             (text-page-path routes (content-element-property element 'target)))
                           (if fragment (string-append "#" fragment) "")
-                          "]"))))))))
+                          "]")))))))
 
 (define (occurrence-anchor element prefix position)
   "The canonical anchor of a tree occurrence: the author anchor when the
@@ -88,7 +91,7 @@ HTML renderer so text and HTML address occurrences identically."
                        (subtree-content-text forest routes target child-prefix
                                              target-context
                                              #:rules rules))))
-    (content->text (site-page-document page)
+    (content->text/internal (site-page-document page)
       #:internal-handlers (page-content-handlers forest routes page)
       #:rules rules
       #:context context
@@ -338,7 +341,8 @@ HTML renderer so text and HTML address occurrences identically."
          (reference-taxon-id (text-options-reference-taxon-id options))
          (locale (text-options-locale options))
          (messages (text-options-messages options))
-         (rules (text-options-rules options)))
+         (rules (compose-render-rules bilingual-text-rules
+                                      (text-options-rules options))))
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
   (unless (forest? forest)
@@ -367,7 +371,8 @@ HTML renderer so text and HTML address occurrences identically."
          (reference-taxon-id (text-options-reference-taxon-id options))
          (locale (text-options-locale options))
          (messages (text-options-messages options))
-         (rules (text-options-rules options)))
+         (rules (compose-render-rules bilingual-text-rules
+                                      (text-options-rules options))))
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
   (unless (forest? forest)

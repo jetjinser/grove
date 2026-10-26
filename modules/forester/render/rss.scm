@@ -18,6 +18,9 @@
   #:use-module (srfi srfi-13)
   #:export (render-rss))
 
+(define content->text/internal
+  (@@ (grove render text) content->text/internal))
+
 (define (page-url base routes page)
   (web-absolute-route-url base (html-page-url routes (site-page-id page))))
 
@@ -52,7 +55,7 @@
 (define (page-description page)
   (or (assq-ref (site-page-metadata page) 'summary)
       (string-trim-both
-        (content->text (site-page-document page)
+        (content->text/internal (site-page-document page)
                        #:internal-handlers rss-text-handlers))))
 
 (define (feed-pages pages)

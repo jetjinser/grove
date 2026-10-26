@@ -89,7 +89,8 @@ file before building.
 
 For custom project models, renderers, transformations, and external-tool
 pipelines, see the [project reference](docs/project.md) and
-[customization guide](docs/customizing.md).
+[customization guide](docs/customizing.md). The [API map](docs/api.md) shows
+which entry point to start from and when to reach for lower-level interfaces.
 
 Other project commands:
 

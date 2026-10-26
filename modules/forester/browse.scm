@@ -16,6 +16,9 @@
   #:export (browse-forest
             make-forest-browser))
 
+(define content->text/internal
+  (@@ (grove render text) content->text/internal))
+
 ;; Content kinds the terminal projection understands. Anything outside this set
 ;; is still rendered as its children, but the page view names it so that no
 ;; authored structure is dropped without a diagnostic.
@@ -58,9 +61,7 @@
     (site-page-metadata page)))
 
 (define (terminal-content-handlers add-entry! references)
-  (append
-   bilingual-text-handlers
-   `((tag . ,(lambda (_element _body) ""))
+  `((tag . ,(lambda (_element _body) ""))
     (taxon . ,(lambda (_element _body) ""))
     (bold . ,(lambda (_element body) (string-append "*" body "*")))
     (verbatim . ,(lambda (_element body) (string-append "`" body "`")))
@@ -87,7 +88,7 @@
                      (format #f "[~a] ~a"
                              (add-entry! 'link body
                                          (content-element-property element 'target))
-                             body))))))
+                             body)))))
 
 (define (render-content forest page add-entry! expanded)
   "Render PAGE's body to a string, recording navigable entries."
@@ -110,8 +111,9 @@
                   (case kind ((subtree) "tree")
                              ((transclude) "transclusion")
                              (else "query"))))))
-  (content->text (site-page-document page)
+  (content->text/internal (site-page-document page)
     #:internal-handlers (terminal-content-handlers add-entry! references)
+    #:rules bilingual-text-rules
     #:internal-lazy-handlers (list (cons 'subtree render-tree)
                           (cons 'transclude render-tree)
                           (cons 'query-transclude render-tree))))

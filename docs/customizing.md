@@ -72,6 +72,15 @@ tracks declared files and loaded Scheme code. Include tool identity in the
 pipeline's `#:version` when Grove cannot observe it, as the Graphviz adapter
 does.
 
+The ordinary path needs no cache key: Grove wraps plain renderer procedures
+for caching and tracks project inputs. A pipeline may omit `#:inputs` when it
+does not read project files, and may keep the default empty `#:version` when
+its behavior is determined by project code and declared inputs. Add a version
+only for relevant state Grove cannot observe, such as an external toolchain
+version or environment variables. Use `make-cached-renderer` only when a
+renderer reads additional files or has hidden configuration; declare those
+dependencies so the cache stays correct.
+
 Use a Scheme expression in `.plant` when the tool's result belongs inline in
 that document. Use a pipeline when the result should be a separate build file.
 Both keep the integration code in the project. For inline expressions, declare

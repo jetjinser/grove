@@ -7,6 +7,7 @@
   #:use-module (grove ir)
   #:use-module (grove style)
   #:use-module (grove style html)
+  #:use-module (grove render rules)
   #:use-module (forester style i18n)
   #:use-module (language scribble command)
   #:use-module (language scribble flow)
@@ -21,7 +22,7 @@
             make-content-bilingual
             bilingual-lane?
             pair-translations
-            bilingual-text-handlers))
+            bilingual-text-rules))
 
 ;; Bilingual authoring lowers to ordinary, cacheable Content IR:
 ;;
@@ -31,8 +32,8 @@
 ;;
 ;; Text direction and HTML presentation are expressed through the existing
 ;; properties and style APIs, so no renderer change is required. The default
-;; HTML renderer emits side-by-side lanes; text output stacks them, and
-;; `bilingual-text-handlers' marks each lane when passed to `content->text'.
+;; HTML renderer emits side-by-side lanes; text output stacks them through an
+;; ordinary render-rule value that composes with project rules.
 
 (define (check-direction dir)
   (unless (member dir '("ltr" "rtl" "auto"))
@@ -223,24 +224,24 @@ hint. Parallel mode shows every lane as before."
       #:properties `((lang . ,tag) (dir . ,dir))
       #:style (foreign-term-style tag dir style))))
 
-;; Handlers that mark each language lane when rendering to text. A folded pair
-;; keeps the reader lane (the summary) and the folded lanes; the trailing hint
-;; is decoration and is dropped.  Plain document summaries carry no language
-;; and pass through unlabeled - `summary' is a shared content kind, and only
-;; the bilingual lowering attaches a lang property.
-(define bilingual-text-handlers
-  `((bilingual . ,(lambda (element body) body))
-    (bilingual-pair . ,(lambda (element body) (string-append body "\n")))
-    (bilingual-lane
-     . ,(lambda (element body)
-          (string-append "[" (content-element-property element 'lang) "] "
-                         body)))
-    (foreign-term . ,(lambda (element body) body))
-    (details . ,(lambda (element body) body))
-    (summary
-     . ,(lambda (element body)
-          (let ((lang (content-element-property element 'lang)))
-            (if lang
-                (string-append "[" lang "] " body)
-                body))))
-    (bilingual-more . ,(lambda (element body) ""))))
+;; A folded pair keeps the reader lane and folded lanes; the trailing hint is
+;; decoration and is dropped. Plain summaries have no language and pass
+;; through unlabeled. `next' preserves the generic text interpreter for kinds
+;; that need no bilingual-specific treatment.
+(define bilingual-text-rules
+  (make-render-rules
+    (list
+      (cons 'bilingual (lambda (_context _element body _next) body))
+      (cons 'bilingual-pair
+        (lambda (_context _element body _next) (string-append body "\n")))
+      (cons 'bilingual-lane
+        (lambda (_context element body _next)
+          (string-append "[" (content-element-property element 'lang) "] " body)))
+      (cons 'foreign-term (lambda (_context _element _body next) (next)))
+      (cons 'details (lambda (_context _element _body next) (next)))
+      (cons 'summary
+        (lambda (_context element body _next)
+          (if (content-element-property element 'lang)
+              (string-append "[" (content-element-property element 'lang) "] " body)
+              body)))
+      (cons 'bilingual-more (lambda (_context _element _body _next) "")))))

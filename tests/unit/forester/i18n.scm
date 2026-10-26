@@ -261,7 +261,7 @@
   "[en] The grove is a small forest.\n[zh-Hans] 树林是一片小小的森林。\n\n"
   (content->text
     (make-content-document (list (bilingual #:reader "en" english chinese)))
-    #:internal-handlers bilingual-text-handlers))
+    #:rules bilingual-text-rules))
 
 ;;; HTML presentation
 
@@ -296,7 +296,7 @@
 (test-equal "text output marks each lane"
   "[en] The grove is a small forest.\n[zh-Hans] 树林是一片小小的森林。\n\n"
   (content->text (make-content-document (list bilingual-block))
-                 #:internal-handlers bilingual-text-handlers))
+                 #:rules bilingual-text-rules))
 
 (test-equal "a plain summary renders unlabeled"
   "Derivation"
@@ -304,7 +304,7 @@
     (make-content-document
       (list (make-content-element 'summary (list "Derivation")
                                   #:flow-kind 'block)))
-    #:internal-handlers bilingual-text-handlers))
+    #:rules bilingual-text-rules))
 
 (test-equal "a summary carrying a language keeps its label"
   "[en] The grove is a small forest."
@@ -313,7 +313,7 @@
       (list (make-content-element
               'summary (list "The grove is a small forest.")
               #:properties (list (cons 'lang "en") (cons 'dir "ltr")))))
-    #:internal-handlers bilingual-text-handlers))
+    #:rules bilingual-text-rules))
 
 ;;; Built-in renderers
 

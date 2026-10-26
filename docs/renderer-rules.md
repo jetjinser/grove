@@ -69,9 +69,10 @@ can read `(render-context-ref context 'page)`.
 - **Public customization point:** HTML renderer options take one
   `#:presentation`, which combines style and rules; text and gemtext options
   take backend rules directly.
-- **Internal layer:** `#:internal-handlers` and `#:internal-lazy-handlers` on
-  `content->sxml`/`content->text`.  They exist for the stock renderer and may
-  change without notice; projects should not pass them.
+- **Stock-renderer layer:** the stock Forester renderers use private dispatch
+  details for tree traversal and format-specific behavior. They are not
+  arguments to the public `content->sxml` or `content->text` procedures and
+  are not extension points. Projects should use render rules instead.
 - **Math:** a built-in interpretation.  Rules do not override `math` in either
   backend; a rule for `math` is ignored.
 - **Trees and transclusions:** handled by lazy structural recursion before

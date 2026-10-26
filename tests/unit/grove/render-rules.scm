@@ -342,4 +342,10 @@
     (content->text (make-content-element 'paragraph (list "Hello"))
                    #:rules rules)))
 
+(test-error "public content->sxml does not accept stock renderer handlers" #t
+  (content->sxml (image-element) #:internal-handlers '()))
+
+(test-error "public content->text does not accept stock renderer handlers" #t
+  (content->text (image-element) #:internal-lazy-handlers '()))
+
 (test-end "grove html rules")

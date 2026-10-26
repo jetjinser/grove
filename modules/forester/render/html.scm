@@ -37,6 +37,11 @@
             html-options?
             make-html-renderer))
 
+;; Forester's tree walk needs lazy dispatch that is deliberately outside the
+;; public content renderer API. Keep the coupling visibly internal.
+(define content->sxml/internal
+  (@@ (grove render html) content->sxml/internal))
+
 (define (chrome-date text context)
   (let ((locale (render-context-ref context 'locale-object)))
     (if locale (format-date locale text #:style 'long) text)))
@@ -225,7 +230,7 @@ backlog report collects the mention."
                                  '())
           #:open? (if (assq 'open? (content-element-properties element))
                       (content-element-property element 'open?) #t))))
-    (content->sxml
+    (content->sxml/internal
       (site-page-document page)
       #:id-prefix anchor-prefix
       #:highlighters highlighters

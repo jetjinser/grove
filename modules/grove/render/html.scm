@@ -68,9 +68,10 @@ ID-PREFIX."
                 attributes)))))
     original additions))
 
-(define* (content->sxml content #:key (internal-handlers '()) (internal-lazy-handlers '()) (id-prefix "")
-                         (highlighters (default-highlighters))
-                         (rules empty-render-rules) (context #f))
+(define* (content->sxml/internal content #:key (internal-handlers '())
+                                 (internal-lazy-handlers '()) (id-prefix "")
+                                 (highlighters (default-highlighters))
+                                 (rules empty-render-rules) (context #f))
   (unless (and (list? highlighters)
                (every (lambda (entry)
                         (and (pair? entry) (symbol? (car entry))
@@ -337,6 +338,13 @@ ID-PREFIX."
                 `(,(if display? 'div 'span) ,attributes ,mathml))))))
 
   (render content))
+
+(define* (content->sxml content #:key (id-prefix "")
+                        (highlighters (default-highlighters))
+                        (rules empty-render-rules) (context #f))
+  "Render CONTENT to SXML using public render rules and context."
+  (content->sxml/internal content #:id-prefix id-prefix
+    #:highlighters highlighters #:rules rules #:context context))
 
 (define (sxml-void? node)
   (and (pair? node) (eq? (car node) '*void*)))

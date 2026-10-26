@@ -9,8 +9,9 @@
   #:use-module (srfi srfi-13)
   #:export (content->text))
 
-(define* (content->text content #:key (internal-handlers '()) (internal-lazy-handlers '())
-                         (rules empty-render-rules) (context #f))
+(define* (content->text/internal content #:key (internal-handlers '())
+                                 (internal-lazy-handlers '())
+                                 (rules empty-render-rules) (context #f))
   (define (render content)
     (cond
       ((string? content) content)
@@ -117,3 +118,7 @@
                         (default-element-text element body))))))))
 
   (render content))
+
+(define* (content->text content #:key (rules empty-render-rules) (context #f))
+  "Render CONTENT to text using public render rules and context."
+  (content->text/internal content #:rules rules #:context context))

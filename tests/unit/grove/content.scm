@@ -11,6 +11,7 @@
   #:use-module (grove render html)
   #:use-module (grove render html routes)
   #:use-module (grove render text)
+  #:use-module (grove render rules)
   #:use-module (grove build)
   #:use-module (grove site)
   #:use-module (forester render html)
@@ -95,11 +96,13 @@
   (test-equal "renderers can add per-kind behavior without changing the IR"
     "notice: Hello"
     (content->text document
-      #:internal-handlers
-      `((notice . ,(lambda (element body)
-                     (string-append
-                       (symbol->string (content-element-kind element))
-                       ": " body)))))))
+      #:rules
+      (make-render-rules
+        (list
+          (cons 'notice
+            (lambda (_context element body _next)
+              (string-append
+                (symbol->string (content-element-kind element)) ": " body))))))))
 
 (let* ((paragraph (make-content-element 'paragraph '("Nested.")))
        (inner-document (make-content-document (list paragraph)))
