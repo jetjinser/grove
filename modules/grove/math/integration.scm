@@ -3,7 +3,7 @@
 (define-module (grove math integration)
   #:use-module (grove relation)
   #:use-module ((grove relation dsl) #:select (project))
-  #:use-module (grove math polynomial)
+  #:use-module (grove math private polynomial)
   #:use-module (grove math declaration)
   #:use-module (grove math rule)
   #:use-module (grove math diagnostic)

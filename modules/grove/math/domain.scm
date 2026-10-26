@@ -7,7 +7,7 @@
   #:use-module (grove math diagnostic)
   #:use-module (grove math declaration)
   #:use-module (grove math premise)
-  #:use-module (grove math polynomial)
+  #:use-module (grove math private polynomial)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (math-domain-diagnostics))
