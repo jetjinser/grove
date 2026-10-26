@@ -4,6 +4,7 @@
 (define-module (grove project load)
   #:use-module (grove project)
   #:use-module (grove project diagnostic)
+  #:use-module (grove private project timing)
   #:use-module (grove build state)
   #:use-module (grove private input cache)
   #:use-module (grove private input dependencies)

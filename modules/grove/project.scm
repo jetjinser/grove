@@ -11,6 +11,7 @@
   #:use-module (grove private input cache)
   #:use-module (grove private input dependencies)
   #:use-module (grove private pipeline)
+  #:use-module (grove private project state)
   #:use-module (grove build)
   #:use-module (grove build state)
   #:use-module (grove collect)
@@ -23,8 +24,6 @@
   #:use-module (srfi srfi-9)
   #:export (project?
             make-project
-            current-analysis-timings
-            current-analysis-phase-start
             project-source-directory
             project-tree-template
             project-default-prefix
@@ -55,35 +54,10 @@
             check-project
             rebuild-from-forest
             render-with-cache
-            last-build-model
-            last-analysis-inputs
             analyze-project
             project-analysis?
             project-analysis-model
             browse-project))
-
-;; Analysis-phase timing hook. Analyzers that support it (make-forest)
-;; call it once per phase with the phase symbol and its wall time; the
-;; CLI installs a reporter so phase durations show in the build log.
-(define current-analysis-timings (make-parameter #f))
-
-;; Phase-start hook, fired with just the phase symbol before a phase
-;; runs, so the CLI can announce it before knowing its duration.
-(define current-analysis-phase-start (make-parameter #f))
-
-;; The analysis model of the most recent build, for long-lived preview
-;; workers that re-render from a retained forest.  Purely advisory:
-;; one-shot builds never read it back.
-(define %last-build-model #f)
-(define (last-build-model) %last-build-model)
-
-;;     What the most recent analysis read, with load-time extra sources
-;;     excluded: those ride the retained forest by design.  Paired with
-;;     the forest, this lets a resident worker tell an asset-only change
-;;     (re-render) from a document change (re-analyze).  Advisory, like
-;;     the model.
-(define %last-analysis-inputs #f)
-(define (last-analysis-inputs) %last-analysis-inputs)
 
 (define-record-type <project-input>
   (make-project-input path value)
@@ -759,8 +733,8 @@ Return a project-analysis holding the analyzed model."
     ;;     Expose the analysis model for long-lived preview workers:
     ;;     a resident worker re-renders from this forest when only
     ;;     load-time assets changed.
-    (set! %last-build-model model)
-    (set! %last-analysis-inputs
+    (publish-project-state!
+      model
       (let ((context (project-analysis-input-cache-context analysis)))
         (and context
              (lset-difference string=?

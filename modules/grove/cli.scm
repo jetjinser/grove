@@ -9,6 +9,7 @@
   #:use-module (grove private cache-dir)
   #:use-module (grove private store-gc)
   #:use-module (grove private cli progress)
+  #:use-module (grove private project timing)
   #:use-module (grove project load)
   #:use-module (grove project diagnostic)
   #:use-module (ice-9 command-line)

@@ -26,6 +26,7 @@
   #:use-module (tests unit forester fixtures)
   #:use-module (grove site)
   #:use-module (grove project)
+  #:use-module (grove private project timing)
   #:use-module (grove style html))
 
 (test-begin "forester site")

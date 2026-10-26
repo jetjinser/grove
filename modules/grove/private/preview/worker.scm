@@ -8,6 +8,7 @@
   #:use-module (grove private build-lock)
   #:use-module (grove private cli progress)
   #:use-module (grove private input cache)
+  #:use-module (grove private project state)
   #:use-module (grove project diagnostic)
   #:use-module (grove build state)
   #:use-module (grove output)

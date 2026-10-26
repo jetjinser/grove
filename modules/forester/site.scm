@@ -7,6 +7,7 @@
   #:use-module (grove ir)
   #:use-module (grove site)
   #:use-module (grove project)
+  #:use-module (grove private project timing)
   #:use-module (grove style)
   #:use-module (grove style html)
   #:use-module ((forester private trees) #:prefix tree-pass:)
