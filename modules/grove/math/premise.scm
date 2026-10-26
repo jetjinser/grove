@@ -7,7 +7,7 @@
   #:use-module (grove math declaration)
   #:use-module (grove math term)
   #:use-module (grove math function-derivative)
-  #:use-module ((grove math exact-polynomial) #:prefix exact:)
+  #:use-module ((grove math private exact-polynomial) #:prefix exact:)
   #:use-module (grove math diagnostic)
   #:use-module (srfi srfi-1)
   #:export (math-premise-known? math-definedness-diagnostics math-domain-premises math-requirement-diagnostics math-context-premises))
