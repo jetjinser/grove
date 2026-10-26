@@ -53,8 +53,10 @@
   (lambda (requested-prefix destination)
     (let ((prefix (or requested-prefix default-prefix)))
       (unless (prefix? prefix)
-        (error "new requires a valid prefix; configure #:default-prefix or supply a prefix"
-               prefix))
+        (if prefix
+            (error "new requires a valid prefix; use lowercase letters, digits, and internal hyphens"
+                   prefix)
+            (error "new needs a prefix; pass one to grove new or configure #:default-prefix in project.scm")))
       (unless (and (string? destination) (file-is-directory? destination))
         (error "new requires an existing destination directory; supply --dest when no source directory is configured"
                destination))

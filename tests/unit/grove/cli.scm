@@ -287,8 +287,13 @@
         '("(lambda (id date) 42)" "(lambda (id date) (error \"template failure\"))" "42")))
     (write-file config
       "(use-modules (forester project))\n(make-forester-project #:source-directory \"sources\" #:output-directory \"output\" #:home \"hello\")\n")
-    (test-equal "missing default prefix requires an explicit prefix" 1
-      (car (run "new" "--project" config)))
+    (let ((result (run "new" "--project" config)))
+      (test-equal "missing default prefix requires an explicit prefix" 1
+        (car result))
+      (test-assert "missing prefix explains both ways to provide one"
+        (string-contains
+          (without-loader-notes (caddr result))
+          "pass one to grove new or configure #:default-prefix in project.scm")))
     (test-equal "explicit prefix works without a default" 0
       (car (run "new" "note" "--project" config)))
     (test-equal "command names can also be prefixes" 0
