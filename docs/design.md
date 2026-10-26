@@ -61,6 +61,12 @@ sitemap, RSS, and graph.
 [Composition audit](composition.md) maps the existing features onto this model
 and lists the remaining gaps.
 
+## Resource identity
+
+[Resource identity and RDF projection](resource-identity-rdf.md) explores
+whether IRIs can unify global resource names and how Grove relations could be
+projected into RDF without replacing Grove's own relation model.
+
 ## Testing
 
 - `blue verify` runs the test suite, REUSE, the example builds, and axe.
