@@ -52,8 +52,6 @@
             build-project/report
             build-project
             check-project
-            rebuild-from-forest
-            render-with-cache
             analyze-project
             browse-project))
 

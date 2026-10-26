@@ -21,6 +21,9 @@
   #:use-module (srfi srfi-13)
   #:export (worker-main))
 
+(define rebuild-from-forest
+  (@@ (grove project) rebuild-from-forest))
+
 (define (existing-files paths)
   (filter (lambda (path)
             (let ((info (stat path #f)))

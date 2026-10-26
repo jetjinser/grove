@@ -16,6 +16,8 @@ and [inventory](../examples/inventory/project.scm) for project-owned models.
 `make-project` connects source collection, preparation, reading, analysis,
 and rendering. `make-site-project` assembles page inputs into a site before
 calling its analyzer. All renderers receive the same model and return artifacts.
+`project-with-options` returns a project copy with an output-directory override,
+additional tracked inputs, or a cache setting; the original project is unchanged.
 
 The default collector walks recursively in sorted order, skipping hidden
 directories. `#:source-filter` selects basenames; `#:collect-sources` supplies

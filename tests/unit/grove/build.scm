@@ -9,6 +9,9 @@
   #:use-module (grove output)
   #:use-module (grove project))
 
+(define render-with-cache
+  (@@ (grove project) render-with-cache))
+
 (test-begin "grove build")
 
 (test-error "cached renderers require procedures" #t
