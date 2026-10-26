@@ -34,14 +34,16 @@ Grove owns versus what a project supplies. Commands use `@name{body}` or
 | `@updated{YYYY-MM-DD}` | Last update; must not precede `@published`. |
 | `@describes{absolute-uri}` | External entity this tree describes; repeat for multiple entities. |
 | `@taxon["chapter"]` | One classification per page, rendered above the title. |
-| `@tag["i18n"]` | Free labels; repeat as needed. |
+| `@tag["i18n"]` | Additional labels; repeat as needed. |
 | `@locale["zh-Hans"]` | Page language and direction. |
 | `@translation["intro"]` | Translation group key shared by parallel pages. |
 
 Page metadata commands may appear anywhere among that tree's top-level forms;
 nested subtrees have their own metadata scope. Keeping page-level metadata at
 the top makes the source readable and lets tools find it quickly. A second
-`@taxon` is an error; use `@tag` for additional labels.
+`@taxon` is an error; use `@tag` for additional labels. Topic values for both
+commands must start and end with a letter or digit and contain only letters,
+digits, and hyphens; Grove stores them in lowercase.
 
 `@describes` records an external entity identity, separate from the page's
 own URL and from ordinary links. For example, a literature page can declare
