@@ -104,7 +104,7 @@
     (error "HTML asset URL requires HTML routes" routes))
   (unless (artifact-path? path)
     (error "HTML URL requires a relative artifact path" path))
-  (string-append (html-url-prefix routes) (uri-encode-path path)))
+  (uri-encode-path (string-append (html-url-prefix routes) path)))
 
 (define (html-page-url routes id)
   (html-asset-url routes (html-page-path routes id)))

@@ -48,6 +48,9 @@
 (test-equal "HTML asset URLs encode non-ASCII artifact paths as UTF-8"
   "/%E8%8A%B1.html"
   (html-asset-url (make-html-routes) "花.html"))
+(test-equal "HTML asset URLs encode the configured URL prefix"
+  "/my%20notes/%3F/x.html"
+  (html-asset-url (make-html-routes #:url-prefix "/my notes/?/") "x.html"))
 
 (let* ((target-link
          (make-content-element 'link '("Target")
