@@ -131,6 +131,10 @@
                                     (and (site-settings? settings)
                                          (site-settings-default-locale
                                            settings))))
+  "Construct a cached sitemap renderer.
+
+Provide SITE-URL directly or through SETTINGS; at least one must contain an
+absolute HTTP(S) base URL. SITE-URL overrides the URL in SETTINGS."
   (unless (or (not settings) (site-settings? settings))
     (error "sitemap settings must be site settings or #f" settings))
   (set! site-url (or site-url

@@ -36,6 +36,9 @@ The normal Forester project always includes HTML. `#:additional-renderers`
 adds peer formats and projections; a `make-site-project` instead receives the
 complete renderer list through `#:renderers`. A shared `make-site-settings`
 value keeps the HTML, RSS, and sitemap base URL and default locale aligned.
+`make-site-settings` may omit the base URL when only the locale is shared;
+RSS and sitemap still require an absolute site URL, supplied through the shared
+settings or directly to either renderer with `#:site-url`.
 
 When routes omit a home page, HTML, RSS, and sitemap renderers infer it from the
 analyzed site's `#:home`. You do not need to repeat the home tree ID in each
