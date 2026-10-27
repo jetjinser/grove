@@ -20,8 +20,8 @@ justify a distinct type.
 | --- | --- | --- | --- |
 | Content | constructors and records in `grove ir` | build a tree; there is no general merge | a renderer interprets the content algebra |
 | Content transform | ordinary procedure: document → document | `compose-content-transforms` applies procedures left to right; `identity` is the unit | `transform-document` checks the input and result document |
-| Render rules | typed map from content kind to procedure | `compose-render-rules` layers an overlay over a base; `next` explicitly reaches the fallback | HTML, text, and gemtext interpreters |
-| HTML presentation | typed product of style, rules, head, navigation, and page fragments | `compose-html-presentations` combines each field according to its own law | HTML renderer |
+| Render rules | typed map from content kind to procedure | `compose-render-rules` layers any number of sets left to right; the empty set is the unit, `next` explicitly reaches the fallback | HTML, text, and gemtext interpreters |
+| HTML presentation | typed product of style, rules, head, navigation, and page fragments | `compose-html-presentations` combines any number of layers left to right; the empty presentation is the unit | HTML renderer |
 | Site outputs | ordinary renderer procedures or cached renderer values | ordered renderer list | project build |
 | Render context | typed wrapper around an association list | `render-context-with` overlays keys; present `#f` remains distinct from absence | rules and renderers |
 | Asset pipelines | typed producer with name, version, inputs, and procedure | ordered independent producers; each producer may emit several artifacts | build pipeline with content-addressed caching |

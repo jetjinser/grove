@@ -60,6 +60,14 @@
   (render-with base)
   (render-with (compose-render-rules base empty-render-rules)))
 
+(test-equal "render rule composition accepts any number of layers"
+  (render-with (compose-render-rules base overlay))
+  (render-with (compose-render-rules base empty-render-rules overlay)))
+
+(test-equal "zero render rule layers produce the empty rule set"
+  #f
+  (render-rules-ref (compose-render-rules) 'image))
+
 (test-assert "overlay wins"
   (pair? (memq 'picture (render-with (compose-render-rules base overlay)))))
 
@@ -126,17 +134,19 @@
                  #:stylesheets (list (make-artifact "base.css" "base"))))
        (style-b (make-html-style
                  #:stylesheets (list (make-artifact "site.css" "site"))))
+       (style-c (make-html-style
+                  #:stylesheets (list (make-artifact "extra.css" "extra"))))
        (a (make-html-presentation #:style style-a #:rules base))
        (b (make-html-presentation #:style style-b #:rules overlay))
-       (left (compose-html-presentations
-               a (compose-html-presentations b empty-html-presentation)))
-       (right (compose-html-presentations
-                (compose-html-presentations a b) empty-html-presentation)))
+       (c (make-html-presentation #:style style-c))
+       (left (compose-html-presentations a b c))
+       (right (compose-html-presentations a
+                (compose-html-presentations b c))))
   (test-assert "presentation composition is associative"
     (equal? (render-with (html-presentation-rules left))
             (render-with (html-presentation-rules right))))
   (test-equal "presentation composition accumulates style artifacts in order"
-    '("base.css" "site.css")
+    '("base.css" "site.css" "extra.css")
     (map artifact-path
          (html-style-artifacts (html-presentation-style left))))
   (test-equal "style composition is associative"
@@ -144,6 +154,12 @@
          (html-style-artifacts (html-presentation-style left)))
     (map artifact-path
          (html-style-artifacts (html-presentation-style right))))
+  (test-eq "zero presentation layers produce the empty presentation"
+    empty-html-presentation
+    (compose-html-presentations))
+  (test-equal "one presentation layer preserves that presentation's head"
+    (html-presentation-head a)
+    (html-presentation-head (compose-html-presentations a)))
   (test-assert "presentation composition keeps the overlay rules"
     (pair? (memq 'picture
                  (render-with

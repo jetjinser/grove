@@ -52,8 +52,7 @@
 (define empty-render-rules
   (make-render-rules '()))
 
-(define (compose-render-rules base overlay)
-  "Compose two rule sets; OVERLAY wins for a kind it interprets."
+(define (compose-render-rules-pair base overlay)
   (unless (and (render-rules? base) (render-rules? overlay))
     (error "render rules can only be composed from render rules" base overlay))
   (let ((overlay-rules (render-rules-map overlay)))
@@ -74,6 +73,18 @@
         (remove (lambda (entry)
                   (assq (car entry) overlay-rules))
                 (render-rules-map base))))))
+
+(define (compose-render-rules . rule-sets)
+  "Compose RULE-SETS from left to right; later sets win and may delegate.
+With no arguments, return the empty rule set."
+  (unless (every render-rules? rule-sets)
+    (error "render rules can only be composed from render rules" rule-sets))
+  (if (null? rule-sets)
+      empty-render-rules
+      (fold (lambda (rule-set base)
+              (compose-render-rules-pair base rule-set))
+            (car rule-sets)
+            (cdr rule-sets))))
 
 (define (render-rules-ref rules kind)
   "Return the interpreter for KIND, or #f."

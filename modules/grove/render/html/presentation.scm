@@ -247,10 +247,7 @@ METADATA-ITEMS map page IDs to static SXML child lists."
 
 (define empty-html-presentation (make-html-presentation))
 
-(define (compose-html-presentations base overlay)
-  "Compose presentations by appending styles and layering rules.
-
-Styles accumulate in order; later rules take precedence and may delegate."
+(define (compose-html-presentation-pair base overlay)
   (unless (and (html-presentation? base) (html-presentation? overlay))
     (error "presentations can only be composed from presentations"
            base overlay))
@@ -268,3 +265,16 @@ Styles accumulate in order; later rules take precedence and may delegate."
                      (html-presentation-title-decorations overlay))
     (merge-page-sxml (html-presentation-metadata-item-map base)
                      (html-presentation-metadata-item-map overlay))))
+
+(define (compose-html-presentations . presentations)
+  "Compose PRESENTATIONS from left to right, applying each field's law.
+
+Styles, rules, head/navigation nodes, and page fragments accumulate in order;
+the rightmost home link wins. With no arguments, return the empty presentation."
+  (unless (every html-presentation? presentations)
+    (error "presentations can only be composed from presentations"
+           presentations))
+  (fold (lambda (presentation base)
+          (compose-html-presentation-pair base presentation))
+        empty-html-presentation
+        presentations))

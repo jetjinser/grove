@@ -28,9 +28,9 @@ set maps each constructor to a backend-specific interpretation.
   `(next)`.  It walks composed rule sets, then the internal handler layer, then
   the built-in interpretation, so an overlay can adjust one case and leave the
   rest to the defaults.
-- `compose-render-rules` layers an overlay over a base: the overlay runs first
-  for a kind it interprets, and `next` reaches the base rule before the
-  backend's internal and built-in interpretations.
+- `compose-render-rules` layers any number of sets from left to right: the
+  rightmost rule runs first for a kind it interprets, and `next` reaches earlier
+  rules before the backend's internal and built-in interpretations.
 - `define-render-rules` is a thin macro that expands to `make-render-rules`; it
   adds no new evaluation model.  `next` remains an ordinary parameter, so the
   macro stays hygienic.
@@ -88,11 +88,10 @@ can read `(render-context-ref context 'page)`.
   #:rules rules)
 ```
 
-`compose-html-presentations` composes styles and rules componentwise. Styles
-accumulate in base-to-overlay order (so later CSS can override earlier CSS);
-rules give later layers precedence and let them delegate to earlier rules with
-`next`. Both components have an identity and associative composition, but
-their precedence semantics differ.
+`compose-html-presentations` accepts any number of layers and combines each
+component left to right. Styles accumulate in that order (so later CSS can
+override earlier CSS); rules give later layers precedence and let them
+delegate to earlier rules with `next`. The empty presentation is the unit.
 
 ## Image example
 
