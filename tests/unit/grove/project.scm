@@ -391,6 +391,15 @@
           '("text/summary.txt" "pages/first.txt" "pages/second.txt"
             "opaque.txt")
           (map artifact-path artifacts))
+        (let ((reported-artifacts (build-report-artifacts report))
+              (reported-sources (build-report-sources report)))
+          (set-car! reported-artifacts #f)
+          (string-set! (car reported-sources) 0 #\X)
+          (test-assert "build reports isolate their artifact collection"
+            (artifact? (car (build-report-artifacts report))))
+          (test-equal "build reports isolate their source path strings"
+            (string-append module-directory "/shared.plant")
+            (car (build-report-sources report))))
         (test-assert "project writes renderer artifacts to its output directory"
           (file-exists? output-path))
         (test-equal "project output contains renderer content"

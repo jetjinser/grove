@@ -96,13 +96,40 @@
 (define-record-type <build-report>
   (%make-build-report sources artifacts added modified removed affected rendered?)
   build-report?
-  (sources build-report-sources)
-  (artifacts build-report-artifacts)
-  (added build-report-added-sources)
-  (modified build-report-modified-sources)
-  (removed build-report-removed-sources)
-  (affected build-report-affected-artifacts)
+  (sources build-report-sources/raw)
+  (artifacts build-report-artifacts/raw)
+  (added build-report-added-sources/raw)
+  (modified build-report-modified-sources/raw)
+  (removed build-report-removed-sources/raw)
+  (affected build-report-affected-artifacts/raw)
   (rendered? build-report-rendered?))
+
+(define (make-build-report sources artifacts added modified removed affected rendered?)
+  (%make-build-report (snapshot-data sources)
+                      (snapshot-data artifacts)
+                      (snapshot-data added)
+                      (snapshot-data modified)
+                      (snapshot-data removed)
+                      (snapshot-data affected)
+                      rendered?))
+
+(define (build-report-sources report)
+  (snapshot-data (build-report-sources/raw report)))
+
+(define (build-report-artifacts report)
+  (snapshot-data (build-report-artifacts/raw report)))
+
+(define (build-report-added-sources report)
+  (snapshot-data (build-report-added-sources/raw report)))
+
+(define (build-report-modified-sources report)
+  (snapshot-data (build-report-modified-sources/raw report)))
+
+(define (build-report-removed-sources report)
+  (snapshot-data (build-report-removed-sources/raw report)))
+
+(define (build-report-affected-artifacts report)
+  (snapshot-data (build-report-affected-artifacts/raw report)))
 
 (define-record-type <project-analysis>
   (%make-project-analysis source-paths prepared-sources inputs context
@@ -532,8 +559,8 @@ Return the internal analysis record used by the build pipeline."
                        (append current-sources pre-build-sources))))
             (when drifted?
               (delete-file state-path))))))
-    (%make-build-report (map build-state-source-path current-sources) artifacts added modified removed affected
-                        (not cache-hit?))))
+    (make-build-report (map build-state-source-path current-sources) artifacts added modified removed affected
+                       (not cache-hit?))))
 
 (define* (build-project/report project #:key (progress (lambda (stage path) #t)))
   "Build PROJECT, notifying PROGRESS with a stage symbol and detail.
@@ -644,7 +671,7 @@ analysis results - pages, relations, indexes - come from the forest."
                           current-sources)))
                (when drifted?
                  (delete-file state-path)))))
-          (%make-build-report
+          (make-build-report
             (map build-state-source-path current-sources)
             artifacts
             '()

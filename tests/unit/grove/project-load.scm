@@ -146,16 +146,26 @@
       (error-stage
         (lambda () (call-with-loaded-project (string-append root "/missing.scm") check-project))))
     (test-equal "failed loading restores working directory" caller (getcwd))
-    (catch 'grove-project-error
-      (lambda ()
-        (call-with-project-stage 'read "input.plant"
-          (lambda () (throw 'unbound-variable "original cause"))))
-      (lambda (_ error)
-        (test-equal "diagnostics preserve original exception key" 'unbound-variable
-          (project-error-key error))
-        (test-equal "diagnostics preserve original arguments" '("original cause")
-          (project-error-arguments error))
-        (test-equal "diagnostics preserve the source path" "input.plant"
-          (project-error-path error)))))
+    (let ((cause (string-copy "original cause")))
+      (catch 'grove-project-error
+        (lambda ()
+          (call-with-project-stage 'read "input.plant"
+            (lambda () (throw 'unbound-variable cause))))
+        (lambda (_ error)
+          (string-set! cause 0 #\X)
+          (test-equal "diagnostics preserve original exception key" 'unbound-variable
+            (project-error-key error))
+          (test-equal "diagnostics snapshot original exception arguments" '("original cause")
+            (project-error-arguments error))
+          (test-equal "diagnostics preserve the source path" "input.plant"
+            (project-error-path error))
+          (let ((arguments (project-error-arguments error))
+                (path (project-error-path error)))
+            (string-set! (car arguments) 0 #\X)
+            (string-set! path 0 #\X))
+          (test-equal "diagnostic accessors return independent arguments" '("original cause")
+            (project-error-arguments error))
+          (test-equal "diagnostic accessors return independent paths" "input.plant"
+            (project-error-path error))))))
   (lambda () (system* "rm" "-rf" root)))
 (test-end "project loading")

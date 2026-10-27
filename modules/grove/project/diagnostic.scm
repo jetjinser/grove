@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove project diagnostic)
+  #:use-module (grove private snapshot)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
   #:export (print-project-error
@@ -10,13 +11,26 @@
             project-error-key project-error-arguments project-error-stack))
 
 (define-record-type <project-error>
-  (make-project-error stage path key arguments stack)
+  (%make-project-error stage path key arguments stack)
   project-error?
   (stage project-error-stage)
-  (path project-error-path)
-  (key project-error-key)
-  (arguments project-error-arguments)
+  (path project-error-path/raw)
+  (key project-error-key/raw)
+  (arguments project-error-arguments/raw)
   (stack project-error-stack))
+
+(define (make-project-error stage path key arguments stack)
+  (%make-project-error stage (snapshot-data path) (snapshot-data key)
+                       (snapshot-data arguments) stack))
+
+(define (project-error-path error)
+  (snapshot-data (project-error-path/raw error)))
+
+(define (project-error-key error)
+  (snapshot-data (project-error-key/raw error)))
+
+(define (project-error-arguments error)
+  (snapshot-data (project-error-arguments/raw error)))
 
 (define (call-with-project-stage stage path thunk)
   "Attach execution context without flattening the original exception."

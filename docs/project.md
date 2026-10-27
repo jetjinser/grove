@@ -97,6 +97,12 @@ configuration accessors return fresh copies of those values. Reader, analyzer,
 renderer, collector, and preparation procedures remain the project author's
 code and are retained as callbacks.
 
+Build reports snapshot their source, artifact, and change lists. Their list
+accessors return independent copies, so a caller can annotate or filter a
+report without changing the result observed by another consumer. Project
+execution errors likewise snapshot the original exception key, arguments, and
+source path; the captured stack remains an opaque diagnostic value.
+
 The analyzer's `project-context` follows the same value rule: its input list,
 source-path strings, and pair-based source values are copied when the context is
 made and when accessed. Prepared and extra source lists are also independent
