@@ -11,14 +11,17 @@
 (define* (collect-directory directory #:optional (include? (lambda (_) #t)))
   "Recursively collect files below DIRECTORY that satisfy INCLUDE?.
 INCLUDE? receives each file's basename; returned paths retain their full
-directory structure. Hidden directories are skipped."
+directory structure. Hidden directories and directory symlinks are skipped."
+  (define (directory-entry? path)
+    (let ((info (false-if-exception (lstat path))))
+      (and info (eq? (stat:type info) 'directory))))
   (define (collect path)
     (append-map
       (lambda (filename)
         (let ((child (string-append path "/" filename)))
           (cond
             ((and (not (string-prefix? "." filename))
-                  (file-is-directory? child))
+                  (directory-entry? child))
              (collect child))
             ((and (not (file-is-directory? child)) (include? filename))
              (list child))

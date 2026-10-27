@@ -110,8 +110,9 @@ copies. Opaque reader values such as records remain shared and follow the
 reader's own contract.
 
 The default collector walks recursively in sorted order, skipping hidden
-directories. The generic project filter skips dot-prefixed basenames; the site
-project filter selects non-hidden `.plant` files. `#:source-filter` selects
+directories and directory symlinks. The generic project filter skips
+dot-prefixed basenames; the site project filter selects non-hidden `.plant`
+files. `#:source-filter` selects
 basenames; `#:collect-sources` supplies an ordered path list instead. `#:prepare`
 runs before reading and returns additional tracked paths. It can load shared
 modules, but does not import their commands into individual articles.
