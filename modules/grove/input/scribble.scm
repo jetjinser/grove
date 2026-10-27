@@ -78,8 +78,10 @@ other paths. Preparing again resets reuse; this is not a persistent cache."
                    (lambda () (default-environment scribble))))
   "Reuse data-only documents by default during builds. CACHE? may be a boolean
 or path predicate. Imported modules are tracked automatically; register other
-file inputs with DEPEND-ON! or CACHE-DEPENDENCIES. DISABLE-CACHE! opts out from
-within a document. Shared environments and checks always evaluate sources."
+file inputs with DEPEND-ON! or CACHE-DEPENDENCIES, which returns a list of
+non-empty paths. DISABLE-CACHE! opts out from within a document. A supplied
+ENVIRONMENT must be a module; shared environments and checks always evaluate
+sources."
   (define (read-document path)
     (call-with-input-file path
       (lambda (port)
@@ -102,10 +104,31 @@ within a document. Shared environments and checks always evaluate sources."
           (unless (content-document? document)
             (error "Scribble source requires a content document" path))
           document))))
+  (unless (or (not environment) (module? environment))
+    (error "Scribble reader environment must be a module or #f" environment))
+  (unless (or (boolean? cache?) (procedure? cache?))
+    (error "Scribble reader cache option must be a boolean or path predicate"
+           cache?))
+  (unless (procedure? cache-dependencies)
+    (error "Scribble cache dependencies must be a procedure"
+           cache-dependencies))
+  (unless (or (not timings) (procedure? timings))
+    (error "Scribble reader timings must be a procedure or #f" timings))
+  (unless (procedure? environment-factory)
+    (error "Scribble reader environment factory must be a procedure"
+           environment-factory))
   (lambda (path)
     (if (current-input-cache)
-        (cached-document path "scribble" (cache-dependencies)
-                         (lambda () (read-document path)) (lambda _ #t)
-                         (and (not environment)
-                              (if (procedure? cache?) (cache? path) cache?)))
+        (let ((dependencies (cache-dependencies)))
+          (unless (and (list? dependencies)
+                       (every (lambda (path)
+                                (and (string? path)
+                                     (not (string-null? path))))
+                              dependencies))
+            (error "Scribble cache dependency collector must return paths"
+                   dependencies))
+          (cached-document path "scribble" dependencies
+                           (lambda () (read-document path)) (lambda _ #t)
+                           (and (not environment)
+                                (if (procedure? cache?) (cache? path) cache?))))
         (read-document path))))

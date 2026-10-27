@@ -74,12 +74,30 @@
   (make-input-cache-context 'enabled '()))
 (test-error "input cache dependencies must be non-empty paths" #t
   (make-input-cache-context #t (list "")))
+(test-error "Scribble reader cache option is checked at construction" #t
+  (make-scribble-document-reader #:cache? 'enabled))
+(test-error "Scribble dependency collector is checked at construction" #t
+  (make-scribble-document-reader #:cache-dependencies 'invalid))
+(test-error "Scribble timing callback is checked at construction" #t
+  (make-scribble-document-reader #:timings 'invalid))
+(test-error "Scribble environment factory is checked at construction" #t
+  (make-scribble-document-reader #:environment-factory 'invalid))
+(test-error "Scribble environment is checked at construction" #t
+  (make-scribble-document-reader 'invalid))
 (dynamic-wind
   (lambda ()
     (setenv "XDG_CACHE_HOME" (string-append root "/.cache"))
     (mkdir root)
     (put source "First") (put dependency "one"))
   (lambda ()
+    (let ((invalid-reader
+            (make-scribble-document-reader
+              #:cache-dependencies (lambda () (list "")))))
+      (test-error "Scribble dependency collector validates returned paths"
+        #t
+        (parameterize ((current-input-cache
+                         (make-input-cache-context #t '())))
+          (invalid-reader source))))
     (parameterize ((current-input-fingerprints (make-hash-table)))
       (let* ((before (input-fingerprint dependency))
              (info (stat dependency)))
