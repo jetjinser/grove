@@ -61,13 +61,26 @@
                   (hash-set! seen fact #t)
                   (loop (cdr facts) (cons fact unique)))))))))
 
-(define (vector-free-term? term)
+(define (finite-vector-free-term? term)
   (cond
     ((vector? term) #f)
-    ((pair? term)
-     (and (vector-free-term? (car term))
-          (vector-free-term? (cdr term))))
-    (else #t)))
+    ((not (pair? term)) #t)
+    (else
+     (let ((states (make-hash-table)))
+       (let visit ((term term))
+         (cond
+           ((vector? term) #f)
+           ((pair? term)
+            (case (hashq-ref states term #f)
+              ((visiting invalid) #f)
+              ((valid) #t)
+              (else
+               (hashq-set! states term 'visiting)
+               (let ((valid? (and (visit (car term))
+                                  (visit (cdr term)))))
+                 (hashq-set! states term (if valid? 'valid 'invalid))
+                 valid?))))
+           (else #t)))))))
 
 (define* (make-relation facts #:key (arity 2))
   (unless (and (integer? arity) (positive? arity))
@@ -78,8 +91,8 @@
                       facts))
     (error "relation facts must be a list of rows matching the relation arity"
            arity facts))
-  (unless (every (lambda (fact) (every vector-free-term? fact)) facts)
-    (error "relation facts cannot contain vectors; miniKanren uses them for logic variables" facts))
+  (unless (every (lambda (fact) (every finite-vector-free-term? fact)) facts)
+    (error "relation facts must contain finite pair trees without vectors; miniKanren uses vectors for logic variables" facts))
   (let* ((facts (unique-facts (snapshot-data facts)))
          ;; A content relation has nine columns; most queries bind only one or
          ;; two. Build each index on first use and share it within this snapshot.

@@ -217,6 +217,12 @@
   #t
   (make-relation (list (list 'alpha (list 'metadata (vector 'tag 'value))))))
 
+(let ((cycle (cons 'loop '())))
+  (set-cdr! cycle cycle)
+  (test-error "relation constructor rejects cyclic terms"
+    #t
+    (make-relation (list (list 'alpha cycle)))))
+
 (test-error "relationo rejects non-relations"
   #t
   (run* (value)

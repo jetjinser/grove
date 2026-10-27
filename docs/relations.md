@@ -13,9 +13,10 @@ the public Grove module owns the relation API and its documented contracts.
 
 A relation is an immutable, finite snapshot of ground fact rows. Each row is a
 proper Scheme list containing one or more terms, and every row in one relation
-has the same arity. A term can be an atomic Scheme value or a pair tree of
-terms. Vectors are reserved by faster-minikanren for logic variables and are
-not valid relation data. A relation cannot contain a live logic variable.
+has the same arity. A term can be an atomic Scheme value or a finite, acyclic
+pair tree of terms. Vectors are reserved by faster-minikanren for logic
+variables and are not valid relation data. A relation cannot contain a live
+logic variable.
 Construction copies mutable strings and pair structure. `relation-facts` and
 query answers return independent copies of that mutable data, so edits to
 caller-owned facts or answers cannot change the relation or invalidate its
