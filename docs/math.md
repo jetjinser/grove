@@ -99,6 +99,11 @@ they applied. Supply assumptions in its argument when required:
 checks establish only what the supported rules and calculation domain justify;
 they do not prove assumptions or validate an external mathematical model.
 
+Derivation and step records snapshot their term trees, paths, assumptions, and
+ordered collections. Accessors return independent copies, so changing a
+displayed trace cannot alter a certificate before it is checked. Opaque source
+provenance values remain shared according to their own contract.
+
 The registered rules are also available as relational data through
 `(grove math catalog)`. Import `(grove relation dsl)` to query rules by group,
 execution mode, input operator, required premise, or semantic-check status.
