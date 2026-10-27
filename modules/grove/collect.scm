@@ -9,13 +9,19 @@
   #:export (collect-directory))
 
 (define* (collect-directory directory #:optional (include? (lambda (_) #t)))
-  "Recursively collect files below DIRECTORY that satisfy INCLUDE?.
+"Recursively collect regular files below DIRECTORY that satisfy INCLUDE?.
 DIRECTORY must name an existing directory.
-INCLUDE? receives each file's basename; returned paths retain their full
-directory structure. Hidden directories and directory symlinks are skipped."
+INCLUDE? receives each regular file's basename; returned paths retain their
+full directory structure. Symlinks to regular files are included. Hidden
+directories, directory symlinks, and special files are skipped."
   (define (directory-entry? path)
     (let ((info (false-if-exception (lstat path))))
       (and info (eq? (stat:type info) 'directory))))
+  (define (regular-file-entry? path)
+    ;; STAT follows file symlinks, keeping source aliases useful while
+    ;; excluding FIFOs, sockets, devices, and dangling links.
+    (let ((info (false-if-exception (stat path))))
+      (and info (eq? (stat:type info) 'regular))))
   (define (collect path)
     (append-map
       (lambda (filename)
@@ -24,7 +30,7 @@ directory structure. Hidden directories and directory symlinks are skipped."
             ((and (not (string-prefix? "." filename))
                   (directory-entry? child))
              (collect child))
-            ((and (not (file-is-directory? child)) (include? filename))
+            ((and (regular-file-entry? child) (include? filename))
              (list child))
             (else '()))))
       (scandir path

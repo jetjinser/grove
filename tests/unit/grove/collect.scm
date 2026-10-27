@@ -14,6 +14,8 @@
 (define nested-directory (string-append test-directory "/nested"))
 (define hidden-directory (string-append test-directory "/.hidden"))
 (define cycle-directory (string-append nested-directory "/cycle"))
+(define alias-file (string-append nested-directory "/alias.plant"))
+(define fifo-file (string-append nested-directory "/blocked.plant"))
 
 (define (write-test-file path)
   (call-with-output-file path (lambda (port) (display "test" port))))
@@ -32,14 +34,18 @@
     (mkdir hidden-directory)
     (symlink nested-directory cycle-directory)
     (write-test-file (string-append test-directory "/root.plant"))
+    (symlink (string-append test-directory "/root.plant") alias-file)
+    (unless (zero? (system* "mkfifo" fifo-file))
+      (error "could not create collection FIFO" fifo-file))
     (write-test-file (string-append nested-directory "/nested.plant"))
     (write-test-file (string-append hidden-directory "/hidden.plant"))
     (write-test-file (string-append nested-directory "/ignored.txt")))
   (lambda ()
     (test-error "collection filter must be a procedure" #t
       (collect-directory test-directory 'not-a-procedure))
-    (test-equal "collection descends into subdirectories and keeps full paths"
-      (list (string-append nested-directory "/nested.plant")
+    (test-equal "collection descends, includes file aliases, and skips special files"
+      (list alias-file
+            (string-append nested-directory "/nested.plant")
             (string-append test-directory "/root.plant"))
       (collect-directory test-directory
         (lambda (filename) (string-suffix? ".plant" filename))))
@@ -54,7 +60,9 @@
       (lambda (path)
         (when (file-exists? path)
           (delete-file path)))
-      (list (string-append test-directory "/root.plant")
+      (list alias-file
+            (string-append test-directory "/root.plant")
+            fifo-file
             (string-append nested-directory "/nested.plant")
             (string-append nested-directory "/ignored.txt")
             (string-append hidden-directory "/hidden.plant")))
