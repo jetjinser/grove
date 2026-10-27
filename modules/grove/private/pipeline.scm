@@ -139,7 +139,7 @@
                    (let ((content (artifact-content artifact)))
                      (cons (artifact-path artifact)
                        (if cache?
-                           (publish-content-blob! content)
+                           (store-content-blob! content)
                            (content-fingerprint content)))))
                  artifact-list))
            (outputs
@@ -148,7 +148,8 @@
                         make-artifact make-byte-artifact)
                     (artifact-path artifact) (artifact-content artifact) sources))
                  artifact-list)))
-      (when cache?
+      (when (and cache?
+                 (every (lambda (entry) (cdr entry)) entries))
         (write-pipeline-index identity dependencies entries))
       outputs)))
 

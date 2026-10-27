@@ -230,6 +230,37 @@
     (content-cache-ref cache "key"))
   (rmdir blob-path))
 
+(let* ((content "pipeline output whose cache blob path is blocked")
+       (artifact-directory (string-append store "/artifacts"))
+       (blob-path (string-append artifact-directory "/"
+                                 (content-fingerprint content)))
+       (index-count (length (index-blobs)))
+       (runs 0)
+       (pipeline
+        (make-asset-pipeline
+          #:name "blocked-output-cache"
+          #:procedure
+          (lambda (_input)
+            (set! runs (1+ runs))
+            (list (make-artifact "blocked-output.txt" content)))))
+       (run (lambda ()
+              (car (run-asset-pipelines
+                    (list pipeline) "blocked-output-project")))))
+  (mkdir blob-path)
+  (test-equal "a pipeline still returns outputs when cache storage fails"
+    content
+    (artifact-content (car (run))))
+  (test-equal "a pipeline does not index unavailable output blobs"
+    index-count
+    (length (index-blobs)))
+  (rmdir blob-path)
+  (run)
+  (test-equal "a pipeline reruns after its output could not be cached"
+    2 runs)
+  (run)
+  (test-equal "a pipeline caches outputs after storage recovers"
+    2 runs))
+
 (test-error "content cache rejects empty keys" #t
   (content-cache-ref (make-content-cache "pipeline-test") ""))
 

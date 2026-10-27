@@ -263,13 +263,13 @@ inside that root, every artifact parent must be an ordinary directory. Return
               ;;     The bytes are already in place; make sure the
               ;;     shared store has the blob so other checkouts and
               ;;     deleted build directories can restore it.
-              (publish-content-blob! content)
+              (store-content-blob! content)
               ;;     A store blob under this fingerprint holds exactly
               ;;     the rendered bytes: restore it, hard-linked when
               ;;     possible, and fall back to writing them.
               (unless (restore-artifact-blob! fingerprint path)
                 (write-artifact-bytes! path content)
-                (publish-content-blob! content)))))
+                (store-content-blob! content)))))
       artifacts)
     (for-each
       (lambda (stale-path)

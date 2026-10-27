@@ -17,7 +17,6 @@
   #:export (artifact-blob-path
             artifact-blob-exists?
             publish-artifact-blob!
-            publish-content-blob!
             store-content-blob!
             read-content-blob
             restore-artifact-blob!))
@@ -40,16 +39,6 @@
          (string-append root "/" fingerprint) write!)
         #t))
     (lambda args #f)))
-
-(define (publish-content-blob! content)
-  "Store text or bytes by content fingerprint and return that fingerprint."
-  (unless (or (string? content) (bytevector? content))
-    (error "content blob requires text or bytes" content))
-  (let* ((bytes (if (string? content) (string->utf8 content) content))
-         (fingerprint (fingerprint-bytes bytes)))
-    (publish-artifact-blob! fingerprint
-      (lambda (port) (put-bytevector port bytes)))
-    fingerprint))
 
 (define (store-content-blob! content)
   "Store text or bytes and return the fingerprint only when its blob is available."
