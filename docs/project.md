@@ -57,10 +57,12 @@ This is a first page.
 Run `grove check` and then `grove build` from the project directory. The home
 ID selects the tree rendered at `index.html`; Grove does not guess which page
 should represent the site. `make-site-project` remains available when a project
-needs to assemble these pieces itself. A project-local command manifest is
-optional: use `@use-commands` and `make-scribble-module-setup` when you want a
-named, reusable vocabulary assembled from local modules. Direct
-`@use-modules` imports need no project preparation step.
+needs to assemble these pieces itself. A named command vocabulary is optional:
+use `@use-commands` to refer to a reusable manifest. Modules already on Guile's
+load path need no setup; load local `.plant` module articles with
+`make-scribble-module-setup`, or use `make-scribble-module-session` when
+preparation and page reading should share one reader. Direct `@use-modules`
+imports of available modules also need no preparation.
 
 `make-forester-project` always includes its standard HTML renderer. Configure it
 with `#:html-options`, and add peer outputs with `#:additional-renderers`:
