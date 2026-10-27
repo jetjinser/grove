@@ -9,7 +9,6 @@
 ;;; results - it can only cost recomputation.
 
 (define-module (grove private store-gc)
-  #:use-module (grove private cache-dir)
   #:use-module (srfi srfi-1)
   #:use-module (ice-9 format)
   #:use-module (ice-9 ftw)

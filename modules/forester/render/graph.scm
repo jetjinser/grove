@@ -8,7 +8,6 @@
   #:use-module ((forester composition) #:prefix composition:)
   #:use-module (grove output)
   #:use-module (grove site)
-  #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-1)
   #:export (site->graph
             render-graph
