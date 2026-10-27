@@ -255,13 +255,14 @@ can be placed inside a styled subtree.
 
 ## Custom elements
 
-`(grove element)` defines element vocabularies without adding renderer
-cases. `make-element` returns a command that renders its body inside the
-tag of your choice; the renderer adds no attributes of its own, and text
-output keeps the body:
+`(grove render html element)` defines HTML element vocabularies without adding
+renderer cases. `make-element` returns a command that renders its body inside
+the tag of your choice; the renderer adds no attributes of its own, and text
+output keeps the body. This is an HTML presentation helper; use
+`make-content-element` from `(grove ir)` for format-neutral content kinds:
 
 ```scheme
-(use-modules (grove element))
+(use-modules (grove render html element))
 
 (define wbr     (make-element #:tag "wbr" #:void? #t))
 (define callout (make-element #:tag "aside" #:class "callout"

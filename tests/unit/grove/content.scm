@@ -4,7 +4,7 @@
 
 (define-module (tests unit grove content)
   #:use-module (srfi srfi-64)
-  #:use-module (grove element)
+  #:use-module (grove render html element)
   #:use-module (grove ir)
   #:use-module (grove style)
   #:use-module (grove style html)

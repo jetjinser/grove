@@ -2,7 +2,7 @@
 ;;;
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(define-module (grove element)
+(define-module (grove render html element)
   #:use-module (grove ir)
   #:use-module (grove style)
   #:use-module (grove style html)
