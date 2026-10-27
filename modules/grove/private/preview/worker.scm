@@ -2,7 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove private preview worker)
-  #:use-module ((grove private output) #:prefix out:)
+  #:use-module ((grove private artifact) #:prefix out:)
   #:use-module (grove project)
   #:use-module (grove project load)
   #:use-module (grove private cache-dir)

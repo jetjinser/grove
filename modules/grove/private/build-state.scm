@@ -3,7 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove private build-state)
-  #:use-module ((grove private output) #:prefix out:)
+  #:use-module ((grove private artifact) #:prefix out:)
   #:use-module (grove output)
   #:use-module (grove private files)
   #:use-module (grove private fingerprint)

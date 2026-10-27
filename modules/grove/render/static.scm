@@ -3,7 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove render static)
-  #:use-module ((grove private output) #:prefix out:)
+  #:use-module ((grove private artifact) #:prefix out:)
   #:use-module (grove collect)
   #:use-module (grove build)
   #:use-module (grove output)
