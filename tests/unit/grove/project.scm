@@ -30,6 +30,9 @@
   (string-append cache-output-directory "/summary.txt"))
 (define incremental-output-directory
   (string-append project-root "/incremental-output"))
+(define drift-source-directory (string-append project-root "/drift-source"))
+(define drift-output-directory (string-append project-root "/drift-output"))
+(define drift-source-path (string-append drift-source-directory "/drift.plant"))
 (define external-source-path (string-append project-root "/theme.css"))
 
 (define (write-test-file path content)
@@ -322,6 +325,7 @@
     (mkdir project-root)
     (mkdir source-directory)
     (mkdir module-directory)
+    (mkdir drift-source-directory)
     (write-test-file external-source-path "body { color: black; }")
     (write-test-file (string-append module-directory "/shared.plant") "module")
     (write-test-file (string-append source-directory "/first.plant") "first")
@@ -384,6 +388,38 @@
               external-source-path)
         (filter (lambda (path) (string-prefix? project-root path))
                 (build-report-added-sources generic-report))))
+    (let* ((source drift-source-path)
+           (output drift-output-directory)
+           (renders 0)
+           (project
+             (begin
+               (write-test-file source "before render")
+               (make-project
+                 #:collect-sources (lambda () (list source))
+                 #:read-source
+                 (lambda (path)
+                   (call-with-input-file path get-string-all))
+                 #:analyze
+                 (lambda (context)
+                   (project-input-value
+                     (car (project-context-inputs context))))
+                 #:renderers
+                 (list
+                   (lambda (model)
+                     (set! renders (+ renders 1))
+                     (when (= renders 1)
+                       (write-test-file source "changed during render"))
+                     (list (make-artifact "drift.txt" model (list source)))))
+                 #:output-directory output)))
+           (first (build-project/report project)))
+      (test-equal "first render observes its original source snapshot" 1 renders)
+      (test-assert "a source drift during render is reported as a completed render"
+        (build-report-rendered? first))
+      (let ((second (build-project/report project)))
+        (test-equal "source drift invalidates the just-written build state" 2 renders)
+        (test-equal "the next render reads the changed source"
+          "changed during render"
+          (artifact-content (car (build-report-artifacts second))))))
     (let ((events '())
           (observed-site-title #f)
           (observed-site-description #f))
@@ -794,7 +830,9 @@
             (string-append output-directory "/pages/first.txt")
             (string-append output-directory "/pages/second.txt")
             (string-append output-directory "/pages/third.txt")
-            (string-append output-directory "/opaque.txt")))
+            (string-append output-directory "/opaque.txt")
+            (string-append drift-output-directory "/drift.txt")
+            drift-source-path))
     (let ((text-directory (string-append output-directory "/text")))
       (when (file-exists? text-directory)
         (rmdir text-directory)))
@@ -813,6 +851,8 @@
       (rmdir cache-output-directory))
     (when (file-exists? incremental-output-directory)
       (rmdir incremental-output-directory))
+    (when (file-exists? drift-output-directory)
+      (rmdir drift-output-directory))
     (for-each (lambda (path)
                 (when (file-exists? path)
                   (delete-file path)))
@@ -828,6 +868,7 @@
     (system* "rm" "-rf" (string-append project-root "/.cache"))
     (rmdir module-directory)
     (rmdir source-directory)
+    (rmdir drift-source-directory)
     (rmdir project-root)))
 
 (test-end "grove project")

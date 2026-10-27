@@ -403,6 +403,32 @@ Return the internal analysis record used by the build pipeline."
                path)))
       previous-artifacts)))
 
+(define (validate-project-artifacts artifacts progress)
+  (call-with-project-stage 'validate #f
+    (lambda ()
+      (progress 'validate #f)
+      (validate-artifacts artifacts))))
+
+(define* (write-project-build! directory state-path state-temp-path sources
+                               artifacts owners identity progress
+                               #:key (earlier-sources '())
+                                     (prune (lambda () #t))
+                                     (fingerprint input-fingerprint))
+  (call-with-project-stage 'write directory
+    (lambda ()
+      (progress 'write directory)
+      (write-artifacts directory artifacts)
+      (write-build-state state-path state-temp-path sources artifacts
+                         owners identity)
+      (prune)
+      ;; Inputs can change while outputs are being rendered. Invalidate the
+      ;; just-written state so a later build cannot reuse unseen source bytes.
+      (when (any (lambda (entry)
+                  (not (equal? (cadr entry)
+                               (fingerprint (car entry)))))
+                (append sources earlier-sources))
+        (delete-file state-path)))))
+
 (define (execute-project project write? progress)
   (unless (project? project)
     (error "project execution requires a Grove project" project))
@@ -569,28 +595,13 @@ Return the internal analysis record used by the build pipeline."
              (lset-difference string=?
                               (input-cache-dependencies context)
                               (project-extra-sources project)))))
-    (call-with-project-stage 'validate #f
-      (lambda ()
-        (progress 'validate #f)
-        (validate-artifacts artifacts)))
+    (validate-project-artifacts artifacts progress)
     (when write?
-      (call-with-project-stage 'write (project-output-directory project)
-        (lambda ()
-          (progress 'write (project-output-directory project))
-          (write-artifacts (project-output-directory project) artifacts)
-          (write-build-state state-path state-temp-path current-sources artifacts
-                             owners identity)
-          (prune-input-cache! input-cache-context)
-          ;;     源文件可能在构建中途被改回（revert 正是如此）：重读
-          ;;     pre-build 快照与 current-sources 的指纹并与写入时比对，
-          ;;     漂移就删掉刚写的 state——下一次构建强制全量重渲染。
-          (let ((drifted?
-                  (any (lambda (entry)
-                         (not (equal? (cadr entry)
-                                      (input-fingerprint (car entry)))))
-                       (append current-sources pre-build-sources))))
-            (when drifted?
-              (delete-file state-path))))))
+      (write-project-build!
+        (project-output-directory project) state-path state-temp-path
+        current-sources artifacts owners identity progress
+        #:earlier-sources pre-build-sources
+        #:prune (lambda () (prune-input-cache! input-cache-context))))
     (make-build-report (map build-state-source-path current-sources) artifacts added modified removed affected
                        (not cache-hit?))))
 
@@ -682,27 +693,13 @@ preserves the prior analysis result."
              (affected (affected-artifacts artifacts previous-artifacts changed))
              (report-removed
                 (filter (lambda (p) (not (member p changed string=?))) removed)))
-         (call-with-project-stage 'validate #f
-           (lambda ()
-             (progress 'validate #f)
-             (validate-artifacts artifacts)))
-         (call-with-project-stage 'write (project-output-directory project)
-           (lambda ()
-             (progress 'write (project-output-directory project))
-             (write-artifacts (project-output-directory project) artifacts)
-             (write-build-state state-path state-temp-path current-sources
-                                artifacts owners identity)
-             ;;     A source edited during the render is not in the
-             ;;     retained model; dropping the state forces the next
-             ;;     build to analyze instead of trusting a cache hit.
-             (let ((drifted?
-                     (any (lambda (entry)
-                            (not (equal? (cadr entry)
-                                         (false-if-exception
-                                           (file-fingerprint (car entry))))))
-                          current-sources)))
-               (when drifted?
-                 (delete-file state-path)))))
+         (validate-project-artifacts artifacts progress)
+         (write-project-build!
+           (project-output-directory project) state-path state-temp-path
+           current-sources artifacts owners identity progress
+           #:fingerprint
+           (lambda (path)
+             (false-if-exception (file-fingerprint path))))
           (make-build-report
             (map build-state-source-path current-sources)
             artifacts
