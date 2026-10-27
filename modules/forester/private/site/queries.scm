@@ -569,7 +569,7 @@ pages that only exist inside another article's DOM."
               (filter-map site-page-source (site-pages site))
               (append-map
                 (lambda (page)
-                  (tree-pass:content-source-paths (site-page-document page)))
+                  (content-source-paths (site-page-document page)))
                 (site-pages site)))
       string=?)))
 
@@ -615,7 +615,7 @@ pages that only exist inside another article's DOM."
                     (lambda (id)
                       (site-page-source (require-page forest id)))
                     included)
-                  (tree-pass:content-source-paths (site-page-document page))
+                  (content-source-paths (site-page-document page))
                   (filter-map site-page-source
                               (backlinks forest (site-page-id page)))
                   (filter-map site-page-source

@@ -170,15 +170,22 @@
 
 (test-error "content text values are strings" #t
   (make-content-text 42))
+(test-error "content text sources must be non-empty paths" #t
+  (make-content-text "text" ""))
 (test-error "content layout kinds are symbols" #t
   (make-content-layout "newline" "\n"))
 (test-error "content layout raw values are strings" #t
   (make-content-layout 'newline 10))
+(test-error "content layout sources must be non-empty paths" #t
+  (make-content-layout 'newline "\n" ""))
 (test-error "content text locations must be source-location alists" #t
   (make-content-text "text" #:location '(file "page.plant")))
 (test-error "content source locations require string filenames" #t
   (content-with-source-location
     (make-content-text "text") '((file . 42))))
+(test-error "content source locations reject empty filenames" #t
+  (content-with-source-location
+    (make-content-text "text") '((file . ""))))
 (test-error "content source locations require positive line numbers" #t
   (content-with-source-location
     (make-content-text "text") '((file . "page.plant") (line . 0))))
@@ -187,10 +194,38 @@
     (make-content-text "text") '((line . 1) (line . 2))))
 (test-error "element kinds are symbols" #t
   (make-content-element "paragraph" '()))
+(test-error "content element sources must be non-empty paths" #t
+  (make-content-element 'paragraph '() ""))
 (test-error "content elements reject non-content children" #t
   (make-content-element 'paragraph '(42)))
 (test-error "content documents reject non-content children" #t
   (make-content-document '(42)))
+(test-error "content document sources must be non-empty paths" #t
+  (make-content-document '() ""))
+
+(test-equal "content-source-paths gathers node and location provenance"
+  '("document.plant" "element.plant" "element-location.plant"
+    "text.plant" "text-location.plant" "layout.plant")
+  (content-source-paths
+    (make-content-document
+      (list
+        (content-with-source-location
+          (make-content-element 'paragraph
+            (list (make-content-text "body" "text.plant" #:location
+                    '((file . "text-location.plant") (line . 2))))
+            "element.plant")
+          '((file . "element-location.plant") (line . 1)))
+        (make-content-layout 'newline "\n" "layout.plant"))
+      "document.plant")))
+
+(test-equal "content-source-paths deduplicates repeated paths in order"
+  '("page.plant")
+  (content-source-paths
+    (make-content-document
+      (list (make-content-text "a" "page.plant")
+            (make-content-element 'paragraph
+              (list (make-content-text "b" "page.plant"))))
+      "page.plant")))
 
 (test-equal "plain-text projection preserves math structure"
   "x^(2)"

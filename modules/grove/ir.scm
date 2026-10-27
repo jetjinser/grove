@@ -39,7 +39,8 @@
             content-document?
             make-content-document
             content-document-children
-            content-document-source))
+            content-document-source
+            content-source-paths))
 
 ;; Content nodes are values: constructors snapshot caller-owned strings,
 ;; bytevectors, and pair structure; collection accessors return fresh
@@ -61,6 +62,13 @@
 (define (content-text-location content)
   (snapshot-data (content-text-location/raw content)))
 
+(define (valid-content-source? source)
+  (or (not source) (non-empty-string? source)))
+
+(define (check-content-source who source)
+  (unless (valid-content-source? source)
+    (error "content source must be a non-empty path or #f" who source)))
+
 (define (valid-source-location? location)
   (and (list? location)
        (every (lambda (entry)
@@ -73,7 +81,7 @@
        (let ((file (assq 'file location))
              (line (assq 'line location))
              (column (assq 'column location)))
-         (and (or (not file) (string? (cdr file)))
+         (and (or (not file) (non-empty-string? (cdr file)))
               (or (not line)
                   (and (integer? (cdr line)) (positive? (cdr line))))
               (or (not column)
@@ -83,6 +91,7 @@
                             #:key (location #f))
   (unless (string? value)
     (error "content text must be a string" value))
+  (check-content-source 'text source)
   (unless (or (not location) (valid-source-location? location))
     (error "content text location must be a source-location alist" location))
   (%make-content-text (snapshot-data value)
@@ -107,6 +116,7 @@
     (error "content layout kind must be a symbol" kind))
   (unless (string? raw)
     (error "content layout raw value must be a string" raw))
+  (check-content-source 'layout source)
   (%make-content-layout kind (snapshot-data raw) (snapshot-data source)))
 
 (define-record-type <content-element>
@@ -150,6 +160,7 @@
                                      (flow-kind #f))
   (unless (symbol? kind)
     (error "content element kind must be a symbol" kind))
+  (check-content-source 'element source)
   (unless (valid-properties? properties)
     (error "content element properties must have unique symbol keys"
            properties))
@@ -241,6 +252,44 @@
 (define (content-document-source document)
   (snapshot-data (content-document-source/raw document)))
 
+(define (content-source-location-file element)
+  (let ((location (content-element-property/raw element 'source-location)))
+    (and (valid-source-location? location)
+         (assq-ref location 'file))))
+
+(define (content-source-paths content)
+  "Return unique source paths recorded anywhere in CONTENT, in traversal order.
+
+Text, layout, element, and document sources are included. File fields from
+text locations and element source-location properties are included as well.
+Raw strings have no source; a list may contain any proper sequence of content
+values."
+  (define (paths value)
+    (cond
+      ((string? value) '())
+      ((content-text? value)
+       (filter identity
+         (list (content-text-source/raw value)
+               (and (content-text-location/raw value)
+                    (assq-ref (content-text-location/raw value) 'file)))))
+      ((content-layout? value)
+       (filter identity (list (content-layout-source/raw value))))
+      ((content-element? value)
+       (append
+         (filter identity
+           (list (content-element-source/raw value)
+                 (content-source-location-file value)))
+         (append-map paths (content-element-children/raw value))))
+      ((content-document? value)
+       (append
+         (filter identity (list (content-document-source/raw value)))
+         (append-map paths (content-document-children/raw value))))
+      ((and (list? value) (every content-child? value))
+       (append-map paths value))
+      (else
+       (error "content-source-paths requires content values" value))))
+  (snapshot-data (delete-duplicates (paths content) string=?)))
+
 (define (content-child? value)
   (or (string? value)
       (content-text? value)
@@ -270,6 +319,7 @@
 (define* (make-content-document children #:optional (source #f))
   (unless (list? children)
     (error "content children must be a proper list" 'document children))
+  (check-content-source 'document source)
   (let ((children
           (append-map (lambda (child)
                         (let ((normalized (normalize-child child)))

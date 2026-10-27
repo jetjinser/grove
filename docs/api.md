@@ -116,10 +116,14 @@ Opaque extension values embedded in properties remain shared and follow their
 own type's contract.
 
 Content source locations are association lists with unique symbol keys. The
-`file` value, when present, is a string; `line` and `column`, when present,
-are positive one-based integers. Text constructors validate and snapshot a
+`file` value, when present, is a non-empty string; `line` and `column` are
+positive one-based integers. Text constructors validate and snapshot a
 supplied `#:location`, and `content-with-source-location` applies the same
-contract when attaching a location to content.
+contract when attaching a location to content. Content text, layout, element,
+and document source arguments are either `#f` or non-empty paths.
+`content-source-paths` walks an IR value or sequence and returns its unique
+recorded source paths, including location file fields. This is the dependency
+projection used when content-derived artifacts need to track their origins.
 
 `(grove ir)` defines these content values and their structural operations.
 Text has two intentionally different projections. Use

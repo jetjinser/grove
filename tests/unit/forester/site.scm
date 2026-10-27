@@ -80,13 +80,17 @@
 
 (let* ((body
          (make-content-element 'paragraph
-           (list (make-content-text "Authored body." "notes/body.scm"))
+           (list (make-content-text "Authored body." "notes/body.scm")
+                 (make-content-layout 'newline "\n" "notes/layout.scm"))
+           "notes/paragraph.scm"
            #:flow-kind 'block))
        (page (make-site-page "authored" "Authored"
-               (make-content-document (list body))))
+               (make-content-document (list body) "notes/document.scm")))
        (forest (make-forest (make-site (list page)))))
-  (test-assert "content text sources participate in page dependencies"
-    (member "notes/body.scm" (page-source-paths forest page) string=?)))
+  (test-equal "all Grove content source paths participate in page dependencies"
+    '("notes/document.scm" "notes/paragraph.scm" "notes/body.scm"
+      "notes/layout.scm")
+    (page-source-paths forest page)))
 
 (test-error "unresolved links fail site analysis" #t
   (make-forest

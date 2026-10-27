@@ -18,7 +18,6 @@
             subtree-elements
             direct-subtree-elements
             declared-anchor-elements
-            content-source-paths
             transclusion-elements
             owned-content
             subtree-pages
@@ -61,11 +60,6 @@
 (define (direct-subtree-elements content)
   (walk-content content (element-kind? 'subtree)
     #:stop? (element-kind? 'subtree)))
-
-(define (content-source-paths content)
-  (filter-map (lambda (node)
-                (and (content-text? node) (ir:content-text-source/raw node)))
-    (walk-content content content-text?)))
 
 (define (transclusion-elements content)
   (walk-content content (element-kind? 'transclude) #:postorder? #t))
