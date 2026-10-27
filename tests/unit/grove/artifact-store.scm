@@ -77,6 +77,7 @@
 
 (define other "other bytes")
 (define other-fingerprint (content-fingerprint other))
+(define fifo-fingerprint (content-fingerprint "special cache entry"))
 
 (test-assert "second content gets its own blob"
   (publish-artifact-blob! other-fingerprint
@@ -86,6 +87,12 @@
 (test-assert "both blobs coexist"
   (and (artifact-blob-exists? fingerprint)
        (artifact-blob-exists? other-fingerprint)))
+
+(let ((path (artifact-blob-path fifo-fingerprint)))
+  (unless (zero? (system* "mkfifo" path))
+    (error "could not create artifact-store FIFO" path))
+  (test-assert "special files are not cache blobs"
+    (not (artifact-blob-exists? fifo-fingerprint))))
 
 ;;     A corrupt blob is a cache miss: restoring reports failure
 ;;     instead of producing broken bytes.

@@ -7,6 +7,7 @@
   #:use-module (grove output)
   #:use-module (grove private artifact-store)
   #:use-module (grove private build-state)
+  #:use-module (grove private files)
   #:use-module (ice-9 binary-ports)
   #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-1)
@@ -131,13 +132,12 @@
                ;;     shared store holds the bytes under the entry's
                ;;     fingerprint, so restore the file instead of
                ;;     paying for a re-render.
-               (_ (when (and (not (file-exists? path))
+               (_ (when (and (not (regular-file-entry? path))
                              (build-state-artifact-fingerprint entry))
                     (restore-artifact-blob!
                      (build-state-artifact-fingerprint entry) path)))
                (content
-                 (and (file-exists? path)
-                      (not (file-is-directory? path))
+                 (and (regular-file-entry? path)
                       (catch #t
                         (lambda ()
                           (if (eq? (build-state-artifact-kind entry) 'bytes)

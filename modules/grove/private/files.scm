@@ -3,6 +3,7 @@
 
 (define-module (grove private files)
   #:export (file-signature
+            regular-file-entry?
             ensure-directory
             call-with-staging-file!))
 
@@ -13,6 +14,11 @@
          (list (stat:type info) (stat:dev info) (stat:ino info) (stat:size info)
                (stat:mtime info) (stat:mtimensec info)
                (stat:ctime info) (stat:ctimensec info)))))
+
+(define (regular-file-entry? path)
+  "Return #t only when PATH itself is a regular file, without following links."
+  (let ((info (stat path #f)))
+    (and info (eq? (stat:type info) 'regular))))
 
 (define (ensure-directory directory)
   "Create DIRECTORY and its missing parents, like mkdir -p.  Tolerant

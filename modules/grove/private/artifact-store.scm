@@ -25,9 +25,7 @@
   (string-append (grove-store-directory) "/artifacts/" fingerprint))
 
 (define (artifact-blob-exists? fingerprint)
-  (let ((path (artifact-blob-path fingerprint)))
-    (and (file-exists? path)
-         (not (file-is-directory? path)))))
+  (regular-file-entry? (artifact-blob-path fingerprint)))
 
 ;;     Write BYTES into the store under FINGERPRINT.  WRITE! receives
 ;;     the output port.  Best effort: failures leave the store without
