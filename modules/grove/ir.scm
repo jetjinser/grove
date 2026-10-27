@@ -273,17 +273,7 @@ For a document, attach the location to each top-level content value."
                              (assq-ref location 'file))
                          (snapshot-data location)))
     ((content-element? content)
-     (let* ((properties (content-element-properties content))
-            (properties (filter (lambda (entry)
-                                  (not (eq? (car entry) 'source-location)))
-                                properties)))
-       (%make-content-element
-         (content-element-kind content)
-         (content-element-children content)
-         `((source-location . ,(snapshot-data location)) ,@properties)
-         (content-element-style content)
-         (content-element-source content)
-         (content-element-flow-kind content))))
+     (content-with-property content 'source-location location))
     ((content-document? content)
      (make-content-document
        (map (lambda (child) (content-with-source-location child location))
