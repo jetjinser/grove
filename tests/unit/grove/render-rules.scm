@@ -374,6 +374,16 @@
   (transform-document (lambda (document) 'not-a-document)
                       (make-content-document '())))
 
+(test-error "content transform composition validates each intermediate result" #t
+  (transform-document
+    (compose-content-transforms
+      (lambda (document) 'not-a-document)
+      (lambda (document) (make-content-document '())))
+    (make-content-document '())))
+
+(test-error "empty content transform composition still validates its input" #t
+  ((compose-content-transforms) 'not-a-document))
+
 (define-image-sets image-sets
   (image-set "forest.jpg"
     (variant "image/avif" "/images/forest.avif")

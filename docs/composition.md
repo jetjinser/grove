@@ -19,7 +19,7 @@ justify a distinct type.
 | Concept | Value | Combination | Interpretation |
 | --- | --- | --- | --- |
 | Content | constructors and records in `grove ir` | build a tree; there is no general merge | a renderer interprets the content algebra |
-| Content transform | ordinary procedure: document → document | `compose-content-transforms` applies procedures left to right; `identity` is the unit | `transform-document` checks the input and result document |
+| Content transform | ordinary procedure: document → document | `compose-content-transforms` applies procedures left to right; `identity` is the unit | composition checks the document at every stage; `transform-document` checks one transform's input and result |
 | Render rules | typed map from content kind to procedure | `compose-render-rules` layers any number of sets left to right; the empty set is the unit, `next` explicitly reaches the fallback | HTML, text, and gemtext interpreters |
 | HTML presentation | typed product of style, rules, head, navigation, and page fragments | `compose-html-presentations` combines any number of layers left to right; the empty presentation is the unit | HTML renderer |
 | Site outputs | ordinary renderer procedures or cached renderer values | ordered renderer list | project build |
