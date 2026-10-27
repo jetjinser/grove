@@ -80,9 +80,18 @@
 (define-record-type <locale>
   (%make-locale tag lang dir)
   locale?
-  (tag locale-tag)
-  (lang locale-lang)
-  (dir locale-dir))
+  (tag locale-tag/raw)
+  (lang locale-lang/raw)
+  (dir locale-dir/raw))
+
+(define (locale-tag locale)
+  (string-copy (locale-tag/raw locale)))
+
+(define (locale-lang locale)
+  (string-copy (locale-lang/raw locale)))
+
+(define (locale-dir locale)
+  (string-copy (locale-dir/raw locale)))
 
 (define (resolve-direction subtags lang)
   "Derive a text direction from a script subtag, then from the language."

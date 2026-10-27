@@ -30,6 +30,17 @@
   (test-equal "locales expose their primary language" "zh" (locale-lang locale))
   (test-equal "Chinese locales are left-to-right" "ltr" (locale-dir locale)))
 
+(let* ((locale (make-locale "ar-EG"))
+       (tag (locale-tag locale))
+       (language (locale-lang locale))
+       (direction (locale-dir locale)))
+  (string-set! tag 0 (integer->char 88))
+  (string-set! language 0 (integer->char 88))
+  (string-set! direction 0 (integer->char 88))
+  (test-equal "locale accessors return independent strings"
+    '("ar-EG" "ar" "rtl")
+    (list (locale-tag locale) (locale-lang locale) (locale-dir locale))))
+
 (test-equal "Arabic locales request right-to-left direction"
   "rtl" (locale-dir (make-locale "ar-EG")))
 
