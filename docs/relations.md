@@ -17,8 +17,9 @@ has the same arity. A term can be an atomic Scheme value or a finite, acyclic
 pair tree of terms. Vectors are reserved by faster-minikanren for logic
 variables and are not valid relation data. A relation cannot contain a live
 logic variable.
-Construction copies mutable strings and pair structure. `relation-facts` and
-query answers return independent copies of that mutable data, so edits to
+Construction copies mutable strings, bytevectors, and pair structure.
+`relation-facts` and query answers return independent copies of that mutable
+data, so edits to
 caller-owned facts or answers cannot change the relation or invalidate its
 indexes. Opaque values such as records and procedures remain shared and follow
 their own type's contract.

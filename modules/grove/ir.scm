@@ -41,9 +41,9 @@
             content-document-children
             content-document-source))
 
-;; Content nodes are values: constructors snapshot caller-owned strings and
-;; pair structure, and collection accessors return fresh structure. Nested
-;; content and style records keep their own value semantics.
+;; Content nodes are values: constructors snapshot caller-owned strings,
+;; bytevectors, and pair structure; collection accessors return fresh
+;; structure. Nested content and style records keep their own value semantics.
 
 (define-record-type <content-text>
   (%make-content-text value source location)

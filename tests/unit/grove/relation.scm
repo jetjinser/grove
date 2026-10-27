@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit grove relation)
+  #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-64)
   #:use-module (grove relation))
@@ -70,6 +71,23 @@
     '((tag "target"))
     (run* (value)
       (relationo relation "source" value))))
+
+(let* ((bytes (u8-list->bytevector '(1 2 3)))
+       (relation (make-relation (list (list bytes)) #:arity 1)))
+  (bytevector-u8-set! bytes 0 9)
+  (test-equal "relations snapshot mutable bytevector terms"
+    '(1 2 3)
+    (bytevector->u8-list (car (car (relation-facts relation)))))
+  (let ((facts (relation-facts relation)))
+    (bytevector-u8-set! (car (car facts)) 1 9))
+  (test-equal "relation facts copy bytevector terms on access"
+    '(1 2 3)
+    (bytevector->u8-list (car (car (relation-facts relation)))))
+  (let ((answer (car (run* (value) (relationo relation value)))))
+    (bytevector-u8-set! answer 2 9))
+  (test-equal "relation query answers cannot mutate bytevector facts"
+    '(1 2 3)
+    (bytevector->u8-list (car (car (relation-facts relation))))))
 
 (test-equal "fact deduplication compares compound terms structurally"
   2

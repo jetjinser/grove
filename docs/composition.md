@@ -46,11 +46,11 @@ they should not wrap a procedure or list without adding meaning.
 ## Shared values and mutation
 
 Grove Content, Site, Relation, project-context, HTML-presentation, and Forester
-composition values snapshot mutable strings and pair structure at construction;
-their accessors return independent copies. This keeps records stable while
-allowing callers to use ordinary Scheme lists and strings. Opaque records,
-procedures, and other extension values remain shared and follow their own
-type's contract.
+composition values snapshot mutable strings, bytevectors, and pair structure
+at construction; their accessors return independent copies. This keeps records
+stable while allowing callers to use ordinary Scheme lists and strings. Opaque
+records, procedures, and other extension values remain shared and follow their
+own type's contract.
 
 A generic analyzer's model is different: Grove does not know its type, so the
 same model value is passed to every renderer and browser callback. Treat that

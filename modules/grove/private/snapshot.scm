@@ -3,10 +3,12 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove private snapshot)
+  #:use-module (rnrs bytevectors)
   #:export (snapshot-data))
 
 (define (snapshot-data value)
-  "Copy mutable strings and pair structure, preserving opaque values.
+  "Copy mutable strings, bytevectors, and pair structure, preserving opaque
+values.
 
 Use at public constructor boundaries for declarative data. Procedures and
 records remain shared values; their own constructors define their semantics."
@@ -19,6 +21,8 @@ records remain shared values; their own constructors define their semantics."
           (when properties
             (set-source-properties! result (copy properties)))
           result))
+       ((bytevector? value)
+        (bytevector-copy value))
        ((pair? value)
         (or (hashq-ref seen value)
             (let ((result (cons #f #f)))
