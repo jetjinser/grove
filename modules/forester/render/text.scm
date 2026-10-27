@@ -9,7 +9,7 @@
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove private snapshot)
-  #:use-module (grove render text)
+  #:use-module (grove private render text)
   #:use-module (grove render rules)
   #:use-module (grove render context)
   #:use-module (forester render text routes)
@@ -32,9 +32,6 @@
 
 ;; Forester supplies the tree-aware lazy handlers; ordinary extensions use
 ;; render rules through the public (grove render text) entry point.
-(define content->text/internal
-  (@@ (grove render text) content->text/internal))
-
 (define (page-content-handlers forest routes page)
   (let ((references (outgoing-references forest (site-page-id page))))
     `((tag . ,(lambda (_element _body) ""))

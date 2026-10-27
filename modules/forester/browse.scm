@@ -4,7 +4,7 @@
 
 (define-module (forester browse)
   #:use-module (grove ir)
-  #:use-module (grove render text)
+  #:use-module (grove private render text)
   #:use-module (grove site)
   #:use-module (forester site)
   #:use-module (forester backmatter)
@@ -15,9 +15,6 @@
   #:use-module (srfi srfi-13)
   #:export (browse-forest
             make-forest-browser))
-
-(define content->text/internal
-  (@@ (grove render text) content->text/internal))
 
 ;; Content kinds the terminal projection understands. Anything outside this set
 ;; is still rendered as its children, but the page view names it so that no

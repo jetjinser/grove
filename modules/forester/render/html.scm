@@ -14,6 +14,7 @@
   #:use-module (forester site)
   #:use-module (grove ir)
   #:use-module (grove output)
+  #:use-module (grove private render html)
   #:use-module (grove private snapshot)
   #:use-module (grove render html)
   #:use-module (grove render rules)
@@ -38,11 +39,8 @@
             html-options?
             make-html-renderer))
 
-;; Forester's tree walk needs lazy dispatch that is deliberately outside the
-;; public content renderer API. Keep the coupling visibly internal.
-(define content->sxml/internal
-  (@@ (grove render html) content->sxml/internal))
-
+;; Forester's tree traversal uses the private content interpreter for lazy
+;; handlers; those handlers are deliberately outside the public renderer API.
 (define (chrome-date text context)
   (let ((locale (render-context-ref context 'locale-object)))
     (if locale (format-date locale text #:style 'long) text)))

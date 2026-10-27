@@ -7,7 +7,7 @@
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove private snapshot)
-  #:use-module (grove render text)
+  #:use-module (grove private render text)
   #:use-module (grove render rules)
   #:use-module (grove render context)
   #:use-module (forester render text routes)
@@ -29,9 +29,6 @@
             make-gemtext-options
             gemtext-options?
             make-gemtext-renderer))
-
-(define content->text/internal
-  (@@ (grove render text) content->text/internal))
 
 (define (default-gemtext-routes)
   (make-text-routes

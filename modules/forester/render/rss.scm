@@ -12,7 +12,7 @@
   #:use-module (grove output)
   #:use-module (grove render html routes)
   #:use-module (grove string-fun)
-  #:use-module (grove render text)
+  #:use-module (grove private render text)
   #:use-module (grove site)
   #:use-module (sxml simple)
   #:use-module (srfi srfi-19)
@@ -20,9 +20,6 @@
   #:use-module (srfi srfi-13)
   #:export (render-rss
             make-rss-renderer))
-
-(define content->text/internal
-  (@@ (grove render text) content->text/internal))
 
 (define (page-url base routes page)
   (web-absolute-route-url base (html-page-url routes (site-page-id page))))
