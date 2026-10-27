@@ -104,6 +104,10 @@ or otherwise needs to compose the complete site lifecycle.
 `make-project` connects source collection, preparation, reading, analysis,
 and rendering. `make-site-project` assembles page inputs into a site before
 calling its analyzer. All renderers receive the same model and return artifacts.
+Use `build-project` when a Scheme host only needs the resulting artifact list;
+use `build-project/report` when it also needs source changes, affected
+artifacts, or cache status. `check-project` returns the same report shape but
+does not read or write published output state.
 `project-with-options` returns a project copy with an output-directory override,
 additional tracked inputs, or a cache setting; the original project is unchanged.
 Project constructors snapshot declared path strings and list containers.
