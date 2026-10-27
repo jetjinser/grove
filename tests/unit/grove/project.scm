@@ -168,9 +168,9 @@
                       #:output-directory "output")
         #:extra-sources '(not-a-path))
       #f)
-    (lambda (_key _module template _arguments _rest)
+    (lambda (_key _module template arguments _rest)
       (string-prefix? "project additional sources must be a list of non-empty paths"
-                      template))))
+                      (apply format #f template arguments)))))
 
 (let* ((body (string-copy "before"))
        (_ (set-source-properties! body '((filename . "page.plant") (line . 4))))
