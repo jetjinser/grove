@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math expression)
+  #:use-module (grove private snapshot)
   #:use-module (grove math term)
   #:use-module (grove math source)
   #:use-module (grove math premise)
@@ -15,11 +16,23 @@
 (define-record-type <math-value>
   (%make-math-value term origin properties declarations requirements)
   math-value?
-  (term math-value-term)
+  (term math-value-term/raw)
   (origin math-value-origin)
-  (properties math-value-properties)
-  (declarations math-value-declarations)
-  (requirements math-value-requirements))
+  (properties math-value-properties/raw)
+  (declarations math-value-declarations/raw)
+  (requirements math-value-requirements/raw))
+
+(define (math-value-term value)
+  (snapshot-data (math-value-term/raw value)))
+
+(define (math-value-properties value)
+  (snapshot-data (math-value-properties/raw value)))
+
+(define (math-value-declarations value)
+  (snapshot-data (math-value-declarations/raw value)))
+
+(define (math-value-requirements value)
+  (snapshot-data (math-value-requirements/raw value)))
 
 (define* (make-math-value term #:key (origin #f) (properties '()) (declarations '()) (requirements '()))
   (unless (math-term? term) (error "expected a mathematical term" term))
@@ -30,11 +43,13 @@
     (error "expected mathematical declarations" declarations))
   (unless (and (list? requirements) (every math-term? requirements))
     (error "expected mathematical domain requirements" requirements))
-  (%make-math-value term origin properties declarations
-    (delete-duplicates (append requirements (math-domain-premises term)) equal?)))
+  (%make-math-value (snapshot-data term) origin
+    (snapshot-data properties) (snapshot-data declarations)
+    (snapshot-data
+      (delete-duplicates (append requirements (math-domain-premises term)) equal?))))
 
 (define (math-value-with-properties value properties)
   (unless (math-value? value) (error "expected a mathematical expression" value))
-  (make-math-value (math-value-term value) #:origin (math-value-origin value)
-    #:properties properties #:declarations (math-value-declarations value)
-    #:requirements (math-value-requirements value)))
+  (make-math-value (math-value-term/raw value) #:origin (math-value-origin value)
+    #:properties properties #:declarations (math-value-declarations/raw value)
+    #:requirements (math-value-requirements/raw value)))

@@ -20,6 +20,42 @@
   '(prime (var f) (var x))
   (math-value-term
     (semantic:prime (semantic:function 'f) (semantic:variable 'x))))
+(let* ((term (list '+ (list 'var 'x) (list 'num (string-copy "2"))))
+       (properties (list (cons 'children (list (list (cons 'variant 'original))))))
+       (declarations (list '(scalar (var x))))
+       (requirements (list '(positive (var x))))
+       (value (make-math-value term #:properties properties
+                               #:declarations declarations
+                               #:requirements requirements)))
+  (set-car! (cadr term) 'changed)
+  (string-set! (cadr (caddr term)) 0 #\9)
+  (set-cdr! (cdar properties) '((variant . changed)))
+  (set-car! declarations '(vector (var x)))
+  (set-car! requirements '(nonzero (var x)))
+  (test-equal "Semantic values snapshot mutable constructor data"
+    '(+ (var x) (num "2")) (math-value-term value))
+  (test-equal "Semantic values snapshot presentation properties"
+    '((children ((variant . original)))) (math-value-properties value))
+  (test-equal "Semantic values snapshot declarations"
+    '((scalar (var x))) (math-value-declarations value))
+  (test-equal "Semantic values snapshot requirements"
+    '((positive (var x))) (math-value-requirements value))
+  (let ((exposed-term (math-value-term value))
+        (exposed-properties (math-value-properties value))
+        (exposed-declarations (math-value-declarations value))
+        (exposed-requirements (math-value-requirements value)))
+    (set-car! (cadr exposed-term) 'changed)
+    (set-car! (car (cdar exposed-properties)) 'changed)
+    (set-car! (car exposed-declarations) 'changed)
+    (set-car! (car exposed-requirements) 'changed))
+  (test-equal "Semantic value accessors return independent term trees"
+    '(+ (var x) (num "2")) (math-value-term value))
+  (test-equal "Semantic value accessors return independent properties"
+    '((children ((variant . original)))) (math-value-properties value))
+  (test-equal "Semantic value accessors return independent declarations"
+    '((scalar (var x))) (math-value-declarations value))
+  (test-equal "Semantic value accessors return independent requirements"
+    '((positive (var x))) (math-value-requirements value)))
 (let ((value (φ:read "x+opaque(x)")))
   (test-assert "unknown function applications remain structurally valid"
     (math-term? (math-value-term value)))

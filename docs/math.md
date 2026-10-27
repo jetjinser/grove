@@ -126,6 +126,11 @@ ordered collections. Accessors return independent copies, so changing a
 displayed trace cannot alter a certificate before it is checked. Opaque source
 provenance values remain shared according to their own contract.
 
+Semantic values follow the same data rule: construction snapshots the term,
+presentation properties, declarations, and domain requirements; their
+accessors return independent copies. The source-origin record is shared as
+opaque provenance data.
+
 Calculation reports likewise snapshot their candidate, limit, pass, and
 diagnostic collections. Diagnostic paths, premises, and messages, along with
 source-location filenames and excerpts, are copied when constructed and when
