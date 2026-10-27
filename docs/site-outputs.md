@@ -14,21 +14,28 @@ Scheme-datum graph. Import the constructors from the format modules:
 
 ```scheme
 (use-modules (forester render html)
+             (forester project)
              (forester render rss)
              (forester render sitemap)
-             (forester render graph))
+             (forester render graph)
+             (forester render site))
+
+(define settings
+  (make-site-settings #:site-url "https://example.org"))
 
 (make-forester-project
   #:home "hello"
+  #:html-options (make-html-options #:settings settings)
   #:additional-renderers
-  (list (make-rss-renderer #:site-url "https://example.org")
-        (make-sitemap-renderer #:site-url "https://example.org")
+  (list (make-rss-renderer #:settings settings)
+        (make-sitemap-renderer #:settings settings)
         (make-graph-renderer)))
 ```
 
 The normal Forester project always includes HTML. `#:additional-renderers`
 adds peer formats and projections; a `make-site-project` instead receives the
-complete renderer list through `#:renderers`.
+complete renderer list through `#:renderers`. A shared `make-site-settings`
+value keeps the HTML, RSS, and sitemap base URL and default locale aligned.
 
 When routes omit a home page, HTML, RSS, and sitemap renderers infer it from the
 analyzed site's `#:home`. You do not need to repeat the home tree ID in each
