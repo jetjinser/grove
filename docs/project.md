@@ -318,8 +318,11 @@ before reusing that document. A reader's `#:cache-dependencies` collector is
 for reader-wide files that may affect any document even when its evaluation
 does not open them; it runs before each document cache lookup. Time,
 randomness, network state, and effects that must repeat require opting out
-with `disable-cache!` or disabling reader caching. Imported module definitions
-remain uncached so their bindings exist in every build process.
+with `disable-cache!` or disabling reader caching. An opted-out document also
+forces the renderer set to run for that build, because its untracked effects may
+change the analyzed model; opting out one renderer still allows its cacheable
+peers to reuse artifacts. Imported module definitions remain uncached so their
+bindings exist in every build process.
 
 Cached renderers and pipelines are assumed deterministic for their tracked
 inputs and declared configuration. Grove verifies cached bytes against their
