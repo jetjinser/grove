@@ -445,6 +445,8 @@
   (make-image-variant "" "/forest.avif"))
 (test-error "image variants require a non-empty URL" #t
   (make-image-variant "image/avif" ""))
+(test-error "image sets require a fallback URL" #t
+  (make-image-set "forest.jpg"))
 (test-error "image-set-rule requires a list of image-set values" #t
   (image-set-rule (list (cons "forest.jpg" (car image-sets)))))
 (test-error "image-set-rule rejects duplicate image sources" #t

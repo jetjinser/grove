@@ -61,7 +61,9 @@
 (define (image-set-fallback image-set)
   (snapshot-data (image-set-fallback/raw image-set)))
 
-(define* (make-image-set source #:key (variants '()) (fallback #f))
+(define* (make-image-set source #:key (variants '()) fallback)
+  "Describe an image source, its alternate VARIANTS, and required FALLBACK URL.
+SOURCE selects the set; FALLBACK is used by the final @code{<img>} element."
   (unless (and (string? source) (not (string-null? source)))
     (error "image set source must be a non-empty string" source))
   (unless (and (list? variants) (every image-variant? variants))

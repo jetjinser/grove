@@ -151,10 +151,11 @@ The image rule can be expressed as data:
 ```
 
 The macro expands to a list of `make-image-set` values; each set carries its
-own source key, variants, and fallback. `image-set-rule` accepts that list and
-rejects duplicate source keys. It does not run encoders: an asset pipeline
-produces the files, and the rule only chooses the URLs and fallback. These
-configuration values snapshot their strings and list structure when built.
+own source key, variants, and required fallback URL. `image-set-rule` accepts
+that list and rejects duplicate source keys. It does not run encoders: an asset
+pipeline produces the files, and the rule only chooses the URLs and fallback.
+These configuration values snapshot their strings and list structure when
+built.
 
 ## Text and gemtext
 
