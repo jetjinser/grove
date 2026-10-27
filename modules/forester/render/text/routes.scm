@@ -36,10 +36,10 @@
 (define (text-page-path routes id)
   (unless (text-routes? routes)
     (error "text page path requires text routes" routes))
-  (let ((path ((text-page-path-procedure routes) id)))
+  (let ((path ((text-page-path-procedure routes) (snapshot-data id))))
     (unless (artifact-path? path)
       (error "text page requires a relative path" id path))
-    path))
+    (snapshot-data path)))
 
 (define (text-relative-path from-path to-path)
   (let* ((from-directory (drop-right (string-split from-path #\/) 1))

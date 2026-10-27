@@ -69,10 +69,10 @@
   (let ((path (if (and (html-home-page routes)
                        (string=? id (html-home-page routes)))
                   (html-index-path routes)
-                  ((html-page-path-procedure routes) id))))
+                  ((html-page-path-procedure routes) (snapshot-data id)))))
     (unless (artifact-path? path)
       (error "HTML page requires a relative artifact path" id path))
-    path))
+    (snapshot-data path)))
 
 (define (html-route-table routes ids)
   (let ((table (map (lambda (id) (cons id (html-page-path routes id))) ids)))
@@ -86,7 +86,7 @@
             (error "HTML page routes must be unique"
                    (car collision) (car entry) path))
           (loop (cdr remaining) (cons entry seen)))))
-    table))
+    (snapshot-data table)))
 
 (define (html-asset-url routes path)
   (unless (artifact-path? path)
@@ -114,13 +114,16 @@ Pages without a locale, and pages in DEFAULT-LOCALE, use `id.html'."
   (unless (or (not default-locale) (non-empty-string? default-locale))
     (error "Locale page path default locale must be a string or #f"
            default-locale))
+  (set! default-locale (snapshot-data default-locale))
   (let ((build (or build
                    (lambda (locale id)
                      (if locale
                          (string-append id "." locale ".html")
                          (string-append id ".html"))))))
     (lambda (id)
-      (let ((locale (locale-of id)))
+      (let ((locale (snapshot-data (locale-of (snapshot-data id)))))
         (unless (or (not locale) (non-empty-string? locale))
           (error "Locale page path requires a locale tag or #f" id locale))
-        (build (and (not (equal? locale default-locale)) locale) id)))))
+        (snapshot-data
+          (build (snapshot-data (and (not (equal? locale default-locale)) locale))
+                 (snapshot-data id)))))))

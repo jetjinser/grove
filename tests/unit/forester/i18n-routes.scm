@@ -21,6 +21,63 @@
 
 (test-begin "forester i18n routes")
 
+(let* ((id (string-copy "guide"))
+       (shared-path (string-copy "pages/guide.html"))
+       (routes (make-html-routes
+                 #:page-path
+                 (lambda (argument)
+                   (string-set! argument 0 #\X)
+                   shared-path)))
+       (returned (html-page-path routes id)))
+  (string-set! returned 0 #\X)
+  (test-equal "HTML path callbacks cannot mutate the caller's page ID"
+    "guide" id)
+  (test-equal "HTML route results do not expose callback-owned strings"
+    "pages/guide.html" (html-page-path routes "guide"))
+  (let* ((ids (list id))
+         (table (html-route-table routes ids)))
+    (string-set! (caar table) 0 #\X)
+    (test-equal "HTML route tables own their page IDs" "guide" (car ids))))
+
+(let* ((id (string-copy "guide"))
+       (shared-path (string-copy "pages/guide.txt"))
+       (routes (make-text-routes
+                 #:page-path
+                 (lambda (argument)
+                   (string-set! argument 0 #\X)
+                   shared-path)))
+       (returned (text-page-path routes id)))
+  (string-set! returned 0 #\X)
+  (test-equal "text path callbacks cannot mutate the caller's page ID"
+    "guide" id)
+  (test-equal "text route results do not expose callback-owned strings"
+    "pages/guide.txt" (text-page-path routes "guide")))
+
+(let* ((default-locale (string-copy "en"))
+       (paths (locale-page-path (lambda (_) #f)
+                                #:default-locale default-locale)))
+  (string-set! default-locale 0 #\X)
+  (test-equal "locale routes snapshot their configured default locale"
+    "guide.html" (paths "guide")))
+
+(let* ((id (string-copy "guide"))
+       (shared-locale (string-copy "zh-Hans"))
+       (shared-path (string-copy "guide.zh-Hans.html"))
+       (paths
+         (locale-page-path
+           (lambda (argument)
+             (string-set! argument 0 #\X)
+             shared-locale)
+           (lambda (locale argument)
+             (string-set! locale 0 #\X)
+             (string-set! argument 0 #\X)
+             shared-path)))
+       (returned (paths id)))
+  (string-set! returned 0 #\X)
+  (test-equal "locale callbacks cannot mutate the caller's page ID" "guide" id)
+  (test-equal "locale callbacks cannot alter later paths"
+    "guide.zh-Hans.html" (paths "guide")))
+
 (let* ((index-path (string-copy "home.html"))
        (home-page (string-copy "home"))
        (routes (make-html-routes #:index-path index-path
