@@ -11,6 +11,7 @@
   #:use-module (grove render plain-text)
   #:use-module (grove site)
   #:use-module (forester relations)
+  #:use-module (forester private topic)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (element-plain-text?
@@ -34,11 +35,10 @@
       (lambda (topic)
         (let ((id (cadr topic))
               (label (caddr topic)))
-          (unless (and (non-empty-string? id)
+          (unless (and (canonical-topic-id? id)
                        (non-empty-string? label))
             (error "invalid topic IR element" topic))
-          (unless (and (string=? id (string-downcase id))
-                       (string=? id label))
+          (unless (string=? id label)
             (error "topic IR must contain one canonical lowercase value" topic))))
       topics)))
 

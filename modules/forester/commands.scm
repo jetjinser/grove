@@ -15,6 +15,7 @@
   #:use-module (language scribble command)
   #:use-module (language scribble flow)
   #:use-module (grove private string-fun)
+  #:use-module (forester private topic)
   #:use-module (forester i18n))
 
 (define-public (title . body)
@@ -91,13 +92,6 @@ page and must be a valid anchor ID."
   (make-content-element 'image alternative-text
                         #:style style
                         #:properties `((source . ,source))))
-
-(define char-set:topic-body (char-set-adjoin char-set:letter+digit #\-))
-(define (valid-topic-id? id)
-  (and (non-empty-string? id)
-       (char-set-contains? char-set:letter+digit (string-ref id 0))
-       (char-set-contains? char-set:letter+digit (string-ref id (- (string-length id) 1)))
-       (string-every char-set:topic-body id)))
 
 (define (topic-element kind value)
   (unless (valid-topic-id? value)

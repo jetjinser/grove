@@ -124,6 +124,17 @@
               "@transclude[\"theorem-3\" #:anchor \"same\"]\n"
               "@transclude[\"theorem-3\" #:anchor \"same\"]")))))))
 
+(test-error "topic IR cannot bypass the canonical topic ID contract" #t
+  (make-forest
+    (make-site
+      (list
+        (make-site-page
+          "invalid-topic" "Invalid topic"
+          (make-content-document
+            (list (make-content-element
+                    'tag (list "not valid")
+                    #:properties '((id . "not valid"))))))))))
+
 (test-error "subtree anchors and math IDs share one namespace" #t
   (make-forest
     (make-site
