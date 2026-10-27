@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit forester graph)
+  #:use-module (grove build)
   #:use-module (forester render graph)
   #:use-module (forester site)
   #:use-module (grove ir)
@@ -66,6 +67,14 @@
 
 (test-error "graph renderer rejects paths with parent traversal" #t
   (render-graph forest #:path "../forest.scm"))
+(test-error "graph renderer validates paths at construction" #t
+  (make-graph-renderer #:path "../forest.scm"))
+(let* ((path (string-copy "graph.scm"))
+       (renderer (make-graph-renderer #:path path)))
+  (string-set! path 0 #\x)
+  (test-equal "graph renderer snapshots its configured output path"
+    "graph.scm"
+    (artifact-path (car (render-model forest (list renderer))))))
 
 (let* ((root
          (make-site-page

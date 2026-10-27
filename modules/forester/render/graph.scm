@@ -68,6 +68,9 @@
     (list (make-artifact path content (source-paths forest)))))
 
 (define* (make-graph-renderer #:key (path "forest-graph.scm"))
+  (unless (artifact-path? path)
+    (error "Forester graph path must be a relative artifact path" path))
+  (set! path (string-copy path))
   (make-cached-renderer
     (lambda (forest) (render-graph forest #:path path))
     #:configuration (list 'graph path)))
