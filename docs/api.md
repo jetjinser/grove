@@ -21,7 +21,9 @@ the work; drop lower only when you need to replace part of its behavior.
 
 `make-forester-project` supplies the normal reader, forest analysis, default
 HTML renderer, and source-creation behavior. Configure the default HTML with
-`#:html-options` and add peer outputs with `#:additional-renderers`.
+`#:html-options`, transform pages before analysis with `#:transforms`, and add
+peer outputs with `#:additional-renderers`. These changes do not require
+reassembling the standard Forester reader and analyzer.
 `make-site-project` keeps the page and Content IR model while exposing the
 complete renderer set and other lifecycle stages for composition. `make-project`
 is the general lifecycle and does not require Grove's Content IR. See the

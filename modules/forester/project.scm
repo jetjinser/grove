@@ -19,6 +19,7 @@
           (prepare (lambda () '()))
           (html-options (make-html-options))
           (additional-renderers '())
+          (transforms '())
           (browse #f)
           (reader-locale #f)
           (pipelines '())
@@ -26,7 +27,8 @@
           (tree-template #f))
   "Build a Forester project with standard HTML and optional peer renderers.
 HOME is the tree ID rendered at the site index. HTML-OPTIONS configures the
-standard HTML renderer; ADDITIONAL-RENDERERS adds peer formats and projections."
+standard HTML renderer; ADDITIONAL-RENDERERS adds peer formats and projections;
+TRANSFORMS compose content changes before Forester analysis."
   (unless (and (string? home) (> (string-length home) 0))
     (error "Forester project requires a non-empty home tree ID" home))
   (make-site-project
@@ -37,6 +39,7 @@ standard HTML renderer; ADDITIONAL-RENDERERS adds peer formats and projections."
     #:prepare prepare
     #:read-page (make-page-reader (make-scribble-document-reader))
     #:analyze make-forest
+    #:transforms transforms
     #:renderers (cons (make-html-renderer #:options html-options)
                       additional-renderers)
     #:pipelines pipelines

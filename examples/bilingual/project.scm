@@ -3,18 +3,14 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (use-modules (ice-9 textual-ports)
-             (forester input scribble)
              (forester render html)
-             (forester project new)
+             (forester project)
              (forester render text)
-             (forester site)
              (forester style html)
              (forester style i18n)
              (grove i18n)
              (grove input scribble)
              (grove output)
-             (grove project)
-             (grove project site)
              (grove render html presentation)
              (grove render html routes)
              (grove style html))
@@ -25,7 +21,6 @@
 (define source-directory (string-append examples-directory "/plants"))
 (define module-directory (string-append examples-directory "/modules"))
 (define style-css-path (string-append examples-directory "/style.css"))
-(define read-document (make-scribble-document-reader))
 
 (define style-css
   (call-with-input-file style-css-path get-string-all))
@@ -56,28 +51,22 @@
   (make-html-routes))
 
 (define bilingual-project
-  (make-site-project
-    #:create-source (make-forester-source-creator
-                      #:source-directory source-directory
-                      #:default-prefix "bi")
+  (make-forester-project
     #:reader-locale "en"
     #:title "Bilingual Notes"
     #:description "One idea in two languages, shown side by side."
     #:home "hello"
     #:source-directory source-directory
-    #:extra-sources (list style-css-path)
+    #:default-prefix "bi"
     #:prepare (make-scribble-module-setup module-directory)
-    #:read-page (make-page-reader read-document)
-    #:analyze make-forest
-    #:renderers
-    (list (make-html-renderer
-            #:options
-            (make-html-options
-              #:presentation (make-html-presentation #:style bilingual-style)
-              #:routes bilingual-routes
-              #:locale "en"
-              #:messages chrome-messages))
-          (make-text-renderer
+    #:html-options
+    (make-html-options
+      #:presentation (make-html-presentation #:style bilingual-style)
+      #:routes bilingual-routes
+      #:locale "en"
+      #:messages chrome-messages)
+    #:additional-renderers
+    (list (make-text-renderer
             #:options (make-text-options #:prefix "text")))
     #:output-directory output-directory))
 

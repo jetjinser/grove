@@ -771,6 +771,7 @@
       (let* ((input (string-append root "/input.txt"))
              (output (string-append root "/output"))
              (text-output (string-append root "/text-output"))
+             (transform-output (string-append root "/transform-output"))
              (settings (make-site-settings #:site-url "https://notes.example"))
              (routes
                (make-html-routes
@@ -805,8 +806,26 @@
                  #:additional-renderers
                  (list (make-text-renderer)
                        (make-sitemap-renderer #:settings settings #:routes routes))))
+             (transform-project
+               (make-forester-project
+                 #:home "hello"
+                 #:source-directory (string-append root "/plants")
+                 #:output-directory transform-output
+                 #:transforms
+                 (list
+                   (lambda (document)
+                     (make-content-document
+                       (append
+                         (content-document-children document)
+                         (list (make-content-element
+                                 'paragraph
+                                 '("Added before Forester analysis."))))
+                       (content-document-source document))))))
              (text-artifacts (build-project text-project))
              (artifacts (build-project project))
+             (_ (build-project transform-project))
+             (transformed-html
+               (read-test-file (string-append transform-output "/index.html")))
              (text-html
                (read-test-file (string-append text-output "/index.html")))
              (topic-html
@@ -832,6 +851,9 @@
                (member "notes/topic.html"
                        (map artifact-path text-artifacts)
                        string=?)))
+        (test-assert "Forester projects transform content and keep standard HTML"
+          (string-contains transformed-html
+                           "Added before Forester analysis."))
         (test-assert "Forester HTML options configure the default renderer"
           (and (string-contains text-html "Hello")
                (string-contains topic-html "Topic")

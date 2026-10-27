@@ -77,11 +77,13 @@ with `#:html-options`, and add peer outputs with `#:additional-renderers`:
 The additional renderers receive the same analyzed Forest and return artifacts
 alongside HTML. `#:html-options` takes the usual value from
 `(forester render html)`; reuse its routes and site settings when configuring
-other outputs such as a sitemap or feed. Use `make-site-project` when the
-project needs a fully chosen renderer set, a different reader or analyzer, or
-otherwise needs to compose the complete site lifecycle. Forester projects can
-also add cached site-wide outputs through renderers; see
+other outputs such as a sitemap or feed. Forester projects can also transform
+Content IR before Forester analysis with `#:transforms` and add cached
+site-wide outputs through renderers; see
 [site outputs](site-outputs.md).
+
+Use `make-site-project` when the project needs a different reader or analyzer,
+or otherwise needs to compose the complete site lifecycle.
 
 ## Execution and paths
 
