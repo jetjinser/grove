@@ -35,9 +35,13 @@
                             (snapshot-data sources)))))
 
 (define (html-style-stylesheets style)
+  "Return STYLE's stylesheet artifacts as independent copies."
   (map snapshot-artifact (html-style-stylesheets/raw style)))
 
 (define* (make-html-style #:key (stylesheets '()) (assets '()))
+  "Describe stylesheet and extra asset artifacts contributed by an HTML style.
+
+Both arguments are artifact lists; the constructor snapshots their contents."
   (unless (and (list? stylesheets)
                (list? assets)
                (every artifact? stylesheets)
@@ -47,6 +51,8 @@
                     (map snapshot-artifact (snapshot-data assets))))
 
 (define (compose-html-styles . styles)
+  "Combine STYLES in order, appending their stylesheets and extra assets.
+With no arguments, return an empty HTML style."
   (unless (every html-style? styles)
     (error "HTML styles can only be composed from HTML styles" styles))
   (make-html-style
@@ -54,6 +60,7 @@
     #:assets (append-map html-style-extra-assets/raw styles)))
 
 (define (html-style-artifacts style)
+  "Return STYLE's stylesheet artifacts followed by its extra assets."
   (append (html-style-stylesheets style)
           (map snapshot-artifact (html-style-extra-assets/raw style))))
 
