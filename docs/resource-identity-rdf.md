@@ -66,6 +66,14 @@ survive route changes should be able to supply a separate stable identity.
 Using the canonical URL is already coherent for published pages and is the
 smaller default; only the stronger persistence guarantee needs another policy.
 
+The current `@describes` implementation is narrower than this candidate model:
+it stores the authored value as a string and validates it with Guile's
+`(web uri)` parser, requiring a scheme and a host for HTTP(S). It preserves the
+spelling and compares values exactly. This is not a complete IRI parser or a
+normalization policy: the parser accepts Unicode path characters but rejects a
+Unicode hostname. The authoring API therefore continues to describe these
+values as URIs until Grove adopts one consistent IRI contract.
+
 ## RDF is a projection, not Grove's relation model
 
 RDF gives a useful interchange vocabulary. A triple has an IRI or blank node
