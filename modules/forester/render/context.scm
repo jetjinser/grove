@@ -25,7 +25,11 @@
             (hash-set! groups key
                        (cons page (or (hash-ref groups key) '()))))))
       pages)
-    groups))
+    ;; Ordinary Scheme data stays inside render-context's snapshot boundary.
+    (hash-fold (lambda (key group result)
+                 (acons key (reverse group) result))
+               '()
+               groups)))
 
 (define* (make-site-render-context forest #:key
                                    (routes #f)

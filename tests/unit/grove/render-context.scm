@@ -34,6 +34,18 @@
     '((label . "authored"))
     (render-context-ref context 'custom)))
 
+(let* ((groups (list (cons "guide" (list 'english 'chinese))))
+       (context (make-render-context #:translation-groups groups)))
+  (set-car! (cdar groups) 'changed)
+  (test-equal "translation groups are copied as ordinary context data"
+    '(("guide" english chinese))
+    (render-context-translation-groups context))
+  (let ((exposed (render-context-translation-groups context)))
+    (set-car! (cdar exposed) 'changed-again))
+  (test-equal "translation group access cannot mutate a context"
+    '(("guide" english chinese))
+    (render-context-translation-groups context)))
+
 (let* ((value (string-copy "overlay"))
        (base (make-render-context #:page "base"))
        (derived (render-context-with base #:custom value)))

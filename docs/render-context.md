@@ -40,7 +40,9 @@ own layers; merging them would turn the context into a new global state.
   changing the core record.
 - Constructors and `render-context-ref` copy mutable strings and pair
   structure. Opaque values such as records, procedures, and hash tables remain
-  shared; treat those values as read-only for the render pass.
+  shared; treat those values as read-only for the render pass. Built-in
+  translation groups use an association list so their structure is copied as
+  ordinary context data.
 - The context is shared with rules and custom renderers for the duration of a
   render pass. Treat it and its values as read-only; use `render-context-with`
   or `render-context-without` to derive a context with different bindings.
@@ -57,8 +59,9 @@ text, or gemtext entry point builds one site-level context for that render pass
 and derives page contexts from it with `render-context-with`. Separate
 renderer entry points build their own contexts from their options. A custom
 renderer can build a context explicitly when it needs the shared Forester
-helpers. Translation groups are derived from the forest by default and can be
-supplied explicitly when a project needs a different index. Locale and
+helpers. Translation groups are an association list from translation key to
+pages; they are derived from the forest by default and can be supplied
+explicitly when a project needs a different index. Locale and
 messages are resolved from the context builder's arguments.
 
 ## Interpreter boundary

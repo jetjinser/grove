@@ -53,9 +53,7 @@
 (define (translation-group page context)
   (let ((key (assq-ref (site-page-metadata page) 'translation)))
     (and key
-         (reverse (hash-ref (render-context-translation-groups context)
-                            key
-                            '())))))
+         (assoc-ref (render-context-translation-groups context) key))))
 
 (define (hreflang-links forest page routes context)
   (let ((group (translation-group page context)))

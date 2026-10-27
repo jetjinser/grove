@@ -6,6 +6,7 @@
   #:use-module (srfi srfi-64)
   #:use-module (srfi srfi-13)
   #:use-module (forester render graph)
+  #:use-module (forester render context)
   #:use-module (forester render rss)
   #:use-module (forester render site)
   #:use-module (forester render sitemap)
@@ -32,6 +33,10 @@
       #:home "guide-en")))
 
 (test-begin "Forester output renderers")
+
+(test-equal "translation groups use association-list data"
+  (list (cons "guide" (list (car (pages forest)) (cadr (pages forest)))))
+  (translation-groups (pages forest)))
 
 (let* ((settings (make-site-settings
                    #:site-url "https://example.org"

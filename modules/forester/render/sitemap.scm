@@ -30,7 +30,7 @@
 
 (define (alternate-links base routes route-table groups default-locale page)
   (let* ((key (assq-ref (site-page-metadata page) 'translation))
-         (group (and key (reverse (hash-ref groups key)))))
+         (group (and key (assoc-ref groups key))))
     (if (or (not group) (< (length group) 2))
         '()
         (append
