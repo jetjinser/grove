@@ -32,6 +32,17 @@
       (put-bytevector port (u8-list->bytevector '(0 255 2)))
       (close-port port)))
   (lambda ()
+    (let* ((directory (string-copy source-directory))
+           (prefix (string-copy "assets"))
+           (renderer (make-static-assets-renderer
+                       #:source-directory directory #:prefix prefix)))
+      (string-set! directory 0 #\x)
+      (string-set! prefix 0 #\x)
+      (test-equal "static renderer snapshots caller-owned directory and prefix"
+        (list "assets/images/data.bin" (list asset-path))
+        (list (artifact-path
+                (car ((cached-renderer-procedure renderer) #f)))
+              ((cached-renderer-inputs renderer)))))
     (let* ((renderer (make-static-assets-renderer
                        #:source-directory source-directory
                        #:prefix "assets"))

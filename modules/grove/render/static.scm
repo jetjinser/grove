@@ -19,6 +19,8 @@
     (error "static asset source directory must exist" source-directory))
   (unless (or (not prefix) (artifact-path? prefix))
     (error "static asset prefix must be a relative artifact path or #f" prefix))
+  (set! source-directory (string-copy source-directory))
+  (set! prefix (and prefix (string-copy prefix)))
   (let ((render-all-assets
           (lambda ()
             (map
