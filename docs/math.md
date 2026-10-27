@@ -104,6 +104,12 @@ ordered collections. Accessors return independent copies, so changing a
 displayed trace cannot alter a certificate before it is checked. Opaque source
 provenance values remain shared according to their own contract.
 
+Calculation reports likewise snapshot their candidate, limit, pass, and
+diagnostic collections. Diagnostic paths, premises, and messages, along with
+source-location filenames and excerpts, are copied when constructed and when
+read. The records inside these collections retain the contracts of their own
+types; for example, derivations snapshot their terms and steps separately.
+
 The registered rules are also available as relational data through
 `(grove math catalog)`. Import `(grove relation dsl)` to query rules by group,
 execution mode, input operator, required premise, or semantic-check status.

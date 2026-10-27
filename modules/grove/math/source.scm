@@ -3,6 +3,7 @@
 
 (define-module (grove math source)
   #:use-module ((grove private ir) #:prefix ir:)
+  #:use-module (grove private snapshot)
   #:use-module (grove ir)
   #:use-module (grove math syntax)
   #:use-module (grove math diagnostic)
@@ -16,12 +17,22 @@
             math-origin-generated? math-origin-rule math-diagnostic-description))
 
 (define-record-type <math-location>
-  (make-math-location file line column excerpt)
+  (%make-math-location file line column excerpt)
   math-location?
-  (file math-location-file)
+  (file location-file/raw)
   (line math-location-line)
   (column math-location-column)
-  (excerpt math-location-excerpt))
+  (excerpt location-excerpt/raw))
+
+(define (make-math-location file line column excerpt)
+  (%make-math-location (snapshot-data file) line column
+                       (snapshot-data excerpt)))
+
+(define (math-location-file location)
+  (snapshot-data (location-file/raw location)))
+
+(define (math-location-excerpt location)
+  (snapshot-data (location-excerpt/raw location)))
 
 (define-record-type <math-origin>
   (make-math-origin text syntax embedded branches causes rule)

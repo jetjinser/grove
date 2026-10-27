@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math report)
+  #:use-module (grove private snapshot)
   #:use-module (grove math derivation)
   #:use-module (grove math audit)
   #:use-module (grove math term)
@@ -18,17 +19,32 @@
 (%make-math-report name candidates reason limits states diagnostics passes audit)
   math-report?
   (name math-report-name)
-  (candidates math-report-candidates)
+  (candidates report-candidates/raw)
   (reason math-report-reason)
-  (limits math-report-limits)
+  (limits report-limits/raw)
   (states math-report-states)
-  (diagnostics math-report-diagnostics)
-  (passes math-report-passes)
+  (diagnostics report-diagnostics/raw)
+  (passes report-passes/raw)
   (audit math-report-audit))
+
+(define (math-report-candidates report)
+  (snapshot-data (report-candidates/raw report)))
+
+(define (math-report-limits report)
+  (snapshot-data (report-limits/raw report)))
+
+(define (math-report-diagnostics report)
+  (snapshot-data (report-diagnostics/raw report)))
+
+(define (math-report-passes report)
+  (snapshot-data (report-passes/raw report)))
 
 (define* (make-math-report name candidates reason limits states
                           #:key (diagnostics '()) (passes '()) (audit #f))
-  (%make-math-report name candidates reason limits states diagnostics passes audit))
+  (%make-math-report name (snapshot-data candidates) reason
+                     (snapshot-data limits) states
+                     (snapshot-data diagnostics)
+                     (snapshot-data passes) audit))
 
 (define (math-report-with-audit report audit)
   (unless (math-report? report) (error "expected a math report" report))

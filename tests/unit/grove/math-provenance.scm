@@ -70,4 +70,15 @@
       (last (math-derivation-sources (car (math-report-candidates report))))))))
 (test-equal "unlocated generated expressions do not acquire invented origins" #f
   (final-origin (φ:simplify (string-copy "1+1"))))
+(let* ((input (located "x+1" 3 0))
+       (origin (math-source-origin input))
+       (location (math-origin-location origin '(0)))
+       (file (math-location-file location))
+       (excerpt (math-location-excerpt location)))
+  (string-set! file 0 #\X)
+  (string-set! excerpt 0 #\y)
+  (test-equal "source locations protect filename strings from accessor mutation"
+    "origins.plant" (math-location-file location))
+  (test-equal "source locations protect excerpts from accessor mutation"
+    "x+1" (math-location-excerpt location)))
 (test-end "generated mathematical provenance")
