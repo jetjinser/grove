@@ -51,15 +51,17 @@ transclusions belong to their own pages and stay out of this set."
 
 (define (element-tag-name element)
   "The HTML tag a vocabulary element renders as, from the style's tag
-marker - dfn for a defining occurrence, say."
+ marker - dfn for a defining occurrence, say. Later markers override earlier
+ ones, matching Grove's HTML renderer and MERGE-CONTENT-STYLE."
   (let ((style (content-element-style element)))
     (and style
-      (let loop ((properties (content-style-properties style)))
-        (cond
-          ((null? properties) #f)
-          ((html-tag? (car properties))
-           (html-tag-name (car properties)))
-          (else (loop (cdr properties))))))))
+      (let loop ((properties (content-style-properties style)) (tag #f))
+        (if (null? properties)
+            tag
+            (loop (cdr properties)
+                  (if (html-tag? (car properties))
+                      (html-tag-name (car properties))
+                      tag)))))))
 
 (define (dom-anchor-index pages composition transclusion-index)
   "Build a page-id → rendered-anchor-ids table.  A page's set is its own

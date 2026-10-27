@@ -1403,7 +1403,9 @@
            (make-content-element
              'span children #f
              #:properties `((anchor . ,anchor))
-             #:style (make-content-style #f (list (make-html-tag "dfn"))))))
+             #:style (merge-content-style
+                       (make-content-style #f (list (make-html-tag "span")))
+                       (make-content-style #f (list (make-html-tag "dfn")))))))
        (text (lambda (value) (make-content-text value)))
        (glossary
          (make-site-page "glossary" "Glossary"
