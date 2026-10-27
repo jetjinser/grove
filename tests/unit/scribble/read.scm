@@ -573,6 +573,17 @@
             (cadr (content-element-children second-paragraph))
             'source-location))))))
 
+(let* ((document
+         (scribble-evaluate-document
+           (open-input-string "@(string-append \"computed\" \" text\")")
+           (default-environment scribble)
+           "computed.plant"))
+       (paragraph (car (content-document-children document)))
+       (text (car (content-element-children paragraph))))
+  (test-equal "computed Scribble text retains its source position"
+    (list "computed text" '((file . "computed.plant") (line . 1) (column . 1)))
+    (list (content-text-value text) (content-text-location text))))
+
 (let ((phases '()))
   (let ((document
           (scribble-evaluate-document (open-input-string "@bold{timed}")
