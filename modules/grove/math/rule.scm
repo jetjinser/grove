@@ -6,7 +6,7 @@
   #:use-module (grove relation)
   #:use-module ((grove relation dsl) #:select (project))
   #:use-module (grove math premise)
-  #:use-module (grove math rule-spec)
+  #:use-module (grove math private rule-spec)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-1)
   #:export (make-math-rewrite-rule math-rule math-factso
