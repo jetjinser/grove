@@ -11,6 +11,7 @@
   #:use-module (grove i18n)
   #:use-module (grove private string-fun)
   #:use-module (forester private render artifact)
+  #:use-module (forester private render anchors)
   #:use-module (forester private render labels)
   #:use-module (forester render context)
   #:use-module (forester render site)
@@ -124,13 +125,6 @@
   (string-append
     (html-page-url routes (reference-source-page-id reference))
     "#" (reference-source-id reference)))
-
-(define (occurrence-anchor element prefix position)
-  "The canonical anchor of a tree occurrence: the author anchor when the
-element declares one (explicitly or through the unique-occurrence pass),
-otherwise the generated position anchor that backs repeated occurrences."
-  (or (ir:content-element-property/raw element 'anchor)
-      (format #f "~atree-~a" prefix position)))
 
 (define (term-mention-sxml forest routes element children)
   "Render an element marked with a term property: an anchor to the

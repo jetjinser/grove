@@ -6,6 +6,7 @@
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove build)
   #:use-module (forester private render artifact)
+  #:use-module (forester private render anchors)
   #:use-module (forester private render-routes)
   #:use-module (forester site)
   #:use-module (grove ir)
@@ -62,13 +63,6 @@
                             (text-page-path routes (ir:content-element-property/raw element 'target)))
                           (if fragment (string-append "#" fragment) "")
                           "]")))))))
-
-(define (occurrence-anchor element prefix position)
-  "The canonical anchor of a tree occurrence: the author anchor when the
-element declares one, otherwise the generated position anchor. Mirrors the
-HTML renderer so text and HTML address occurrences identically."
-  (or (ir:content-element-property/raw element 'anchor)
-      (format #f "~atree-~a" prefix position)))
 
 (define* (subtree-content-text forest routes page #:optional (prefix "") (context #f)
                                #:key (rules empty-render-rules))
