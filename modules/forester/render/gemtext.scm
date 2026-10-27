@@ -314,6 +314,27 @@
     (error (string-append who " requires Gemtext options") options))
   options)
 
+(define (make-gemtext-page-renderer forest options)
+  (let* ((routes (gemtext-options-routes options))
+         (backmatter (gemtext-options-backmatter options))
+         (reference-taxon-id (gemtext-options-reference-taxon-id options))
+         (locale (gemtext-options-locale options))
+         (messages (gemtext-options-messages options))
+         (rules (compose-render-rules bilingual-text-rules
+                                      (gemtext-options-rules options))))
+    (unless (forest? forest)
+      (error "Forester Gemtext renderer requires a forest" forest))
+    (check-routes forest routes)
+    (let* ((context
+             (make-site-render-context forest
+                                       #:routes routes
+                                       #:locale locale
+                                       #:messages messages))
+           (backmatter-labels (localized-backmatter-labels context)))
+      (lambda (page)
+        (page->gemtext forest routes page backmatter backmatter-labels
+                       reference-taxon-id rules context)))))
+
 (define* (make-gemtext-options #:key
                                (prefix #f)
                                (routes (default-gemtext-routes))
@@ -343,48 +364,18 @@
 (define* (site->gemtext forest #:key (options (make-gemtext-options)))
   (let* ((_ (require-gemtext-options options "site->gemtext"))
          (routes (gemtext-options-routes options))
-         (backmatter (gemtext-options-backmatter options))
-         (reference-taxon-id (gemtext-options-reference-taxon-id options))
-         (locale (gemtext-options-locale options))
-         (messages (gemtext-options-messages options))
-         (rules (compose-render-rules bilingual-text-rules
-                                      (gemtext-options-rules options))))
-  (unless (forest? forest)
-    (error "Forester Gemtext renderer requires a forest" forest))
-  (check-routes forest routes)
-  (let* ((context
-           (make-site-render-context forest
-                                     #:routes routes
-                                     #:locale locale
-                                     #:messages messages))
-         (backmatter-labels (localized-backmatter-labels context)))
+         (render-page (make-gemtext-page-renderer forest options)))
     (cons (cons 'index (index->gemtext forest routes))
           (map (lambda (page)
                  (cons (site-page-id page)
-                       (page->gemtext forest routes page backmatter
-                                      backmatter-labels reference-taxon-id
-                                      rules context)))
-               (pages forest))))))
+                       (render-page page)))
+               (pages forest)))))
 
 (define* (render-gemtext forest #:key (options (make-gemtext-options)))
   (let* ((_ (require-gemtext-options options "render-gemtext"))
          (prefix (gemtext-options-prefix options))
          (routes (gemtext-options-routes options))
-         (backmatter (gemtext-options-backmatter options))
-         (reference-taxon-id (gemtext-options-reference-taxon-id options))
-         (locale (gemtext-options-locale options))
-         (messages (gemtext-options-messages options))
-         (rules (compose-render-rules bilingual-text-rules
-                                      (gemtext-options-rules options))))
-  (unless (forest? forest)
-    (error "Forester Gemtext renderer requires a forest" forest))
-  (check-routes forest routes)
-  (let* ((context
-           (make-site-render-context forest
-                                     #:routes routes
-                                     #:locale locale
-                                     #:messages messages))
-         (backmatter-labels (localized-backmatter-labels context)))
+         (render-page (make-gemtext-page-renderer forest options)))
     (let ((artifacts
             (cons (make-artifact (text-index-path routes)
                                  (index->gemtext forest routes)
@@ -392,12 +383,10 @@
                   (map (lambda (page)
                          (make-artifact
                            (text-page-path routes (site-page-id page))
-                           (page->gemtext forest routes page backmatter
-                                          backmatter-labels reference-taxon-id
-                                          rules context)
+                           (render-page page)
                            (page-source-paths forest page)))
                        (pages forest)))))
-      (if prefix (prefix-artifacts prefix artifacts) artifacts)))))
+      (if prefix (prefix-artifacts prefix artifacts) artifacts))))
 
 (define* (make-gemtext-renderer #:key (options (make-gemtext-options))
                                (rules-id #f)

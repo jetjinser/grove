@@ -257,33 +257,6 @@
       (string-append prefix "/" name)
       name))
 
-(define (render-text-changed forest prefix routes backmatter
-                             reference-taxon-id rules context
-                             changed old-artifacts)
-  (check-text-routes forest routes)
-  (let* ((backmatter-labels (localized-backmatter-labels context))
-         (site (site forest))
-         (index-path (output-path prefix (text-index-path routes)))
-         (index-sources (source-paths forest))
-         (index-artifact
-           (reuse-artifact index-path index-sources old-artifacts changed
-             (lambda () (index->text forest routes))))
-         (page-artifacts
-           (map (lambda (page)
-                  (let* ((path (output-path
-                                 prefix
-                                 (text-page-path routes
-                                                 (site-page-id page))))
-                         (sources (page-source-paths forest page)))
-                    (reuse-artifact path sources old-artifacts changed
-                      (lambda ()
-                        (page->text forest page routes backmatter
-                                    backmatter-labels
-                                    reference-taxon-id
-                                    context #:rules rules)))))
-                (pages forest))))
-    (cons index-artifact page-artifacts)))
-
 (define-record-type <text-options>
   (%make-text-options prefix routes backmatter
                       reference-taxon-id locale messages rules)
@@ -300,6 +273,48 @@
   (unless (text-options? options)
     (error (string-append who " requires text options") options))
   options)
+
+(define (make-text-page-renderer forest options)
+  (let* ((routes (text-options-routes options))
+         (backmatter (text-options-backmatter options))
+         (reference-taxon-id (text-options-reference-taxon-id options))
+         (locale (text-options-locale options))
+         (messages (text-options-messages options))
+         (rules (compose-render-rules bilingual-text-rules
+                                      (text-options-rules options))))
+    (unless (forest? forest)
+      (error "Forester text renderer requires a forest" forest))
+    (check-text-routes forest routes)
+    (let* ((context
+             (make-site-render-context forest
+                                       #:routes routes
+                                       #:locale locale
+                                       #:messages messages))
+           (backmatter-labels (localized-backmatter-labels context)))
+      (lambda (page)
+        (page->text forest page routes backmatter backmatter-labels
+                    reference-taxon-id context #:rules rules)))))
+
+(define (render-text-changed forest options changed old-artifacts)
+  (let* ((prefix (text-options-prefix options))
+         (routes (text-options-routes options))
+         (render-page (make-text-page-renderer forest options))
+         (index-path (output-path prefix (text-index-path routes)))
+         (index-sources (source-paths forest))
+         (index-artifact
+           (reuse-artifact index-path index-sources old-artifacts changed
+             (lambda () (index->text forest routes))))
+         (page-artifacts
+           (map (lambda (page)
+                  (let* ((path (output-path
+                                 prefix
+                                 (text-page-path routes
+                                                 (site-page-id page))))
+                         (sources (page-source-paths forest page)))
+                    (reuse-artifact path sources old-artifacts changed
+                      (lambda () (render-page page)))))
+                (pages forest))))
+    (cons index-artifact page-artifacts)))
 
 (define* (make-text-options #:key
                             (prefix #f)
@@ -329,49 +344,19 @@
 (define* (site->text forest #:key (options (make-text-options)))
   (let* ((_ (require-text-options options "site->text"))
          (routes (text-options-routes options))
-         (backmatter (text-options-backmatter options))
-         (reference-taxon-id (text-options-reference-taxon-id options))
-         (locale (text-options-locale options))
-         (messages (text-options-messages options))
-         (rules (compose-render-rules bilingual-text-rules
-                                      (text-options-rules options))))
-  (unless (forest? forest)
-    (error "Forester text renderer requires a forest" forest))
-  (check-text-routes forest routes)
-  (let* ((context
-           (make-site-render-context forest
-                                     #:routes routes
-                                     #:locale locale
-                                     #:messages messages))
-         (backmatter-labels (localized-backmatter-labels context)))
+         (render-page (make-text-page-renderer forest options)))
     (cons (cons 'index (index->text forest routes))
           (map (lambda (page)
                  (cons (site-page-id page)
-                       (page->text forest page routes backmatter
-                                   backmatter-labels reference-taxon-id
-                                   context #:rules rules)))
-               (pages forest))))))
+                       (render-page page)))
+               (pages forest)))))
 
 (define* (render-text forest #:key (options (make-text-options)))
   (let* ((_ (require-text-options options "render-text"))
          (prefix (text-options-prefix options))
          (routes (text-options-routes options))
-         (backmatter (text-options-backmatter options))
-         (reference-taxon-id (text-options-reference-taxon-id options))
-         (locale (text-options-locale options))
-         (messages (text-options-messages options))
-         (rules (compose-render-rules bilingual-text-rules
-                                      (text-options-rules options))))
-  (unless (forest? forest)
-    (error "Forester text renderer requires a forest" forest))
-  (let* ((context
-           (make-site-render-context forest
-                                     #:routes routes
-                                     #:locale locale
-                                     #:messages messages))
-         (backmatter-labels (localized-backmatter-labels context))
+         (render-page (make-text-page-renderer forest options))
          (sources (source-paths forest)))
-    (check-text-routes forest routes)
     (let ((artifacts
             (cons
               (make-artifact (text-index-path routes)
@@ -380,11 +365,10 @@
               (map (lambda (page)
                      (make-artifact
                        (text-page-path routes (site-page-id page))
-                       (page->text forest page routes backmatter backmatter-labels
-                                   reference-taxon-id context #:rules rules)
+                       (render-page page)
                        (page-source-paths forest page)))
                    (pages forest)))))
-      (if prefix (prefix-artifacts prefix artifacts) artifacts)))))
+      (if prefix (prefix-artifacts prefix artifacts) artifacts))))
 
 (define* (make-text-renderer #:key (options (make-text-options))
                             (rules-id #f)
@@ -417,11 +401,4 @@
               (interface-cache-identity locale messages)))
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
-            (render-text-changed forest prefix routes backmatter
-                                 reference-taxon-id rules
-                                 (make-site-render-context
-                                   forest
-                                   #:routes routes
-                                   #:locale locale
-                                   #:messages messages)
-                                 changed old-artifacts))))))
+            (render-text-changed forest options changed old-artifacts))))))
