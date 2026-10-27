@@ -8,7 +8,6 @@
   #:use-module (ice-9 optargs)
   #:use-module (language scribble command)
   #:use-module (grove math pipeline)
-  #:use-module (grove math presentation)
   #:use-module (grove math context)
   #:use-module (grove math source)
   #:use-module ((grove math semantic) #:prefix semantic:)

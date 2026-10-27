@@ -6,7 +6,6 @@
   #:use-module ((grove math private formula-reader) #:prefix reader:)
   #:use-module ((grove math semantic) #:prefix semantic:)
   #:use-module ((grove math pipeline) #:prefix core:)
-  #:use-module (grove math presentation)
   #:use-module (grove math expression)
   #:use-module (grove math private assumption)
   #:use-module (srfi srfi-1)
@@ -104,7 +103,7 @@
   (lambda* (source #:key (assumptions '()) (rules #f) (max-steps 32)
                    (max-term-size 2048) (view 'compact) (on-error 'raise))
     (let ((content
-            (math-completed-report->content
+            (core:math-completed-report->content
               (core:math-derive (read source)
                 #:assumptions (parse-assumptions (list assumptions)) #:rules rules
                 #:max-steps max-steps #:max-term-size max-term-size)
