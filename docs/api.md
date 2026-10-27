@@ -24,8 +24,10 @@ the work; drop lower only when you need to replace part of its behavior.
 | Handle project failures in a Scheme host | `(grove project diagnostic)` for structured errors and Grove's formatter | custom work needs to add a stage or path; use `call-with-project-stage` |
 | Add a terminal browser to a Forester project | `(forester browse)` → `make-forest-browser` | the project needs its own `#:browse` callback |
 | Change how content renders | the format's renderer options and `(grove render rules)` | the project needs a new output format or a different build stage |
+| Define a reusable custom content element | `(grove element)` → `make-element` | the element needs custom interpretation in a renderer; add a render rule |
 | Pass explicit state through a render pass | `(grove render context)` → `make-render-context`, `render-context-with`; Forester renderers can use `(forester render context)` → `make-site-render-context` | renderer options configure a renderer; context carries values to rules and custom rendering code |
 | Add a model-derived output | a renderer in `#:additional-renderers` or `#:renderers` | the output depends on declared files or an external tool; use `#:pipelines` |
+| Construct a renderer's output artifacts | `(grove output)` → `make-artifact`, `make-byte-artifact` | output comes from declared files independently of the model; use an asset pipeline |
 | Reuse derived bytes inside an extension | `(grove cache)` → `make-content-cache` | ordinary renderer artifacts and pipeline outputs are already cached by the project |
 | Write or extend math | `(grove math formula)` for text-based writing and calculations; `(grove math semantic)` for typed values; `(grove math notation)` for display layout; see the [Math reference](math.md) | code needs to inspect reports, compose passes, or query rule relations |
 | Query finite relations | `(grove relation)` for relation values and miniKanren goals; `(grove relation dsl)` for named schemas and rules; see the [Relation reference](relations.md) | a domain API should return ordered, domain-specific results |
