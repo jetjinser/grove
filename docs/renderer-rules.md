@@ -72,8 +72,10 @@ can read `(render-context-ref context 'page)`.
   details for tree traversal and format-specific behavior. They are not
   arguments to the public `content->sxml` or `content->text` procedures and
   are not extension points. Projects should use render rules instead.
-- **Math:** a built-in interpretation.  Rules do not override `math` in either
-  backend; a rule for `math` is ignored.
+- **Math:** the built-in semantic renderer remains the fallback. A `math` rule
+  can replace it or delegate with `next`; its `children` value is the complete
+  backend-specific math rendering (MathML/HTML for HTML, text for text and
+  gemtext), rather than a list of recursively rendered child nodes.
 - **Trees and transclusions:** handled by lazy structural recursion before
   rules are consulted.  A rule cannot replace the tree walk; customize the
   target page instead.

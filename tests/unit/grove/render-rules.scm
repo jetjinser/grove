@@ -117,6 +117,25 @@
     (and (pair? (memq 'img sxml))
          (not (memq 'picture sxml)))))
 
+(let* ((math (make-content-element 'math '("x")
+                                   #:properties '((tex? . #t))))
+       (document (make-content-document (list math)))
+       (rules (make-render-rules
+                (list (cons 'math
+                            (lambda (_context _element _children _next)
+                              '(custom-math "custom")))))))
+  (test-equal "HTML rules can replace math rendering"
+    '(article (custom-math "custom"))
+    (content->sxml document #:rules rules))
+  (test-equal "HTML math rules can delegate to the built-in renderer"
+    (content->sxml document)
+    (content->sxml document
+      #:rules
+      (make-render-rules
+        (list (cons 'math
+                    (lambda (_context _element _children next)
+                      (next))))))))
+
 (define-render-rules dsl-rules
   (image (context element children next)
     (picture-rule context element children next)))

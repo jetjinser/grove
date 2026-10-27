@@ -204,7 +204,13 @@ ID-PREFIX."
          ;;     the generic application runs only for the rest.
          (lazy-handler element render))
         ((eq? kind 'math)
-         (apply-element-style element (render-math element)))
+         (let* ((default (render-math element))
+                (rule (and rules (render-rules-ref rules kind)))
+                (rendered
+                 (if rule
+                     (rule context element default (lambda () default))
+                     default)))
+           (apply-element-style element rendered)))
         (else
          (let* ((children (map render (ir:content-element-children/raw element)))
                 (handler (assq-ref internal-handlers kind))

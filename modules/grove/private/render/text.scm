@@ -106,16 +106,14 @@
                          (map render (ir:content-element-children/raw element))))
                  (handler (assq-ref internal-handlers kind))
                  (rule (and rules (render-rules-ref rules kind))))
-            (if (eq? kind 'math)
-                (default-element-text element body)
-                (if rule
-                    (rule context element body
-                          (lambda ()
-                            (if handler
-                                (handler element body)
-                                (default-element-text element body))))
-                    (if handler
-                        (handler element body)
-                        (default-element-text element body))))))))
+            (if rule
+                (rule context element body
+                      (lambda ()
+                        (if handler
+                            (handler element body)
+                            (default-element-text element body))))
+                (if handler
+                    (handler element body)
+                    (default-element-text element body)))))))
 
   (render content))

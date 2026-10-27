@@ -275,9 +275,18 @@
                 (list (cons 'math
                             (lambda (context element children next)
                               "MATH-RULE"))))))
-  (test-equal "text rules do not override math"
+  (test-equal "text rules can override math"
+    "MATH-RULE"
+    (content->text (make-content-document (list math)) #:rules rules))
+  (test-equal "text math rules can delegate to the built-in renderer"
     "$x$"
-    (content->text (make-content-document (list math)) #:rules rules)))
+    (content->text
+      (make-content-document (list math))
+      #:rules
+      (make-render-rules
+        (list (cons 'math
+                    (lambda (context element children next)
+                      (next))))))))
 
 (let ((rules (make-render-rules
                (list (cons 'paragraph

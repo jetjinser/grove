@@ -71,7 +71,8 @@ messages are resolved from the context builder's arguments.
   the built-in interpretation.  A rule that only wants to adjust one kind can
   call `(next)` and delegate the rest.
 - Trees and transclusions use lazy structural recursion and stay outside the
-  rule chain; `math` is a built-in interpretation that rules do not override.
+  rule chain. Math rules can replace or delegate to the backend's built-in
+  semantic math interpretation.
 - No `current-chrome-locale` / `current-message-catalog` parameters remain in
   the render path.
 
