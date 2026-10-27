@@ -44,21 +44,25 @@ they should not wrap a procedure or list without adding meaning.
 
 ## Shared values and mutation
 
-Content, site, and analyzed-model values are shared between project callbacks;
-their list and string fields are ordinary mutable Scheme data. Constructors
-validate values when they are made, but Grove does not recursively freeze them
-or copy them on every accessor call. Treat these values as read-only after
-construction. A content transform is the intended place to derive changed
-content, using constructors such as `content-with-property` and
-`content-with-style`; renderers should interpret the same model without
-changing it. Mutating a shared model can make later renderers depend on
-renderer order and can bypass the guarantees of the constructors.
+Grove Content, Site, Relation, project-context, HTML-presentation, and Forester
+composition values snapshot mutable strings and pair structure at construction;
+their accessors return independent copies. This keeps records stable while
+allowing callers to use ordinary Scheme lists and strings. Opaque records,
+procedures, and other extension values remain shared and follow their own
+type's contract.
 
-Project and renderer configuration has a different ownership rule: Grove
-snapshots its declarative strings and list containers at construction because
-they define cache identity. Procedures and opaque extension values remain the
-project author's responsibility. This distinction keeps hot content traversal
-from copying trees while making build configuration stable after construction.
+A generic analyzer's model is different: Grove does not know its type, so the
+same model value is passed to every renderer and browser callback. Treat that
+model as read-only after analysis, or derive a new model in an earlier
+transform. Mutating a shared model can make later renderers depend on renderer
+order. Grove-owned Content and Site values remain snapshots; use constructors
+such as `content-with-property` and `content-with-style` to derive intentional
+changes.
+
+Project configuration snapshots declared paths and list containers because
+they define build identity. Callback procedures and opaque extension values
+remain shared so projects can compose ordinary Guile code without a wrapper
+protocol.
 
 ## Keep different semantics distinct
 

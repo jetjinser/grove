@@ -104,6 +104,81 @@
     '((smooth (var x)))
     (math-rule-spec-instantiate spec (math-rule-spec-premises spec)
       (math-rule-spec-match spec '(pair (var x) (var x))))))
+
+(let* ((zero (string-copy "0"))
+       (left (list '+ (list 'unquote 'x) (list 'num zero)))
+       (right (list 'unquote 'x))
+       (premises (list (list 'smooth (list 'unquote 'x))))
+       (guards (list (list '=/= (list 'unquote 'x) (list 'num zero))))
+       (spec (make-math-rule-spec left right premises guards)))
+  (set-car! left '-)
+  (string-set! zero 0 #\9)
+  (set-car! premises '(changed))
+  (set-car! guards '(changed))
+  (test-equal "RuleSpec snapshots caller-owned declaration data"
+    '(+ (unquote x) (num "0"))
+    (math-rule-spec-left spec))
+  (test-equal "RuleSpec accessors return independent declaration data"
+    '(+ (unquote x) (num "0"))
+    (let ((exposed (math-rule-spec-left spec)))
+      (set-car! exposed '-)
+      (string-set! (cadr (caddr exposed)) 0 #\9)
+      (math-rule-spec-left spec)))
+  (test-equal "RuleSpec snapshot keeps matching behavior stable"
+    '((x . (var x)))
+    (math-rule-spec-match spec '(+ (var x) (num "0"))))
+  (test-equal "RuleSpec snapshots premise and guard lists"
+    '(((smooth (unquote x))) ((=/= (unquote x) (num "0"))))
+    (list (math-rule-spec-premises spec) (math-rule-spec-guards spec)))
+  (let ((premise-copy (math-rule-spec-premises spec))
+        (guard-copy (math-rule-spec-guards spec)))
+    (set-car! premise-copy '(changed))
+    (set-car! guard-copy '(changed))
+    (test-equal "RuleSpec collection accessors return independent data"
+      '(((smooth (unquote x))) ((=/= (unquote x) (num "0"))))
+      (list (math-rule-spec-premises spec) (math-rule-spec-guards spec)))))
+
+(let* ((equation (string-copy "left = right"))
+       (condition (string-copy "facts hold"))
+       (label (string-copy "Named rule"))
+       (documentation (string-copy "Rule documentation"))
+       (relation (lambda (_facts _input _output) #f))
+       (rule (make-math-rewrite-rule
+               'snapshot equation condition 'example relation
+               #:matcher (lambda (_) '())
+               #:label label
+               #:documentation documentation)))
+  (string-set! equation 0 #\x)
+  (string-set! condition 0 #\x)
+  (string-set! label 0 #\x)
+  (string-set! documentation 0 #\x)
+  (test-equal "math rules snapshot caller-owned declaration strings"
+    '("left = right" "facts hold" "Named rule" "Rule documentation")
+    (list (math-rewrite-rule-equation rule)
+          (math-rewrite-rule-condition rule)
+          (math-rewrite-rule-label rule)
+          (math-rewrite-rule-documentation rule)))
+  (let ((modes (math-rewrite-rule-modes rule))
+        (equation-copy (math-rewrite-rule-equation rule))
+        (condition-copy (math-rewrite-rule-condition rule))
+        (label-copy (math-rewrite-rule-label rule))
+        (rule-doc (math-rewrite-rule-documentation rule)))
+    (set-car! modes 'changed)
+    (string-set! equation-copy 0 #\x)
+    (string-set! condition-copy 0 #\x)
+    (string-set! label-copy 0 #\x)
+    (string-set! rule-doc 0 #\x)
+    (test-equal "math rule metadata accessors return independent copies"
+      '(forward check "left = right" "facts hold" "Named rule"
+        "Rule documentation")
+      (append (math-rewrite-rule-modes rule)
+              (list (math-rewrite-rule-equation rule)
+                    (math-rewrite-rule-condition rule)
+                    (math-rewrite-rule-label rule)
+                    (math-rewrite-rule-documentation rule)))))
+  (test-assert "mutating returned modes cannot change rule behavior"
+    (procedure? (math-rewrite-rule-relation rule 'forward))))
+
 (test-error "malformed RuleSpecs are rejected at construction"
   #t (make-math-rule-spec '(+ x 0) 'x 'not-a-list '()))
 (test-equal "vector rule's diagnostic premises come from its relation declaration"

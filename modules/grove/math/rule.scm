@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math rule)
+  #:use-module (grove private snapshot)
   #:use-module (grove relation)
   #:use-module ((grove relation dsl) #:select (project))
   #:use-module (grove math premise)
@@ -26,17 +27,29 @@
   (%make-math-rewrite-rule name equation label condition checked? group relation modes backward matcher default? spec)
   math-rewrite-rule?
   (name math-rewrite-rule-name)
-  (equation math-rewrite-rule-equation)
-  (label math-rewrite-rule-label)
-  (condition math-rewrite-rule-condition)
+  (equation rule-equation/raw)
+  (label rule-label/raw)
+  (condition rule-condition/raw)
   (checked? math-rewrite-rule-condition-checked?)
   (group math-rewrite-rule-group)
   (relation rule-relation)
-  (modes math-rewrite-rule-modes)
+  (modes rule-modes/raw)
   (backward rule-backward)
   (matcher math-rewrite-rule-required-facts)
   (default? math-rewrite-rule-backward-default?)
   (spec math-rewrite-rule-spec))
+
+(define (math-rewrite-rule-equation rule)
+  (snapshot-data (rule-equation/raw rule)))
+
+(define (math-rewrite-rule-label rule)
+  (snapshot-data (rule-label/raw rule)))
+
+(define (math-rewrite-rule-condition rule)
+  (snapshot-data (rule-condition/raw rule)))
+
+(define (math-rewrite-rule-modes rule)
+  (snapshot-data (rule-modes/raw rule)))
 
 (define* (make-math-rewrite-rule name equation condition group relation
                                #:key (matcher #f)
@@ -54,12 +67,17 @@
                (or (not backward-default?) backward))
     (error "invalid math rule declaration" name))
   (when documentation
-    (set-procedure-property! relation 'documentation documentation))
-  (%make-math-rewrite-rule name equation
-    (or label (string-capitalize (string-map (lambda (c) (if (char=? c #\-) #\space c))
-                                             (symbol->string name))))
-    condition condition-checked? group relation
-    (append (if forward? '(forward) '()) (if backward '(backward) '()) '(check))
+    (set-procedure-property! relation 'documentation
+                             (snapshot-data documentation)))
+  (%make-math-rewrite-rule name (snapshot-data equation)
+    (snapshot-data
+      (or label (string-capitalize
+                  (string-map (lambda (c) (if (char=? c #\-) #\space c))
+                              (symbol->string name)))))
+    (snapshot-data condition) condition-checked? group relation
+    (snapshot-data
+      (append (if forward? '(forward) '())
+              (if backward '(backward) '()) '(check)))
     (if (eq? backward #t) relation backward)
     (or matcher (lambda (term)
                   (let ((bindings (math-rule-spec-match spec term)))
@@ -70,7 +88,7 @@
 
 (define (math-rewrite-rule-documentation rule)
   "Return the execution relation's Guile docstring, or #f if absent."
-  (procedure-documentation (rule-relation rule)))
+  (snapshot-data (procedure-documentation (rule-relation rule))))
 
 (define (math-rewrite-rule-relation rule mode)
   (and (memq mode (math-rewrite-rule-modes rule))

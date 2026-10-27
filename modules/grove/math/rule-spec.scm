@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math rule-spec)
+  #:use-module (grove private snapshot)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-1)
@@ -17,10 +18,22 @@
 (define-record-type <math-rule-spec>
   (%make-math-rule-spec left right premises guards)
   math-rule-spec?
-  (left math-rule-spec-left)
-  (right math-rule-spec-right)
-  (premises math-rule-spec-premises)
-  (guards math-rule-spec-guards))
+  (left rule-spec-left/raw)
+  (right rule-spec-right/raw)
+  (premises rule-spec-premises/raw)
+  (guards rule-spec-guards/raw))
+
+(define (math-rule-spec-left spec)
+  (snapshot-data (rule-spec-left/raw spec)))
+
+(define (math-rule-spec-right spec)
+  (snapshot-data (rule-spec-right/raw spec)))
+
+(define (math-rule-spec-premises spec)
+  (snapshot-data (rule-spec-premises/raw spec)))
+
+(define (math-rule-spec-guards spec)
+  (snapshot-data (rule-spec-guards/raw spec)))
 
 (define (rule-template? value)
   (cond
@@ -39,7 +52,10 @@
                (list? premises) (every (lambda (form) (and (list? form) (rule-template? form))) premises)
                (list? guards) (every list? guards))
     (error "invalid math rule specification" left right premises guards))
-  (%make-math-rule-spec left right premises guards))
+  (%make-math-rule-spec (snapshot-data left)
+                        (snapshot-data right)
+                        (snapshot-data premises)
+                        (snapshot-data guards)))
 
 (define (math-rule-spec-match spec pattern)
   "Match PATTERN against a RuleSpec left side and return its bindings."

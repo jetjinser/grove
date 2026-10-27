@@ -107,6 +107,11 @@ content. The [inference-rules example](../examples/showcases/math-derivations/pl
 builds a page from these queries, using the same registry as the rewrite
 engine rather than maintaining a separate catalog.
 
+Rule declarations and RuleSpec values snapshot their string and pair-based
+data at construction. Their accessors return independent copies, so inspection
+cannot change the registered rule or its verification behavior. Relation and
+matcher procedures remain shared extension code.
+
 Derivation commands can show the result alone, a compact view, or the full
 steps. Long step lists are presented in a collapsible subtree. If a rule cannot
 apply or a required premise is missing, `#:on-error 'show` displays the
