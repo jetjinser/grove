@@ -21,6 +21,17 @@
 
 (test-begin "forester i18n routes")
 
+(test-equal "text routes resolve sibling artifact paths"
+  "chapter.txt"
+  (text-relative-path "pages/guide.txt" "pages/chapter.txt"))
+(test-equal "text routes resolve artifact paths across directories"
+  "../assets/figure.png"
+  (text-relative-path "pages/guide.txt" "assets/figure.png"))
+(test-error "text relative paths reject absolute source paths" #t
+  (text-relative-path "/pages/guide.txt" "pages/chapter.txt"))
+(test-error "text relative paths reject traversal target paths" #t
+  (text-relative-path "pages/guide.txt" "../outside.txt"))
+
 (let* ((id (string-copy "guide"))
        (shared-path (string-copy "pages/guide.html"))
        (routes (make-html-routes

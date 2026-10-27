@@ -42,6 +42,15 @@
     (snapshot-data path)))
 
 (define (text-relative-path from-path to-path)
+  "Return the relative URL path from artifact FROM-PATH to TO-PATH.
+
+Both arguments must be valid relative artifact paths."
+  (unless (artifact-path? from-path)
+    (error "text-relative-path requires a relative source artifact path"
+           from-path))
+  (unless (artifact-path? to-path)
+    (error "text-relative-path requires a relative target artifact path"
+           to-path))
   (let* ((from-directory (drop-right (string-split from-path #\/) 1))
          (to-parts (string-split to-path #\/))
          (common
