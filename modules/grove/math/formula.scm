@@ -3,7 +3,7 @@
 
 (define-module (grove math formula)
   #:use-module (grove ir)
-  #:use-module ((grove math formula reader) #:prefix reader:)
+  #:use-module ((grove math private formula-reader) #:prefix reader:)
   #:use-module ((grove math semantic) #:prefix semantic:)
   #:use-module ((grove math pipeline) #:prefix core:)
   #:use-module (grove math presentation)
@@ -23,7 +23,7 @@
             compute check-equation solve-poisson differentiate partial))
 
 ;; Public Formula helpers are adapters: parse fragments once, then call the
-;; Semantic API. The parser itself lives in `formula reader` so Semantic
+;; Semantic API. The parser itself lives in a private module so Semantic
 ;; constructors can use it without depending on this facade.
 (define-public (read . fragments)
   (apply reader:read fragments))

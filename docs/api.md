@@ -51,11 +51,10 @@ The modules form three user-facing layers rather than one umbrella module:
   Math Formula is its writing facade; rule, proof, audit, and pass modules are
   lower-level interfaces for projects building their own workflows.
 
-The `(grove private ...)` and `(forester private ...)` modules are internal.
-Public domain modules remain available for direct composition, but their
-presence does not make every low-level binding a recommended starting point.
-This API map is the supported route from a user task to the narrowest useful
-layer.
+Modules whose name includes `private` are internal. Public domain modules
+remain available for direct composition, but their presence does not make every
+low-level binding a recommended starting point. This API map is the supported
+route from a user task to the narrowest useful layer.
 
 Private bindings may change with their implementations. Public content
 interpreters accept render rules and context; stock renderers use private

@@ -7,7 +7,7 @@
   #:use-module (ice-9 optargs)
   #:use-module (ice-9 match)
   #:use-module (language scribble command)
-  #:use-module ((grove math notation core) #:prefix notation:)
+  #:use-module ((grove math private notation) #:prefix notation:)
   #:use-module (grove math expression)
   #:use-module (grove math layout)
   #:use-module (grove math context)

@@ -4,7 +4,7 @@
 (use-modules ((grove math semantic) #:prefix semantic:)
              ((grove math formula) #:prefix φ:)
              ((grove math notation) #:prefix notation:)
-             ((grove math notation core) #:prefix core:)
+             ((grove math private notation) #:prefix core:)
              ((language scribble commands) #:prefix document:)
              (grove math pipeline) (grove math context) (grove math expression)
              (grove math layout) (grove math source)

@@ -10,7 +10,7 @@
   #:use-module (grove math term)
   #:use-module (grove math operator)
   #:use-module (grove ir)
-  #:use-module ((grove math notation core) #:prefix notation:)
+  #:use-module ((grove math private notation) #:prefix notation:)
   #:use-module (ice-9 format)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1))
