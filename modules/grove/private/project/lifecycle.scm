@@ -105,8 +105,8 @@ Return the internal analysis record used by the build pipeline."
                         (lambda () ((project-analyze project) context))))))
            (_ (register-input-dependencies! input-cache-context
                                             (trace-inputs trace))))
-      (make-project-analysis source-paths prepared-sources inputs context
-                             model trace input-cache-context))))
+      (make-project-analysis source-paths prepared-sources model trace
+                             input-cache-context))))
 
 (define* (analyze-project project #:key (progress (lambda (stage path) #t)))
   "Return PROJECT's analyzed model without rendering or writing outputs."
@@ -139,8 +139,6 @@ Return the internal analysis record used by the build pipeline."
          (analysis (analyze-project/result project write? #:progress progress))
          (source-paths (project-analysis-source-paths analysis))
          (prepared-sources (project-analysis-prepared-sources analysis))
-         (inputs (project-analysis-inputs analysis))
-         (context (project-analysis-context analysis))
          (analysis-trace (project-analysis-trace analysis))
          (model (project-analysis-model analysis))
          (input-cache-context (project-analysis-input-cache-context analysis))

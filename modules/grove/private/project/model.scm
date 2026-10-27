@@ -43,8 +43,6 @@
             make-project-analysis
             project-analysis-source-paths
             project-analysis-prepared-sources
-            project-analysis-inputs
-            project-analysis-context
             project-analysis-model
             project-analysis-trace
             project-analysis-input-cache-context
@@ -131,21 +129,19 @@
   (snapshot-data (build-report-affected-artifacts/raw report)))
 
 (define-record-type <project-analysis>
-  (%make-project-analysis source-paths prepared-sources inputs context
-                          model trace input-cache-context)
+  (%make-project-analysis source-paths prepared-sources model trace
+                          input-cache-context)
   project-analysis?
   (source-paths project-analysis-source-paths)
   (prepared-sources project-analysis-prepared-sources)
-  (inputs project-analysis-inputs)
-  (context project-analysis-context)
   (model project-analysis-model)
   (trace project-analysis-trace)
   (input-cache-context project-analysis-input-cache-context))
 
-(define (make-project-analysis source-paths prepared-sources inputs context
-                               model trace input-cache-context)
-  (%make-project-analysis source-paths prepared-sources inputs context
-                          model trace input-cache-context))
+(define (make-project-analysis source-paths prepared-sources model trace
+                               input-cache-context)
+  (%make-project-analysis source-paths prepared-sources model trace
+                          input-cache-context))
 
 (define-record-type <project>
   (%make-project source-directory source-filter collect-sources prepare
