@@ -201,9 +201,20 @@ spellings."
               entries)))
 
 (define (catalog-locale-key tag)
-  (if (= (length (string-split tag #\-)) 1)
-      tag
-      (canonical-locale-tag tag)))
+  (let ((locale (make-locale tag)))
+    ;; Keep generic Chinese available as a fallback after zh-Hans/zh-Hant,
+    ;; while canonicalizing every authored tag, including language-only tags.
+    (if (string=? (locale-tag locale) "zh-Hans")
+        (let ((parts (string-split (string-trim-both tag) #\-)))
+          (if (= (length parts) 1) "zh" (locale-tag locale)))
+        (locale-tag locale))))
+
+(define (unique-catalog-locales? entries)
+  (let loop ((remaining entries) (seen '()))
+    (or (null? remaining)
+        (let ((locale (caar remaining)))
+          (and (not (member locale seen string=?))
+               (loop (cdr remaining) (cons locale seen)))))))
 
 (define* (make-message-catalog entries #:key (default "en"))
   "Map locale tags to symbol-keyed messages, falling back to DEFAULT."
@@ -216,6 +227,9 @@ spellings."
                           (cons (catalog-locale-key (car entry)) (cdr entry)))
                         entries)))
         (default (string-copy (catalog-locale-key default))))
+    (unless (unique-catalog-locales? entries)
+      (error "message catalog contains duplicate canonical locale tags"
+             entries))
     (%make-message-catalog default entries)))
 
 (define (locale-fallbacks tag)

@@ -84,6 +84,18 @@
   "notes" (message catalog 'notes "en"))
 (test-equal "messages use the catalog default locale by default"
   "Home" (message catalog 'home))
+(test-equal "catalog locale tags canonicalize language-only tags"
+  "Accueil"
+  (message (make-message-catalog
+             '(("FR" . ((home . "Accueil"))))
+             #:default "FR")
+           'home "fr"))
+(test-error "catalogs reject locale aliases that canonicalize to the same tag" #t
+  (make-message-catalog
+    '(("zh-CN" . ((home . "首页")))
+      ("zh-Hans" . ((home . "首頁"))))))
+(test-error "catalogs reject invalid locale tags" #t
+  (make-message-catalog '(("not a locale" . ((home . "Home"))))))
 (test-error "catalogs reject duplicate message keys" #t
   (make-message-catalog '(("en" . ((home . "Home") (home . "Start"))))))
 (test-error "catalogs reject non-symbol message keys" #t
