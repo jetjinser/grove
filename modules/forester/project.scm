@@ -8,7 +8,12 @@
   #:use-module (forester site)
   #:use-module (grove input scribble)
   #:use-module (grove project site)
+  #:use-module (srfi srfi-13)
   #:export (make-forester-project))
+
+(define (forester-source? filename)
+  (and (not (string-prefix? "." filename))
+       (string-suffix? ".plant" filename)))
 
 (define* (make-forester-project
           #:key home
@@ -35,6 +40,7 @@ TRANSFORMS compose content changes before Forester analysis."
     #:title title
     #:description description
     #:source-directory source-directory
+    #:source-filter forester-source?
     #:home home
     #:prepare prepare
     #:read-page (make-page-reader (make-scribble-document-reader))

@@ -39,6 +39,10 @@
   (call-with-output-file path
     (lambda (port) (display content port))))
 
+(define (plant-source? filename)
+  (and (not (string-prefix? "." filename))
+       (string-suffix? ".plant" filename)))
+
 (test-begin "grove project")
 
 (test-error "site pages require a non-empty string ID" #t
@@ -333,6 +337,14 @@
     (write-test-file (string-append source-directory "/.draft.plant") "hidden")
     (write-test-file (string-append source-directory "/ignore.txt") "ignored"))
   (lambda ()
+    (let ((project
+            (make-site-project
+              #:source-directory source-directory
+              #:read-page (lambda (_) #f)
+              #:output-directory "unused-output")))
+      (test-equal "generic site collection accepts non-hidden source formats"
+        '("first.plant" "ignore.txt" "second.plant")
+        (map basename (collect-project-sources project))))
     (let* ((generic-events '())
            (generic-project
              (make-project
@@ -428,6 +440,7 @@
                    #:title "Configured"
                    #:description "A configured site description."
                    #:source-directory source-directory
+                 #:source-filter plant-source?
                  #:prepare
                  (lambda ()
                    (let ((paths (list (string-append module-directory
@@ -475,7 +488,7 @@
             analyze
             render)
           events)
-        (test-assert "site default collection excludes hidden .plant files"
+        (test-assert "configured collection excludes hidden .plant files"
           (not (member '(read ".draft") events)))
         (test-equal "project configuration selects the site title"
           "Configured"
@@ -559,6 +572,7 @@
                (cached-project
                (make-site-project
                      #:source-directory source-directory
+                     #:source-filter plant-source?
                      #:extra-sources (list external-source-path)
                    #:read-page
                    (lambda (path)
@@ -639,6 +653,7 @@
                  (changed-project
                  (make-site-project
                        #:source-directory source-directory
+                       #:source-filter plant-source?
                        #:extra-sources (list external-source-path)
                      #:read-page
                      (lambda (path)
@@ -659,6 +674,7 @@
             (let* ((changed-project-key
                      (make-site-project
                          #:source-directory source-directory
+                         #:source-filter plant-source?
                          #:extra-sources (list external-source-path)
                        #:read-page
                        (lambda (path)
@@ -733,6 +749,7 @@
                (incremental-project
                  (make-site-project
                      #:source-directory source-directory
+                     #:source-filter plant-source?
                      #:read-page
                    (lambda (path)
                      (let ((id (string-drop-right (basename path) (string-length ".plant"))))

@@ -135,9 +135,10 @@ reader's own contract.
 
 The default collector walks recursively in sorted order, skipping hidden
 directories, directory symlinks, and special files; symlinks to regular files
-are included. The generic project filter skips
-dot-prefixed basenames; the site project filter selects non-hidden `.plant`
-files. `(grove collect)` exposes `collect-directory` for custom collectors;
+are included. The generic and site project filters skip dot-prefixed
+basenames. Forester's project constructor additionally selects `.plant` files,
+keeping that format policy in the Forester layer. `(grove collect)` exposes
+`collect-directory` for custom collectors;
 its optional predicate sees each regular file basename, and by default it
 accepts hidden file basenames while still skipping hidden directories and
 special files.
