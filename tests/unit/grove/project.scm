@@ -189,9 +189,15 @@
   '("selected.plant")
   (collect-project-sources
     (make-project #:source-directory "unused-directory"
+                  #:source-filter #f
                   #:collect-sources (lambda () '("selected.plant"))
                   #:read-source (lambda (_) #f)
                   #:output-directory "output")))
+(test-error "directory projects require a source filter procedure" #t
+  (make-project #:source-directory "sources"
+                #:source-filter #f
+                #:read-source (lambda (_) #f)
+                #:output-directory "output"))
 (let* ((path (string-copy "selected.plant"))
        (collector-paths (list path))
        (project

@@ -220,15 +220,20 @@ ANALYZE receives a project context;
 each RENDERER receives the analyzed model and returns artifacts. PIPELINES
 derive artifacts from declared files independently of the model. CACHE? controls
 document, renderer, and pipeline cache use."
-  (unless (and (or (not source-directory) (string? source-directory))
-               (procedure? source-filter)
-               (or (not collect-sources) (procedure? collect-sources))
-               (or source-directory collect-sources))
-    (error "project requires a source directory or collector"
-           source-directory collect-sources))
+  (unless (or (not source-directory) (string? source-directory))
+    (error "project source directory must be a path or #f" source-directory))
   (when (and source-directory (not (non-empty-string? source-directory)))
     (error "project source directory must be a non-empty path"
            source-directory))
+  (unless (or (not collect-sources) (procedure? collect-sources))
+    (error "project source collector must be a procedure or #f"
+           collect-sources))
+  (unless (or source-directory collect-sources)
+    (error "project requires a source directory or collector"
+           source-directory collect-sources))
+  (unless (or collect-sources (procedure? source-filter))
+    (error "project source filter must be a procedure when using directory collection"
+           source-filter))
   (unless (procedure? prepare)
     (error "project preparation step must be a procedure" prepare))
   (unless (and (list? extra-sources)
