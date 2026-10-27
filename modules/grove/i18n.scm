@@ -259,9 +259,8 @@ then the key name."
     (error "message requires a message catalog" catalog))
   (unless (symbol? key)
     (error "message key must be a symbol" key))
-  (let* ((locale (if (locale? locale)
-                     (locale-tag locale)
-                     (canonical-locale-tag locale)))
+  (let* ((locale (locale-tag
+                   (if (locale? locale) locale (make-locale locale))))
          (entries (message-catalog-entries/raw catalog))
          (lookup (lambda (tags)
                    (any (lambda (tag)

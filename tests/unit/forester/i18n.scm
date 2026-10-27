@@ -97,6 +97,8 @@
   "目录" (message catalog 'contents "zh-CN"))
 (test-equal "messages fall back to the default locale"
   "Contents" (message catalog 'contents "fr"))
+(test-error "message lookup rejects invalid locale tags" #t
+  (message catalog 'home "not a locale"))
 (test-equal "unknown keys fall back to their name"
   "notes" (message catalog 'notes "en"))
 (test-equal "messages use the catalog default locale by default"
