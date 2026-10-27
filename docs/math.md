@@ -42,7 +42,8 @@ same calculations on Semantic values and returns structured reports with
 results, diagnostics, derivations, and audit evidence; its checkers return
 structured verification results. Formula is the convenient text-reading and
 article-writing facade; use the pipeline when code needs to inspect or compose
-those results.
+those results. Keep the Formula prefix: its `read` helper would otherwise
+shadow Scheme's ordinary reader procedure in the importing module.
 
 Scheme code can inspect those values through `(grove math report)` and
 `(grove math diagnostic)`. `math-report-result` from `(grove math pipeline)`
