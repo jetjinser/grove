@@ -20,6 +20,11 @@
 
 (test-begin "grove collect")
 
+(test-error "collection requires an existing directory" #t
+  (collect-directory (string-append test-directory "/missing")))
+(test-error "collection rejects an empty directory path" #t
+  (collect-directory ""))
+
 (dynamic-wind
   (lambda ()
     (mkdir test-directory)
@@ -31,6 +36,8 @@
     (write-test-file (string-append hidden-directory "/hidden.plant"))
     (write-test-file (string-append nested-directory "/ignored.txt")))
   (lambda ()
+    (test-error "collection filter must be a procedure" #t
+      (collect-directory test-directory 'not-a-procedure))
     (test-equal "collection descends into subdirectories and keeps full paths"
       (list (string-append nested-directory "/nested.plant")
             (string-append test-directory "/root.plant"))

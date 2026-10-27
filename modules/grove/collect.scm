@@ -10,6 +10,7 @@
 
 (define* (collect-directory directory #:optional (include? (lambda (_) #t)))
   "Recursively collect files below DIRECTORY that satisfy INCLUDE?.
+DIRECTORY must name an existing directory.
 INCLUDE? receives each file's basename; returned paths retain their full
 directory structure. Hidden directories and directory symlinks are skipped."
   (define (directory-entry? path)
@@ -32,4 +33,8 @@ directory structure. Hidden directories and directory symlinks are skipped."
                string<?)))
   (unless (procedure? include?)
     (error "directory collector predicate must be a procedure" include?))
+  (unless (and (string? directory)
+               (not (string-null? directory))
+               (file-is-directory? directory))
+    (error "directory collector requires an existing directory" directory))
   (collect directory))
