@@ -3,6 +3,10 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math syntax)
+  #:use-module ((grove math private identifier)
+                #:select (math-identifier-start-char?
+                          math-identifier-char?
+                          math-digit-char?))
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:export (math-token?
@@ -39,18 +43,6 @@
   (start math-expression-start)
   (end math-expression-end))
 
-(define (letter? char)
-  (memq (char-general-category char) '(Lu Ll Lt Lm Lo)))
-
-(define (mark? char)
-  (memq (char-general-category char) '(Mn Mc)))
-
-(define (digit? char)
-  (memq (char-general-category char) '(Nd Nl No)))
-
-(define (identifier-char? char)
-  (or (letter? char) (mark? char) (digit? char)))
-
 (define (tokenize-math source)
   (unless (string? source)
     (error "math source must be a string" source))
@@ -62,18 +54,18 @@
           (let ((char (at position)))
             (cond
               ((char-whitespace? char) (loop (+ position 1) tokens))
-              ((letter? char)
+              ((math-identifier-start-char? char)
                (let collect ((end (+ position 1)))
-                 (if (and (< end length) (identifier-char? (at end)))
+                 (if (and (< end length) (math-identifier-char? (at end)))
                      (collect (+ end 1))
                      (loop end
                        (cons (make-math-token 'identifier
                                (substring source position end)
                                position end)
                              tokens)))))
-              ((digit? char)
+              ((math-digit-char? char)
                (let collect ((end (+ position 1)))
-                 (if (and (< end length) (digit? (at end)))
+                 (if (and (< end length) (math-digit-char? (at end)))
                      (collect (+ end 1))
                      (loop end
                        (cons (make-math-token 'number

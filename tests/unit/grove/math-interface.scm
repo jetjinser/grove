@@ -19,6 +19,10 @@
 (define polynomial (φ:read (φ:power "x" "3") "+" (φ:multiply "2" "x")))
 
 (test-begin "unified mathematical writing interface")
+(let ((name (list->string (map integer->char '(101 804 768)))))
+  (test-equal "Semantic variables and Formula use the same composed identifier"
+    (math-value-term (semantic:variable name))
+    (math-value-term (φ:read name))))
 (test-equal "semantic division uses the same notation as an authored fraction"
   (content->sxml (notation:frac "x" "2"))
   (content->sxml (math-value->layout (φ:divide "x" "2"))))
