@@ -496,8 +496,9 @@ UTF-8 source text. Imports used by each article belong in the template;
 ## Highlighting
 
 Code blocks accept a language symbol: `@code-block[#:language 'scheme]{(define x 2)}`.
-Scheme highlighting is included by default in the Nix devshell and installed
-CLI. No project configuration is needed for `#:language 'scheme`.
+Scheme highlighting is included by default in the Nix and Guix development
+environments and the installed CLI. No project configuration is needed for
+`#:language 'scheme`.
 To replace the defaults, configure the HTML renderer with `#:highlighters`, an
 association list of language symbols and values created by `(grove highlight)`:
 
