@@ -46,4 +46,4 @@
     ((content-document? content)
      (string-concatenate (map content->plain-text
                               (content-document-children content))))
-    (else "")))
+    (else (error "plain-text projection requires a content value" content))))

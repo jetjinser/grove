@@ -11,6 +11,7 @@
   #:use-module (grove render html)
   #:use-module (grove render html routes)
   #:use-module (grove render text)
+  #:use-module (grove render plain-text)
   #:use-module (grove render rules)
   #:use-module (grove build)
   #:use-module (grove site)
@@ -137,6 +138,16 @@
   (make-content-element 'paragraph '(42)))
 (test-error "content documents reject non-content children" #t
   (make-content-document '(42)))
+
+(test-equal "plain-text projection preserves math structure"
+  "x^(2)"
+  (content->plain-text
+    (make-content-element
+      'math-sup
+      (list (make-content-element 'math-row '("x"))
+            (make-content-element 'math-row '("2"))))))
+(test-error "plain-text projection rejects non-content values" #t
+  (content->plain-text 42))
 (test-error "content elements reject nested documents" #t
   (make-content-element 'paragraph
     (list (make-content-document '("nested")))))
