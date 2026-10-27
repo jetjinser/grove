@@ -55,7 +55,7 @@
     (if (null? uris)
         ""
         (string-append
-          "\n" (title-line (chrome-message 'describes context))
+          "\n" (title-line (interface-message 'describes context))
           (string-concatenate
             (map (lambda (uri)
                    (let ((href (entity-uri-href uri)))
@@ -297,7 +297,7 @@
                      (text-relative-path
                        (text-page-path routes (site-page-id page))
                        (text-index-path routes)))
-                   (chrome-message 'home context))
+                   (interface-message 'home context))
         "\n" body
         (describes-gemtext page context)
         (page-backmatter forest page routes backmatter backmatter-labels
@@ -348,7 +348,7 @@
     (error "Forester Gemtext options require text routes" routes))
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
-  (validate-chrome-options locale messages)
+  (validate-interface-options locale messages)
   (unless (render-rules? rules)
     (error "Forester Gemtext options require render rules" rules))
   (%make-gemtext-options prefix routes backmatter
@@ -363,8 +363,6 @@
          (messages (gemtext-options-messages options))
          (rules (compose-render-rules bilingual-text-rules
                                       (gemtext-options-rules options))))
-  (validate-backmatter-sections backmatter)
-  (check-reference-taxon-id reference-taxon-id)
   (unless (forest? forest)
     (error "Forester Gemtext renderer requires a forest" forest))
   (check-routes forest routes)
@@ -392,8 +390,6 @@
          (messages (gemtext-options-messages options))
          (rules (compose-render-rules bilingual-text-rules
                                       (gemtext-options-rules options))))
-  (validate-backmatter-sections backmatter)
-  (check-reference-taxon-id reference-taxon-id)
   (unless (forest? forest)
     (error "Forester Gemtext renderer requires a forest" forest))
   (check-routes forest routes)
@@ -436,25 +432,18 @@
   (set! rules-id (snapshot-data rules-id))
   (unless (boolean? cache?)
     (error "Forester Gemtext renderer cache option must be a boolean" cache?))
-  (validate-backmatter-sections backmatter)
-  (check-reference-taxon-id reference-taxon-id)
-  (unless (text-routes? routes)
-    (error "Gemtext renderer requires text routes" routes))
-  (unless (or (not prefix) (artifact-path? prefix))
-    (error "Gemtext output prefix must be a relative path or #f" prefix))
   (let ((render (lambda (forest)
                   (render-gemtext forest #:options options))))
     (make-cached-renderer render #:cache? effective-cache?
       #:configuration
       (lambda (forest)
-        (list 'gemtext prefix
-              (map (lambda (page)
-                     (cons (site-page-id page)
-                           (text-page-path routes (site-page-id page))))
-                   (pages forest))
-              (text-index-path routes)
-              backmatter reference-taxon-id rules-id
-              (site-title (site forest)) (site-description (site forest))
-              (resolve-chrome-locale locale (resolve-chrome-catalog messages))
-              (message-catalog-default (resolve-chrome-catalog messages))
-              (message-catalog-entries (resolve-chrome-catalog messages))))))))
+        (append
+          (list 'gemtext prefix
+                (map (lambda (page)
+                       (cons (site-page-id page)
+                             (text-page-path routes (site-page-id page))))
+                     (pages forest))
+                (text-index-path routes)
+                backmatter reference-taxon-id rules-id
+                (site-title (site forest)) (site-description (site forest)))
+          (interface-cache-identity locale messages)))))))

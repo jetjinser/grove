@@ -73,8 +73,8 @@
                                    (translation-groups derive-translation-groups-later))
   "Build the site-level render context for FOREST.
 
-LOCALE and MESSAGES are resolved once, here, so renderers no longer read the
-dynamic chrome parameters."
+LOCALE and MESSAGES are resolved once, here, so renderers no longer read
+dynamic locale or message parameters."
   (unless (forest? forest)
     (error "render context requires a forest" forest))
   (unless (or (not settings) (site-settings? settings))
@@ -82,6 +82,7 @@ dynamic chrome parameters."
   (unless (and (boolean? hreflang?) (boolean? language-switcher?))
     (error "render context language switches must be booleans"
            hreflang? language-switcher?))
+  (validate-interface-options locale messages)
   (unless (or (not site-url) (web-url? site-url))
     (error "render context site URL must be an absolute HTTP(S) base URL or #f"
            site-url))
@@ -108,7 +109,7 @@ dynamic chrome parameters."
     #:translation-groups translation-groups
     #:og-image og-image
     #:og-image-alt og-image-alt
-    #:locale (resolve-chrome-locale locale messages)
+    #:locale (resolve-interface-locale locale messages)
     #:locale-object (and locale
                          (if (locale? locale) locale (make-locale locale)))
-    #:messages (resolve-chrome-catalog messages)))
+    #:messages (resolve-interface-catalog messages)))

@@ -867,7 +867,7 @@ anchors."
 (define (used-codepoints forest)
   "Every codepoint in the site's rendered text — document text and page
 titles, as a sorted character list. This is the universe a text font
-must cover; site chrome strings stay the caller's concern. Math is
+must cover; built-in site interface strings stay the caller's concern. Math is
 counted through its plain-text rendering, a harmless superset since
 MathJax draws it with its own fonts."
   (cached-rows forest 'used-codepoints

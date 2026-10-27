@@ -424,7 +424,7 @@
 (test-equal "Chinese has a single plural form"
   "~a 条" (plural "zh-Hans" 1 '((one . "~a 条") (other . "~a 条"))))
 
-(test-assert "text output localizes chrome labels"
+(test-assert "text output localizes interface labels"
   (let ((text (assoc-ref
                 (site->text bilingual-forest
                             #:options (make-text-options #:locale "zh-Hans"))

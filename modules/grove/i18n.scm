@@ -39,8 +39,9 @@
             og-locale-tag
             sort-strings))
 
-;; Grove's i18n primitives are language tags and chrome messages. They carry no
-;; document content; translated trees and their presentation live elsewhere.
+;; Grove's i18n primitives are language tags and built-in interface messages.
+;; They carry no document content; translated trees and their presentation live
+;; elsewhere.
 
 (define rtl-languages
   '("ar" "arc" "ckb" "dv" "fa" "he" "khw" "ku" "nqo" "prs" "ps" "sd" "syr"
@@ -270,9 +271,9 @@ then the key name."
         (lookup (locale-fallbacks (message-catalog-default/raw catalog)))
         (symbol->string key))))
 
-;; Chrome messages for the renderers' navigation, skip link, tree labels,
-;; metadata, and backmatter headings.  Projects extend the catalog through
-;; the renderer's `#:messages' option.
+;; Interface messages for renderer-owned navigation, skip links, tree labels,
+;; metadata, and backmatter headings. Projects extend the catalog through the
+;; renderer's `#:messages' option.
 (define default-message-catalog
   (make-message-catalog
     '(("en" . ((nav-site . "Site")

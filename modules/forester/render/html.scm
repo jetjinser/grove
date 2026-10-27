@@ -6,7 +6,7 @@
   #:use-module ((grove private artifact) #:prefix out:)
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove build)
-  #:use-module (grove private build-state)
+  #:use-module (grove private fingerprint)
   #:use-module (grove private html-attributes)
   #:use-module (grove i18n)
   #:use-module (grove private string-fun)
@@ -49,7 +49,7 @@
 
 ;; Forester's tree traversal uses the private content interpreter for lazy
 ;; handlers; those handlers are deliberately outside the public renderer API.
-(define (chrome-date text context)
+(define (format-rendered-date text context)
   (let ((locale (render-context-ref context 'locale-object)))
     (if locale (format-date locale text #:style 'long) text)))
 
@@ -95,7 +95,7 @@
     (if (or (not group) (< (length group) 2))
         '()
         `(nav (@ (class "language-switcher")
-                 (aria-label ,(chrome-message 'language context)))
+                 (aria-label ,(interface-message 'language context)))
               ,@(map (lambda (other)
                        (let ((tag (or (page-locale other) "und")))
                          `(a (@ (href ,(html-page-url
@@ -250,13 +250,13 @@ from the HTML presentation are appended after these."
         (updated (assq-ref (site-page-metadata page) 'updated)))
     `(,@(if published
             `((li (@ (class "meta-item"))
-                  (time (@ (datetime ,published)) ,(chrome-date published context))))
+                  (time (@ (datetime ,published)) ,(format-rendered-date published context))))
             '())
       ,@(if updated
             `((li (@ (class "meta-item"))
                   (time (@ (datetime ,updated))
-                        ,(chrome-message-format
-                           'metadata-updated (list (chrome-date updated context))
+                        ,(interface-message-format
+                           'metadata-updated (list (format-rendered-date updated context))
                            context))))
             '()))))
 
@@ -351,7 +351,7 @@ from the HTML presentation are appended after these."
          ,@(metadata-sxml metadata-items))
        (a (@ (class "forest-tree-id")
            (href ,page-url)
-           (aria-label ,(chrome-message-format
+           (aria-label ,(interface-message-format
                           'tree-open-page (list (display-tree-id id)) context)))
           "[" ,(display-tree-id id) "]")
        (div (@ (class "forest-tree-content"))
@@ -533,8 +533,8 @@ top-level taxon element; pages without one contribute nothing."
                                   #:context context)))
     (if (null? items) '()
         (list `(nav (@ (class "table-of-contents")
-                       (aria-label ,(chrome-message 'nav-contents context)))
-                    (h2 ,(chrome-message 'nav-contents context))
+                       (aria-label ,(interface-message 'nav-contents context)))
+                    (h2 ,(interface-message 'nav-contents context))
                     (ol ,@items))))))
 
 (define* (nav-link-sxml routes id label #:key (current-page #f))
@@ -569,7 +569,7 @@ top-level taxon element; pages without one contribute nothing."
         '()
         (list
           `(section (@ (class "describes"))
-             (h2 ,(chrome-message 'describes context))
+             (h2 ,(interface-message 'describes context))
              (ul
                ,@(map (lambda (uri)
                         (let ((href (entity-uri-href uri)))
@@ -767,10 +767,10 @@ name, property, rel, or title."
              '()))
      (body
        (a (@ (class "skip-link") (href "#main"))
-          ,(chrome-message 'skip-to-content context))
+          ,(interface-message 'skip-to-content context))
        (header
          ,@(if (or home-title home-link (pair? site-nav) (pair? language-nav))
-               (list `(nav (@ (aria-label ,(chrome-message 'nav-site context)))
+               (list `(nav (@ (aria-label ,(interface-message 'nav-site context)))
                            ,@(cond
                                (home-link (list home-link))
                                (home-title (list `(a (@ (href ,(html-index-url routes)))
@@ -960,7 +960,7 @@ to the lane, and an in-place numbered marker links to it."
         (if (and (every (lambda (path)
                           ;;     Only load-time style artifacts are
                           ;;     dirty: their bytes feed the @font-face
-                          ;;     and <link> chrome, never a page body,
+                          ;;     rules and stylesheet links, never a page body,
                           ;;     so every page artifact keeps its
                           ;;     previous bytes under the retained
                           ;;     forest and the page walk is skipped -
@@ -1107,7 +1107,7 @@ Entry points take this value with #:options."
       (error "HTML options require HTML routes" routes))
     (validate-backmatter-sections backmatter)
     (check-reference-taxon-id reference-taxon-id)
-    (validate-chrome-options locale messages)
+    (validate-interface-options locale messages)
     (when (string? locale)
       (set! locale (locale-tag (make-locale locale))))
     (unless (valid-html-attribute-list? html-attributes)
@@ -1185,8 +1185,6 @@ Entry points take this value with #:options."
          (side-lane (html-options-side-lane options))
          (rules (html-presentation-rules presentation))
          (context (make-html-render-context forest routes options)))
-    (validate-backmatter-sections backmatter)
-    (check-reference-taxon-id reference-taxon-id)
     (check-html-input forest style routes mathjax-src)
     (map (lambda (page)
            (cons (site-page-id page)
@@ -1226,8 +1224,6 @@ Entry points take this value with #:options."
           (side-lane (html-options-side-lane options))
           (rules (html-presentation-rules presentation))
           (context (make-html-render-context forest routes options)))
-    (validate-backmatter-sections backmatter)
-    (check-reference-taxon-id reference-taxon-id)
     (check-html-input forest style routes mathjax-src)
     (append
       (html-style-artifacts style)
@@ -1292,31 +1288,32 @@ Entry points take this value with #:options."
       (set! rules-id (snapshot-data rules-id))
       (unless (boolean? cache?)
         (error "Forester HTML renderer cache option must be a boolean" cache?))
-      (validate-backmatter-sections backmatter)
-      (check-reference-taxon-id reference-taxon-id)
       (let ((render (lambda (forest)
                       (render-html forest #:options options))))
     (make-cached-renderer render #:cache? effective-cache?
           #:configuration
           (lambda (forest)
-            (let ((routes (resolve-site-routes forest routes)))
-              (list 'html (site-title (site forest)) (site-description (site forest))
+            (let* ((routes (resolve-site-routes forest routes))
+                   (interface-key (interface-cache-identity locale messages)))
+              (list 'html (site-title (site forest))
+                    (site-description (site forest))
                     (html-home-page routes)
                     (html-index-url routes)
                     mathjax-src backmatter reference-taxon-id
                     article? backmatter-details? html-attributes
                     (presentation-cache-identity presentation-data)
-                    side-lane (resolve-chrome-locale locale (resolve-chrome-catalog messages))
-                    default-locale site-url og-image og-image-alt hreflang? language-switcher?
-                    rules-id
-                    (message-catalog-default (resolve-chrome-catalog messages))
-                    (message-catalog-entries (resolve-chrome-catalog messages))
+                    side-lane (car interface-key)
+                    default-locale site-url og-image og-image-alt
+                    hreflang? language-switcher? rules-id
+                    (cadr interface-key) (caddr interface-key)
                     (map (lambda (entry)
-                           (list (car entry) (highlighter-configuration (cdr entry))))
+                           (list (car entry)
+                                 (highlighter-configuration (cdr entry))))
                          highlighters)
                     (map (lambda (artifact)
                            (list (out:artifact-path/raw artifact)
-                                 (content-fingerprint (out:artifact-content/raw artifact))))
+                                 (content-fingerprint
+                                   (out:artifact-content/raw artifact))))
                          (html-style-artifacts style)))))
           #:inputs (lambda ()
                      (append

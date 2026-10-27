@@ -99,7 +99,7 @@
     (if (null? uris)
         ""
         (string-append
-          "\n" (chrome-message 'describes context) ":\n"
+          "\n" (interface-message 'describes context) ":\n"
           (string-concatenate
             (map (lambda (uri)
                    (string-append "- " (or (entity-uri-href uri) uri) "\n"))
@@ -124,7 +124,7 @@
   (let ((items (entries (site-page-id page) "" "")))
     (if (string-null? items)
         ""
-        (string-append (title-text (chrome-message 'nav-contents context))
+        (string-append (title-text (interface-message 'nav-contents context))
                        "\n" items "\n"))))
 
 (define (text-backlink-reference forest page-id routes reference indent)
@@ -235,7 +235,7 @@
                  (char-set #\newline))))
     (string-append
       (title-text (site-page-title page))
-      "\n" (chrome-message 'home context) ": "
+      "\n" (interface-message 'home context) ": "
       (text-relative-path page-path (text-index-path routes))
       "\n\n"
       (table-of-contents-text forest page context)
@@ -320,7 +320,7 @@
     (error "Forester text options require text routes" routes))
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
-  (validate-chrome-options locale messages)
+  (validate-interface-options locale messages)
   (unless (render-rules? rules)
     (error "Forester text options require render rules" rules))
   (%make-text-options prefix routes backmatter
@@ -335,8 +335,6 @@
          (messages (text-options-messages options))
          (rules (compose-render-rules bilingual-text-rules
                                       (text-options-rules options))))
-  (validate-backmatter-sections backmatter)
-  (check-reference-taxon-id reference-taxon-id)
   (unless (forest? forest)
     (error "Forester text renderer requires a forest" forest))
   (check-text-routes forest routes)
@@ -345,8 +343,7 @@
                                      #:routes routes
                                      #:locale locale
                                      #:messages messages))
-         (backmatter-labels (localized-backmatter-labels context))
-         (site (site forest)))
+         (backmatter-labels (localized-backmatter-labels context)))
     (cons (cons "index" (index->text forest routes))
           (map (lambda (page)
                  (cons (site-page-id page)
@@ -365,8 +362,6 @@
          (messages (text-options-messages options))
          (rules (compose-render-rules bilingual-text-rules
                                       (text-options-rules options))))
-  (validate-backmatter-sections backmatter)
-  (check-reference-taxon-id reference-taxon-id)
   (unless (forest? forest)
     (error "Forester text renderer requires a forest" forest))
   (let* ((context
@@ -375,7 +370,6 @@
                                      #:locale locale
                                      #:messages messages))
          (backmatter-labels (localized-backmatter-labels context))
-         (site (site forest))
          (sources (source-paths forest)))
     (check-text-routes forest routes)
     (let ((artifacts
@@ -407,12 +401,6 @@
   (set! rules-id (snapshot-data rules-id))
   (unless (boolean? cache?)
     (error "Forester text renderer cache option must be a boolean" cache?))
-  (validate-backmatter-sections backmatter)
-  (check-reference-taxon-id reference-taxon-id)
-  (unless (or (not prefix) (artifact-path? prefix))
-    (error "Forester text output prefix must be a relative path or #f" prefix))
-  (unless (text-routes? routes)
-    (error "Forester text renderer requires text routes" routes))
   (let ((render (lambda (forest)
                   (render-text forest #:options options)))
         (effective-cache?
@@ -422,12 +410,11 @@
     (make-cached-renderer render #:cache? effective-cache?
           #:configuration
           (lambda (forest)
-            (list 'text prefix (site-title (site forest)) (site-description (site forest))
-                  (text-index-path routes)
-                  backmatter reference-taxon-id rules-id
-                  (resolve-chrome-locale locale (resolve-chrome-catalog messages))
-                  (message-catalog-default (resolve-chrome-catalog messages))
-                  (message-catalog-entries (resolve-chrome-catalog messages))))
+            (append
+              (list 'text prefix (site-title (site forest))
+                    (site-description (site forest)) (text-index-path routes)
+                    backmatter reference-taxon-id rules-id)
+              (interface-cache-identity locale messages)))
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
             (render-text-changed forest prefix routes backmatter

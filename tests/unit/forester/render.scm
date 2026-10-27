@@ -87,7 +87,13 @@
     (make-site-render-context forest #:og-image ""))
   (test-error "site context rejects non-string Open Graph alt text"
     #t
-    (make-site-render-context forest #:og-image-alt 42)))
+    (make-site-render-context forest #:og-image-alt 42))
+  (test-error "site context validates renderer locale options"
+    #t
+    (make-site-render-context forest #:locale 'not-a-locale))
+  (test-error "site context validates message catalogs"
+    #t
+    (make-site-render-context forest #:messages 'not-a-catalog)))
 
 (let ((message
         (catch #t

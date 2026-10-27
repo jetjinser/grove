@@ -132,7 +132,7 @@
               #:messages (make-message-catalog
                           '(("en" . ((nav-site . "Browse"))))
                           #:default "en"))))
-  (test-assert "projects override chrome messages"
+  (test-assert "projects override interface messages"
     (string-contains page "<nav aria-label=\"Browse\">")))
 
 (let* ((root (dirname (getenv "GROVE_SRCDIR")))
@@ -155,7 +155,7 @@
     (and (string-contains page "lang=\"zh-Hant\"")
          (string-contains page "dir=\"ltr\""))))
 
-(test-assert "text output localizes its chrome"
+(test-assert "text output localizes its interface labels"
   (let ((text (assoc-ref
                 (site->text (a11y-forest)
                             #:options (make-text-options #:locale "zh-Hans"))
@@ -189,7 +189,7 @@
                         "root")))
   (test-assert "page locale derives lang and dir without a renderer locale"
     (string-contains page "<html lang=\"zh-Hans\" dir=\"ltr\">"))
-  (test-assert "page locale localizes chrome"
+  (test-assert "page locale localizes interface labels"
     (and (string-contains page "跳到正文")
          (string-contains page "aria-label=\"站点导航\"")))
   (test-assert "page locale localizes dates"
@@ -199,9 +199,9 @@
     (string-contains page "property=\"og:locale\" content=\"zh_CN\"")))
 
 (test-error "renderer locales reject non-tags" #t
-  (resolve-chrome-locale 42 default-message-catalog))
+  (resolve-interface-locale 42 default-message-catalog))
 (test-error "renderer catalogs reject non-catalogs" #t
-  (resolve-chrome-catalog 42))
+  (resolve-interface-catalog 42))
 
 (define* (render-page-with document #:key (site-url #f)
                            (og-image #f) (og-image-alt #f)
