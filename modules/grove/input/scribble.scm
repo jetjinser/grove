@@ -14,8 +14,7 @@
                 #:select (scribble scribble-evaluate-document))
   #:export (make-scribble-module-setup
             make-scribble-module-session
-            make-scribble-document-reader)
-  #:re-export (disable-cache!))
+            make-scribble-document-reader))
 
 (define (scribble-source-file? filename)
   (string-suffix? ".plant" filename))

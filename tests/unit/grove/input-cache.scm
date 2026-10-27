@@ -383,7 +383,7 @@
             (call-with-input-file (string-append output "/page.html") get-string-all)
             second-target)))
       (delete-file alias))
-    (put source "@use-modules[(grove input scribble)]\n@(disable-cache!)\nAlways execute")
+    (put source "@use-modules[(grove input)]\n@(disable-cache!)\nAlways execute")
     (let ((before evaluations))
       (build-project (project #t))
       (test-assert "document opt-out also prevents renderer reuse"

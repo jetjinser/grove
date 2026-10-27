@@ -4,4 +4,4 @@
 
 (define-module (grove input)
   #:use-module (grove private input dependencies)
-  #:re-export (depend-on!))
+  #:re-export (depend-on! disable-cache!))

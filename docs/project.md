@@ -307,9 +307,9 @@ Arbitrary Scheme I/O is not intercepted. Declare a file before reading it:
 (call-with-input-file (depend-on! "data.txt") get-string-all)
 ```
 
-`depend-on!` is exported by `(grove input)`; `disable-cache!` is exported by
-`(grove input scribble)`. Use `depend-on!` for files discovered while
-evaluating a document: Grove records those reads and checks the recorded files
+`depend-on!` and `disable-cache!` are both exported by `(grove input)`. Use
+`depend-on!` for files discovered during evaluation: Grove records those reads
+and checks the recorded files
 before reusing that document. A reader's `#:cache-dependencies` collector is
 for reader-wide files that may affect any document even when its evaluation
 does not open them; it runs before each document cache lookup. Time,
