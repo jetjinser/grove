@@ -4,7 +4,7 @@
 
 (define-module (grove math term)
   #:use-module (ice-9 match)
-  #:use-module (grove math operator)
+  #:use-module (grove math private operator)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (math-term?

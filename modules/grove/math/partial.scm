@@ -7,7 +7,7 @@
   #:use-module (grove math rule)
   #:use-module (grove math differentiation)
   #:use-module (grove math types)
-  #:use-module (grove math number)
+  #:use-module (grove math private number)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
   #:export (math-partial-rule-definitions math-partial-rules))

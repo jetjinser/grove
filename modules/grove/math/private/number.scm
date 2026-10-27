@@ -1,7 +1,7 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(define-module (grove math number)
+(define-module (grove math private number)
   #:use-module (grove string-fun)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-13)

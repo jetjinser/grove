@@ -6,7 +6,7 @@
   #:use-module (grove private snapshot)
   #:use-module (grove math derivation)
   #:use-module (grove math private checker-polynomial)
-  #:use-module (grove math number)
+  #:use-module (grove math private number)
   #:use-module (grove math premise)
   #:use-module (grove math rule)
   #:use-module (grove math rewrite)

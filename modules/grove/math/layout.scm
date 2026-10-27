@@ -5,7 +5,7 @@
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove ir)
   #:use-module (grove math term)
-  #:use-module (grove math operator)
+  #:use-module (grove math private operator)
   #:use-module (grove math expression)
   #:use-module (grove math declaration)
   #:use-module (grove math private function-derivative)

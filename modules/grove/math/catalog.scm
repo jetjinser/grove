@@ -8,7 +8,7 @@
   #:use-module (grove math rule)
   #:use-module (grove math layout)
   #:use-module (grove math term)
-  #:use-module (grove math operator)
+  #:use-module (grove math private operator)
   #:use-module (grove ir)
   #:use-module ((grove math private notation) #:prefix notation:)
   #:use-module (ice-9 format)

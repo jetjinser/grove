@@ -2,7 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 (define-module (grove math private polynomial)
   #:use-module ((grove math private exact-polynomial) #:prefix exact:)
-  #:use-module (grove math number)
+  #:use-module (grove math private number)
   #:use-module (grove math term)
   #:use-module (grove math scalar)
   #:use-module (ice-9 match)

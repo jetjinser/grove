@@ -2,7 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math declaration)
-  #:use-module (grove math operator)
+  #:use-module (grove math private operator)
   #:use-module (srfi srfi-1)
   #:export (math-function-signature math-function-declaration?
             math-scalar-declared? math-variable-role math-field-declaration? math-space-declaration?

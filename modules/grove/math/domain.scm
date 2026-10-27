@@ -3,7 +3,7 @@
 
 (define-module (grove math domain)
   #:use-module (grove math term)
-  #:use-module (grove math operator)
+  #:use-module (grove math private operator)
   #:use-module (grove math diagnostic)
   #:use-module (grove math declaration)
   #:use-module (grove math premise)
