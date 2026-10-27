@@ -210,7 +210,8 @@
 
 (let* ((source-directory (string-copy "sources"))
        (output-directory (string-copy "output"))
-       (source-creator (lambda (_prefix _destination) "created"))
+       (source-creator (lambda (prefix destination)
+                         (list prefix destination)))
        (extra-sources (list (string-copy "theme.css")))
        (renderers (list (lambda (_) '())))
        (project (make-project
@@ -225,11 +226,15 @@
   (set-car! extra-sources "changed.css")
   (set-car! renderers #f)
   (test-equal "projects snapshot caller-owned path and source values"
-    '("sources" "output" ("theme.css") #t)
+    '("sources" "output" ("theme.css") ("note" "destination"))
     (list (project-source-directory project)
           (project-output-directory project)
           (project-extra-sources project)
-          (eq? (project-create-source project) source-creator)))
+          (create-project-source project
+            #:prefix "note" #:destination "destination")))
+  (test-equal "source creation defaults to the project source directory"
+    '("note" "sources")
+    (create-project-source project #:prefix "note"))
   (let ((exposed-sources (project-extra-sources project))
         (exposed-renderers (project-renderers project)))
     (set-car! exposed-sources "changed again.css")

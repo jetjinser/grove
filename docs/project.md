@@ -406,7 +406,9 @@ procedure. Grove does not choose a source format or template. A generic project
 may omit this callback; `grove new` then reports that creation is unavailable.
 The procedure receives the optional positional prefix and destination and
 returns the path to print. This keeps naming and file-format rules with the
-project that owns them.
+project that owns them. Scheme callers can invoke the same policy with
+`create-project-source` from `(grove project)`; omitting `#:destination` uses
+the project's source directory.
 
 Forester provides that policy in `(forester project new)`. The default
 constructor installs it automatically; advanced `make-site-project` users can

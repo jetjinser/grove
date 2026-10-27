@@ -28,7 +28,7 @@
   #:export (project?
             make-project
             project-source-directory
-            project-create-source
+            create-project-source
             project-renderers
             collect-project-sources
             project-extra-sources
@@ -160,7 +160,7 @@
   (cache? project-cache?)
   (browse project-browse)
   (pipelines project-pipelines)
-  (create-source project-create-source))
+  (create-source project-create-source-procedure))
 
 (define (project-source-directory project)
   (snapshot-data (project-source-directory/raw project)))
@@ -170,6 +170,17 @@
 
 (define (project-renderers project)
   (append (project-renderers/raw project) '()))
+
+(define* (create-project-source project #:key prefix
+                                (destination (project-source-directory project)))
+  "Create a source through PROJECT's configured creator.
+
+PREFIX and DESTINATION are passed to the project-owned procedure. DESTINATION
+defaults to the project's source directory."
+  (let ((creator (project-create-source-procedure project)))
+    (unless creator
+      (error "this project does not define how to create a source file"))
+    (creator prefix destination)))
 
 (define (project-output-directory project)
   (snapshot-data (project-output-directory/raw project)))
@@ -265,7 +276,7 @@
     #:output-directory output-directory
     #:cache? cache?
     #:browse (project-browse project)
-    #:create-source (project-create-source project)))
+    #:create-source (project-create-source-procedure project)))
 
 (define (read-source-with-context path read-source)
   (call-with-project-stage 'read path (lambda () (read-source path))))

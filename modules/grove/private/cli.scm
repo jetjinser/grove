@@ -4,7 +4,6 @@
 (define-module (grove private cli)
   #:use-module (grove project)
   #:use-module (grove build)
-  #:use-module (grove private project new)
   #:use-module (grove serve)
   #:use-module (grove private cache-dir)
   #:use-module (grove private store-gc)
@@ -305,7 +304,7 @@ with HELP overrides keyed by command."
                                     (string-append (getcwd) "/" destination)))))
          (call-with-loaded-project filename
            (lambda (project)
-             (display (create-source project
+             (display (create-project-source project
                         #:prefix (assq-ref options 'prefix)
                         #:destination (or destination
                                           (project-source-directory project))))

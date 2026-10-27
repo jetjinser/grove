@@ -9,11 +9,16 @@
 
 (test-begin "grove artifact store")
 
-;;     The store directory honors GROVE_STORE_DIR, so the tests can
-;;     point it at a throwaway tree unique to this process.
-(setenv "GROVE_STORE_DIR"
-        (string-append "/tmp/kilo/artifact-store-test-"
-                       (number->string (getpid))))
+;;     Both store and outputs live under a process-unique root. Remove
+;;     leftovers in case the operating system has reused this PID.
+(define root
+  (string-append "/tmp/kilo/artifact-store-test-"
+                 (number->string (getpid))))
+(define store (string-append root "/store"))
+(define output (string-append root "/output"))
+
+(system* "rm" "-rf" root)
+(setenv "GROVE_STORE_DIR" store)
 
 (define text "hello rendered page\n")
 (define fingerprint (content-fingerprint text))
@@ -23,7 +28,7 @@
 
 (test-equal "restore from an absent blob reports failure"
   #f
-  (restore-artifact-blob! fingerprint "/tmp/kilo/artifact-store-test-out/missing"))
+  (restore-artifact-blob! fingerprint (string-append output "/missing")))
 
 (test-assert "publish stores the bytes under the fingerprint"
   (publish-artifact-blob! fingerprint
@@ -41,17 +46,19 @@
 
 (test-equal "restore materializes the bytes at the output path"
   #t
-  (restore-artifact-blob! fingerprint "/tmp/kilo/artifact-store-test-out/nested/page.html"))
+  (restore-artifact-blob! fingerprint
+    (string-append output "/nested/page.html")))
 
 (test-equal "restored bytes match the content"
   text
-  (call-with-input-file "/tmp/kilo/artifact-store-test-out/nested/page.html"
+  (call-with-input-file (string-append output "/nested/page.html")
     (lambda (port)
       (get-string-all port))))
 
 (test-equal "restoring over an existing output replaces the bytes"
   #t
-  (restore-artifact-blob! fingerprint "/tmp/kilo/artifact-store-test-out/nested/page.html"))
+  (restore-artifact-blob! fingerprint
+    (string-append output "/nested/page.html")))
 
 ;;     The output may be a hard link to the store blob after a
 ;;     restore; writing new bytes through a truncating in-place
@@ -88,6 +95,7 @@
 
 (test-equal "corrupt blob restore reports failure"
   #f
-  (restore-artifact-blob! fingerprint "/tmp/kilo/artifact-store-test-out/corrupt"))
+  (restore-artifact-blob! fingerprint (string-append output "/corrupt")))
 
 (test-end "grove artifact store")
+(system* "rm" "-rf" root)
