@@ -8,8 +8,9 @@
             call-with-staging-file!))
 
 (define (file-signature path)
-  "Identify the current file, including same-size edits and atomic replacements."
-  (let ((info (stat path #f)))
+  "Identify PATH's target file, including same-size edits and replacements.
+Return #f when PATH is missing or cannot be inspected."
+  (let ((info (false-if-exception (stat path))))
     (and info
          (list (stat:type info) (stat:dev info) (stat:ino info) (stat:size info)
                (stat:mtime info) (stat:mtimensec info)

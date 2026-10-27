@@ -59,6 +59,7 @@
 (define output (string-append root "/build"))
 (define source (string-append root "/article.plant"))
 (define external (string-append root "-external.css"))
+(define external-alias (string-append root "-external-alias.css"))
 (define (write-file path text)
   (call-with-output-file path (lambda (port) (display text port))))
 (define (snapshot) (watch-snapshot (list root) (list external) output))
@@ -93,12 +94,20 @@
         (write-file external "restored")
         (test-equal "external dependency restoration is observed" (list external)
           (snapshot-changes missing (snapshot)))))
+    (symlink external external-alias)
+    (let ((before (watch-snapshot '() (list external-alias) output)))
+      (usleep 1000)
+      (write-file external "changed through alias")
+      (test-equal "watcher observes edits through file symlinks" (list external-alias)
+        (snapshot-changes before
+                          (watch-snapshot '() (list external-alias) output))))
     (symlink root (string-append root "/cycle"))
     (test-assert "directory symlinks do not cause recursive scans" (< (length (snapshot)) 10))
     (test-equal "path normalization also works for nonexistent outputs"
       (string-append root "/preview") (absolute-path (string-append root "/a/../preview"))))
   (lambda ()
     (system* "rm" "-rf" root)
+    (when (file-exists? external-alias) (delete-file external-alias))
     (when (file-exists? external) (delete-file external))))
 (let ((listener (socket AF_INET SOCK_STREAM 0)))
   (dynamic-wind

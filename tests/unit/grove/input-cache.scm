@@ -110,6 +110,17 @@
         (put dependency "one")
         (test-equal "restoring an absent input invalidates the build memo"
           before (input-fingerprint dependency))))
+    (let ((alias (string-append root "/dependency-alias")))
+      (symlink dependency alias)
+      (parameterize ((current-input-fingerprints (make-hash-table)))
+        (let ((before (input-fingerprint alias))
+              (info (stat dependency)))
+          (put dependency "two")
+          (utime dependency (stat:atime info) (stat:mtime info))
+          (test-assert "input memo notices same-size edits through file symlinks"
+            (not (equal? before (input-fingerprint alias))))))
+      (delete-file alias)
+      (put dependency "one"))
     (build-project (project #t) #:progress
       (lambda (stage detail)
         (when (eq? stage 'input-cache) (set! statuses (cons detail statuses)))
