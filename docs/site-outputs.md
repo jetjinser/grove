@@ -55,7 +55,7 @@ of the analyzed model. A renderer can also invoke an external tool when its
 input is model data, such as source embedded in a page, and the generated asset
 belongs to that content. Use a renderer rule when a custom content node should
 become inline output markup. A pipeline procedure receives an input lookup and
-an emit callback; the lookup resolves only declared `#:inputs` to materialized
-paths, while emit accepts a relative artifact path and string or bytevector
-content. It must emit at least one artifact. See the
+an emit callback; the lookup resolves each unique declared `#:inputs` path to
+a materialized path, while emit accepts a relative artifact path and string or
+bytevector content. It must emit at least one artifact. See the
 [customization guide](customizing.md) for examples.

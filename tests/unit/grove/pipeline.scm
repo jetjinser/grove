@@ -111,6 +111,12 @@
          (module-public-interface (resolve-module '(grove pipeline)))
          'asset-pipeline?)))
 
+(test-error "asset pipelines reject duplicate input paths" #t
+  (make-asset-pipeline
+    #:name "duplicate-input"
+    #:inputs (list input-a input-a)
+    #:procedure (lambda (_input _emit) #t)))
+
 (let ((merged
        (merge-pipeline-artifacts
         (list (make-artifact "shared.css" "pipeline"))

@@ -25,16 +25,19 @@
   "Construct a file-driven build step named NAME.
 
 PROCEDURE is called with an input lookup and an emit callback. The lookup
-accepts only declared INPUTS and returns a materialized path. EMIT accepts a
-relative artifact path and a string or bytevector; the procedure must emit at
-least one artifact, and its own return value is ignored. VERSION distinguishes
-behavior depending on state Grove cannot track, such as an external toolchain."
+accepts only declared INPUTS, which must have unique paths, and returns a
+materialized path. EMIT accepts a relative artifact path and a string or
+bytevector; the procedure must emit at least one artifact, and its own return
+value is ignored. VERSION distinguishes behavior depending on state Grove
+cannot track, such as an external toolchain."
   (unless (and (string? name) (not (string-null? name)))
     (error "asset pipeline requires a name" name))
   (unless (string? version)
     (error "asset pipeline version must be a string" version))
   (unless (and (list? inputs) (every valid-input? inputs))
     (error "asset pipeline inputs must be a list of paths" inputs))
+  (unless (= (length inputs) (length (delete-duplicates inputs string=?)))
+    (error "asset pipeline inputs must be unique" inputs))
   (unless (procedure? procedure)
     (error "asset pipeline requires a procedure" procedure))
   (%make-asset-pipeline (snapshot-data name)
