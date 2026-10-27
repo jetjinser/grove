@@ -43,6 +43,7 @@
 
 (define (artifact-path? path)
   (and (non-empty-string? path)
+       (not (string-index path #\nul))
        (every (lambda (part)
                 (and (not (string-null? part))
                      (not (member part '("." "..")))))

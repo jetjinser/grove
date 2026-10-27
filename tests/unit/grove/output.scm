@@ -65,6 +65,8 @@
 
 (test-error "artifact sources reject empty paths" #t
   (make-artifact "page.txt" "content" '("")))
+(test-error "artifact paths reject NUL characters before writing" #t
+  (make-artifact (string-append "page" (string #\nul) ".txt") "content"))
 (test-error "artifact prefix requires a relative path" #t
   (prefix-artifacts "../assets" '()))
 (test-error "artifact prefix requires a list of artifacts" #t

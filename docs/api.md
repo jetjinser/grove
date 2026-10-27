@@ -116,6 +116,7 @@ Artifacts use the same ownership rule: `make-artifact` and
 `artifact-content` accessor returns a fresh string or bytevector.
 `prefix-artifacts` places a validated artifact set under a relative output
 directory while preserving each artifact's content and source dependencies.
+Artifact paths reject absolute paths, empty or traversal components, and NUL.
 
 HTML presentation, home-link, and navigation-link values apply the same rule
 to their SXML, labels, IDs, and attribute lists. Their accessors return copies
