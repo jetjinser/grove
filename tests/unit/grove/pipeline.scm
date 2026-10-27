@@ -195,6 +195,11 @@
     "pipeline"
     (artifact-content (car merged))))
 
+(test-error "pipeline artifacts cannot share an output path" #t
+  (validate-artifacts
+    (list (make-artifact "shared.css" "first pipeline")
+          (make-artifact "shared.css" "second pipeline"))))
+
 (let ((cache (make-content-cache "pipeline-test")))
   (test-equal "content cache starts empty" #f
     (content-cache-ref cache "font-key"))
