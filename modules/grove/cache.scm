@@ -68,10 +68,11 @@
     (and fingerprint (read-content-blob fingerprint))))
 
 (define (content-cache-store! cache key bytes)
-  "Store bytevector BYTES for KEY; return #f if the cache is unavailable.
-Callers that reuse KEY must ensure its value is stable for the intended lifetime."
+  "Store bytevector BYTES for KEY; return #t only when its blob and index are available.
+Later reads may still miss if an entry disappears or becomes invalid. Callers
+must ensure that a reused KEY remains stable for the intended lifetime."
   (unless (bytevector? bytes)
     (error "content cache stores bytevectors" bytes))
   (let* ((identity (content-cache-identity cache key))
-         (fingerprint (publish-content-blob! bytes)))
-    (write-cache-index identity fingerprint)))
+         (fingerprint (store-content-blob! bytes)))
+    (and fingerprint (write-cache-index identity fingerprint))))

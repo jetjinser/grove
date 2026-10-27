@@ -214,6 +214,22 @@
     bytes
     (content-cache-ref cache "key")))
 
+(let* ((bytes (string->utf8 "content whose cache blob path is blocked"))
+       (artifact-directory (string-append store "/artifacts"))
+       (blob-path (string-append artifact-directory "/"
+                                 (content-fingerprint bytes)))
+       (cache (make-content-cache "blocked-content-cache")))
+  (unless (file-exists? artifact-directory)
+    (mkdir artifact-directory))
+  (mkdir blob-path)
+  (test-equal "content cache reports a failed blob write"
+    #f
+    (content-cache-store! cache "key" bytes))
+  (test-equal "content cache does not index a missing blob"
+    #f
+    (content-cache-ref cache "key"))
+  (rmdir blob-path))
+
 (test-error "content cache rejects empty keys" #t
   (content-cache-ref (make-content-cache "pipeline-test") ""))
 
