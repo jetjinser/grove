@@ -50,11 +50,12 @@ the renderer configuration is cacheable; project-wide or untracked changes
 fall back to the full renderer. Keep the normal full renderer for initial
 builds and as the explicit fallback.
 
-Asset pipelines remain separate because they declare file inputs and drive
-external tools. Use a renderer for a projection of the analyzed model; use a
-pipeline when generated output depends on declared files or external tool
-execution. A pipeline procedure receives an input lookup and an emit callback;
-the lookup resolves only declared `#:inputs` to materialized paths, while emit
-accepts a relative artifact path and string or bytevector content. It must emit
-at least one artifact. See the [customization guide](customizing.md) for
-examples.
+Asset pipelines consume declared file inputs and emit artifacts independently
+of the analyzed model. A renderer can also invoke an external tool when its
+input is model data, such as source embedded in a page, and the generated asset
+belongs to that content. Use a renderer rule when a custom content node should
+become inline output markup. A pipeline procedure receives an input lookup and
+an emit callback; the lookup resolves only declared `#:inputs` to materialized
+paths, while emit accepts a relative artifact path and string or bytevector
+content. It must emit at least one artifact. See the
+[customization guide](customizing.md) for examples.

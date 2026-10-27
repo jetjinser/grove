@@ -23,7 +23,8 @@ This is the shortest path from “I want to change X” to the right Grove API.
 | content before Forester analysis | content transforms | `make-forester-project #:transforms` |
 | content before a custom site's analysis | content transforms | `make-site-project #:transforms` |
 | copy a directory of static files | a renderer | `make-static-assets-renderer` |
-| generate files from declared inputs with an external tool | an asset pipeline | `#:pipelines` |
+| generate artifacts from declared project files with an external tool | an asset pipeline | `#:pipelines` |
+| turn source embedded in the analyzed model into output assets | a renderer | `#:renderers` or `#:additional-renderers` |
 | choose the complete renderer set for a site | a renderer list | `make-site-project #:renderers` |
 | cache behavior for any project kind | project options | `project-with-options #:cache?` |
 | renderer-set cache eligibility | cached renderer constructor | `make-*-renderer #:cache?`, `#:rules-id` |
@@ -69,9 +70,10 @@ non-Forester site or when you need lower-level site configuration.
 ## Add output from an external tool
 
 Keep the tool invocation in project Scheme and describe its inputs and output
-as an asset pipeline. A `make-asset-pipeline` value from `(grove pipeline)` can
-be passed to the compact Forester constructor, which keeps its standard reader,
-analyzer, and HTML renderer:
+as an asset pipeline when it consumes declared project files. A
+`make-asset-pipeline` value from `(grove pipeline)` can be passed to the compact
+Forester constructor, which keeps its standard reader, analyzer, and HTML
+renderer:
 
 ```scheme
 ;; diagram-pipeline is a project-owned asset-pipeline value.
@@ -88,6 +90,16 @@ tracks declared files and loaded Scheme code. Include tool identity in the
 pipeline's `#:version` when Grove cannot observe it, as the Graphviz adapter
 does.
 
+Choose the extension point by the data flow, not by whether the adapter starts
+a process. A pipeline consumes declared project files and emits artifacts
+independently of the analyzed model. A renderer can consume values already in
+the model and emit corresponding assets; the
+[hackable math experiment](../examples/hackable-math/README.md) uses this for
+Typst and LaTeX source embedded in pages. A render rule can turn a custom
+content node into inline markup; the same experiment demonstrates this with
+SMathML. Declare external files and tool identity in the renderer or HTML
+configuration so cache reuse stays correct.
+
 The ordinary path needs no cache key: Grove wraps plain renderer procedures
 for caching and tracks project inputs. A pipeline may omit `#:inputs` when it
 does not read project files, and may keep the default empty `#:version` when
@@ -98,12 +110,12 @@ renderer reads additional files or has hidden configuration; declare those
 dependencies so the cache stays correct.
 
 Use a Scheme expression in `.plant` when the tool's result belongs inline in
-that document. Use a pipeline when the result should be a separate build file.
-Both keep the integration code in the project. For inline expressions, declare
-file reads with `depend-on!` from `(grove input scribble)` and opt out of reader
-caching when behavior depends on untracked external state. Pipelines use Grove's
-artifact validation and content-addressed cache; declare opaque tool identity
-with `#:version`.
+that document. Declare file reads with `depend-on!` from `(grove input
+scribble)` and opt out of reader caching when behavior depends on untracked
+external state. Use a pipeline when the tool consumes declared project files
+and emits standalone build artifacts. Both keep the integration code in the
+project. Pipelines use Grove's artifact validation and content-addressed cache;
+declare opaque tool identity with `#:version`.
 
 ## Three renderer entry points
 
