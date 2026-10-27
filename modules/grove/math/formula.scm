@@ -19,7 +19,7 @@
             derive rewrite search search-backward simplify calculate normalize expand collect
             check-chain check-polynomial-rule check-polynomial-derivation
             check-polynomial-step check-polynomial-derivative check-polynomial-antiderivative
-            polynomial-check->content
+            polynomial-check->content antiderivative
             compute check-equation solve-poisson differentiate partial))
 
 ;; Public Formula helpers are adapters: parse fragments once, then call the

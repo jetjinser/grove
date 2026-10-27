@@ -24,6 +24,14 @@ Grove separates formula text, mathematical meaning, and visual layout:
 Article commands accept semantic expressions, and Formula helpers wrap the
 same semantic operations for text input.
 
+Formula helpers distinguish constructing an expression from calculating it:
+`derivative` constructs a symbolic expression, while `differentiate` returns a
+calculation report; `partial-expression` pairs with `partial`, and
+`antiderivative-expression` pairs with `antiderivative`. Likewise,
+`poisson-particular` constructs an expression while `solve-poisson` computes a
+particular solution. The corresponding Semantic constructors build values
+directly without parsing text.
+
 Import `(grove math semantic)`, `(grove math formula)`, and
 `(grove math notation)` with the respective prefixes. The
 [math-derivations example](../examples/showcases/math-derivations/project.scm)
