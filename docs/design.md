@@ -64,8 +64,9 @@ and asset pipelines.
 ## Resource identity
 
 [Resource identity and RDF projection](resource-identity-rdf.md) explores
-whether IRIs can unify global resource names and how Grove relations could be
-projected into RDF without replacing Grove's own relation model.
+IRI-based identity and RDF projection for Grove's relations. It records the
+tested Flora mapping, current design direction, and the remaining identity and
+vocabulary decisions without committing to a public API.
 
 ## Testing
 
