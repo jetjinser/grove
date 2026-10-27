@@ -22,7 +22,6 @@ This is the shortest path from “I want to change X” to the right Grove API.
 | a site-wide sitemap, feed, or graph projection | additional renderers | Forester: `make-forester-project #:additional-renderers`; general sites: `make-site-project #:renderers` |
 | content before Forester analysis | content transforms | `make-forester-project #:transforms` |
 | content before a custom site's analysis | content transforms | `make-site-project #:transforms` |
-| how `.plant` files become Forester pages | a page reader | `make-forester-project #:read-page` |
 | copy a directory of static files | a renderer | `make-static-assets-renderer` |
 | generate files from declared inputs with an external tool | an asset pipeline | `#:pipelines` |
 | choose the complete renderer set for a site | a renderer list | `make-site-project #:renderers` |

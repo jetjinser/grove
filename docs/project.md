@@ -82,13 +82,8 @@ Content IR before Forester analysis with `#:transforms` and add cached
 site-wide outputs through renderers; see
 [site outputs](site-outputs.md).
 
-Pass `#:read-page` to `make-forester-project` to replace how `.plant` files
-become site pages while retaining Forester analysis, HTML, and the other project
-defaults. The procedure receives a source path and must return a `site-page?`.
-Use `make-site-project` when the project needs a different analyzed model or
-otherwise needs to compose the complete site lifecycle. Its analyzer receives
-the assembled site; the standard Forester HTML renderer expects the resulting
-model to be a Forest.
+Use `make-site-project` when the project needs a different reader or analyzer,
+or otherwise needs to compose the complete site lifecycle.
 
 ## Execution and paths
 

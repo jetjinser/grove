@@ -854,37 +854,6 @@
         (test-assert "Forester projects transform content and keep standard HTML"
           (string-contains transformed-html
                            "Added before Forester analysis."))
-        (let* ((reader-output (string-append root "/reader-output"))
-               (default-read-page
-                 (make-page-reader (make-scribble-document-reader)))
-               (custom-read-page
-                 (lambda (path)
-                   (let* ((page (default-read-page path))
-                          (document (site-page-document page)))
-                     (make-site-page
-                       (site-page-id page)
-                       (site-page-title page)
-                       (make-content-document
-                         (append
-                           (content-document-children document)
-                           (list (make-content-element
-                                   'paragraph
-                                   '("Added by the custom page reader."))))
-                         (content-document-source document))
-                       (site-page-source page)
-                       #:metadata (site-page-metadata page)))))
-               (reader-project
-                 (make-forester-project
-                   #:home "hello"
-                   #:source-directory (string-append root "/plants")
-                   #:output-directory reader-output
-                   #:read-page custom-read-page)))
-          (build-project reader-project)
-          (test-assert
-            "Forester projects can replace the page reader and keep standard HTML"
-            (string-contains
-              (read-test-file (string-append reader-output "/index.html"))
-              "Added by the custom page reader.")))
         (test-assert "Forester HTML options configure the default renderer"
           (and (string-contains text-html "Hello")
                (string-contains topic-html "Topic")
