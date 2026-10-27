@@ -12,6 +12,7 @@
   #:use-module (grove private pipeline)
   #:use-module (grove private project artifacts)
   #:use-module (grove private project state)
+  #:use-module (grove private renderer)
   #:use-module (grove build)
   #:use-module (grove private build-state)
   #:use-module (grove collect)
@@ -53,20 +54,6 @@
             analyze-project
             browse-project))
 
-(define renderer-configurations
-  (@@ (grove build) renderer-configurations))
-(define cached-renderer?
-  (@@ (grove build) cached-renderer?))
-(define cached-renderer-cache?
-  (@@ (grove build) cached-renderer-cache?))
-(define cached-renderer-configuration
-  (@@ (grove build) cached-renderer-configuration))
-(define cached-renderer-procedure
-  (@@ (grove build) cached-renderer-procedure))
-(define cached-renderer-render-changed
-  (@@ (grove build) cached-renderer-render-changed))
-(define cached-renderer-inputs
-  (@@ (grove build) cached-renderer-inputs))
 (define asset-pipeline-name
   (@@ (grove pipeline) asset-pipeline-name))
 (define asset-pipeline?

@@ -5,15 +5,13 @@
 (define-module (tests unit grove build)
   #:use-module (srfi srfi-64)
   #:use-module (grove build)
+  #:use-module (grove private renderer)
   #:use-module (grove private build-state)
   #:use-module (grove output)
   #:use-module (grove project))
 
 (define render-with-cache
   (@@ (grove project) render-with-cache))
-(define renderer-configurations
-  (@@ (grove build) renderer-configurations))
-
 (test-begin "grove build")
 
 (test-assert "cached renderer representation stays private"

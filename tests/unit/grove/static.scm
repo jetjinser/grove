@@ -9,14 +9,8 @@
   #:use-module (srfi srfi-64)
   #:use-module (grove output)
   #:use-module (grove build)
+  #:use-module (grove private renderer)
   #:use-module (grove render static))
-
-(define cached-renderer-procedure
-  (@@ (grove build) cached-renderer-procedure))
-(define cached-renderer-inputs
-  (@@ (grove build) cached-renderer-inputs))
-(define cached-renderer-render-changed
-  (@@ (grove build) cached-renderer-render-changed))
 
 (define static-root (format #f "/tmp/grove-static-test-~a" (getpid)))
 (define source-directory (string-append static-root "/static"))

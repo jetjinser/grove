@@ -15,6 +15,7 @@
   #:use-module (forester site)
   #:use-module (forester style html)
   #:use-module (grove build)
+  #:use-module (grove private renderer)
   #:use-module (grove ir)
   #:use-module (grove render html)
   #:use-module (grove render context)
@@ -30,11 +31,6 @@
   #:use-module (grove style)
   #:use-module (grove style html)
   #:use-module (tests unit forester fixtures))
-
-(define renderer-configurations
-  (@@ (grove build) renderer-configurations))
-(define cached-renderer-cache?
-  (@@ (grove build) cached-renderer-cache?))
 
 (test-begin "forester renderers")
 

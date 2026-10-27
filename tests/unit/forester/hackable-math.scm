@@ -10,6 +10,7 @@
   #:use-module (forester commands)
   #:use-module (forester site)
   #:use-module (grove build)
+  #:use-module (grove private renderer)
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove site)
@@ -18,9 +19,6 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64))
-
-(define cached-renderer-procedure
-  (@@ (grove build) cached-renderer-procedure))
 
 (define environment (default-environment scribble))
 (eval '(use-modules (forester commands)
