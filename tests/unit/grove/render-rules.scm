@@ -337,13 +337,17 @@
     (artifact-path (car (html-style-stylesheets style)))))
 
 
-(let* ((add-text
-         (lambda (document)
-           (make-content-document
-             (append (content-document-children document)
-                     (list (make-content-text "x"))))))
+(define (append-content-text value)
+  (lambda (document)
+    (make-content-document
+      (append (content-document-children document)
+              (list (make-content-text value))))))
+
+(let* ((add-a (append-content-text "a"))
+       (add-b (append-content-text "b"))
+       (add-c (append-content-text "c"))
        (document (make-content-document '()))
-       (composed (compose-content-transforms add-text add-text)))
+       (composed (compose-content-transforms add-a add-b)))
   (test-equal "identity is a valid content transform"
     0 (length (content-document-children
                 (transform-document identity document))))
@@ -352,19 +356,27 @@
     (content-document-children
       (transform-document (compose-content-transforms) document)))
   (test-equal "content transforms compose in order"
-    2 (length (content-document-children
-                (transform-document composed document))))
+    '("a" "b")
+    (map content-text-value
+      (content-document-children (transform-document composed document))))
   (test-equal "content transform composition is associative"
+    '("a" "b" "c")
+    (map content-text-value (content-document-children
+      (transform-document
+        (compose-content-transforms add-a
+                                    (compose-content-transforms add-b add-c))
+        document))))
+  (test-equal "left- and right-associated transforms agree"
     (content-document-children
       (transform-document
-        (compose-content-transforms add-text
-                                    (compose-content-transforms add-text add-text))
+        (compose-content-transforms add-a
+          (compose-content-transforms add-b add-c))
         document))
     (content-document-children
       (transform-document
         (compose-content-transforms
-          (compose-content-transforms add-text add-text)
-          add-text)
+          (compose-content-transforms add-a add-b)
+          add-c)
         document))))
 
 (test-error "content transforms must be procedures" #t
