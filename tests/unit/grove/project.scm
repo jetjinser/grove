@@ -158,6 +158,13 @@
   (make-site-project #:source-directory "sources"
                      #:output-directory "output"))
 
+(let ((project (make-site-project
+                 #:source-directory "sources"
+                 #:read-page (lambda (_) #f)
+                 #:output-directory "output")))
+  (test-equal "generic site projects require an explicit renderer set"
+    '() (project-renderers project)))
+
 (define duplicate-pipelines
   (list (make-asset-pipeline
           #:name "math-assets" #:inputs '("math.typ")

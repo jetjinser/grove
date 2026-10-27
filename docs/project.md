@@ -30,7 +30,10 @@ values from the page reader, optionally transforms their Content IR, combines
 them into a `site?`, then passes the analyzed site model to renderers. Forester
 adds its linked-tree analysis on top of that site. Use this entry point when
 those page and content semantics are useful; there is no need to wrap an
-unrelated project model as a site.
+unrelated project model as a site. `make-site-project` does not select an
+output format or install a renderer: `#:renderers` is the complete output set.
+The higher-level `make-forester-project` supplies HTML and accepts peer outputs
+through `#:additional-renderers`.
 
 ## Smallest Forester site
 

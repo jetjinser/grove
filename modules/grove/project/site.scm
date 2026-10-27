@@ -39,7 +39,8 @@ READ-PAGE constructs each page. ANALYZE receives the assembled Site and may
 return any project model. Provide SOURCE-DIRECTORY or COLLECT-SOURCES, along
 with READ-PAGE and OUTPUT-DIRECTORY. When both source options are supplied,
 COLLECT-SOURCES determines the inputs and SOURCE-DIRECTORY remains available
-as the default source-creation destination."
+as the default source-creation destination. RENDERERS is the complete output
+set; this general constructor installs no format-specific renderer."
   ;;     These values are captured by the project callbacks below. Copy their
   ;;     declarative containers now, while keeping caller procedures shared.
   (set! title (snapshot-data title))
