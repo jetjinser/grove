@@ -170,14 +170,13 @@ correctly. See [project.md](project.md#dependencies-and-caching).
 | | options | context |
 | --- | --- | --- |
 | lifetime | configuration snapshot | one render pass |
-| shape | typed record; list and string inputs are copied | symbol alist with typed accessors |
+| shape | typed record; list and string inputs are copied | open symbol-keyed context value |
 | read by | renderer entry points | rules and custom renderers |
-| examples | style, rules, presentation, routes | forest, page, locale, messages |
+| examples | style, rules, presentation, routes | model and renderer-defined values |
 
 Use `make-html-options` / `make-text-options` / `make-gemtext-options` for
-configuration.  Use `render-context-page`, `render-context-locale`, and the
-other typed accessors inside a rule.  `render-context-ref` remains available
-for project-defined keys.
+configuration. Use `render-context-ref` to read fields inside a rule;
+project-specific fields remain available through the same interface.
 
 ## Minimal examples
 

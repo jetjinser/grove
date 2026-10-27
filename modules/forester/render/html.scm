@@ -55,7 +55,7 @@
 
 (define (hreflang-links forest page routes context)
   (let ((group (page-translation-group
-                 page (render-context-translation-groups context))))
+                 page (render-context-ref context 'translation-groups))))
     (if (or (not group) (< (length group) 2))
         '()
         (append
@@ -76,7 +76,7 @@
 
 (define (alternate-og-locales forest page context)
   (let ((group (page-translation-group
-                 page (render-context-translation-groups context))))
+                 page (render-context-ref context 'translation-groups))))
     (if (not group)
         '()
         (let loop ((rest group) (acc '()))
@@ -91,7 +91,7 @@
 
 (define (language-switcher-sxml forest page routes context)
   (let ((group (page-translation-group
-                 page (render-context-translation-groups context))))
+                 page (render-context-ref context 'translation-groups))))
     (if (or (not group) (< (length group) 2))
         '()
         `(nav (@ (class "language-switcher")
@@ -230,7 +230,9 @@ backlog report collects the mention."
                       #:forest forest
                       #:routes routes
                       #:page page
-                      #:anchor-prefix anchor-prefix))
+                      #:anchor-prefix anchor-prefix
+                      #:hreflang? #t
+                      #:language-switcher? #t))
       #:internal-handlers (append
                    extra-handlers
                    (page-content-handlers forest routes page anchor-prefix))

@@ -57,12 +57,14 @@
          groups))
   (test-equal "site render context can explicitly omit translation groups"
     '()
-    (render-context-translation-groups
-      (make-site-render-context forest #:translation-groups '())))
+    (render-context-ref
+      (make-site-render-context forest #:translation-groups '())
+      'translation-groups))
   (test-equal "site render context accepts explicit page groups"
     groups
-    (render-context-translation-groups
-      (make-site-render-context forest #:translation-groups groups)))
+    (render-context-ref
+      (make-site-render-context forest #:translation-groups groups)
+      'translation-groups))
   (test-error "site context rejects malformed translation groups"
     #t
     (make-site-render-context forest #:translation-groups '((42 . ()))))

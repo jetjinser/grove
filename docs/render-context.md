@@ -13,7 +13,7 @@ concurrently without sharing state.
 
 | Context | Lifetime | Contents | Does not belong here |
 | --- | --- | --- | --- |
-| `render-context` | one site/page render | forest, routes, page, anchor prefix, locale, messages, site URL, default locale, hreflang, language switcher, translation groups, OG defaults | build progress, cache, reader modules, math assumptions |
+| `render-context` | one render pass | values supplied by the renderer or project | build progress, cache, reader modules, math assumptions |
 | build context | one build | progress reporting, input cache, output root, dirty paths | page locale, presentation |
 | reader context | one source read | reader locale, module manifest, source paths | HTML/OG metadata |
 | math context | one evaluation | assumptions, derivation state | site rendering |
@@ -24,9 +24,9 @@ own layers; merging them would turn the context into a new global state.
 ## Shape
 
 ```scheme
-(make-render-context #:page page #:locale "en" #:project/extra "value")
-(render-context-ref context 'page)
-(render-context-with context #:page next-page)
+(make-render-context #:model model #:project/extra "value")
+(render-context-ref context 'model)
+(render-context-with context #:model next-model)
 (render-context-with context #:hreflang? #f)        ; explicit false
 (render-context-without context 'og-image)          ; remove
 (render-context-has? context 'og-image)
@@ -36,8 +36,8 @@ own layers; merging them would turn the context into a new global state.
   false value are distinct; use `render-context-has?` to tell them apart.
 - `render-context-with` overlays every supplied value, including `#f`.  Omit a
   key to inherit it; use `render-context-without` to remove a key.
-- Unknown namespaced keys are allowed, so projects can add data without
-  changing the core record.
+- Context keys are open-ended. Grove supplies no domain-specific keys or
+  defaults; renderers and projects define the values they need.
 - Constructors and `render-context-ref` copy mutable strings and pair
   structure. Opaque values such as records, procedures, and hash tables remain
   shared; treat those values as read-only for the render pass. Built-in
@@ -54,7 +54,8 @@ own layers; merging them would turn the context into a new global state.
 
 ## Where contexts are built
 
-`(forester render context)` provides `make-site-render-context`. Each HTML,
+`(forester render context)` provides `make-site-render-context`, which defines
+the fields and defaults used by Forester. Each HTML,
 text, or gemtext entry point builds one site-level context for that render pass
 and derives page contexts from it with `render-context-with`. Separate
 renderer entry points build their own contexts from their options. A custom

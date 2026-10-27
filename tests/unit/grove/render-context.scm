@@ -39,12 +39,12 @@
   (set-car! (cdar groups) 'changed)
   (test-equal "translation groups are copied as ordinary context data"
     '(("guide" english chinese))
-    (render-context-translation-groups context))
-  (let ((exposed (render-context-translation-groups context)))
+    (render-context-ref context 'translation-groups))
+  (let ((exposed (render-context-ref context 'translation-groups)))
     (set-car! (cdar exposed) 'changed-again))
   (test-equal "translation group access cannot mutate a context"
     '(("guide" english chinese))
-    (render-context-translation-groups context)))
+    (render-context-ref context 'translation-groups)))
 
 (let* ((value (string-copy "overlay"))
        (base (make-render-context #:page "base"))
@@ -53,48 +53,12 @@
   (test-equal "context derivation snapshots newly supplied values"
     "overlay" (render-context-ref derived 'custom)))
 
-(let ((context (make-render-context #:forest "forest"
-                                    #:routes "routes"
-                                    #:page "page"
-                                    #:anchor-prefix "anchor"
-                                    #:site-url "site"
-                                    #:default-locale "en"
-                                    #:hreflang? #f
-                                    #:language-switcher? #t
-                                    #:translation-groups 'groups
-                                    #:og-image "image"
-                                    #:og-image-alt "alt"
-                                    #:locale "zh-Hans"
-                                    #:locale-object "locale-object"
-                                    #:messages "messages")))
-  (test-equal "typed forest accessor" "forest"
-    (render-context-forest context))
-  (test-equal "typed routes accessor" "routes"
-    (render-context-routes context))
-  (test-equal "typed page accessor" "page"
-    (render-context-page context))
-  (test-equal "typed anchor-prefix accessor" "anchor"
-    (render-context-anchor-prefix context))
-  (test-equal "typed site-url accessor" "site"
-    (render-context-site-url context))
-  (test-equal "typed default-locale accessor" "en"
-    (render-context-default-locale context))
-  (test-equal "typed hreflang accessor" #f
-    (render-context-hreflang? context))
-  (test-equal "typed language-switcher accessor" #t
-    (render-context-language-switcher? context))
-  (test-equal "typed translation-groups accessor" 'groups
-    (render-context-translation-groups context))
-  (test-equal "typed og-image accessor" "image"
-    (render-context-og-image context))
-  (test-equal "typed og-image-alt accessor" "alt"
-    (render-context-og-image-alt context))
-  (test-equal "typed locale accessor" "zh-Hans"
-    (render-context-locale context))
-  (test-equal "typed locale-object accessor" "locale-object"
-    (render-context-locale-object context))
-  (test-equal "typed messages accessor" "messages"
-    (render-context-messages context)))
+(let ((context (make-render-context #:model "model"
+                                    #:project/extra "value")))
+  (test-equal "context keys are open to project models and extensions"
+    "model" (render-context-ref context 'model))
+  (test-equal "namespace keys are retained as supplied"
+    "value" (render-context-ref context 'project/extra)))
 
 (let ((context (make-render-context #:hreflang? #t #:language-switcher? #f)))
   (test-equal "explicit #f is preserved"
@@ -105,12 +69,13 @@
     (not (render-context-has? context 'og-image))))
 
 (let ((context (make-render-context)))
-  (test-equal "hreflang? defaults to true"
-    #t (render-context-ref context 'hreflang?))
-  (test-equal "language-switcher? defaults to true"
-    #t (render-context-ref context 'language-switcher?)))
+  (test-assert "generic contexts invent no project defaults"
+    (and (not (render-context-has? context 'hreflang?))
+         (not (render-context-has? context 'language-switcher?)))))
 
-(let* ((base (make-render-context #:hreflang? #t #:page "base"))
+(let* ((base (make-render-context #:hreflang? #t
+                                  #:language-switcher? #t
+                                  #:page "base"))
        (derived (render-context-with base #:hreflang? #f #:page "derived")))
   (test-equal "with overlays a site-level boolean with #f"
     #f (render-context-ref derived 'hreflang?))
