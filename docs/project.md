@@ -105,11 +105,13 @@ calling its analyzer. All renderers receive the same model and return artifacts.
 `project-with-options` returns a project copy with an output-directory override,
 additional tracked inputs, or a cache setting; the original project is unchanged.
 Project constructors snapshot declared path strings and list containers.
-Project inputs and callback contexts return independent copies of mutable data
-and collection containers; Grove keeps the reader, analyzer, renderer, collector,
-and preparation procedures as the project author's callbacks. Paths returned by
-collector and preparation callbacks are copied before Grove reads them or
-includes them in analysis.
+Project inputs and callback contexts copy mutable strings, bytevectors, and
+pair/list structure when exposed. Other values, including mutable vectors,
+records, and procedures, are passed through and may remain shared; projects and
+extension types own their mutation semantics. Grove keeps the reader, analyzer,
+renderer, collector, and preparation procedures as the project author's
+callbacks. Paths returned by collector and preparation callbacks are copied
+before Grove reads them or includes them in analysis.
 
 Build reports snapshot their source, artifact, and change lists. Their list
 accessors return independent copies, so a caller can annotate or filter a
