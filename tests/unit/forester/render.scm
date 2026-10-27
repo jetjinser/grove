@@ -334,6 +334,18 @@
   (test-assert "Gemtext renderer can disable its cache explicitly"
     (not (cached-renderer-cache? (make-gemtext-renderer #:cache? #f)))))
 
+(let* ((forest (make-forest (make-site (list algebra limits))))
+       (rules-id (string-copy "rules-v1"))
+       (renderers
+         (list (make-html-renderer #:rules-id rules-id)
+               (make-text-renderer #:rules-id rules-id)
+               (make-gemtext-renderer #:rules-id rules-id)))
+       (before (renderer-configurations forest renderers)))
+  (string-set! rules-id 0 (integer->char 88))
+  (test-equal "renderer rules IDs are snapshotted at construction"
+    before
+    (renderer-configurations forest renderers)))
+
 (test-assert "declarative HTML presentation remains cacheable"
   (cached-renderer-cache?
     (make-html-renderer

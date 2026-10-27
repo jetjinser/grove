@@ -410,6 +410,7 @@ HTML renderer so text and HTML address occurrences identically."
          (messages (text-options-messages options))
          (rules (text-options-rules options)))
   (validate-rules-id rules-id)
+  (set! rules-id (snapshot-data rules-id))
   (unless (boolean? cache?)
     (error "Forester text renderer cache option must be a boolean" cache?))
   (validate-backmatter-sections backmatter)

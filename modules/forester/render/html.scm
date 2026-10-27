@@ -1307,6 +1307,7 @@ Entry points take this value with #:options."
                  (or (eq? rules empty-render-rules)
                      (and rules-id #t)))))
       (validate-rules-id rules-id)
+      (set! rules-id (snapshot-data rules-id))
       (unless (boolean? cache?)
         (error "Forester HTML renderer cache option must be a boolean" cache?))
       (validate-backmatter-sections backmatter)
