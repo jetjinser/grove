@@ -37,7 +37,8 @@
   "Build a project from Grove site pages.
 
 READ-PAGE constructs each page. ANALYZE receives the assembled Site and may
-return any project model. READ-PAGE and OUTPUT-DIRECTORY are required."
+return any project model. Provide SOURCE-DIRECTORY or COLLECT-SOURCES, along
+with READ-PAGE and OUTPUT-DIRECTORY."
   ;;     These values are captured by the project callbacks below. Copy their
   ;;     declarative containers now, while keeping caller procedures shared.
   (set! title (snapshot-data title))

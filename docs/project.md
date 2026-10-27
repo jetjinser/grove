@@ -131,11 +131,13 @@ copies. Opaque reader values such as records remain shared and follow the
 reader's own contract.
 
 The default collector walks recursively in sorted order, skipping hidden
-directories and directory symlinks. The generic project filter skips
+directories, directory symlinks, and special files; symlinks to regular files
+are included. The generic project filter skips
 dot-prefixed basenames; the site project filter selects non-hidden `.plant`
 files. `(grove collect)` exposes `collect-directory` for custom collectors;
-its optional predicate sees each file basename, and by default it accepts
-hidden file basenames while still skipping hidden directories.
+its optional predicate sees each regular file basename, and by default it
+accepts hidden file basenames while still skipping hidden directories and
+special files.
 `#:source-filter` selects
 basenames; `#:collect-sources` supplies an ordered path list instead. `#:prepare`
 runs before reading and returns additional tracked paths. It can load shared
