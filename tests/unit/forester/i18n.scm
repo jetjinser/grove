@@ -405,6 +405,20 @@
   "Sep 27, 2026" (format-date "en" "2026-09-27"))
 (test-equal "Chinese dates"
   "2026年9月27日" (format-date "zh-Hans" "2026-09-27"))
+(test-equal "Gregorian leap day is accepted"
+  "Feb 29, 2024" (format-date "en" "2024-02-29"))
+(test-equal "century years follow Gregorian leap rules"
+  (list "1900-02-29" "Feb 29, 2000")
+  (list (format-date "en" "1900-02-29")
+        (format-date "en" "2000-02-29")))
+(test-equal "impossible calendar dates pass through"
+  (list "2026-02-29" "2026-04-31" "2026-13-01" "2026-00-10")
+  (map (lambda (date) (format-date "en" date))
+       '("2026-02-29" "2026-04-31" "2026-13-01" "2026-00-10")))
+(test-equal "dates require the documented YYYY-MM-DD shape"
+  "2026-9-27" (format-date "en" "2026-9-27"))
+(test-error "date styles are validated even for unparseable input"
+  #t (format-date "en" "not-a-date" #:style 'compact))
 (test-equal "unsupported locales keep the ISO date"
   "2026-09-27" (format-date "sw" "2026-09-27"))
 (test-equal "unparseable dates pass through"
