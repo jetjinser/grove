@@ -30,8 +30,8 @@ Grove owns versus what a project supplies. Commands use `@name{body}` or
 | `@summary{...}` | Description used by `<meta>`, Open Graph, and feeds. |
 | `@og-image{assets/cover.png}` | Open Graph image; external URLs pass through, relative paths resolve against the site URL. |
 | `@og-image-alt{...}` | Alternative text for `@og-image`; defaults to the page title. |
-| `@published{YYYY-MM-DD}` | Publication date. |
-| `@updated{YYYY-MM-DD}` | Last update; must not precede `@published`. |
+| `@published{YYYY-MM-DD}` | Valid Gregorian publication date. |
+| `@updated{YYYY-MM-DD}` | Valid Gregorian update date; must not precede `@published`. |
 | `@describes{absolute-uri}` | External entity this tree describes; repeat for multiple entities. |
 | `@taxon["chapter"]` | One classification per page, rendered above the title. |
 | `@tag["i18n"]` | Additional labels; repeat as needed. |
