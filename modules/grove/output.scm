@@ -39,6 +39,8 @@
     (if (string? content) (string-copy content) (bytevector-copy content))))
 
 (define (artifact-sources artifact)
+  "Return ARTIFACT's tracked input paths, #f when its dependencies are unknown.
+An empty list means the artifact is known to have no file dependencies."
   (snapshot-data (artifact:artifact-sources/raw artifact)))
 
 (define (artifact-path? path)
@@ -63,11 +65,19 @@
                          (delete-duplicates sources string=?)))))
 
 (define* (make-artifact path content #:optional (sources #f))
+  "Construct a text artifact at PATH with optional source dependencies.
+
+SOURCES is a list of input paths, or #f when the dependencies are unknown.
+An explicit empty list asserts that the artifact depends on no input files."
   (unless (string? content)
     (error "artifact requires text content" content))
   (make-artifact* path content sources))
 
 (define* (make-byte-artifact path content #:optional (sources #f))
+  "Construct a byte artifact at PATH with optional source dependencies.
+
+SOURCES is a list of input paths, or #f when the dependencies are unknown.
+An explicit empty list asserts that the artifact depends on no input files."
   (unless (bytevector? content)
     (error "byte artifact requires a bytevector" content))
   (make-artifact* path content sources))

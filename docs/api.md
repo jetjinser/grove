@@ -132,6 +132,14 @@ Artifacts use the same ownership rule: `make-artifact` and
 directory while preserving each artifact's content and source dependencies.
 Artifact paths reject absolute paths, empty or traversal components, and NUL.
 
+The optional third constructor argument declares the input paths that an
+artifact depends on. Omitting it means dependencies are unknown (`#f`), so
+Grove handles the artifact conservatively during invalidation and incremental
+rendering. Pass an explicit empty list when the artifact is known to depend on
+no input files; pass the relevant paths when it depends on only part of the
+project. This declaration is what lets incremental renderers reuse unaffected
+artifacts safely.
+
 HTML presentation, home-link, and navigation-link values apply the same rule
 to their SXML, labels, IDs, and attribute lists. Their accessors return copies
 of mutable data, so editing a returned fragment does not change the configured

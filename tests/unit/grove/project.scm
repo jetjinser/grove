@@ -706,7 +706,9 @@
                        (list (make-artifact
                                "index.txt"
                                (number->string (length (site-pages site)))
-                               (site-sources site)))
+                               (site-sources site))
+                             (make-artifact "independent.txt" "constant" '())
+                             (make-artifact "unknown.txt" "opaque"))
                        (map (lambda (page)
                               (make-artifact
                                 (string-append "pages/"
@@ -721,12 +723,21 @@
                        (list changed-paths dirty-paths
                              (map artifact-path old-artifacts)))
                      (let ((current-ids
-                             (map site-page-id (site-pages site))))
+                             (map site-page-id (site-pages site)))
+                           (independent
+                             (find (lambda (artifact)
+                                     (string=? "independent.txt"
+                                               (artifact-path artifact)))
+                                   old-artifacts)))
                        (append
                          (list (make-artifact
                                  "index.txt"
                                  (number->string (length current-ids))
-                                 (site-sources site)))
+                                 (site-sources site))
+                               (or independent
+                                   (make-artifact "independent.txt"
+                                                  "constant" '()))
+                               (make-artifact "unknown.txt" "opaque"))
                          (map
                            (lambda (page)
                              (let* ((path (string-append
@@ -776,12 +787,15 @@
                      (member (string-append source-directory "/third.plant")
                              changed-paths string=?)
                      (member "index.txt" dirty-paths string=?)
+                     (member "unknown.txt" dirty-paths string=?)
+                     (not (member "independent.txt" dirty-paths string=?))
                      (member "pages/first.txt" old-paths string=?)
                      (member "pages/third.txt" old-paths string=?))))
             (test-assert "partial render is reported as rendering"
               (build-report-rendered? partial))
             (test-equal "partial renderer preserves current output set"
-              '("index.txt" "pages/first.txt")
+              '("index.txt" "independent.txt" "unknown.txt"
+                "pages/first.txt")
               (map artifact-path (build-report-artifacts partial)))
             (test-assert "partial renderer removes output for deleted page"
               (not (file-exists?
@@ -793,7 +807,8 @@
             (test-equal "new inputs also use partial rendering"
               2 partial-count)
             (test-equal "new page appears in the complete renderer output set"
-              '("index.txt" "pages/first.txt" "pages/fourth.txt")
+              '("index.txt" "independent.txt" "unknown.txt"
+                "pages/first.txt" "pages/fourth.txt")
               (map artifact-path (build-report-artifacts added-page))))))))
     (let* ((view-events '())
            (view-output-directory (string-append project-root "/view-output"))
@@ -841,6 +856,8 @@
             (string-append generic-output-directory "/inventory.scm")
             cache-output-path
             (string-append incremental-output-directory "/index.txt")
+            (string-append incremental-output-directory "/independent.txt")
+            (string-append incremental-output-directory "/unknown.txt")
             (string-append incremental-output-directory "/pages/first.txt")
             (string-append incremental-output-directory "/pages/third.txt")
             (string-append incremental-output-directory "/pages/fourth.txt")

@@ -106,6 +106,10 @@
       #f
       (artifact-sources
         (make-artifact "unknown.txt" "unknown source set")))
+    (test-equal "an explicit empty source set means known independent"
+      '()
+      (artifact-sources
+        (make-artifact "independent.txt" "constant" '())))
     (let ((inode (stat:ino (stat output-path))))
       (write-artifacts output-directory
         (list (make-artifact "nested/page.txt" "artifact content")
