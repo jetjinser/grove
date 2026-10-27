@@ -316,7 +316,7 @@ Return the internal analysis record used by the build pipeline."
            (input-cache-context
              (and write?
                (make-input-cache-context
-                 (string-append (grove-store-directory) "/input-cache") (project-cache? project)
+                 (project-cache? project)
                  (append prepared-sources (project-extra-sources project)
                          (runtime-inputs)))))
            (inputs

@@ -67,6 +67,12 @@
     source))
 
 (test-begin "document result cache")
+(test-equal "disabled input caching has no context"
+  #f (make-input-cache-context #f '()))
+(test-error "input cache option must be boolean" #t
+  (make-input-cache-context 'enabled '()))
+(test-error "input cache dependencies must be non-empty paths" #t
+  (make-input-cache-context #t (list "")))
 (dynamic-wind
   (lambda ()
     (setenv "XDG_CACHE_HOME" (string-append root "/.cache"))
@@ -133,7 +139,7 @@
     (reader source)
     (test-equal "standalone reader evaluates normally" 7 evaluations)
     (parameterize ((current-input-cache
-                    (make-input-cache-context output #t (list dependency))))
+                    (make-input-cache-context #t (list dependency))))
       (cached-document source "codec" '() (lambda () rich-document) (lambda _ #t))
       (let ((decoded (cached-document source "codec" '()
                        (lambda () (error "expected a cache hit")) (lambda _ #t))))
@@ -160,7 +166,7 @@
             (list (content-layout-kind layout) (content-layout-raw layout)
                   (content-layout-source layout))))))
     (parameterize ((current-input-cache
-                    (make-input-cache-context output #t '())))
+                    (make-input-cache-context #t '())))
       (let ((document
               (make-content-document
                 (list (make-content-element 'custom-void '()
@@ -182,7 +188,7 @@
                       (list (make-content-element 'forest-query '()
                               #:properties `((query . ,(lambda _ #t))))))))
       (parameterize ((current-input-cache
-                      (make-input-cache-context output #t '())))
+                      (make-input-cache-context #t '())))
         (do ((index 0 (+ index 1))) ((= index 2))
           (cached-document source "closure" '()
             (lambda () (set! reads (+ reads 1)) document) (lambda _ #t))))
@@ -195,7 +201,7 @@
           (lambda _ #t))))
     (parameterize ((current-input-fingerprints (make-hash-table))
                   (current-input-cache
-                    (make-input-cache-context output #t '())))
+                    (make-input-cache-context #t '())))
       (let ((reads 0))
         (define (read-changing-source)
           (set! reads (+ reads 1))
@@ -332,7 +338,7 @@
         (build-project mixed)
         (test-equal "one uncached renderer disables the shared artifact cache"
           '(2 2) (list cached-runs uncached-runs)))
-    (prune-input-cache! (make-input-cache-context output #t '()))
+    (prune-input-cache! (make-input-cache-context #t '()))
     ;;     The prune owns the input-cache subtree: entries outside the
     ;;   current selection go, while sibling subtrees (artifacts) are
     ;;   the store GC's business.
