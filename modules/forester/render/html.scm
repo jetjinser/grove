@@ -546,9 +546,19 @@ top-level taxon element; pages without one contribute nothing."
   "https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js")
 
 (define (external-url? value)
-  (or (string-prefix? "https://" value)
-      (string-prefix? "http://" value)
-      (string-prefix? "//" value)))
+  (and (string? value)
+       (or (string-prefix-ci? "https://" value)
+           (string-prefix-ci? "http://" value)
+           (string-prefix? "//" value))))
+
+(define (validate-mathjax-source source)
+  (unless (or (not source)
+              (and (non-empty-string? source)
+                   (or (external-url? source)
+                       (artifact-path? source))))
+    (error "MathJax source must be a URL, relative artifact path, or #f"
+           source))
+  source)
 
 (define (describes-sxml page context)
   (let ((uris (or (assq-ref (site-page-metadata page) 'describes) '())))
@@ -995,12 +1005,7 @@ to the lane, and an in-place numbered marker links to it."
   (unless (find-page forest (html-home-page routes))
     (error "configured HTML home page was not found" (html-home-page routes)))
   (html-route-table routes (map site-page-id (pages forest)))
-  (unless (or (not mathjax-src)
-              (and (non-empty-string? mathjax-src)
-                   (or (external-url? mathjax-src)
-                       (artifact-path? mathjax-src))))
-    (error "MathJax source must be a URL, relative artifact path, or #f"
-           mathjax-src)))
+  (validate-mathjax-source mathjax-src))
 
 (define-record-type <html-options>
   (%make-html-options highlighters routes mathjax-src backmatter
@@ -1132,12 +1137,7 @@ Entry points take this value with #:options."
                  (boolean? hreflang?)
                  (boolean? language-switcher?))
       (error "HTML options contain invalid renderer values"))
-    (unless (or (not mathjax-src)
-                (and (non-empty-string? mathjax-src)
-                     (or (external-url? mathjax-src)
-                         (artifact-path? mathjax-src))))
-      (error "MathJax source must be a URL, relative artifact path, or #f"
-             mathjax-src))
+    (validate-mathjax-source mathjax-src)
     (unless (html-presentation? presentation)
       (error "HTML options require an HTML presentation" presentation))
     (%make-html-options highlighters routes mathjax-src backmatter

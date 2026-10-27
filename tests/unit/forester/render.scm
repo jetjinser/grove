@@ -913,6 +913,14 @@
     (string-contains algebra-html "src=\"/assets/mathjax.js\"")))
 
 (let* ((forest (make-forest (make-site (list algebra limits))))
+       (html (render-test-html
+               forest #:mathjax-src "HTTPS://cdn.example.org/mathjax.js")))
+  (test-assert "external URL schemes are case-insensitive"
+    (string-contains
+      (assoc-ref html "algebra")
+      "src=\"HTTPS://cdn.example.org/mathjax.js\"")))
+
+(let* ((forest (make-forest (make-site (list algebra limits))))
        (html (render-test-html forest #:mathjax-src #f)))
   (test-assert "projects can disable browser-side math rendering"
     (not (string-contains (assoc-ref html "algebra") "mathjax"))))
