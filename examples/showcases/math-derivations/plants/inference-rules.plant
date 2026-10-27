@@ -8,14 +8,14 @@
 @paragraph{The catalog is relational: rules can be selected by group, execution mode, input operator, or a declared premise. These queries inspect the same registered rules that the rewrite engine executes.}
 
 @(format #f "Rules whose input schema contains curl: ~s"
-         (query (name) (rule-operationo name 'curl)))
+         (run* (name) (rule-operationo name 'curl)))
 
 @(format #f "Rules requiring differentiability: ~s"
-         (query (name premise)
+         (run* (name premise)
            (rule-premiseo name 'differentiable premise)))
 
 @(format #f "Rules with scalar-polynomial semantic checks: ~s"
-         (query (name) (rule-semantic-checko name 'semantically-checked)))
+         (run* (name) (rule-semantic-checko name 'semantically-checked)))
 
 @(map (lambda (row) (math-rule->content (car row)))
-      (query (name modes documentation) (ruleo name 'vector-calculus modes documentation)))
+      (run* (name modes documentation) (ruleo name 'vector-calculus modes documentation)))

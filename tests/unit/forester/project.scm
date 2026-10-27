@@ -52,7 +52,7 @@
       (string-contains (format #f "~s" (cons key args)) text))))
 
 ;; Project code can name a useful composition of public Forester predicates.
-(define-relation (short-math-paragrapho nodes paragraph-id maximum)
+(defrel (short-math-paragrapho nodes paragraph-id maximum)
   (math-containing-paragrapho nodes paragraph-id)
   (shorter-than-o nodes paragraph-id maximum))
 
@@ -287,7 +287,7 @@
                          (string-append source-directory "/unicode-accent.plant")))))))
           (test-equal "miniKanren queries topic membership and labels"
             '(("algebra" "mathematics") ("limits" "mathematics"))
-            (query (page-id label)
+            (run* (page-id label)
               (topic-membero
                 (content-node-relation forest)
                 "mathematics"
@@ -295,8 +295,8 @@
                 label)))
           (test-equal "topic relations normalize selectors bound by earlier goals"
             '("algebra" "limits")
-            (query (page-id)
-              (exists (topic label)
+            (run* (page-id)
+              (fresh (topic label)
                 (== topic "MATHEMATICS")
                 (topic-membero (content-node-relation forest) topic page-id label))))
           (test-equal "topic helper accepts mixed-case selectors"
@@ -319,27 +319,27 @@
               'taxon))
           (test-equal "enumerated topics keep their canonical spellings"
             '("straße")
-            (query (topic)
+            (run* (topic)
               (fresh (label)
                 (topic-membero (content-node-relation forest) topic "unicode" label))))
           (test-equal "enumerated accented topics keep composed spellings"
             '("café")
-            (query (topic)
+            (run* (topic)
               (fresh (label)
                 (topic-membero
                   (content-node-relation forest) topic "unicode-accent" label))))
           (let* ((nodes (content-node-relation forest))
                  (page-data (page-relation forest))
                  (paragraph-ids
-                   (query (node-id)
+                   (run* (node-id)
                      (nodeo nodes
                        (node-id node-id)
                        (page-id "algebra")
                        (kind 'paragraph)))))
             (test-equal "page metadata queries compose with IR queries"
               '(("Algebra" "A short algebra note." "范畴论 is useful."))
-              (query (title summary text)
-                (exists (page-id label node-id)
+              (run* (title summary text)
+                (fresh (page-id label node-id)
                   (pageo page-data
                     (page-id page-id)
                     (title title))
@@ -353,8 +353,8 @@
                   (contains-texto nodes node-id "范畴论"))))
             (test-equal "content queries combine topic and paragraph constraints"
               '("范畴论 is useful.")
-              (query (text)
-                (exists (page-id label node-id)
+              (run* (text)
+                (fresh (page-id label node-id)
                   (topic-membero nodes "algebra" page-id label)
                   (nodeo nodes
                     (node-id node-id)
@@ -365,8 +365,8 @@
                   (contains-texto nodes node-id "范畴论"))))
             (test-equal "project-defined goals compose Forester predicates"
               '("See limits. x^2+y^2=z^2")
-              (query (text)
-                (exists (node-id)
+              (run* (text)
+                (fresh (node-id)
                   (short-math-paragrapho nodes node-id 120)
                   (nodeo nodes
                     (node-id node-id)
@@ -375,8 +375,8 @@
                     (text text)))))
             (test-equal "plain text paragraph goal excludes inline elements"
               '("范畴论 is useful.")
-              (query (text)
-                (exists (node-id)
+              (run* (text)
+                (fresh (node-id)
                   (nodeo nodes
                     (node-id node-id)
                     (page-id "algebra")
@@ -385,8 +385,8 @@
                   (contains-texto nodes node-id "范畴论"))))
             (test-equal "node text and character counts include nested content"
               '(("See limits. x^2+y^2=z^2" 23))
-              (query (text character-count)
-                (exists (node-id)
+              (run* (text character-count)
+                (fresh (node-id)
                   (nodeo nodes
                     (node-id node-id)
                     (page-id "algebra")
@@ -396,8 +396,8 @@
                   (contains-texto nodes node-id "See"))))
             (test-equal "node property queries select display math"
               '(#t)
-              (query (display?)
-                (exists (node-id)
+              (run* (display?)
+                (fresh (node-id)
                   (nodeo nodes
                     (node-id node-id)
                     (page-id "algebra")
@@ -406,8 +406,8 @@
                   (== display? #t))))
             (test-equal "character counts use grapheme clusters"
               '(14)
-              (query (character-count)
-                (exists (node-id text)
+              (run* (character-count)
+                (fresh (node-id text)
                   (nodeo nodes
                     (node-id node-id)
                     (page-id "algebra")
@@ -417,8 +417,8 @@
                   (contains-texto nodes node-id "范畴论"))))
             (test-equal "a multi-codepoint Foochow letter is one character"
               '((1 3))
-              (query (character-count codepoint-count)
-                (exists (node-id text)
+              (run* (character-count codepoint-count)
+                (fresh (node-id text)
                   (nodeo nodes
                     (node-id node-id)
                     (page-id "unicode-accent")
@@ -429,7 +429,7 @@
                   (contains-texto nodes node-id "è̤"))))
             (test-assert "content node IDs are dense in traversal order"
               (let ((ids
-                      (query (node-id)
+                      (run* (node-id)
                         (nodeo nodes
                           (node-id node-id)
                           (page-id "algebra")))))
@@ -444,8 +444,8 @@
                 (lambda () (content-node forest -1))
                 "unknown content node"))
             (test-assert "paragraph and math goals compose through descendants"
-              (pair? (query (node-id)
-                       (exists (math-id)
+              (pair? (run* (node-id)
+                       (fresh (math-id)
                          (nodeo nodes
                            (node-id node-id)
                            (page-id "algebra")
@@ -453,7 +453,7 @@
                          (descendanto nodes node-id math-id)
                          (math-nodeo nodes math-id)))))
             (test-assert "math-containing paragraph helper finds the same nodes"
-              (pair? (query (node-id)
+              (pair? (run* (node-id)
                        (math-containing-paragrapho nodes node-id)
                        (nodeo nodes
                          (node-id node-id)

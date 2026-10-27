@@ -49,10 +49,9 @@ supported goals.
 
 ## Relation library DSL
 
-The optional `(grove relation dsl)` module provides a small macro vocabulary
-for libraries that define reusable rules. It re-exports the relation and
-miniKanren APIs from `(grove relation)` and adds `define-relation`, `exists`,
-`all`, `either`, `project`, and `query`:
+The optional `(grove relation dsl)` module re-exports the relation and
+miniKanren APIs from `(grove relation)`. It adds `define-relation-schema` for
+named columns and `project` for host-language checks over projected values:
 
 ```scheme
 (use-modules (grove relation dsl))
@@ -60,20 +59,20 @@ miniKanren APIs from `(grove relation)` and adds `define-relation`, `exists`,
 (define-relation-schema make-reference-relation referenceo
   (source-page reference-id target-page label))
 
-(define-relation (incoming-referenceo references target source)
+(defrel (incoming-referenceo references target source)
   (referenceo references
               (source-page source)
               (target-page target)))
 
-(query (source)
+(run* (source)
   (incoming-referenceo references "algebra" source))
 ```
 
-These forms expand to faster-minikanren relations, `fresh`, `conde`, and
-`run*`; `project` exposes miniKanren's host-language projection. Host operations
+`defrel`, `fresh`, `conde`, and `run*` retain their faster-minikanren names and
+semantics; `project` exposes its host-language projection. Host operations
 must handle the projected values, including any unbound logic variables;
-projection does not make an arbitrary Scheme function relational. These forms
-add no new evaluation engine.
+projection does not make an arbitrary Scheme function relational. Grove adds
+no new evaluation engine.
 `define-relation-schema` declares
 the tuple columns once, generates a constructor with fixed arity, and creates a
 named query macro. Query clauses name columns, so omitted columns become
@@ -81,7 +80,7 @@ independent anonymous logic variables. Unknown or repeated columns are
 rejected during macro expansion. For example, a query can constrain
 `(target-page "algebra")` without naming the other three columns. Terms are
 ordinary Scheme expressions in lexical scope.
-`either` clauses and `all` goals retain standard miniKanren search order, and
+`conde` branches and `fresh` goals retain standard miniKanren search order, and
 results retain its duplicate-answer behavior. Libraries pass relation values
 explicitly and export their own named rules. The positional `relationo` and
 core miniKanren forms remain available for lower-level code.
@@ -187,7 +186,7 @@ matching composable with other page facts and content queries:
 ```scheme
 (let ((entities (described-entity-relation forest))
       (page-data (page-relation forest)))
-  (query (page-id title)
+  (run* (page-id title)
     (described-entityo entities
       (uri "doi:10.1146/annurev.fluid.29.1.123")
       (page-id page-id))
@@ -199,8 +198,8 @@ matching composable with other page facts and content queries:
 ```scheme
 (let ((nodes (content-node-relation forest))
       (page-data (page-relation forest)))
-  (query (node-id)
-    (exists (page-id label summary)
+  (run* (node-id)
+    (fresh (page-id label summary)
       (pageo page-data (page-id page-id))
       (page-metadatao page-data page-id 'summary summary)
       (topic-membero nodes "algebra" page-id label)
@@ -212,7 +211,7 @@ matching composable with other page facts and content queries:
       (contains-texto nodes node-id "范畴论"))))
 ```
 
-Project modules can export ordinary `define-relation` rules over these explicit
+Project modules can export ordinary `defrel` rules over these explicit
 snapshots; no Grove changes are required. Composition queries use the typed API
 in `(forester composition)` rather than depending on its private tuple layout.
 

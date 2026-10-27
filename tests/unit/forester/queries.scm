@@ -193,7 +193,7 @@
               (described-entity-relation forest) doi)))
   (test-equal "described entities compose with page facts by page ID"
     '(("first" "First") ("second" "Second"))
-    (query (id title)
+    (run* (id title)
       (described-entityo (described-entity-relation forest)
         (uri doi) (page-id id))
       (pageo (page-relation forest)

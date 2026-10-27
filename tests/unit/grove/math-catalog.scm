@@ -7,29 +7,29 @@
 (define (html name) (sxml->html (content->sxml (math-rule->content name))))
 (test-equal "enumeration preserves the complete registry"
   (map math-rewrite-rule-name math-rewrite-rules)
-  (map car (query (name group modes documentation) (ruleo name group modes documentation))))
+  (map car (run* (name group modes documentation) (ruleo name group modes documentation))))
 (test-equal "group filtering queries actual registry facts" 8
-  (length (query (name modes documentation) (ruleo name 'vector-calculus modes documentation))))
+  (length (run* (name modes documentation) (ruleo name 'vector-calculus modes documentation))))
 (test-equal "mode filtering sees every checkable rule"
   (length math-rewrite-rules)
-  (length (query (name) (rule-modeo name 'check))))
+  (length (run* (name) (rule-modeo name 'check))))
 (test-equal "operation filtering uses the input side of declared RuleSpecs"
   '(curl-curl-identity div-curl-zero curl-grad-zero curl-product curl-components)
-  (query (name) (rule-operationo name 'curl)))
+  (run* (name) (rule-operationo name 'curl)))
 (test-equal "premise filtering returns the actual declared premise"
   '((curl-product (differentiable (unquote f)))
     (curl-product (differentiable (unquote e))))
-  (query (name premise) (rule-premiseo name 'differentiable premise)
+  (run* (name premise) (rule-premiseo name 'differentiable premise)
          (== name 'curl-product)))
 (test-equal "algorithm rules without fixed RuleSpecs are absent from pattern queries" '()
-  (query (name) (rule-operationo name 'differentiate)
+  (run* (name) (rule-operationo name 'differentiate)
          (== name 'differentiate-polynomial)))
 (test-equal "unknown names have no catalog answers" '()
-  (query (group modes documentation) (ruleo 'missing-rule group modes documentation)))
+  (run* (group modes documentation) (ruleo 'missing-rule group modes documentation)))
 (test-equal "the catalog distinguishes checker-covered laws from algorithms"
   '(semantically-checked unsupported)
-  (list (car (query (status) (rule-semantic-checko 'add-commutative status)))
-        (car (query (status) (rule-semantic-checko 'differentiate-power status)))))
+  (list (car (run* (status) (rule-semantic-checko 'add-commutative status)))
+        (car (run* (status) (rule-semantic-checko 'differentiate-power status)))))
 (test-equal "RuleSpec retains premises and executable guards"
   '(((differentiable (unquote f)) (differentiable (unquote e)))
     ((math-typeo facts f 'scalar) (math-typeo facts e 'vector)))
@@ -56,14 +56,14 @@
 (test-equal "rule documentation is the execution procedure's native docstring"
   (procedure-documentation
     (math-rewrite-rule-relation (math-rewrite-rule-ref 'curl-product) 'forward))
-  (car (query (documentation)
+  (car (run* (documentation)
          (fresh (group modes) (ruleo 'curl-product group modes documentation)))))
 (test-equal "documentation queries enumerate only documented rules" 8
-  (length (query (name documentation)
+  (length (run* (name documentation)
             (fresh (group modes) (ruleo name group modes documentation))
             (=/= documentation #f))))
 (test-equal "undocumented rules remain queryable with #f documentation" '(#f)
-  (query (documentation)
+  (run* (documentation)
     (fresh (group modes) (ruleo 'add-zero group modes documentation))))
 (test-assert "explanations appear alongside inference rules"
   (string-contains (html 'curl-product) "reversing it changes the sign"))

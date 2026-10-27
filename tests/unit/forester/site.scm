@@ -291,10 +291,10 @@
        (forest (make-forest (make-site (list article target))))
        (nodes (content-node-relation forest))
        (math-paragraph-ids
-         (query (node-id)
+         (run* (node-id)
            (math-containing-paragrapho nodes node-id)))
        (plain-matches
-         (query (node-id page-id text)
+         (run* (node-id page-id text)
            (plain-text-paragrapho nodes node-id)
            (shorter-than-o nodes node-id 120)
            (contains-texto nodes node-id "范畴论")
@@ -302,16 +302,16 @@
                   (page-id page-id)
                   (text text))))
        (tutorial-pages
-         (query (page-id label)
+         (run* (page-id label)
            (topic-membero nodes "tutorial" page-id label)))
        (math-pages
-         (query (page-id label)
+         (run* (page-id label)
            (topic-membero nodes "mathematics" page-id label)))
        (link-node-ids
-         (query (node-id)
+         (run* (node-id)
            (nodeo nodes (node-id node-id) (kind 'link))))
        (subtree-node-ids
-         (query (node-id)
+         (run* (node-id)
            (nodeo nodes (node-id node-id) (kind 'subtree)))))
   (test-equal "plain paragraphs and their text are derived from page IR"
     '("query-article" "query-subtree")
@@ -349,17 +349,17 @@
     (require-page forest "no-such-page"))
   (test-equal "link nodes and their target properties remain in content IR"
     '("target")
-    (query (target-id)
+    (run* (target-id)
       (node-propertyo nodes (car link-node-ids) 'target target-id)))
   (test-equal "named subtree nodes are queryable as content IR"
     '("query-subtree")
-    (query (tree-id)
+    (run* (tree-id)
       (node-propertyo nodes (car subtree-node-ids) 'tree-id tree-id)))
   (test-equal "subtree body paragraphs belong to their named tree"
     '("query-subtree")
     (delete-duplicates
       (map cadr
-           (query (node-id page-id)
+           (run* (node-id page-id)
              (plain-text-paragrapho nodes node-id)
              (nodeo nodes (node-id node-id) (page-id page-id))
              (contains-texto nodes node-id "Nested note")))
@@ -394,13 +394,13 @@
        (nodes (content-node-relation forest)))
   (test-equal "math text projection keeps powers and fractions legible"
     '("Formula: x^(2) + (a)/(b).")
-    (query (text)
+    (run* (text)
       (fresh (node-id)
         (math-containing-paragrapho nodes node-id)
         (nodeo nodes (node-id node-id) (text text)))))
 (test-equal "source-locationo returns the paragraph's source position"
     '(("query-article.plant" 7 3))
-    (query (file line column)
+    (run* (file line column)
       (fresh (node-id)
         (math-containing-paragrapho nodes node-id)
         (source-locationo nodes node-id file line column)))))
@@ -412,7 +412,7 @@
            "   (lambda (forest _page-id)\n"
            "     (let* ((nodes (content-node-relation forest))\n"
            "            (matches\n"
-           "              (query (node-id page-id)\n"
+           "              (run* (node-id page-id)\n"
            "                (plain-text-paragrapho nodes node-id)\n"
            "                (nodeo nodes (node-id node-id) (page-id page-id))\n"
            "                (contains-texto nodes node-id \"范畴论\"))))\n"
@@ -458,7 +458,7 @@
   (test-equal "query-generated content is absent from the source node snapshot"
     '("article")
     (map cadr
-      (query (node-id page-id)
+      (run* (node-id page-id)
       (plain-text-paragrapho nodes node-id)
       (nodeo nodes (node-id node-id) (page-id page-id))
       (contains-texto nodes node-id "范畴论")

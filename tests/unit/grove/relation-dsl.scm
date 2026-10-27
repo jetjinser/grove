@@ -9,22 +9,21 @@
 (define-relation-schema make-edge-relation edgeo (source target))
 (define-relation-schema make-value-relation valueo (value))
 
-(define-relation (common-sourceo edges left right source)
-  (exists (left-target right-target)
-    (all
-      (edgeo edges (source source) (target left-target))
-      (edgeo edges (source source) (target right-target))
-      (== left-target left)
-      (== right-target right))))
+(defrel (common-sourceo edges left right source)
+  (fresh (left-target right-target)
+    (edgeo edges (source source) (target left-target))
+    (edgeo edges (source source) (target right-target))
+    (== left-target left)
+    (== right-target right)))
 
-(define-relation (either-targeto edges source target)
-  (either
-    ((all (== target 'left)
-          (edgeo edges (source source) (target target))))
-    ((all (== target 'right)
-          (edgeo edges (source source) (target target))))))
+(defrel (either-targeto edges source target)
+  (conde
+    ((== target 'left)
+     (edgeo edges (source source) (target target)))
+    ((== target 'right)
+     (edgeo edges (source source) (target target)))))
 
-(define-relation (long-stringo values value)
+(defrel (long-stringo values value)
   (stringo value)
   (valueo values (value value))
   (project (value)
@@ -38,6 +37,14 @@
   (not (module-variable
          (module-public-interface (resolve-module '(grove relation dsl)))
          'relation-indexes)))
+(test-assert "relation DSL does not shadow miniKanren with aliases"
+  (let ((interface
+          (module-public-interface (resolve-module '(grove relation dsl)))))
+    (not (or (module-variable interface 'define-relation)
+             (module-variable interface 'exists)
+             (module-variable interface 'all)
+             (module-variable interface 'either)
+             (module-variable interface 'query)))))
 
 (let ((edges
         (make-edge-relation
@@ -48,17 +55,17 @@
   (test-equal "schema constructors retain declared arity when empty"
     2
     (relation-arity (make-edge-relation '())))
-  (test-equal "named relations compose with exists and all"
+  (test-equal "named relations compose with fresh goals"
     '(first)
-    (query (source)
+    (run* (source)
       (common-sourceo edges 'left 'right source)))
-  (test-equal "either branches preserve miniKanren answer order"
+  (test-equal "conde branches preserve miniKanren answer order"
     '(left right)
-    (query (target)
+    (run* (target)
       (either-targeto edges 'first target)))
   (test-equal "project runs host-language checks on ground terms"
     '("longer")
-    (query (value)
+    (run* (value)
       (long-stringo (make-value-relation '(("few") ("longer"))) value))))
 
 (let ((edges
@@ -68,7 +75,7 @@
             (second left)))))
   (test-equal "omitted schema fields become independent anonymous variables"
     '(first first second)
-    (query (source)
+    (run* (source)
       (edgeo edges (source source))))
   (test-error "unknown schema fields are rejected during expansion"
     #t

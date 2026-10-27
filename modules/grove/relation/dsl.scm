@@ -14,6 +14,7 @@
                relationo
                run
                run*
+               defrel
                ==
                =/=
                fresh
@@ -25,13 +26,8 @@
                succeed
                fail
                matche)
-  #:export (define-relation
-            define-relation-schema
-            exists
-            all
-            either
-            project
-            query))
+  #:export (define-relation-schema
+            project))
 
 (define (syntax-list-elements form)
   (syntax-case form ()
@@ -164,35 +160,7 @@
                (define-syntax goal-name
                  (make-schema-goal-transformer '(field ...))))))))))
 
-;; Define named, possibly recursive relations using faster-minikanren's
-;; standard suspension behavior for multi-goal relations.
-(define-syntax define-relation
-  (syntax-rules ()
-    ((_ (name argument ...) goal ...)
-     (defrel (name argument ...) goal ...))))
-
-;; Readable aliases for the standard miniKanren goal combinators.
-(define-syntax exists
-  (syntax-rules ()
-    ((_ (variable ...) goal ...)
-     (fresh (variable ...) goal ...))))
-
-(define-syntax all
-  (syntax-rules ()
-    ((_ goal ...)
-     (fresh () goal ...))))
-
-(define-syntax either
-  (syntax-rules ()
-    ((_ (goal ...) ...)
-     (conde (goal ...) ...))))
-
 (define-syntax project
   (syntax-rules ()
     ((_ (term ...) body ...)
      (with-projected-terms (term ...) body ...))))
-
-(define-syntax query
-  (syntax-rules ()
-    ((_ (answer ...) goal ...)
-     (run* (answer ...) goal ...))))

@@ -76,33 +76,33 @@
 (define-relation-schema make-term-mention-relation term-mentiono
   (term-id source-page-id resolved?))
 
-(define-relation (list-membero value values)
-  (either
-    ((exists (tail)
+(defrel (list-membero value values)
+  (conde
+    ((fresh (tail)
        (== `(,value . ,tail) values)))
-    ((exists (head tail)
+    ((fresh (head tail)
        (== `(,head . ,tail) values)
        (=/= value head)
        (list-membero value tail)))))
 
-(define-relation (node-propertyo relation node-id key value)
-  (exists (properties entry)
+(defrel (node-propertyo relation node-id key value)
+  (fresh (properties entry)
     (nodeo relation
            (node-id node-id)
            (properties properties))
     (list-membero entry properties)
     (== `(,key . ,value) entry)))
 
-(define-relation (source-locationo relation node-id file line column)
-  (exists (properties location)
+(defrel (source-locationo relation node-id file line column)
+  (fresh (properties location)
     (nodeo relation (node-id node-id) (properties properties))
     (list-membero `(source-location . ,location) properties)
     (list-membero `(file . ,file) location)
     (list-membero `(line . ,line) location)
     (list-membero `(column . ,column) location)))
 
-(define-relation (page-metadatao relation page-id key value)
-  (exists (metadata entry)
+(defrel (page-metadatao relation page-id key value)
+  (fresh (metadata entry)
     (pageo relation
            (page-id page-id)
            (metadata metadata))
@@ -114,50 +114,50 @@
     (map car (relation-index-rows relation 1 uri))
     string=?))
 
-(define-relation (paragrapho relation node-id)
+(defrel (paragrapho relation node-id)
   (nodeo relation (node-id node-id) (kind 'paragraph)))
 
-(define-relation (plain-text-paragrapho relation node-id)
+(defrel (plain-text-paragrapho relation node-id)
   (nodeo relation
          (node-id node-id)
          (kind 'paragraph)
          (plain-text? #t)))
 
-(define-relation (math-nodeo relation node-id)
+(defrel (math-nodeo relation node-id)
   (nodeo relation (node-id node-id) (kind 'math)))
 
-(define-relation (childo relation parent-id child-id)
+(defrel (childo relation parent-id child-id)
   (nodeo relation
          (node-id child-id)
          (parent-id parent-id)))
 
-(define-relation (parento relation child-id parent-id)
+(defrel (parento relation child-id parent-id)
   (nodeo relation
          (node-id child-id)
          (parent-id parent-id)))
 
-(define-relation (ancestoro relation ancestor-id descendant-id)
-  (either
+(defrel (ancestoro relation ancestor-id descendant-id)
+  (conde
     ((parento relation descendant-id ancestor-id))
-    ((exists (parent-id)
+    ((fresh (parent-id)
        (parento relation descendant-id parent-id)
        (ancestoro relation ancestor-id parent-id)))))
 
-(define-relation (descendanto relation ancestor-id descendant-id)
-  (either
+(defrel (descendanto relation ancestor-id descendant-id)
+  (conde
     ((childo relation ancestor-id descendant-id))
-    ((exists (parent-id)
+    ((fresh (parent-id)
        (childo relation ancestor-id parent-id)
        (descendanto relation parent-id descendant-id)))))
 
-(define-relation (math-containing-paragrapho relation paragraph-id)
-  (exists (math-id)
+(defrel (math-containing-paragrapho relation paragraph-id)
+  (fresh (math-id)
     (math-nodeo relation math-id)
     (ancestoro relation paragraph-id math-id)
     (paragrapho relation paragraph-id)))
 
-(define-relation (shorter-than-o relation node-id maximum)
-  (exists (character-count)
+(defrel (shorter-than-o relation node-id maximum)
+  (fresh (character-count)
     (nodeo relation
            (node-id node-id)
            (character-count character-count))
@@ -168,8 +168,8 @@
           succeed
           fail))))
 
-(define-relation (contains-texto relation node-id needle)
-  (exists (text)
+(defrel (contains-texto relation node-id needle)
+  (fresh (text)
     (nodeo relation (node-id node-id) (text text))
     (project (text needle)
       (if (and (string? text)
@@ -178,8 +178,8 @@
           succeed
           fail))))
 
-(define-relation (topic-ido relation node-id topic-id)
-  (exists (stored-id)
+(defrel (topic-ido relation node-id topic-id)
+  (fresh (stored-id)
     (node-propertyo relation node-id 'id stored-id)
     ;; Ground selectors match canonically caseless; enumerated answers
     ;; stay canonical.
@@ -188,49 +188,47 @@
           (== (match-key stored-id) (match-key topic-id))
           (== stored-id topic-id)))))
 
-(define-relation (topic-membero relation topic-id page-id label)
-  (exists (node-id kind)
+(defrel (topic-membero relation topic-id page-id label)
+  (fresh (node-id kind)
     (nodeo relation (node-id node-id) (page-id page-id)
            (kind kind) (text label))
-    (either ((== kind 'tag)) ((== kind 'taxon)))
+    (conde ((== kind 'tag)) ((== kind 'taxon)))
     (topic-ido relation node-id topic-id)))
 
 (define* (topic-page-ids relation topic-id #:optional kind)
   (delete-duplicates
     (if kind
-        (query (page-id)
-          (exists (node-id)
+        (run* (page-id)
+          (fresh (node-id)
             (nodeo relation
                    (node-id node-id)
                    (kind kind)
                    (page-id page-id))
             (topic-ido relation node-id topic-id)))
-        (query (page-id)
-          (exists (label)
+        (run* (page-id)
+          (fresh (label)
             (topic-membero relation topic-id page-id label))))
     equal?))
 
-(define-relation (incoming-reference-rowo relation fixed-target-page-id
+(defrel (incoming-reference-rowo relation fixed-target-page-id
                                           source-page-id reference-id
                                           target-page-id label)
-  (all
-    (referenceo relation
-                (source-page-id source-page-id)
-                (reference-id reference-id)
-                (target-page-id target-page-id)
-                (label label))
-    (== fixed-target-page-id target-page-id)))
+  (referenceo relation
+              (source-page-id source-page-id)
+              (reference-id reference-id)
+              (target-page-id target-page-id)
+              (label label))
+  (== fixed-target-page-id target-page-id))
 
-(define-relation (outgoing-reference-rowo relation fixed-source-page-id
+(defrel (outgoing-reference-rowo relation fixed-source-page-id
                                           source-page-id reference-id
                                           target-page-id label)
-  (all
-    (referenceo relation
-                (source-page-id source-page-id)
-                (reference-id reference-id)
-                (target-page-id target-page-id)
-                (label label))
-    (== fixed-source-page-id source-page-id)))
+  (referenceo relation
+              (source-page-id source-page-id)
+              (reference-id reference-id)
+              (target-page-id target-page-id)
+              (label label))
+  (== fixed-source-page-id source-page-id))
 
 (define (incoming-reference-rows relation target-page-id)
   (relation-index-rows relation 2 target-page-id))
@@ -313,34 +311,32 @@
              (hash-map->list cons by-term))
         (lambda (left right) (string<? (car left) (car right)))))))
 
-(define-relation (not-membero value values)
-  (either
+(defrel (not-membero value values)
+  (conde
     ((== '() values))
-    ((exists (head tail)
-       (all
-         (== `(,head . ,tail) values)
-         (=/= value head)
-         (not-membero value tail))))))
+    ((fresh (head tail)
+       (== `(,head . ,tail) values)
+       (=/= value head)
+       (not-membero value tail)))))
 
-(define-relation (page-linko relation source-page-id target-page-id)
+(defrel (page-linko relation source-page-id target-page-id)
   (referenceo relation
               (source-page-id source-page-id)
               (target-page-id target-page-id)))
 
-(define-relation (reachableo relation source-page-id target-page-id)
+(defrel (reachableo relation source-page-id target-page-id)
   (reachable-step relation source-page-id target-page-id
                   (list source-page-id)))
 
-(define-relation (reachable-step relation source-page-id target-page-id seen)
-  (either
+(defrel (reachable-step relation source-page-id target-page-id seen)
+  (conde
     ((page-linko relation source-page-id target-page-id)
      (not-membero target-page-id seen))
-    ((exists (middle-page-id)
-       (all
-         (page-linko relation source-page-id middle-page-id)
-         (not-membero middle-page-id seen)
-         (reachable-step relation middle-page-id target-page-id
-                         (cons middle-page-id seen)))))))
+    ((fresh (middle-page-id)
+       (page-linko relation source-page-id middle-page-id)
+       (not-membero middle-page-id seen)
+       (reachable-step relation middle-page-id target-page-id
+                       (cons middle-page-id seen))))))
 
 (define (reachable-page-ids relation source-page-id)
   ;;     Breadth-first closure over the source index. The solver's
