@@ -194,6 +194,10 @@
   (eq? (content-element-flow-kind element) 'block))
 
 (define (content-element-property element key)
+  (unless (content-element? element)
+    (error "content-element-property requires a content element" element))
+  (unless (symbol? key)
+    (error "content property key must be a symbol" key))
   (snapshot-data (content-element-property/raw element key)))
 
 (define (content-element-property/raw element key)

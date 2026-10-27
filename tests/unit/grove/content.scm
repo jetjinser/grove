@@ -261,6 +261,10 @@
 (test-error "content-with-property validates source locations" #t
   (content-with-property (make-content-element 'paragraph '())
     'source-location '((file . ""))))
+(test-error "content-element-property requires an element" #t
+  (content-element-property 'not-an-element 'role))
+(test-error "content-element-property requires a symbol key" #t
+  (content-element-property (make-content-element 'paragraph '()) "role"))
 (test-error "element flow kinds are constrained" #t
   (make-content-element 'paragraph '() #:flow-kind 'floating))
 (test-error "site construction rejects duplicate page IDs" #t
