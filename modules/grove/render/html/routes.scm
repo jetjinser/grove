@@ -43,6 +43,10 @@
            (page-path (lambda (id) (string-append id ".html")))
            (index-path "index.html")
            (url-prefix "/"))
+  "Build HTML routes from page and index artifact paths.
+
+URL-PREFIX is raw absolute path text beginning and ending with /. Grove
+encodes it together with each artifact path when constructing URLs."
   (unless (procedure? page-path)
     (error "HTML page path requires a procedure" page-path))
   (unless (artifact-path? index-path)
