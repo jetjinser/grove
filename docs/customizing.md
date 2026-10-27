@@ -128,7 +128,7 @@ declare opaque tool identity with `#:version`.
 
 | Function | Returns | Use when |
 | --- | --- | --- |
-| `site->html` / `site->text` / `site->gemtext` | alist of page id → rendered string; text and gemtext also include `"index"` | tests, inspection, small tools |
+| `site->html` / `site->text` / `site->gemtext` | alist of page ID string → rendered string; text and gemtext use the symbol `'index` for the aggregate index | tests, inspection, small tools |
 | `render-html` / `render-text` / `render-gemtext` | complete list of build artifacts, including shared assets and indexes | custom build steps that need artifacts directly |
 | `make-html-renderer` / `make-text-renderer` / `make-gemtext-renderer` | cached renderer value | `make-site-project #:renderers` |
 

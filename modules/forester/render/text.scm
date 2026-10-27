@@ -344,7 +344,7 @@
                                      #:locale locale
                                      #:messages messages))
          (backmatter-labels (localized-backmatter-labels context)))
-    (cons (cons "index" (index->text forest routes))
+    (cons (cons 'index (index->text forest routes))
           (map (lambda (page)
                  (cons (site-page-id page)
                        (page->text forest page routes backmatter

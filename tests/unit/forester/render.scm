@@ -1123,6 +1123,29 @@
   (test-assert "text index references configured page routes"
     (string-contains index "Alpha (notes/alpha.md)")))
 
+(let* ((forest
+         (make-forest
+           (make-site
+             (list (make-site-page "index" "Index page"
+                                   (make-content-document '()))))))
+       (routes
+         (make-text-routes
+           #:index-path "index.txt"
+           #:page-path (lambda (id) (string-append "trees/" id ".txt"))))
+       (text (site->text forest #:options (make-text-options #:routes routes)))
+       (gemtext
+         (site->gemtext forest
+           #:options (make-gemtext-options #:routes routes))))
+  (test-assert "site->text distinguishes the aggregate index from page ID index"
+    (and (string-contains (assoc-ref text 'index) "Index page")
+         (string-contains (assoc-ref text "index") "Index page")
+         (not (string=? (assoc-ref text 'index) (assoc-ref text "index")))))
+  (test-assert "site->gemtext distinguishes the aggregate index from page ID index"
+    (and (string-contains (assoc-ref gemtext 'index) "Index page")
+         (string-contains (assoc-ref gemtext "index") "Index page")
+         (not (string=? (assoc-ref gemtext 'index)
+                        (assoc-ref gemtext "index"))))))
+
 (let* ((forest (make-forest (make-site (list algebra limits))))
        (text-artifacts
          (render-text forest

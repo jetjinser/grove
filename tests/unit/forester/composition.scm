@@ -139,8 +139,8 @@
   (test-assert "subtrees receive standalone text routes"
     (string-contains (assoc-ref text "unstable-0") "Owned text."))
   (test-assert "text index lists file-backed trees but omits inline subtrees"
-    (and (string-contains (assoc-ref text "index") "Root")
-         (not (string-contains (assoc-ref text "index") "Inline section"))))
+    (and (string-contains (assoc-ref text 'index) "Root")
+         (not (string-contains (assoc-ref text 'index) "Inline section"))))
   (test-assert "sitemap includes addressable inline subtrees"
     (string-contains sitemap "/unstable-0.html"))
   (test-assert "RSS omits inline subtrees as standalone feed entries"

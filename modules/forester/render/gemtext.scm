@@ -372,7 +372,7 @@
                                      #:locale locale
                                      #:messages messages))
          (backmatter-labels (localized-backmatter-labels context)))
-    (cons (cons "index" (index->gemtext forest routes))
+    (cons (cons 'index (index->gemtext forest routes))
           (map (lambda (page)
                  (cons (site-page-id page)
                        (page->gemtext forest routes page backmatter
