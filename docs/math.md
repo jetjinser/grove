@@ -34,6 +34,12 @@ use `@derive` for rendered derivations. `partial-expression` pairs with
 particular solution. The corresponding Semantic constructors build values
 directly without parsing text.
 
+`φ:calculate` is the narrow exact-arithmetic evaluator. `φ:compute` runs the
+broader calculation pipeline, including component and spatial operations,
+partial derivatives, and simplification. Both return reports; use `calculate`
+for supported arithmetic evaluation and `compute` when the expression needs
+the domain calculation stages.
+
 Import `(grove math semantic)`, `(grove math formula)`, and
 `(grove math notation)` with the respective prefixes. The
 [math-derivations example](../examples/showcases/math-derivations/project.scm)
