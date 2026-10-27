@@ -28,7 +28,7 @@ the work; drop lower only when you need to replace part of its behavior.
 | Rewrite content before analysis | `(grove content transform)` → `compose-content-transforms`; project constructors accept `#:transforms` | the behavior depends on the analyzed site model; use a renderer or render rule |
 | Localize interface text and formatting | `(grove i18n)` plus renderer `#:locale` and `#:messages`; see the [localization guide](i18n.md) | project-specific content should be translated; keep that data in the content model |
 | Pass explicit state through a render pass | `(grove render context)` → `make-render-context`, `render-context-with`; Forester renderers can use `(forester render context)` → `make-site-render-context` | renderer options configure a renderer; context carries values to rules and custom rendering code |
-| Add a model-derived output | a renderer in `#:additional-renderers` or `#:renderers` | the output depends on declared files or an external tool; use `#:pipelines` |
+| Add an output derived from the analyzed model | a renderer in `#:additional-renderers` or `#:renderers` | the output depends only on declared project files, independently of the model; use `#:pipelines` |
 | Construct a renderer's output artifacts | `(grove output)` → `make-artifact`, `make-byte-artifact` | output comes from declared files independently of the model; use an asset pipeline |
 | Copy a static asset directory into the build | `(grove render static)` → `make-static-assets-renderer` | files are generated from declared inputs or a tool; use an asset pipeline |
 | Render alternate image encodings as HTML `<picture>` | `(grove render html image)` → `define-image-sets`, `image-set-rule` | the encoded files still come from a project-owned asset pipeline |
