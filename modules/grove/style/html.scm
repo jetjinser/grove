@@ -59,7 +59,10 @@
 (define-record-type <html-attributes>
   (%make-html-attributes assoc)
   html-attributes?
-  (assoc html-attributes-assoc))
+  (assoc html-attributes-assoc/raw))
+
+(define (html-attributes-assoc attributes)
+  (snapshot-data (html-attributes-assoc/raw attributes)))
 
 (define (valid-html-attributes? assoc)
   (and (list? assoc)
@@ -77,12 +80,15 @@
   "Add HTML attributes to the tag produced for a styled content element."
   (unless (valid-html-attributes? assoc)
     (error "HTML attributes must be unique symbol/string pairs" assoc))
-  (%make-html-attributes assoc))
+  (%make-html-attributes (snapshot-data assoc)))
 
 (define-record-type <html-tag>
   (%make-html-tag name)
   html-tag?
-  (name html-tag-name))
+  (name html-tag-name/raw))
+
+(define (html-tag-name tag)
+  (snapshot-data (html-tag-name/raw tag)))
 
 (define (html-tag-name? name)
   (and (string? name) (> (string-length name) 0)
@@ -97,7 +103,7 @@
   (let ((name (if (symbol? name) (symbol->string name) name)))
     (unless (html-tag-name? name)
       (error "invalid HTML tag name" name))
-    (%make-html-tag name)))
+    (%make-html-tag (snapshot-data name))))
 
 (define-record-type <html-void>
   (%make-html-void marker)

@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove style)
+  #:use-module (grove private snapshot)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-1)
   #:export (make-content-style content-style? content-style-name
@@ -10,8 +11,14 @@
 (define-record-type <content-style>
   (%make-content-style name properties)
   content-style?
-  (name content-style-name)
-  (properties content-style-properties))
+  (name content-style-name/raw)
+  (properties content-style-properties/raw))
+
+(define (content-style-name style)
+  (snapshot-data (content-style-name/raw style)))
+
+(define (content-style-properties style)
+  (snapshot-data (content-style-properties/raw style)))
 
 (define* (make-content-style name #:optional (properties '()))
   "Describe presentation intent and renderer-specific style properties."
@@ -19,7 +26,8 @@
     (error "content style name must be a string, symbol, or #f" name))
   (unless (list? properties)
     (error "content style properties must be a list" properties))
-  (%make-content-style name properties))
+  (%make-content-style (snapshot-data name)
+                       (snapshot-data properties)))
 
 (define (merge-style-name a b)
   (cond

@@ -90,6 +90,37 @@
       (content->sxml styled)))
   (test-error "HTML attributes require unique string-valued pairs" #t
     (make-html-attributes '((id . "one") (id . "two"))))
+  (let* ((name (string-copy "notice"))
+         (property-value (string-copy "callout"))
+         (attributes (list (cons 'data-kind property-value)))
+         (tag-name (string-copy "aside"))
+         (style-properties
+          (list (make-html-attributes attributes) (make-html-tag tag-name)))
+         (style (make-content-style name style-properties)))
+    (string-set! name 0 #\x)
+    (string-set! property-value 0 #\x)
+    (string-set! tag-name 0 #\x)
+    (set-car! attributes (cons 'changed "changed"))
+    (set-car! style-properties 'changed)
+    (test-equal "content styles snapshot names, properties, and nested values"
+      '("notice" ((data-kind . "callout")) "aside")
+      (list (content-style-name style)
+            (html-attributes-assoc (car (content-style-properties style)))
+            (html-tag-name (cadr (content-style-properties style)))))
+    (let ((exposed-name (content-style-name style))
+          (exposed-properties (content-style-properties style))
+          (exposed-attributes
+           (html-attributes-assoc (car (content-style-properties style))))
+          (exposed-tag (html-tag-name (cadr (content-style-properties style)))))
+      (string-set! exposed-name 0 #\x)
+      (set-car! exposed-properties 'changed)
+      (set-cdr! (car exposed-attributes) "changed")
+      (string-set! exposed-tag 0 #\x))
+    (test-equal "content style and HTML value accessors return snapshots"
+      '("notice" ((data-kind . "callout")) "aside")
+      (list (content-style-name style)
+            (html-attributes-assoc (car (content-style-properties style)))
+            (html-tag-name (cadr (content-style-properties style))))))
   (test-equal "HTML supplies a generic fallback for open element kinds"
     '(article (span (@ (class "notice")) "Hello"))
     (content->sxml document))
