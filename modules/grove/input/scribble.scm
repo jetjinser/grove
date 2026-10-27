@@ -24,10 +24,14 @@
                                      #:key
                                      (module-filter scribble-source-file?))
   "Return a project preparation procedure that loads Scribble module sources.
-It returns the loaded paths so Grove can track them as build inputs."
-  (unless (and (string? module-directory) (procedure? module-filter))
+MODULE-DIRECTORY must be non-empty and is copied at construction. The
+procedure returns loaded paths so Grove can track them as build inputs."
+  (unless (and (string? module-directory)
+               (not (string-null? module-directory))
+               (procedure? module-filter))
     (error "Scribble module setup requires a directory and filter"
            module-directory module-filter))
+  (set! module-directory (string-copy module-directory))
   (let ((read-document (make-scribble-document-reader)))
     (lambda ()
       (let ((paths (collect-directory module-directory module-filter)))
@@ -38,11 +42,17 @@ It returns the loaded paths so Grove can track them as build inputs."
                                       #:key
                                       (read-document (make-scribble-document-reader)))
   "Return a project preparation procedure and its document reader.
-PREPARE evaluates module articles in PATHS order, once per preparation. The
-reader reuses those document results within that preparation and delegates
-other paths. Preparing again resets reuse; this is not a persistent cache."
-  (unless (and (list? paths) (every string? paths) (procedure? read-document))
+PATHS is a list of non-empty path strings, copied at construction. PREPARE
+evaluates module articles in PATHS order, once per preparation. The reader
+reuses those document results within that preparation and delegates other
+paths. Preparing again resets reuse; this is not a persistent cache."
+  (unless (and (list? paths)
+               (every (lambda (path)
+                        (and (string? path) (not (string-null? path))))
+                      paths)
+               (procedure? read-document))
     (error "module session requires source paths and a reader" paths read-document))
+  (set! paths (map string-copy paths))
   (let ((prepared (make-hash-table)))
     (define (replay! trace)
       (for-each depend-on! (trace-inputs trace))

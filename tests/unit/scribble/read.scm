@@ -83,6 +83,11 @@
 
 (test-begin "scribble read")
 
+(test-error "Scribble module setup rejects an empty directory" #t
+  (make-scribble-module-setup ""))
+(test-error "Scribble module sessions reject empty paths" #t
+  (make-scribble-module-session (list "")))
+
 (let* ((document (evaluate-document (default-environment scribble)
                    "@with-assumptions[\"scalar(x)\"]{
  @differentiate[\"x\"]{x*x}
@@ -530,9 +535,12 @@
             "@(define-module (tests unit scribble preloaded-module) #:use-module (forester commands) #:export (preloaded-label))\n@(define preloaded-label \"preloaded module\")"
             port))))
     (lambda ()
-      (test-equal "module setup returns the loaded source paths"
-        (list module-path)
-        ((make-scribble-module-setup module-directory)))
+      (let* ((directory (string-copy module-directory))
+             (setup (make-scribble-module-setup directory)))
+        (string-set! directory 1 (integer->char 120))
+        (test-equal "module setup snapshots its directory and returns loaded paths"
+          (list module-path)
+          (setup)))
       (call-with-temporary-source
         "@use-modules[(tests unit scribble preloaded-module)]@paragraph{@|preloaded-label|}"
         (lambda (page-path)
@@ -648,16 +656,23 @@
       "@use-modules[(tests literate-provider)]\n@verbatim[answer]"
       (lambda (consumer)
         (let ((executions 0)
+              (session-path (string-copy provider))
+              (session-paths #f)
               (base-reader (make-scribble-document-reader)))
+          (set! session-paths (list session-path))
           (call-with-values
             (lambda ()
-              (make-scribble-module-session (list provider)
+              (make-scribble-module-session session-paths
                 #:read-document
                 (lambda (path)
                   (when (string=? path provider) (set! executions (+ executions 1)))
                   (base-reader path))))
             (lambda (prepare read-document)
-              (prepare)
+              (string-set! session-path 0 (integer->char 120))
+              (set-car! session-paths consumer)
+              (test-equal "module session snapshots path lists and strings"
+                (list (canonicalize-path provider))
+                (prepare))
               (test-equal "module articles record their actual .plant filename"
                 provider (module-filename (resolve-module '(tests literate-provider))))
               (let ((trace (make-hash-table)))
