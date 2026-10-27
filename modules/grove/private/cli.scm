@@ -221,7 +221,7 @@ with HELP overrides keyed by command."
     ("serve" . "Usage: grove serve [OPTIONS]\n\nServe successful build outputs on localhost and watch for changes.\n")
     ("browse" . "Usage: grove browse [OPTIONS]\n\nRead and analyze the project, then browse its model in the terminal.\n")
     ("ssh-keygen" . "Usage: grove ssh-keygen --host-key PATH [OPTIONS]\n\nGenerate an RSA host key for 'grove browse --ssh'.\n")
-    ("store" . "Usage: grove store (size|gc) [OPTIONS]\n\nReport the size of the machine-global store, or prune stale entries.\n")))
+    ("store" . "Usage: grove store (size|gc) [OPTIONS]\n\nReport the size of the per-user shared store, or prune stale entries.\n")))
 
 (define general-synopsis
   "Usage: grove COMMAND [OPTIONS]\n\nCommands:\n  build       Build the project and update its outputs.\n  check       Validate the complete pipeline without writing outputs.\n  serve       Preview on localhost and rebuild when inputs change.\n  browse      Analyze the project and browse its model in the terminal.\n  ssh-keygen  Generate an RSA host key for --ssh.\n  new         Create a tree with an increasing base36 ID.\n  store       Report the size of the shared content store or prune it.\n")

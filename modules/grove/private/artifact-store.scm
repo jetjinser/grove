@@ -2,7 +2,7 @@
 ;;;
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-;;; Content-addressed content blobs under the machine-global Grove
+;;; Content-addressed content blobs under the per-user shared Grove
 ;;; store. Every blob is keyed by the hex SHA-256 of its bytes, so
 ;;; concurrent writers never collide and every checkout can share build
 ;;; outputs, pipeline products, and extension cache values. Unusable or

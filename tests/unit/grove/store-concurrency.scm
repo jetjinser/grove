@@ -10,7 +10,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-64))
 
-;;     Concurrent writers meeting on the machine-global store: threads
+;;     Concurrent writers meeting on the per-user shared store: threads
 ;;     stand in for parallel builds and checkouts.  The discipline
 ;;     under test is that every publish installs a complete blob and
 ;;     every verified restore materializes the exact bytes - races may

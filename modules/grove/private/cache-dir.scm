@@ -29,7 +29,7 @@ back to the path as given."
                    (substring (content-fingerprint canonical) 0 16))))
 
 (define (grove-store-directory)
-  "The machine-global content store, shared by every checkout and
+  "The per-user content store, shared by every checkout and
 every output directory of every project this user builds.  Keys are
 content-derived, so concurrent writers land on identical objects and
 the write discipline (temp file + rename) makes races no-ops.  Callers

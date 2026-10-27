@@ -298,7 +298,7 @@ output. Most project code should pass a plain renderer procedure and leave
 cache configuration alone; declare hidden dependencies only when a custom
 renderer or pipeline actually uses them.
 
-Document entries live in the machine-global content store,
+Document entries live in the per-user shared content store,
 `$XDG_CACHE_HOME/grove/store/input-cache` (override the base with
 `GROVE_STORE_DIR`), shared by every checkout and output directory of
 every project this user builds. Keys are content-derived from the project's

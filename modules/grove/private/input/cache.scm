@@ -92,7 +92,7 @@
   (and enabled?
     (let ((globals (make-hash-table)))
       (for-each (lambda (path) (hash-set! globals path #t)) dependencies)
-      ;;     The document cache lives in the machine-global store, not
+      ;;     The document cache lives in the per-user shared store, not
       ;;     a per-output directory: its keys are content-derived, so
       ;;     concurrent checkouts and worktrees share one set of
       ;;     entries instead of recomputing identical analyses.

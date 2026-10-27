@@ -2,7 +2,7 @@
 ;;;
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-;;; Size reporting and mtime-based pruning for the machine-global
+;;; Size reporting and mtime-based pruning for the per-user shared
 ;;; store.  Every subtree (artifacts, keys, input-cache) is a pure
 ;;; cache: entries are content-derived and every consumer verifies
 ;;; what it reads, so deletion is always safe and never changes

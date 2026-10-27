@@ -25,7 +25,7 @@
 (define file-fingerprint private:file-fingerprint)
 
 (define (make-content-cache namespace)
-  "Create a machine-wide cache namespace for values addressed by caller keys."
+  "Create a per-user shared cache namespace addressed by caller keys."
   (unless (and (string? namespace) (not (string-null? namespace)))
     (error "content cache requires a non-empty namespace" namespace))
   (%make-content-cache (snapshot-data namespace)))
