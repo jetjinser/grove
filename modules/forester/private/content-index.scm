@@ -4,7 +4,8 @@
 
 (define-module (forester private content-index)
   #:use-module ((grove private ir) #:prefix ir:)
-  #:use-module (grove string-fun)
+  #:use-module (grove private string-fun)
+  #:use-module (grove unicode)
   #:use-module (grove ir)
   #:use-module ((grove private render plain-text) #:prefix plain:)
   #:use-module (grove render plain-text)

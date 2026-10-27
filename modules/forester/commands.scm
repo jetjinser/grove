@@ -14,7 +14,7 @@
   #:use-module (grove ir)
   #:use-module (language scribble command)
   #:use-module (language scribble flow)
-  #:use-module (grove string-fun)
+  #:use-module (grove private string-fun)
   #:use-module (forester i18n))
 
 (define-public (title . body)

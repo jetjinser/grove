@@ -4,7 +4,7 @@
 
 (define-module (grove project)
   #:use-module ((grove private artifact) #:prefix out:)
-  #:use-module (grove string-fun)
+  #:use-module (grove private string-fun)
   #:use-module (grove pipeline)
   #:use-module (grove private cache-dir)
   #:use-module (grove private build-lock)

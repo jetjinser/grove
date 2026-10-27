@@ -4,7 +4,7 @@
 
 (define-module (grove ir)
   #:use-module (grove private snapshot)
-  #:use-module (grove string-fun)
+  #:use-module (grove private string-fun)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)

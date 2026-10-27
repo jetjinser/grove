@@ -4,7 +4,7 @@
 
 (define-module (forester style html)
   #:use-module (grove output)
-  #:use-module (grove string-fun)
+  #:use-module (grove private string-fun)
   #:use-module (grove style html)
   #:use-module (grove style highlight)
   #:export (default-html-style))

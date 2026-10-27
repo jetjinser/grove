@@ -2,11 +2,12 @@
 ;;;
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(define-module (tests unit grove string-fun)
+(define-module (tests unit grove string)
   #:use-module (srfi srfi-64)
-  #:use-module (grove string-fun))
+  #:use-module (grove private string-fun)
+  #:use-module (grove unicode))
 
-(test-begin "grove string-fun")
+(test-begin "grove string and Unicode helpers")
 
 (test-assert "non-empty-string? accepts non-empty strings"
   (non-empty-string? "grove"))
@@ -28,4 +29,4 @@
 (test-error "grapheme-count rejects non-strings" #t
   (grapheme-count #f))
 
-(test-end "grove string-fun")
+(test-end "grove string and Unicode helpers")

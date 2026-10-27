@@ -153,7 +153,8 @@ returned result.
 
 The `text` column is the concatenation of descendant text and layout leaves,
 without renderer-specific formatting. `character-count` counts Unicode
-extended grapheme clusters, the default user-perceived text units;
+extended grapheme clusters, the default user-perceived text units; the public
+`grapheme-count` procedure is available from `(grove unicode)`;
 `codepoint-count` is the Guile string length. UTF-8 byte length is a storage
 measure and can be computed from `(string->utf8 text)` when needed.
 `plain-text?` means that the element has no child content elements;

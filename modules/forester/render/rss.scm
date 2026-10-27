@@ -12,7 +12,7 @@
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove render html routes)
-  #:use-module (grove string-fun)
+  #:use-module (grove private string-fun)
   #:use-module (grove private render text)
   #:use-module (grove site)
   #:use-module (sxml simple)

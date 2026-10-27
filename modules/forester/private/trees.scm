@@ -4,7 +4,7 @@
 
 (define-module (forester private trees)
   #:use-module ((grove private ir) #:prefix ir:)
-  #:use-module (grove string-fun)
+  #:use-module (grove private string-fun)
   #:use-module (grove ir)
   #:use-module (grove site)
   #:use-module (forester input scribble)

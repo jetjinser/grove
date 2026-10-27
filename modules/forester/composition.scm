@@ -3,7 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester composition)
-  #:use-module (grove string-fun)
+  #:use-module (grove private string-fun)
   #:use-module (grove relation dsl)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)

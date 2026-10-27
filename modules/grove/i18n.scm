@@ -3,7 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove i18n)
-  #:use-module (grove string-fun)
+  #:use-module (grove private string-fun)
   #:use-module (grove private snapshot)
   #:use-module ((scheme char) #:select (string-foldcase))
   #:use-module (srfi srfi-1)

@@ -9,7 +9,7 @@
   #:use-module (grove private cache-dir)
   #:use-module (grove private files)
   #:use-module (grove private fingerprint)
-  #:use-module (grove string-fun)
+  #:use-module (grove private string-fun)
   #:use-module (ice-9 ftw)
   #:use-module (ice-9 binary-ports)
   #:use-module (ice-9 textual-ports)

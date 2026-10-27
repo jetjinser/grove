@@ -8,7 +8,7 @@
   #:use-module (grove build)
   #:use-module (grove private build-state)
   #:use-module (grove i18n)
-  #:use-module (grove string-fun)
+  #:use-module (grove private string-fun)
   #:use-module (forester private render artifact)
   #:use-module (forester private render labels)
   #:use-module (forester render context)

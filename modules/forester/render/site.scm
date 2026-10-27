@@ -5,7 +5,7 @@
 (define-module (forester render site)
   #:use-module (grove i18n)
   #:use-module (grove private snapshot)
-  #:use-module (grove string-fun)
+  #:use-module (grove private string-fun)
   #:use-module (srfi srfi-9)
   #:export (site-settings?
             make-site-settings

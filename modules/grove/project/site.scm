@@ -8,7 +8,7 @@
   #:use-module (grove project)
   #:use-module (grove private snapshot)
   #:use-module (grove site)
-  #:use-module (grove string-fun)
+  #:use-module (grove private string-fun)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (make-site-project))

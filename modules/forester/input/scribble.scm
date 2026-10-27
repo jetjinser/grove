@@ -8,7 +8,7 @@
   #:use-module (forester private date)
   #:use-module (grove i18n)
   #:use-module (grove ir)
-  #:use-module (grove string-fun)
+  #:use-module (grove private string-fun)
   #:use-module (grove site)
   #:use-module (web uri)
   #:use-module (srfi srfi-1)

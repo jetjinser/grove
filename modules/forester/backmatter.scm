@@ -3,7 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester backmatter)
-  #:use-module (grove string-fun)
+  #:use-module (grove private string-fun)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-26) ; cut(e)
   #:export (default-backmatter-sections
