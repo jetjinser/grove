@@ -7,6 +7,7 @@
   #:use-module (grove build)
   #:use-module (forester private date)
   #:use-module (forester private render-routes)
+  #:use-module (forester private translations)
   #:use-module (forester private web)
   #:use-module (forester render context)
   #:use-module (forester render site)
@@ -26,12 +27,8 @@
              (site-page-id page) updated))
     updated))
 
-(define (page-locale page)
-  (assq-ref (site-page-metadata page) 'locale))
-
 (define (alternate-links base routes route-table groups default-locale page)
-  (let* ((key (assq-ref (site-page-metadata page) 'translation))
-         (group (and key (assoc-ref groups key))))
+  (let ((group (page-translation-group page groups)))
     (if (or (not group) (< (length group) 2))
         '()
         (append
@@ -45,10 +42,7 @@
                                             (cdr (assoc (site-page-id other)
                                                         route-table))))))))
                group)
-          (let ((default (and default-locale
-                              (find (lambda (other)
-                                      (equal? (page-locale other) default-locale))
-                                    group))))
+          (let ((default (default-translation-page group default-locale)))
             (if default
                 (list `(xhtml:link
                          (@ (rel "alternate")

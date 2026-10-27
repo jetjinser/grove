@@ -13,6 +13,7 @@
   #:use-module (forester private render artifact)
   #:use-module (forester private render anchors)
   #:use-module (forester private render labels)
+  #:use-module (forester private translations)
   #:use-module (forester render context)
   #:use-module (forester render site)
   #:use-module (forester site)
@@ -51,16 +52,9 @@
   (let ((locale (render-context-ref context 'locale-object)))
     (if locale (format-date locale text #:style 'long) text)))
 
-(define (page-locale page)
-  (assq-ref (site-page-metadata page) 'locale))
-
-(define (translation-group page context)
-  (let ((key (assq-ref (site-page-metadata page) 'translation)))
-    (and key
-         (assoc-ref (render-context-translation-groups context) key))))
-
 (define (hreflang-links forest page routes context)
-  (let ((group (translation-group page context)))
+  (let ((group (page-translation-group
+                 page (render-context-translation-groups context))))
     (if (or (not group) (< (length group) 2))
         '()
         (append
@@ -69,13 +63,9 @@
                            (hreflang ,(or (page-locale other) "und"))
                            (href ,(html-page-url routes (site-page-id other))))))
                group)
-          (let* ((default-locale
-                   (render-context-ref context 'default-locale))
-                 (default
-                   (and default-locale
-                        (find (lambda (other)
-                                (equal? (page-locale other) default-locale))
-                              group))))
+          (let ((default
+                  (default-translation-page
+                    group (render-context-ref context 'default-locale))))
             (if default
                 (list `(link (@ (rel "alternate")
                                 (hreflang "x-default")
@@ -84,7 +74,8 @@
                 '()))))))
 
 (define (alternate-og-locales forest page context)
-  (let ((group (translation-group page context)))
+  (let ((group (page-translation-group
+                 page (render-context-translation-groups context))))
     (if (not group)
         '()
         (let loop ((rest group) (acc '()))
@@ -98,7 +89,8 @@
                     (loop (cdr rest) acc))))))))
 
 (define (language-switcher-sxml forest page routes context)
-  (let ((group (translation-group page context)))
+  (let ((group (page-translation-group
+                 page (render-context-translation-groups context))))
     (if (or (not group) (< (length group) 2))
         '()
         `(nav (@ (class "language-switcher")
