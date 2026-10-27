@@ -193,6 +193,66 @@ defaults to the project's source directory."
           (and (not (member name seen string=?))
                (loop (cdr remaining) (cons name seen)))))))
 
+(define (renderer-identities-match? current previous)
+  (and (list? current) (list? previous) (equal? current previous)))
+
+(define (renderer-cache-available? current previous)
+  (and (list? current)
+       (or (null? current)
+           (and (list? previous)
+                (let loop ((current current) (previous previous))
+                  (and (pair? current)
+                       (or (and (car current)
+                                (equal? (car current)
+                                        (and (pair? previous) (car previous))))
+                           (loop (cdr current)
+                                 (if (pair? previous) (cdr previous) '())))))))))
+
+(define (all-renderers-cacheable? identities)
+  (and (list? identities) (every identity identities)))
+
+(define (renderer-identity-changed? current previous index)
+  (if (and (list? current) (list? previous))
+      (not (equal? (and (< index (length current)) (list-ref current index))
+                   (and (< index (length previous))
+                        (list-ref previous index))))
+      #t))
+
+(define (changed-renderer-artifact-paths artifacts owners previous-artifacts
+                                         current-identities previous-identities)
+  (delete-duplicates
+    (append
+      (map out:artifact-path/raw
+           (filter
+             (lambda (artifact)
+               (let ((owner (assoc (out:artifact-path/raw artifact) owners)))
+                 (and owner
+                      (integer? (cdr owner))
+                      (renderer-identity-changed? current-identities
+                                                  previous-identities
+                                                  (cdr owner)))))
+             artifacts))
+      (map build-state-artifact-path
+           (filter
+             (lambda (entry)
+               (let ((renderer (build-state-artifact-renderer entry)))
+                 (and (integer? renderer)
+                      (renderer-identity-changed? current-identities
+                                                  previous-identities
+                                                  renderer))))
+             previous-artifacts)))
+    string=?))
+
+(define (reused-renderer-artifact-paths artifacts owners rendered-indices)
+  (map out:artifact-path/raw
+       (filter
+         (lambda (artifact)
+           (let ((owner (assoc (out:artifact-path/raw artifact) owners)))
+             (and owner
+                  (integer? (cdr owner))
+                  (not (member (cdr owner) rendered-indices)))))
+         artifacts)))
+
 (define* (make-project #:key
                        (source-directory #f)
                        (source-filter (lambda (filename)
@@ -509,8 +569,8 @@ Return the internal analysis record used by the build pipeline."
                                        (project-renderers project)))
           (retired (retired-pipeline-paths pipeline-artifacts previous-artifacts))
           (cache-ready?
-           (and identity previous-state
-                (equal? identity previous-identity)
+           (and previous-state
+                (renderer-cache-available? identity previous-identity)
                 (load-cached-artifacts (project-output-directory project)
                                        previous-artifacts)))
          (global-inputs-changed?
@@ -519,7 +579,11 @@ Return the internal analysis record used by the build pipeline."
                (paths-intersect? (input-cache-dependencies input-cache-context) changed)
                (and (> (cdr (input-cache-summary input-cache-context)) 0)
                     (any (lambda (path) (not (file-exists? path))) removed))))
-         (cache-hit? (and cache-ready? (null? changed) (not global-inputs-changed?)))
+         (cache-hit? (and cache-ready?
+                          (renderer-identities-match? identity previous-identity)
+                          (all-renderers-cacheable? identity)
+                          (null? changed)
+                          (not global-inputs-changed?)))
          (render-result
            (cond
              (cache-hit?
@@ -528,6 +592,7 @@ Return the internal analysis record used by the build pipeline."
                            (cons (build-state-artifact-path entry)
                                  (build-state-artifact-renderer entry)))
                          previous-artifacts)
+                    '()
                     '()))
              (global-inputs-changed?
               (progress 'render #f)
@@ -536,7 +601,9 @@ Return the internal analysis record used by the build pipeline."
               (progress 'render #f)
               (render-with-cache model (project-renderers project)
                                  previous-artifacts cache-ready?
-                                 previous-sources changed progress))
+                                 previous-sources changed progress
+                                 #:renderer-identities identity
+                                 #:previous-renderer-identities previous-identity))
              (else
               (progress 'render #f)
               (render-all model (project-renderers project) progress))))
@@ -544,26 +611,19 @@ Return the internal analysis record used by the build pipeline."
                                                (car render-result) retired))
           (owners (append pipeline-owners (cadr render-result)))
          (affected
-           (cond
-             (cache-hit? '())
-             ((and identity previous-state
-                   (equal? identity previous-identity)
-                   (not cache-ready?))
-              (map out:artifact-path/raw artifacts))
-             ((and previous-state
-                   (not (equal? identity previous-identity)))
-              (append (map out:artifact-path/raw artifacts)
-                      (map car
-                           (filter (lambda (entry)
-                                     (not (find
-                                            (lambda (artifact)
-                                              (string=? (out:artifact-path/raw artifact)
-                                                        (build-state-artifact-path
-                                                          entry)))
-                                            artifacts)))
-                                   previous-artifacts))))
-             (else
-              (affected-artifacts artifacts previous-artifacts changed)))))
+           (if cache-hit?
+               '()
+               (let ((reused
+                       (reused-renderer-artifact-paths
+                         artifacts owners (caddr render-result))))
+                 (delete-duplicates
+                   (filter (lambda (path) (not (member path reused string=?)))
+                     (append
+                       (affected-artifacts artifacts previous-artifacts changed)
+                       (changed-renderer-artifact-paths
+                         artifacts owners previous-artifacts identity
+                         previous-identity)))
+                   string=?)))))
     ;;     Expose the analysis model for long-lived preview workers:
     ;;     a resident worker re-renders from this model when only
     ;;     load-time assets changed.
@@ -599,8 +659,8 @@ watch and a manual build over one project must not run concurrently."
 ;;     Analysis is skipped wholesale; render-with-cache re-runs just
 ;;     the renderers whose inputs changed, and renderers without an
 ;;     incremental callback keep their previous artifacts outright -
-;;     the retained model and the identity-checked configurations
-;;     make their output byte-identical.  The on-disk build state
+;;     the retained model and each renderer's identity
+;;     make their output byte-identical. The on-disk build state
 ;;     is refreshed (with content fingerprints) so manual builds stay
 ;;     incremental.  Cache pruning is skipped here - the retained
 ;;     state carries no selection statuses, and pruning is hygiene.
@@ -632,8 +692,10 @@ preserves the prior analysis result."
                                                previous-artifacts))
               (identity (renderer-identity (project-cache? project) model
                                            (project-renderers project)))
-             (config-equal?
-                (equal? identity (build-state-identity retained-state)))
+              (previous-identity (build-state-identity retained-state))
+              (cached-artifacts
+                (load-cached-artifacts (project-output-directory project)
+                                       previous-artifacts))
              ;;     Capture content before rendering: the retained model
              ;;     reflects these bytes, and a source edited during the
              ;;     render must not enter the state as if the render had
@@ -652,24 +714,28 @@ preserves the prior analysis result."
              (render-result
                 (begin
                   (progress 'render #f)
-                  (if config-equal?
-                      (render-with-cache model (project-renderers project)
-                                         previous-artifacts
-                                         (load-cached-artifacts
-                                           (project-output-directory project)
-                                           previous-artifacts)
-                                         previous-sources changed progress
-                                         #:model-retained? #t)
-                      ;;     A configuration baked an extra-source value
-                      ;;     that just changed: every artifact may differ,
-                      ;;     so render everything with the fresh configs
-                      ;;     - but the analysis still comes from the
-                      ;;     retained model.
-                      (render-all model (project-renderers project) progress))))
+                  (render-with-cache model (project-renderers project)
+                                     previous-artifacts cached-artifacts
+                                     previous-sources changed progress
+                                     #:model-retained? #t
+                                     #:renderer-identities identity
+                                     #:previous-renderer-identities
+                                     previous-identity)))
               (artifacts (merge-pipeline-artifacts pipeline-artifacts
                                                    (car render-result) retired))
               (owners (append pipeline-owners (cadr render-result)))
-             (affected (affected-artifacts artifacts previous-artifacts changed))
+             (affected
+               (let ((reused
+                       (reused-renderer-artifact-paths
+                         artifacts owners (caddr render-result))))
+                 (delete-duplicates
+                   (filter (lambda (path) (not (member path reused string=?)))
+                     (append
+                       (affected-artifacts artifacts previous-artifacts changed)
+                       (changed-renderer-artifact-paths
+                         artifacts owners previous-artifacts identity
+                         previous-identity)))
+                   string=?)))
              (report-removed
                 (filter (lambda (p) (not (member p changed string=?))) removed)))
          (validate-project-artifacts artifacts progress)

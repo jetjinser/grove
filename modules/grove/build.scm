@@ -17,9 +17,10 @@ to track. RENDER-CHANGED, when supplied, receives the model, changed source
 paths, dirty artifact paths, and this renderer's previous artifacts. It must
 return the renderer's complete current artifact list, or #f to request a full
 render. CACHE? false marks this renderer uncached; in a project this disables
-the shared artifact cache for the renderer set. Use this constructor when its
-stable cache identity is known; a plain renderer procedure runs on each build
-because procedure identity cannot be persisted safely."
+this renderer's artifact cache without disabling cache reuse for its peers. Use
+this constructor when its stable cache identity is known; a plain renderer
+procedure runs on each build because procedure identity cannot be persisted
+safely."
   (unless (boolean? cache?)
     (error "renderer cache option must be a boolean" cache?))
   (unless (procedure? procedure)

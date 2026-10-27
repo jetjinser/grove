@@ -31,6 +31,13 @@
   (renderer-configurations
     #f (list (make-cached-renderer (lambda (site) '())))))
 
+(test-equal "renderer configurations retain per-renderer cache boundaries"
+  '(stable #f)
+  (renderer-configurations
+    #f (list (make-cached-renderer (lambda (_) '())
+                                  #:configuration 'stable)
+             (make-cached-renderer (lambda (_) '()) #:cache? #f))))
+
 (test-error "incremental callbacks must be procedures" #t
   (make-cached-renderer (lambda (site) '())
     #:render-changed #t))

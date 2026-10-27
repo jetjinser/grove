@@ -93,8 +93,16 @@
        (every valid-output-entry? (build-state-artifacts state))
        (distinct-paths? (build-state-artifacts state)
                         build-state-artifact-path)
-       (or (not (build-state-identity state))
-           (string? (build-state-identity state)))))
+       (let ((identity (build-state-identity state)))
+         (or (not identity)
+             ;; Earlier states stored one renderer-set fingerprint. Keep
+             ;; reading it so its artifacts can be retired; it will not
+             ;; match the current per-renderer identity list.
+             (string? identity)
+             (and (list? identity)
+                  (every (lambda (item)
+                           (or (not item) (valid-fingerprint? item)))
+                         identity))))))
 
 (define (read-build-state path)
   (if (not (regular-file? path #:follow-links? #f))

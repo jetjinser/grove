@@ -58,6 +58,12 @@
       (test-equal "build state round trips input and artifact provenance"
         state
         (read-build-state state-path))
+      (let ((identities (list (content-fingerprint "html") #f)))
+        (write-build-state state-path temp-path sources artifacts
+                           '(("page.html" . 0)) identities)
+        (test-equal "build state round trips per-renderer cache identities"
+          identities
+          (build-state-identity (read-build-state state-path))))
       (write-test-file input-path "other")
       (test-assert "file fingerprints read source bytes"
         (equal? (cadar sources)

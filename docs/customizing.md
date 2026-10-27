@@ -38,12 +38,12 @@ HTML, RSS, and sitemap so their links agree. Set the absolute HTTP(S) site base
 with `#:site-url`; it may include a path prefix but cannot include a query or
 fragment.
 
-Renderers share one artifact-cache identity. If any renderer is a plain
-procedure, opts out with `#:cache? #f`, or has opaque rules without a
-`#:rules-id`, Grove reruns the whole renderer set on each build. This
-conservative boundary keeps ordered renderers over a shared model predictable.
-Use `project-with-options #:cache? #f` to disable both document and artifact
-caching for a project.
+Each renderer has its own artifact-cache identity. A plain procedure, a
+renderer that opts out with `#:cache? #f`, or one with opaque rules and no
+`#:rules-id` reruns on each build; cacheable peers can still reuse their
+artifacts. Source changes may still rerun the full set because renderers see
+the same analyzed model. Use `project-with-options #:cache? #f` to disable
+document, renderer, and pipeline caching for a project.
 
 If the change is about *how one node is interpreted*, use rules.  If it is
 about *the environment of a render pass*, use a context.  If it is about

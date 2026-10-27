@@ -205,9 +205,9 @@ derives the page context per page; rules receive it through `#:context`.
 Project rules override the default interpretation; no core codec knowledge is
 involved. A renderer with project rules is cacheable only when its constructor
 receives a stable `#:rules-id` (a symbol or non-empty string). Renderer values
-share one artifact-cache identity, so a plain procedure, an opaque renderer,
-or an explicitly uncached renderer causes Grove to rerun the whole renderer
-set on each build. Pass `#:cache? #f` to `make-html-renderer`,
+have independent cache identities, so a plain procedure, an opaque renderer,
+or an explicitly uncached renderer reruns without disabling cache reuse for
+its peers. Pass `#:cache? #f` to `make-html-renderer`,
 `make-text-renderer`, or `make-gemtext-renderer` to make that choice explicit.
 These are cache controls, so they live on the cached renderer constructors
 rather than render options.

@@ -377,6 +377,35 @@
         (build-project uncached)
         (test-equal "renderer opt-out forces rendering on every build" 5 renders)))
       (let* ((cached-runs 0)
+             (plain-runs 0)
+             (mixed
+              (make-project
+                #:collect-sources (lambda () (list source))
+                #:read-source (lambda (path)
+                                (call-with-input-file path get-string-all))
+                #:renderers
+                (list
+                  (make-cached-renderer
+                    (lambda (_)
+                      (set! cached-runs (+ cached-runs 1))
+                      (list (make-artifact "cached.txt" "stable")))
+                    #:configuration 'stable)
+                  (lambda (_)
+                    (set! plain-runs (+ plain-runs 1))
+                    (list (make-artifact "plain.txt"
+                                         (number->string plain-runs)))))
+                #:output-directory (string-append root "/mixed-cache"))))
+        (build-project mixed)
+        (build-project mixed)
+        (test-equal "a plain renderer does not invalidate its cached peer"
+          1 cached-runs)
+        (test-equal "a plain renderer reruns independently"
+          2 plain-runs)
+        (test-equal "the plain renderer publishes its latest bytes"
+          "2"
+          (call-with-input-file (string-append root "/mixed-cache/plain.txt")
+            get-string-all)))
+      (let* ((cached-runs 0)
              (uncached-runs 0)
              (mixed
               (make-project
@@ -397,8 +426,35 @@
                 #:output-directory (string-append root "/mixed"))))
         (build-project mixed)
         (build-project mixed)
-        (test-equal "one uncached renderer disables the shared artifact cache"
-          '(2 2) (list cached-runs uncached-runs)))
+        (test-equal "an uncached renderer does not disable its cached peer"
+          '(1 2) (list cached-runs uncached-runs)))
+      (let* ((stable-runs 0)
+             (changing-runs 0)
+             (make-mixed
+              (lambda (configuration)
+                (make-project
+                  #:collect-sources (lambda () (list source))
+                  #:read-source (lambda (path)
+                                  (call-with-input-file path get-string-all))
+                  #:renderers
+                  (list
+                    (make-cached-renderer
+                      (lambda (_)
+                        (set! stable-runs (+ stable-runs 1))
+                        (list (make-artifact "stable.txt" "stable")))
+                      #:configuration 'stable)
+                    (make-cached-renderer
+                      (lambda (_)
+                        (set! changing-runs (+ changing-runs 1))
+                        (list (make-artifact "changing.txt" "changing")))
+                      #:configuration configuration))
+                  #:output-directory (string-append root "/mixed-config"))))
+             (_ (build-project (make-mixed 'first)))
+             (changed (build-project/report (make-mixed 'second))))
+        (test-equal "a changed renderer configuration leaves its peer cached"
+          '(1 2) (list stable-runs changing-runs))
+        (test-equal "only artifacts owned by the changed renderer are affected"
+          '("changing.txt") (build-report-affected-artifacts changed)))
     (prune-input-cache! (make-input-cache-context #t '()))
     ;;     The prune owns the input-cache subtree: entries outside the
     ;;   current selection go, while sibling subtrees (artifacts) are
