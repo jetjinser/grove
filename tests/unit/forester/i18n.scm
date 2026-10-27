@@ -39,10 +39,16 @@
 
 (test-assert "locale matching accepts a more specific tag"
   (locale-matches? "zh" "zh-CN"))
+(test-assert "locale matching canonicalizes equivalent tags"
+  (locale-matches? "zh-CN" "zh-Hans"))
 (test-assert "locale matching is case-insensitive"
   (locale-matches? "ZH" "zh-CN"))
 (test-assert "locale matching rejects a different region"
   (not (locale-matches? "zh-CN" "zh-TW")))
+(test-error "locale matching rejects malformed language tags" #t
+  (locale-matches? "not a tag" "en"))
+(test-error "locale matching rejects non-string language tags" #t
+  (locale-matches? 'en "en"))
 
 (test-equal "a right-to-left script overrides a left-to-right language"
   "rtl" (locale-dir (make-locale "az-Arab")))

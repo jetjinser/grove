@@ -152,10 +152,8 @@ become zh-Hant."
 
 Tags are canonicalized first, so `zh-CN' and `zh-Hans' compare equal
 and a `zh-Hans' reader matches `zh-Hans-CN'."
-  (unless (and (string? reader) (string? tag))
-    (error "locale-matches? requires two language tags" reader tag))
-  (let ((reader (canonical-locale-tag reader))
-        (tag (canonical-locale-tag tag)))
+  (let ((reader (locale-tag (make-locale reader)))
+        (tag (locale-tag (make-locale tag))))
     (or (string-ci=? reader tag)
         (string-prefix-ci? (string-append reader "-") tag))))
 
