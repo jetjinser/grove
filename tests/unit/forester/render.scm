@@ -59,6 +59,21 @@
     '()
     (render-context-translation-groups
       (make-site-render-context forest #:translation-groups '())))
+  (test-equal "site render context accepts explicit page groups"
+    groups
+    (render-context-translation-groups
+      (make-site-render-context forest #:translation-groups groups)))
+  (test-error "site context rejects malformed translation groups"
+    #t
+    (make-site-render-context forest #:translation-groups '((42 . ()))))
+  (test-error "site context rejects duplicate translation group keys"
+    #t
+    (make-site-render-context forest
+      #:translation-groups '(("guide" . ()) ("guide" . ()))))
+  (test-error "site context rejects non-page translation group members"
+    #t
+    (make-site-render-context forest
+      #:translation-groups '(("guide" . (not-a-page)))))
   (test-error "site context rejects non-boolean language switches"
     #t
     (make-site-render-context forest #:hreflang? 'enabled))

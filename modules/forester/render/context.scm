@@ -10,6 +10,7 @@
   #:use-module (forester private render labels)
   #:use-module (forester render site)
   #:use-module (forester site)
+  #:use-module (srfi srfi-1)
   #:export (translation-groups
             make-site-render-context))
 
@@ -40,6 +41,17 @@
          (reverse keys))))
 
 (define translation-groups derive-translation-groups)
+
+(define (valid-translation-groups? groups)
+  (and (list? groups)
+       (every (lambda (entry)
+                (and (pair? entry)
+                     (non-empty-string? (car entry))
+                     (list? (cdr entry))
+                     (every site-page? (cdr entry))))
+              groups)
+       (= (length groups)
+          (length (delete-duplicates (map car groups) string=?)))))
 
 (define* (make-site-render-context forest #:key
                                    (routes #f)
@@ -80,6 +92,9 @@ dynamic chrome parameters."
            og-image-alt))
   (when (eq? translation-groups derive-translation-groups-later)
     (set! translation-groups (derive-translation-groups (pages forest))))
+  (unless (valid-translation-groups? translation-groups)
+    (error "render context translation groups must map unique string keys to page lists"
+           translation-groups))
   (when default-locale
     (set! default-locale (locale-tag (make-locale default-locale))))
   (make-render-context
