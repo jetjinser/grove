@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit grove ssh)
+  #:use-module (ice-9 ftw)
   #:use-module (ice-9 optargs)
   #:use-module (ice-9 popen)
   #:use-module (ice-9 rdelim)
@@ -24,8 +25,8 @@
 (define ssh-supported? (and ssh-module #t))
 
 (define test-directory
-  (string-append (or (getenv "TMPDIR") "/tmp")
-                 "/grove-ssh-test-" (number->string (getpid))))
+  (mkdtemp (string-append (or (getenv "TMPDIR") "/tmp")
+                          "/grove-ssh-test-XXXXXX")))
 
 (define (have-program? program)
   (and=> (search-path (string-split (or (getenv "PATH") "") #\:) program)
@@ -37,8 +38,6 @@
     (lambda _ #f)))
 
 (define ssh-keygen? (have-program? "ssh-keygen"))
-
-(unless (file-exists? test-directory) (mkdir test-directory))
 
 (define host-key (string-append test-directory "/host_rsa"))
 (define client-key (string-append test-directory "/client_ed25519"))
@@ -171,3 +170,13 @@
           (test-assert "SSH transport (skipped: ssh/ssh-keygen unavailable)" #t))))
 
 (test-end "grove ssh")
+
+(for-each (lambda (name)
+            (let ((path (string-append test-directory "/" name)))
+              (when (file-exists? path) (delete-file path))))
+          '("host_rsa" "host_rsa.pub"
+            "client_ed25519" "client_ed25519.pub"
+            "other_ed25519" "other_ed25519.pub"
+            "authorized_keys" "authorized_keys.sample" "authorized_keys.empty"
+            "generated_host" "generated_host.pub"))
+(rmdir test-directory)
