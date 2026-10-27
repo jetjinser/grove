@@ -394,10 +394,12 @@ forest.
 `--no-watch` serves the initial successful snapshot only.
 
 Scheme runners are silent unless given `#:progress`, a `(stage detail)` callback.
-Stages are `collect`, `sources`, `prepare`, `read`, `read-done`, `analyze`,
-`render`, `validate`, and `write`. `sources` carries a count, read events carry
-a path, and `write` carries the output directory; other details are `#f`.
-Complete renderer hits skip `render`. CLI formatting uses the same events.
+Stages are `collect`, `sources`, `prepare`, `read`, `read-done`, `input-cache`,
+`analyze`, `render`, `validate`, and `write`. `sources` carries a count, read
+events carry a path, and `write` carries the output directory. `input-cache`
+carries `(hits . total-inputs)` when the project read at least one input;
+other details are `#f`. Complete renderer hits skip `render`. CLI formatting
+uses the same events.
 
 ## Tree creation
 
