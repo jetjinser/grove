@@ -73,6 +73,9 @@ that order; empty sections are omitted:
 | Backlinks | Authored links to this tree. |
 | Related | Non-reference targets linked directly from this tree. |
 
+`default-backmatter-sections` and `default-reference-taxon-id` are provided by
+`(forester backmatter)` for projects that build renderer options directly.
+
 HTML, text, and Gemtext renderers accept `#:backmatter` to select/order
 sections (an empty list disables them), message catalog entries to override
 headings, and `#:reference-taxon-id` to choose the reference classification.
@@ -94,7 +97,7 @@ after the built-in date items:
   #:presentation
   (make-html-presentation
       #:metadata-items
-      '(("flora-page" . ((li (@ (class "meta-item")) "…author or source items…"))))))
+      '(("project-page" . ((li (@ (class "meta-item")) "…author or source items…"))))))
 ```
 
 ## Composition API
@@ -132,7 +135,7 @@ To extend the default CSS, compose styles in cascade order:
   (compose-html-styles
     default-html-style
     (make-html-style
-      #:stylesheets (list (make-artifact "flora.css" "body { color: #333; }")))))
+      #:stylesheets (list (make-artifact "project.css" "body { color: #333; }")))))
 
 (make-html-renderer
   #:options (make-html-options

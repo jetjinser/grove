@@ -150,6 +150,35 @@ content. The [inference-rules example](../examples/showcases/math-derivations/pl
 builds a page from these queries, using the same registry as the rewrite
 engine rather than maintaining a separate catalog.
 
+## Custom relational rules
+
+`(grove math rule)` also provides `math-rule` and `math-rules-stepo` for direct
+relational extensions. `math-rule` declares a rule from a pattern, premises,
+and relational goals; `make-math-rewrite-rule` accepts a relation procedure
+for rules that need algorithmic code. Pass an explicit rule list to
+`math-rules-stepo`:
+
+```scheme
+(use-modules (grove math rule) (grove relation))
+
+(define double-rule
+  (math-rule 'double "double(X) = X + X" "all values" 'custom
+    (facts x) (double ,x) (+ ,x ,x) () ()))
+
+(run* (output name)
+  (math-rules-stepo (list double-rule) '()
+    '(double (var x)) output name 'forward))
+```
+
+This is a lower-level relational interface. The high-level `math-*` operations,
+Formula helpers, and derivation verifiers select rule names from Grove's
+registered rule set; a locally constructed rule is not added to that registry
+or its catalog, so it cannot participate in their report and verification
+pipeline. The built-in rule-pack modules also expose rule lists for direct
+relational queries, but loading a pack does not register or replace high-level
+rules. Use this API when project code wants to run or compose a custom relation
+directly.
+
 Rule declarations and RuleSpec values snapshot their string and pair-based
 data at construction. Their accessors return independent copies, so inspection
 cannot change the registered rule or its verification behavior. Relation and

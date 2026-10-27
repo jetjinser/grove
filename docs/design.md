@@ -47,8 +47,8 @@ registered as callbacks.
 
 ## Render context
 
-[Render context](render-context.md) defines the four context layers and their
-boundaries.
+[Render context](render-context.md) explains how project analysis and rendering
+contexts are separated from build, reader, and math state.
 
 ## Site outputs
 

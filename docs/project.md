@@ -83,6 +83,13 @@ other outputs such as a sitemap or feed. Forester projects can also transform
 Content IR before Forester analysis with `#:transforms` and add cached
 site-wide outputs through renderers; see
 [site outputs](site-outputs.md).
+Pass `#:collect-sources` to replace directory traversal or choose a specific
+ordered set of `.plant` paths while keeping Forester's standard reader,
+analysis, and renderers. `#:source-directory` still supplies the default
+destination for creating new trees. Use `#:extra-sources` for additional files
+that should participate in project invalidation and preview watching.
+`#:cache?` defaults to `#t`; set it to `#f` to disable document, renderer, and
+pipeline caches for this project.
 
 Use `make-site-project` when the project needs a different reader or analyzer,
 or otherwise needs to compose the complete site lifecycle.
@@ -241,8 +248,9 @@ protocol.
 
 Projects, document readers, and built-in renderers cache by default. Set
 `#:cache? #f` to opt out; `project-with-options` applies this to any project,
-including Forester projects. Constructors such as `make-site-project` also
-accept it directly. Readers accept a path predicate for finer control.
+including Forester projects. Both `make-site-project` and
+`make-forester-project` accept it directly. Readers accept a path predicate for
+finer control.
 Preparation and whole-project analysis still run. Document hits reuse Content
 IR; renderer hits reuse artifacts. Shared code changes conservatively force
 full rendering. Standalone reader calls evaluate normally; `check` bypasses
@@ -439,7 +447,7 @@ install it directly:
   #:template
   (lambda (id date)
     (string-append
-      "@use-modules[(flora commands) (language scribble commands)]\n\n"
+      "@use-modules[(forester commands) (language scribble commands)]\n\n"
       "@title{}\n"
       "@published{" date "}\n")))
 ```
@@ -542,12 +550,12 @@ rewrite rendered markup. They are available on `render-html`, `site->html`, and
 - `#:backmatter-details?` — renders each backmatter section as a collapsible
   `details`/`summary` block.
 
-Chrome values are part of the presentation and its cache identity, so changing
-them invalidates cached pages without requiring a separate identity token.
-Their SXML must be static and well-formed: procedures, duplicate attributes,
-and repeated page IDs are rejected when constructing the value. Composition
-appends head and navigation nodes, appends page fragments by page ID, and lets
-the rightmost declared home link replace earlier ones.
+Static SXML in a presentation participates in its cache identity, so changing
+it invalidates cached pages without requiring a separate identity token. The
+SXML must be well-formed: procedures, duplicate attributes, and repeated page
+IDs are rejected when constructing the value. Composition appends head and
+navigation nodes, appends page fragments by page ID, and lets the rightmost
+declared home link replace earlier ones.
 
 ## Packaging and measurement
 

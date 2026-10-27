@@ -40,7 +40,7 @@ to them.
 - The default stylesheet hides the skip link until it is focused and keeps
   `:focus-visible` outlines visible.
 
-## Chrome labels
+## Built-in interface labels
 
 Every built-in label (site navigation, contents, skip link, tree link,
 updated date, backmatter headings) comes from a message catalog; the text and

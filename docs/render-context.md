@@ -9,17 +9,21 @@ A render context is the explicit environment for one rendering pass.  It is a
 value, not a dynamic parameter, so two pages or two sites can render
 concurrently without sharing state.
 
-## Four contexts, not one
+## State by lifecycle stage
 
-| Context | Lifetime | Contents | Does not belong here |
+| Representation | Lifetime | Contents | Does not belong here |
 | --- | --- | --- | --- |
-| `render-context` | one render pass | values supplied by the renderer or project | build progress, cache, reader modules, math assumptions |
-| build context | one build | progress reporting, input cache, output root, dirty paths | page locale, presentation |
-| reader context | one source read | reader locale, module manifest, source paths | HTML/OG metadata |
-| math context | one evaluation | assumptions, derivation state | site rendering |
+| `render-context` record | one render pass | values supplied by the renderer or project | build state, reader locale, math assumptions |
+| `project-context` record | one project analysis | read inputs, prepared source paths, extra source paths | render options, reader locale |
+| build internals and callbacks | one build | progress, input cache, output root, dirty paths | page locale, presentation |
+| reader parameters and module setup | one source read | reader locale, loaded modules, declared source dependencies | HTML/OG metadata |
+| math assumptions parameter or explicit arguments | one evaluation | assumptions for mathematical relations | site rendering |
 
-Only `render-context` is passed to renderer rules.  The others stay in their
-own layers; merging them would turn the context into a new global state.
+The first two rows are public context records: `render-context` is passed to
+renderer rules, and `project-context` is passed to the project analyzer. The
+other rows describe stage-specific state, not additional records in the public
+context API. Keeping them separate avoids turning the open render environment
+into global state for unrelated lifecycles.
 
 ## Shape
 
@@ -48,14 +52,16 @@ own layers; merging them would turn the context into a new global state.
   or `render-context-without` to derive a context with different bindings.
 - Rules receive `(context element children next)` and use
   `render-context-ref` for named fields.
-- Rules and chrome helpers receive the render context explicitly. A custom
-  renderer builds one through `make-site-render-context` when needed. There is
-  no ambient render context.
+- Rules and built-in interface helpers receive the render context explicitly.
+  A custom renderer builds one through `make-site-render-context` when needed.
+  There is no ambient render context.
 
 ## Where contexts are built
 
-`(forester render context)` provides `make-site-render-context`, which defines
-the fields and defaults used by Forester. Each HTML,
+`(forester render context)` provides `make-site-render-context`, which returns
+the same `(grove render context)` record and defines the fields and defaults
+used by Forester. It is a domain-specific constructor, not another context
+type. Each HTML,
 text, or gemtext entry point builds one site-level context for that render pass
 and derives page contexts from it with `render-context-with`. Separate
 renderer entry points build their own contexts from their options. A custom
@@ -76,8 +82,8 @@ pages within each group keep that same order.
 - Trees and transclusions use lazy structural recursion and stay outside the
   rule chain. Math rules can replace or delegate to the backend's built-in
   semantic math interpretation.
-- No `current-chrome-locale` / `current-message-catalog` parameters remain in
-  the render path.
+- Locale and message catalogs are explicit render-context values; the render
+  path does not depend on dynamic parameters for them.
 
 The parallel golden test in `tests/unit/forester/render-golden.scm` renders two
 different contexts on separate threads and checks that site URL and language do

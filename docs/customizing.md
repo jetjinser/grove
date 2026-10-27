@@ -18,7 +18,7 @@ This is the shortest path from “I want to change X” to the right Grove API.
 | the home link | a declarative home-link value | `make-html-presentation #:home-link` |
 | tree headings or the table of contents | page-specific presentation data | `make-html-presentation #:title-decorations` |
 | locale, messages, or date formatting | renderer options | `make-html-options #:locale/#:messages` |
-| output paths | routes | `make-html-routes`, `make-text-routes`, `#:prefix` |
+| output paths | routes | `(grove render html routes)` → `make-html-routes`; `(forester render text routes)` → `make-text-routes`; renderer `#:prefix` |
 | a site-wide sitemap, feed, or graph projection | additional renderers | Forester: `make-forester-project #:additional-renderers`; general sites: `make-site-project #:renderers` |
 | content before Forester analysis | content transforms | `make-forester-project #:transforms` |
 | content before a custom site's analysis | content transforms | `make-site-project #:transforms` |
@@ -26,8 +26,8 @@ This is the shortest path from “I want to change X” to the right Grove API.
 | generate artifacts from declared project files with an external tool | an asset pipeline | `#:pipelines` |
 | turn source embedded in the analyzed model into output assets | a renderer | `#:renderers` or `#:additional-renderers` |
 | choose the complete renderer set for a site | a renderer list | `make-site-project #:renderers` |
-| cache behavior for any project kind | project options | `project-with-options #:cache?` |
-| renderer-set cache eligibility | cached renderer constructor | `make-*-renderer #:cache?`, `#:rules-id` |
+| cache behavior for any project kind | project options | `make-site-project` / `make-forester-project #:cache?`, or `project-with-options #:cache?` |
+| control caching for HTML/text/Gemtext | cached renderer constructors | These three accept `#:cache?`; custom rules need `#:rules-id`. Project options control caching globally. |
 
 HTML routes distinguish output paths from URLs. `#:page-path` and
 `#:index-path` choose artifact paths relative to the project's output
@@ -266,7 +266,8 @@ the value again.
 ## Where to read next
 
 - [renderer-rules.md](renderer-rules.md) — rules, composition, `next`.
-- [render-context.md](render-context.md) — contexts and the four context kinds.
+- [render-context.md](render-context.md) — context roles and their lifecycle
+  boundaries.
 - [site-outputs.md](site-outputs.md) — sitemap, RSS, graph, and renderer composition.
 - [project.md](project.md) — project options, cache, CLI.
 - [composition.md](composition.md) — the algebra behind the layers.

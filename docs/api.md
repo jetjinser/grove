@@ -13,14 +13,18 @@ the work; drop lower only when you need to replace part of its behavior.
 | --- | --- | --- |
 | Write a Forester page | `(forester commands)` and `(language scribble commands)` in `.plant` | the page needs project-local Scheme modules or a new command vocabulary |
 | Configure the normal Forester site | `(forester project)` → `make-forester-project` | the reader, analysis, or complete renderer set needs replacing |
+| Adapt Scribble documents to Forester tree pages | `(forester input scribble)` → `make-page-reader` | a custom page project needs Forester metadata extraction without the standard project lifecycle |
+| Parse Scribble syntax in a custom reader | `(language scribble parser)` → `scribble-parse`, `scribble-read` | standard pages should use the Grove or Forester reader to convert forms to Content IR |
 | Build a site from page documents | `(grove project site)` → `make-site-project` | the input is not a page or the model is project-specific |
 | Assemble a page model directly | `(grove site)` → `make-site-page`, `make-site` | the project should collect and read source pages itself |
 | Build an arbitrary file-based model | `(grove project)` → `make-project` | custom collection, reading, analysis, artifacts, or execution options are needed |
 | Apply renderers directly to an existing model | `(grove build)` → `render-model` | input collection, caching, validation, or output writing is needed; use a project |
 | Create a source for a project | `(grove project)` → `create-project-source`, or the `grove new` command | the project must supply its own `#:create-source` policy |
-| Collect files recursively | `(grove collect)` → `collect-directory` | project-specific collection needs explicit ordering or more context; use `#:collect-sources` |
+| Collect files recursively | `(grove collect)` → `collect-directory` | Forester can accept an ordered `#:collect-sources` callback while retaining its defaults; custom site projects can use the same option |
 | Handle project failures in a Scheme host | `(grove project diagnostic)` for structured errors and Grove's formatter | custom work needs to add a stage or path; use `call-with-project-stage` |
+| Add a terminal browser to a Forester project | `(forester browse)` → `make-forest-browser` | the project needs its own `#:browse` callback |
 | Change how content renders | the format's renderer options and `(grove render rules)` | the project needs a new output format or a different build stage |
+| Pass explicit state through a render pass | `(grove render context)` → `make-render-context`, `render-context-with`; Forester renderers can use `(forester render context)` → `make-site-render-context` | renderer options configure a renderer; context carries values to rules and custom rendering code |
 | Add a model-derived output | a renderer in `#:additional-renderers` or `#:renderers` | the output depends on declared files or an external tool; use `#:pipelines` |
 | Reuse derived bytes inside an extension | `(grove cache)` → `make-content-cache` | ordinary renderer artifacts and pipeline outputs are already cached by the project |
 | Write or extend math | `(grove math formula)` for text-based writing and calculations; `(grove math semantic)` for typed values; `(grove math notation)` for display layout; see the [Math reference](math.md) | code needs to inspect reports, compose passes, or query rule relations |
@@ -114,7 +118,9 @@ building custom block commands can use `(language scribble flow)`:
 `decode-flow` turns command bodies into paragraphs around blank lines and
 keeps block elements outside paragraphs, while `content-value?`,
 `content-sequence?`, and `flatten-content-sequence` expose the same value and
-sequence rules used by the reader.
+sequence rules used by the reader. Variadic command procedures can use
+`command-body` from `(language scribble command)` to remove keyword/value
+options while preserving body order.
 
 `content->sxml` applies a content element's HTML style automatically when a
 render rule returns one root element. A custom HTML renderer assembling its
@@ -123,7 +129,9 @@ own root can use `content-style-html-attributes` from
 scoped IDs; `merge-html-attributes`
 combines them with renderer-owned attributes while protecting renderer-owned
 IDs. These helpers are for custom SXML assembly; ordinary render rules do not
-need to call them.
+need to call them. Use `sxml->html` from `(grove render html)` to serialize the
+result: it applies HTML void-element and raw-text rules that a generic XML
+serializer does not.
 
 Artifacts use the same ownership rule: `make-artifact` and
 `make-byte-artifact` snapshot their path, content, and source paths. The public

@@ -25,9 +25,10 @@
 (define style-css
   (call-with-input-file style-css-path get-string-all))
 
-;; Chrome strings such as backmatter headings come from a message catalog. This
-;; is separate from the bilingual content itself, which is authored per tree.
-(define chrome-messages
+;; Built-in interface strings such as backmatter headings come from a message
+;; catalog. This is separate from the bilingual content itself, which is
+;; authored per tree.
+(define interface-messages
   (make-message-catalog
     '(("en" . ((backmatter-context . "Context")
                (backmatter-references . "References")
@@ -64,7 +65,7 @@
       #:presentation (make-html-presentation #:style bilingual-style)
       #:routes bilingual-routes
       #:locale "en"
-      #:messages chrome-messages)
+      #:messages interface-messages)
     #:additional-renderers
     (list (make-text-renderer
             #:options (make-text-options #:prefix "text")))
