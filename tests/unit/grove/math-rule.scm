@@ -57,6 +57,17 @@
 (test-error "unknown modes are rejected even with no rules" #t
   (math-selected-rules '() '() #:mode 'unknown))
 
+;; This is the public, lower-level extension path shown in docs/math.md:
+;; custom rules compose through an explicit relational query, not the registry.
+(let ((double-rule
+        (math-rule 'double "double(X) = X + X" "all values" 'custom
+          (facts x) (double ,x) (+ ,x ,x) () ())))
+  (test-equal "a declared local rule runs through the relational rule list"
+    '(((+ (var x) (var x)) double))
+    (run* (output name)
+      (math-rules-stepo (list double-rule) '()
+        '(double (var x)) output name 'forward))))
+
 ;; A fresh rule declaration supplies one left side and one premise template.
 ;; Both relational execution and diagnostic matching derive from that source.
 (let* ((rule (math-rule 'custom "custom(f) = f" "smooth(f)" 'example
