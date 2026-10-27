@@ -45,22 +45,21 @@
   (snapshot-data (html-nav-link-label/raw link)))
 
 (define (html-nav-link-attributes link)
-  (snapshot-data (html-nav-link-attributes/raw link)))
+  (html-attributes-assoc (html-nav-link-attributes/raw link)))
 
 (define* (make-html-nav-link page-id label #:key (attributes '()))
   "Describe a route-aware site navigation link."
   (unless (and (string? page-id) (string? label))
     (error "HTML navigation links require a page ID and string label"
            page-id label))
-  (unless (valid-html-attributes? attributes)
-    (error "HTML navigation attributes must be symbol/string pairs"
-           attributes))
-  (when (any (lambda (entry) (memq (car entry) '(href aria-current)))
-            attributes)
-    (error "HTML navigation attributes cannot override route state" attributes))
-  (%make-html-nav-link (snapshot-data page-id)
-                       (snapshot-data label)
-                       (snapshot-data attributes)))
+  (let* ((attributes (make-html-attributes attributes))
+         (assoc (html-attributes-assoc attributes)))
+    (when (any (lambda (entry) (memq (car entry) '(href aria-current)))
+              assoc)
+      (error "HTML navigation attributes cannot override route state" assoc))
+    (%make-html-nav-link (snapshot-data page-id)
+                         (snapshot-data label)
+                         attributes)))
 
 (define (sxml-atom? value)
   (and (not (procedure? value))
@@ -72,18 +71,6 @@
     (or (null? rest)
         (and (not (memq (caar rest) seen))
              (loop (cdr rest) (cons (caar rest) seen))))))
-
-(define (valid-html-attributes? attributes)
-  (and (list? attributes)
-       (every (lambda (entry)
-                (and (pair? entry)
-                     (symbol? (car entry))
-                     (string? (cdr entry))))
-              attributes)
-       (let loop ((rest attributes) (seen '()))
-         (or (null? rest)
-             (and (not (memq (caar rest) seen))
-                  (loop (cdr rest) (cons (caar rest) seen)))))))
 
 (define (valid-sxml-attributes? attributes)
   (and (list? attributes)
@@ -136,7 +123,7 @@
   (snapshot-data (html-home-link-content/raw link)))
 
 (define (html-home-link-attributes link)
-  (snapshot-data (html-home-link-attributes/raw link)))
+  (html-attributes-assoc (html-home-link-attributes/raw link)))
 
 (define* (make-html-home-link content #:key (attributes '()))
   "Describe the content and attributes of the routed home link.
@@ -145,13 +132,11 @@ The renderer supplies its href. CONTENT is a static SXML child list; ATTRIBUTES
 is a list of symbol/string pairs."
   (unless (static-sxml-list? content)
     (error "HTML home-link content must be a static SXML list" content))
-  (unless (valid-html-attributes? attributes)
-    (error "HTML home-link attributes must be symbol/string pairs"
-           attributes))
-  (when (assq 'href attributes)
-    (error "HTML home-link href is supplied by its route" attributes))
-  (%make-html-home-link (snapshot-data content)
-                        (snapshot-data attributes)))
+  (let* ((attributes (make-html-attributes attributes))
+         (assoc (html-attributes-assoc attributes)))
+    (when (assq 'href assoc)
+      (error "HTML home-link href is supplied by its route" assoc))
+    (%make-html-home-link (snapshot-data content) attributes)))
 
 (define (valid-page-sxml-map? entries)
   (and (list? entries)
@@ -220,13 +205,15 @@ METADATA-ITEMS map page IDs to static SXML child lists."
     (and home-link
          (%make-html-home-link
            (snapshot-data (html-home-link-content home-link))
-           (snapshot-data (html-home-link-attributes home-link))))
+           (make-html-attributes
+             (html-home-link-attributes home-link))))
     (map (lambda (entry)
            (if (html-nav-link? entry)
                (%make-html-nav-link
                  (snapshot-data (html-nav-link-page-id entry))
                  (snapshot-data (html-nav-link-label entry))
-                 (snapshot-data (html-nav-link-attributes entry)))
+                 (make-html-attributes
+                   (html-nav-link-attributes entry)))
                (snapshot-data entry)))
          site-nav)
     (snapshot-data title-decorations)
