@@ -10,6 +10,7 @@
   #:export (decode-flow content-value? content-sequence? flatten-content-sequence))
 
 (define (content-value? value)
+  "Return true when VALUE is one Grove content value accepted by Scribble."
   (or (string? value)
       (content-text? value)
       (content-layout? value)
@@ -17,6 +18,7 @@
       (content-document? value)))
 
 (define (content-sequence? value)
+  "Return true when VALUE is a recursively nested list of content values."
   (and (list? value)
        (every (lambda (item)
                 (or (content-value? item)
@@ -24,6 +26,7 @@
               value)))
 
 (define (flatten-content-sequence values)
+  "Flatten nested content sequences while preserving document order."
   (append-map (lambda (value)
                 (if (content-sequence? value)
                     (flatten-content-sequence value)
@@ -94,6 +97,10 @@
     (else #f)))
 
 (define (decode-flow values)
+  "Normalize VALUES into content flow, grouping prose into paragraphs.
+
+Single newlines separate inline text; blank lines separate paragraphs, and
+block elements flush the current paragraph."
   (define (flush output pending)
     (if (or (null? pending) (every flow-whitespace? pending))
         output

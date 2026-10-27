@@ -86,6 +86,14 @@ Text projection is an interpreter: use `(grove render plain-text)` for a
 readable text form, including math-specific notation, and `(grove render text)`
 for formatted text output.
 
+Scribble forms may return content values or recursively nested lists of them;
+the reader flattens those sequences and decodes prose into paragraphs. Authors
+building custom block commands can use `(language scribble flow)`:
+`decode-flow` turns command bodies into paragraphs around blank lines and
+keeps block elements outside paragraphs, while `content-value?`,
+`content-sequence?`, and `flatten-content-sequence` expose the same value and
+sequence rules used by the reader.
+
 `content->sxml` applies a content element's HTML style automatically when a
 render rule returns one root element. A custom HTML renderer assembling its
 own root can use `content-style-html-attributes` from
