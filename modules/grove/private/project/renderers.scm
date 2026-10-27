@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove private project renderers)
+  #:use-module ((grove private output) #:prefix out:)
   #:use-module (grove build)
   #:use-module (grove output)
   #:use-module (grove private build-state)
@@ -42,7 +43,7 @@
                 (append artifacts generated)
                 (append owners
                         (map (lambda (artifact)
-                               (cons (artifact-path artifact) index))
+                               (cons (out:artifact-path/raw artifact) index))
                              generated)))))))
 
 (define* (render-with-cache model renderers previous-entries cached-artifacts
@@ -74,7 +75,7 @@
                (old-artifacts
                  (filter (lambda (artifact)
                            (and (artifact-entry-by-path
-                                  old-entries (artifact-path artifact))
+                                  old-entries (out:artifact-path/raw artifact))
                                 #t))
                          cached-artifacts))
                (changed-proc
@@ -133,7 +134,7 @@
                (current new-artifacts)
                (current-owners
                  (map (lambda (artifact)
-                        (cons (artifact-path artifact) index))
+                        (cons (out:artifact-path/raw artifact) index))
                       current))
                (seconds (/ (- (get-internal-real-time) start)
                            internal-time-units-per-second)))

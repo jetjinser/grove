@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove style html)
+  #:use-module ((grove private output) #:prefix out:)
   #:use-module (grove output)
   #:use-module (grove private snapshot)
   #:use-module (rnrs bytevectors)
@@ -24,9 +25,9 @@
   (assets html-style-extra-assets/raw))
 
 (define (snapshot-artifact artifact)
-  (let ((path (snapshot-data (artifact-path artifact)))
-        (content (artifact-content artifact))
-        (sources (artifact-sources artifact)))
+  (let ((path (snapshot-data (out:artifact-path/raw artifact)))
+        (content (out:artifact-content/raw artifact))
+        (sources (out:artifact-sources/raw artifact)))
     (if (string? content)
         (make-artifact path (snapshot-data content)
                        (snapshot-data sources))

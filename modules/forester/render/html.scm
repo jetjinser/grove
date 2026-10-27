@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester render html)
+  #:use-module ((grove private output) #:prefix out:)
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove build)
   #:use-module (grove private build-state)
@@ -752,12 +753,12 @@ name, property, rel, or title."
            head)
        ,@(if inline-stylesheets?
              (map (lambda (stylesheet)
-                    `(style ,(artifact-content stylesheet)))
+                    `(style ,(out:artifact-content/raw stylesheet)))
                   (html-style-stylesheets style))
              (map (lambda (stylesheet)
                     `(link (@ (rel "stylesheet")
                               (href ,(html-asset-url
-                                       routes (artifact-path stylesheet))))))
+                                       routes (out:artifact-path/raw stylesheet))))))
                   (html-style-stylesheets style)))
        ,@(if (and math? mathjax-src)
              `((script (@ (src ,(mathjax-script-url mathjax-src routes))
@@ -951,10 +952,10 @@ to the lane, and an in-place numbered marker links to it."
   (set! routes (resolve-site-routes forest routes))
   (check-html-input forest style routes mathjax-src)
   (let ((style-artifacts (html-style-artifacts style)))
-    (let ((style-paths (map artifact-path style-artifacts)))
+    (let ((style-paths (map out:artifact-path/raw style-artifacts)))
       (let ((old-page-artifacts
              (filter (lambda (artifact)
-                       (not (member (artifact-path artifact) style-paths string=?)))
+                       (not (member (out:artifact-path/raw artifact) style-paths string=?)))
                      old-artifacts)))
         (if (and (every (lambda (path)
                           ;;     Only load-time style artifacts are
@@ -1329,13 +1330,13 @@ Entry points take this value with #:options."
                            (list (car entry) (highlighter-configuration (cdr entry))))
                          highlighters)
                     (map (lambda (artifact)
-                           (list (artifact-path artifact)
-                                 (content-fingerprint (artifact-content artifact))))
+                           (list (out:artifact-path/raw artifact)
+                                 (content-fingerprint (out:artifact-content/raw artifact))))
                          (html-style-artifacts style)))))
           #:inputs (lambda ()
                      (append
                        (append-map (lambda (entry) (highlighter-inputs (cdr entry))) highlighters)
-                       (append-map (lambda (artifact) (or (artifact-sources artifact) '()))
+                       (append-map (lambda (artifact) (or (out:artifact-sources/raw artifact) '()))
                                    (html-style-artifacts style))))
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)

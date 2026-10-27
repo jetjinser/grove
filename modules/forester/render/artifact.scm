@@ -3,19 +3,20 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester render artifact)
+  #:use-module ((grove private output) #:prefix out:)
   #:use-module (grove output)
   #:use-module (srfi srfi-1)
   #:export (find-artifact-by-path artifact-reusable? reuse-artifact))
 
 (define (find-artifact-by-path artifacts path)
   (find (lambda (artifact)
-          (string=? (artifact-path artifact) path))
+          (string=? (out:artifact-path/raw artifact) path))
         artifacts))
 
 (define (artifact-reusable? current previous changed)
-  (let ((sources (artifact-sources current)))
+  (let ((sources (out:artifact-sources/raw current)))
     (and previous
-         (equal? sources (artifact-sources previous))
+         (equal? sources (out:artifact-sources/raw previous))
          (not (and sources
                    (any (lambda (path) (member path sources string=?))
                         changed))))))

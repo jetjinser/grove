@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove output)
+  #:use-module (grove private snapshot)
   #:use-module (grove private artifact-store)
   #:use-module (grove private cache-dir)
   #:use-module (grove private files)
@@ -29,9 +30,19 @@
 (define-record-type <artifact>
   (%make-artifact path content sources)
   artifact?
-  (path artifact-path)
-  (content artifact-content)
-  (sources artifact-sources))
+  (path artifact-path/raw)
+  (content artifact-content/raw)
+  (sources artifact-sources/raw))
+
+(define (artifact-path artifact)
+  (snapshot-data (artifact-path/raw artifact)))
+
+(define (artifact-content artifact)
+  (let ((content (artifact-content/raw artifact)))
+    (if (string? content) (string-copy content) (bytevector-copy content))))
+
+(define (artifact-sources artifact)
+  (snapshot-data (artifact-sources/raw artifact)))
 
 (define (artifact-path? path)
   (and (non-empty-string? path)
@@ -44,10 +55,14 @@
   (unless (artifact-path? path)
     (error "artifact requires a relative path" path))
   (unless (or (not sources)
-              (and (list? sources) (every string? sources)))
+              (and (list? sources) (every non-empty-string? sources)))
     (error "artifact sources must be #f or a list of paths" sources))
-  (%make-artifact path content
-                  (and sources (delete-duplicates sources string=?))))
+  (%make-artifact (snapshot-data path)
+                  (if (string? content) (string-copy content)
+                      (bytevector-copy content))
+                  (and sources
+                       (snapshot-data
+                         (delete-duplicates sources string=?)))))
 
 (define* (make-artifact path content #:optional (sources #f))
   (unless (string? content)
@@ -63,10 +78,10 @@
   (unless (artifact-path? prefix)
     (error "artifact prefix requires a relative path" prefix))
   (map (lambda (artifact)
-         ((if (string? (artifact-content artifact)) make-artifact
+         ((if (string? (artifact-content/raw artifact)) make-artifact
               make-byte-artifact)
-          (string-append prefix "/" (artifact-path artifact))
-          (artifact-content artifact) (artifact-sources artifact)))
+          (string-append prefix "/" (artifact-path/raw artifact))
+          (artifact-content/raw artifact) (artifact-sources/raw artifact)))
        artifacts))
 
 (define artifact-manifest-name ".grove-artifacts")
@@ -153,7 +168,7 @@
   "Validate the complete output set without accessing the filesystem."
   (unless (and (list? artifacts) (every artifact? artifacts))
     (error "renderers must return a list of artifacts" artifacts))
-  (let ((paths (map artifact-path artifacts)))
+  (let ((paths (map artifact-path/raw artifacts)))
     (unless (= (length paths) (length (delete-duplicates paths string=?)))
       (error "duplicate artifact path" paths))
     (when (any reserved-artifact-path? paths)
@@ -208,7 +223,7 @@
 
 (define (write-artifacts directory artifacts)
   (validate-artifacts artifacts)
-  (let* ((paths (map artifact-path artifacts))
+  (let* ((paths (map artifact-path/raw artifacts))
          (cache-directory (grove-cache-directory directory))
          (manifest-path
            (string-append cache-directory "/" artifact-manifest-name))
@@ -231,8 +246,8 @@
               conflicting-stale-paths)
     (for-each
       (lambda (artifact)
-        (let* ((path (string-append directory "/" (artifact-path artifact)))
-               (content (artifact-content artifact))
+        (let* ((path (string-append directory "/" (artifact-path/raw artifact)))
+               (content (artifact-content/raw artifact))
                (fingerprint (content-fingerprint content)))
           (when (and (file-exists? path) (file-is-directory? path))
             (error "artifact path is occupied by a directory; refusing to replace"

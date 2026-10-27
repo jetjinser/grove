@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove private preview http)
+  #:use-module ((grove private output) #:prefix out:)
   #:use-module (grove output)
   #:use-module (rnrs bytevectors)
   #:use-module (ice-9 iconv)
@@ -15,8 +16,8 @@
   (validate-artifacts artifacts)
   (let ((table (make-hash-table)))
     (for-each (lambda (artifact)
-                (let ((content (artifact-content artifact)))
-                  (hash-set! table (artifact-path artifact)
+                (let ((content (out:artifact-content/raw artifact)))
+                  (hash-set! table (out:artifact-path/raw artifact)
                     (if (string? content) (string->utf8 content) content))))
               artifacts)
     table))

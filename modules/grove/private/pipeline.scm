@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove private pipeline)
+  #:use-module ((grove private output) #:prefix out:)
   #:use-module (grove private asset-pipeline)
   #:use-module (grove output)
   #:use-module (grove private artifact-store)
@@ -117,7 +118,7 @@
 (define (read-pipeline-index identity)
   ;; Runtime Scheme loads are discovered while the procedure runs. Keep their
   ;; fingerprints beside this pipeline's outputs; the shared boundary index
-  ;; remains a plain artifact-path table for the other cache users.
+  ;; remains a plain out:artifact-path/raw table for the other cache users.
   (catch #t
     (lambda ()
       (let ((path (artifact-blob-path identity)))
@@ -191,10 +192,10 @@
                  (asset-pipeline-name pipeline)))
         (write-pipeline-index identity dependencies entry-list)
         (map (lambda (artifact)
-               ((if (string? (artifact-content artifact))
+               ((if (string? (out:artifact-content/raw artifact))
                     make-artifact make-byte-artifact)
-                (artifact-path artifact)
-                (artifact-content artifact)
+                (out:artifact-path/raw artifact)
+                (out:artifact-content/raw artifact)
                 (pipeline-artifact-sources inputs dependencies)))
              artifact-list)))))
 
@@ -212,7 +213,7 @@ build state's renderer field."
                (produced (or (restore-pipeline-artifacts identity inputs)
                              (run-pipeline-procedure pipeline identity inputs)))
                (markers (map (lambda (artifact)
-                               (cons (artifact-path artifact) name))
+                               (cons (out:artifact-path/raw artifact) name))
                              produced)))
           (loop (cdr pipelines)
                 (append (reverse produced) artifacts)
@@ -232,9 +233,9 @@ build state's renderer field."
 (define (merge-pipeline-artifacts pipeline-artifacts rendered retired-paths)
   (if (and (null? pipeline-artifacts) (null? retired-paths))
       rendered
-      (let ((shadowed (append (map artifact-path pipeline-artifacts)
+      (let ((shadowed (append (map out:artifact-path/raw pipeline-artifacts)
                               retired-paths)))
         (append pipeline-artifacts
                 (remove (lambda (artifact)
-                          (member (artifact-path artifact) shadowed string=?))
+                          (member (out:artifact-path/raw artifact) shadowed string=?))
                         rendered)))))

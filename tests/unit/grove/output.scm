@@ -23,6 +23,47 @@
 
 (test-begin "grove output")
 
+(let* ((path (string-copy "page.txt"))
+       (content (string-copy "artifact content"))
+       (source (string-copy "source.plant"))
+       (sources (list source))
+       (artifact (make-artifact path content sources)))
+  (string-set! path 0 #\x)
+  (string-set! content 0 #\x)
+  (string-set! source 0 #\x)
+  (set-car! sources "changed.plant")
+  (test-equal "text artifacts snapshot caller-owned strings and sources"
+    '("page.txt" "artifact content" ("source.plant"))
+    (list (artifact-path artifact)
+          (artifact-content artifact)
+          (artifact-sources artifact)))
+  (let ((path (artifact-path artifact))
+        (content (artifact-content artifact))
+        (sources (artifact-sources artifact)))
+    (string-set! path 0 #\x)
+    (string-set! content 0 #\x)
+    (set-car! sources "changed-again.plant"))
+  (test-equal "text artifact accessors return independent snapshots"
+    '("page.txt" "artifact content" ("source.plant"))
+    (list (artifact-path artifact)
+          (artifact-content artifact)
+          (artifact-sources artifact))))
+
+(let* ((bytes (u8-list->bytevector '(0 255 1 128)))
+       (artifact (make-byte-artifact "pixel.bin" bytes)))
+  (bytevector-u8-set! bytes 0 9)
+  (test-assert "binary artifacts snapshot construction bytes"
+    (bytevector=? (u8-list->bytevector '(0 255 1 128))
+                  (artifact-content artifact)))
+  (let ((exposed (artifact-content artifact)))
+    (bytevector-u8-set! exposed 0 9))
+  (test-assert "binary artifact accessors return independent bytes"
+    (bytevector=? (u8-list->bytevector '(0 255 1 128))
+                  (artifact-content artifact))))
+
+(test-error "artifact sources reject empty paths" #t
+  (make-artifact "page.txt" "content" '("")))
+
 (dynamic-wind
   (lambda () (system* "rm" "-rf" test-root))
   (lambda ()

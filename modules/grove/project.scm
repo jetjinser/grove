@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove project)
+  #:use-module ((grove private output) #:prefix out:)
   #:use-module (grove string-fun)
   #:use-module (grove pipeline)
   #:use-module (grove private cache-dir)
@@ -313,7 +314,7 @@ Return the internal analysis record used by the build pipeline."
 ;;     entries a pipeline owns (string renderer marker) whose paths the
 ;;     current run no longer emits are retired.
 (define (retired-pipeline-paths pipeline-artifacts previous-artifacts)
-  (let ((current (map artifact-path pipeline-artifacts)))
+  (let ((current (map out:artifact-path/raw pipeline-artifacts)))
     (filter-map
       (lambda (entry)
         (let ((path (build-state-artifact-path entry))
@@ -359,7 +360,7 @@ Return the internal analysis record used by the build pipeline."
          (pipeline-runtime-sources
            (lset-difference
              string=?
-             (delete-duplicates (append-map artifact-sources pipeline-artifacts)
+             (delete-duplicates (append-map out:artifact-sources/raw pipeline-artifacts)
                                 string=?)
              pipeline-declared-sources))
          (state-directory
@@ -461,15 +462,15 @@ Return the internal analysis record used by the build pipeline."
              ((and identity previous-state
                    (equal? identity previous-identity)
                    (not cache-ready?))
-              (map artifact-path artifacts))
+              (map out:artifact-path/raw artifacts))
              ((and previous-state
                    (not (equal? identity previous-identity)))
-              (append (map artifact-path artifacts)
+              (append (map out:artifact-path/raw artifacts)
                       (map car
                            (filter (lambda (entry)
                                      (not (find
                                             (lambda (artifact)
-                                              (string=? (artifact-path artifact)
+                                              (string=? (out:artifact-path/raw artifact)
                                                         (build-state-artifact-path
                                                           entry)))
                                             artifacts)))

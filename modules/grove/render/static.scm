@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove render static)
+  #:use-module ((grove private output) #:prefix out:)
   #:use-module (grove collect)
   #:use-module (grove build)
   #:use-module (grove output)
@@ -44,7 +45,7 @@
                    (substring source (+ 1 (string-length source-directory))))
                  (path (if prefix (string-append prefix "/" relative) relative))
                  (old (find (lambda (artifact)
-                              (and (equal? (artifact-sources artifact)
+                              (and (equal? (out:artifact-sources/raw artifact)
                                            (list source))
                                    (not (member source changed string=?))))
                             old-artifacts)))

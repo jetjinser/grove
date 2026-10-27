@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove private preview worker)
+  #:use-module ((grove private output) #:prefix out:)
   #:use-module (grove project)
   #:use-module (grove project load)
   #:use-module (grove private cache-dir)
@@ -225,7 +226,7 @@
                                               loaded-stamps))
                               (lambda (left right) (string=? (car left) (car right))))
                             (map (lambda (artifact)
-                                   (list (artifact-path artifact) (artifact-content artifact)))
+                                   (list (out:artifact-path/raw artifact) (out:artifact-content/raw artifact)))
                                  (build-report-artifacts report))))
                    (print-cli-summary report (- (cli-seconds) started) #:output output)
                    ;;     Profile mode: the cost split lands on stderr

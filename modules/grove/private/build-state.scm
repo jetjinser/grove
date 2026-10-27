@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove private build-state)
+  #:use-module ((grove private output) #:prefix out:)
   #:use-module (grove output)
   #:use-module (grove private files)
   #:use-module (grove private fingerprint)
@@ -115,11 +116,11 @@
           (list 'grove-build-state
                 sources
                 (map (lambda (artifact)
-                       (list (artifact-path artifact)
-                             (content-fingerprint (artifact-content artifact))
-                             (artifact-sources artifact)
-                             (cdr (assoc (artifact-path artifact) owners))
-                             (if (string? (artifact-content artifact))
+                       (list (out:artifact-path/raw artifact)
+                             (content-fingerprint (out:artifact-content/raw artifact))
+                             (out:artifact-sources/raw artifact)
+                             (cdr (assoc (out:artifact-path/raw artifact) owners))
+                             (if (string? (out:artifact-content/raw artifact))
                                  'text 'bytes)))
                      artifacts)
                 identity)))

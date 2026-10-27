@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove private project artifacts)
+  #:use-module ((grove private output) #:prefix out:)
   #:use-module (grove output)
   #:use-module (grove private artifact-store)
   #:use-module (grove private build-state)
@@ -91,13 +92,13 @@
             (source-paths removed))))
 
 (define (artifact-affected? artifact previous changed)
-  (let* ((path (artifact-path artifact))
+  (let* ((path (out:artifact-path/raw artifact))
          (old (artifact-entry-by-path previous path))
-         (sources (artifact-sources artifact))
+         (sources (out:artifact-sources/raw artifact))
          (old-sources (and old (build-state-artifact-sources old))))
     (or (not old)
         (not (equal? (build-state-artifact-fingerprint old)
-                     (content-fingerprint (artifact-content artifact))))
+                     (content-fingerprint (out:artifact-content/raw artifact))))
         (not (equal? sources old-sources))
         (not sources)
         (paths-intersect? (append (or sources '())
@@ -106,14 +107,14 @@
 
 (define (affected-artifacts artifacts previous changed)
   (append
-    (map artifact-path
+    (map out:artifact-path/raw
          (filter (lambda (artifact)
                    (artifact-affected? artifact previous changed))
                  artifacts))
     (map build-state-artifact-path
          (filter (lambda (entry)
                    (not (find (lambda (artifact)
-                                (string=? (artifact-path artifact)
+                                (string=? (out:artifact-path/raw artifact)
                                           (build-state-artifact-path entry)))
                               artifacts)))
                  previous))))

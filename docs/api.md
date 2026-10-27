@@ -76,3 +76,7 @@ returned by an accessor does not alter the node. Use `content-with-style` and
 `content-with-property` to derive an element with an intentional change.
 Opaque extension values embedded in properties remain shared and follow their
 own type's contract.
+
+Artifacts use the same ownership rule: `make-artifact` and
+`make-byte-artifact` snapshot their path, content, and source paths. The public
+`artifact-content` accessor returns a fresh string or bytevector.
