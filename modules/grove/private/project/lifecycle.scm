@@ -13,13 +13,13 @@
   #:use-module (grove private pipeline)
   #:use-module (grove private asset-pipeline)
   #:use-module (grove private project artifacts)
+  #:use-module (grove private project publication)
   #:use-module (grove private project renderers)
   #:use-module (grove private project state)
   #:use-module (grove private renderer)
   #:use-module (grove build)
   #:use-module (grove private build-state)
   #:use-module (grove collect)
-  #:use-module (grove output)
   #:use-module (grove project diagnostic)
   #:use-module (grove private snapshot)
   #:use-module (srfi srfi-1)
@@ -402,32 +402,6 @@ Return the internal analysis record used by the build pipeline."
                (not (member path current string=?))
                path)))
       previous-artifacts)))
-
-(define (validate-project-artifacts artifacts progress)
-  (call-with-project-stage 'validate #f
-    (lambda ()
-      (progress 'validate #f)
-      (validate-artifacts artifacts))))
-
-(define* (write-project-build! directory state-path state-temp-path sources
-                               artifacts owners identity progress
-                               #:key (earlier-sources '())
-                                     (prune (lambda () #t))
-                                     (fingerprint input-fingerprint))
-  (call-with-project-stage 'write directory
-    (lambda ()
-      (progress 'write directory)
-      (write-artifacts directory artifacts)
-      (write-build-state state-path state-temp-path sources artifacts
-                         owners identity)
-      (prune)
-      ;; Inputs can change while outputs are being rendered. Invalidate the
-      ;; just-written state so a later build cannot reuse unseen source bytes.
-      (when (any (lambda (entry)
-                  (not (equal? (cadr entry)
-                               (fingerprint (car entry)))))
-                (append sources earlier-sources))
-        (delete-file state-path)))))
 
 (define (execute-project project write? progress)
   (unless (project? project)
