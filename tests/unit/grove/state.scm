@@ -40,7 +40,7 @@
     (test-assert "content fingerprints accept binary artifact bytes"
       (equal? (content-fingerprint (u8-list->bytevector '(0 255 1)))
               (content-fingerprint (u8-list->bytevector '(0 255 1)))))
-    (let* ((sources (list (list input-path (file-fingerprint input-path))))
+    (let* ((sources (list (list input-path (file-fingerprint input-path) 'source)))
            (artifacts
              (list (make-artifact "page.html" "rendered"
                                   (list input-path))))
@@ -65,6 +65,11 @@
       (test-assert "file fingerprints detect source changes"
         (not (equal? (cadar sources)
                      (file-fingerprint input-path))))
+      (write-test-file state-path
+        "(grove-build-state ((\"source.plant\" #f)) () #f)")
+      (test-equal "source entries without a kind are discarded"
+        #f
+        (read-build-state state-path))
       (write-test-file state-path
         "(grove-build-state-v4 () () #f)")
       (test-equal "previous versioned build states are discarded"
