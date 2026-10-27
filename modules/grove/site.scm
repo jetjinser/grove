@@ -47,6 +47,11 @@
 
 (define* (make-site-page id title document #:optional (source #f)
                          #:key (metadata '()))
+  "Construct one page from its ID, title, and Content IR DOCUMENT.
+
+SOURCE is the page's optional primary input path. METADATA is an association
+list with unique symbol keys; its values are available to renderers and other
+project code."
   (unless (non-empty-string? id)
     (error "site page ID must be a non-empty string" id))
   (unless (non-empty-string? title)
@@ -98,6 +103,11 @@
 
 (define* (make-site pages #:key (title "Site") (description #f)
                     (sources '()) (home #f))
+  "Construct a site from PAGES, preserving their order.
+
+Each page ID must be unique. HOME is an optional page ID and must identify one
+of PAGES. SOURCES is the site's tracked source-path list; it is independent of
+each page's optional primary source path."
   (unless (and (list? pages) (every site-page? pages))
     (error "site requires pages" pages))
   (unless (non-empty-string? title)

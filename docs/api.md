@@ -43,6 +43,17 @@ inputs or configuration Grove cannot see through the model and tracked files.
 inside an existing renderer. See the [customization guide](customizing.md) for
 how these layers compose.
 
+## Site model
+
+`(grove site)` provides `make-site-page` and `make-site` for code assembling a
+page-based model directly. A site page holds an ID, title, Content IR document,
+an optional primary source path, and metadata. The site holds the ordered pages,
+descriptive fields, an optional home page ID, and a separate list of tracked
+source paths. Page IDs must be unique, and a supplied home ID must name one of
+the pages. `make-site-project` builds these values from collected inputs; use
+the constructors directly when synthesizing pages or composing a custom
+analysis stage.
+
 ## API layers
 
 The modules form three user-facing layers rather than one umbrella module:
