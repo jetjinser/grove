@@ -16,7 +16,7 @@
   #:use-module (srfi srfi-1)
   #:export (use-commands))
 
-(define-public (use-command-module module-name)
+(define (use-command-module module-name)
   "Import the command modules declared by MODULE-NAME's command-modules export."
   (let* ((module (resolve-module module-name))
          (variable (and module (module-local-variable module 'command-modules))))
