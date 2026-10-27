@@ -398,10 +398,10 @@ subprocesses it spawned down with it. A serve killed outright (SIGKILL) runs
 no teardown at all - the worker's watchdog notices the dead serve and tears
 the group down itself, so a hard-killed session leaves no resident builder or
 subprocess behind.
-The worker retains the analysis forest across edits: document edits (the
+The worker retains the analysis model across edits: document edits (the
 source set, and anything else analysis read) re-analyze, while load-time
 assets and undeclared render-time reads only re-render against the retained
-forest.
+model.
 `--no-watch` serves the initial successful snapshot only.
 
 Scheme runners are silent unless given `#:progress`, a `(stage detail)` callback.

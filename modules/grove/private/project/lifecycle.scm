@@ -56,7 +56,7 @@
             check-project
             analyze-project
             browse-project
-            rebuild-from-forest))
+            rebuild-from-model))
 
 (define-record-type <project-input>
   (%make-project-input path value)
@@ -560,7 +560,7 @@ Return the internal analysis record used by the build pipeline."
              (else
               (affected-artifacts artifacts previous-artifacts changed)))))
     ;;     Expose the analysis model for long-lived preview workers:
-    ;;     a resident worker re-renders from this forest when only
+    ;;     a resident worker re-renders from this model when only
     ;;     load-time assets changed.
     (publish-project-state!
       model
@@ -603,25 +603,24 @@ watch and a manual build over one project must not run concurrently."
   (with-build-lock (project-output-directory project)
     (lambda () (execute-project project #t progress))))
 
-;;     Forest-level reuse: a long-lived preview worker retains the
-;;     forest of its last successful build and re-renders with a
+;;     Model-level reuse: a long-lived preview worker retains the
+;;     model of its last successful build and re-renders with a
 ;;     freshly loaded project when only load-time assets changed.
 ;;     Analysis is skipped wholesale; render-with-cache re-runs just
 ;;     the renderers whose inputs changed, and renderers without an
 ;;     incremental callback keep their previous artifacts outright -
-;;     the retained forest and the identity-checked configurations
+;;     the retained model and the identity-checked configurations
 ;;     make their output byte-identical.  The on-disk build state
 ;;     is refreshed (with content fingerprints) so manual builds stay
 ;;     incremental.  Cache pruning is skipped here - the retained
 ;;     state carries no selection statuses, and pruning is hygiene.
-(define* (rebuild-from-forest project forest retained-state changed removed
+(define* (rebuild-from-model project model retained-state changed removed
                               #:key (progress (lambda (stage path) #t)))
-  "Render and write using a FOREST built by a previous build of the
-same PROJECT.  RETAINED-STATE is that build's on-disk state record;
-CHANGED names the sources modified or added since, REMOVED the ones
-deleted.  Renderers and style values come from the freshly loaded
-PROJECT, so load-time assets (stylesheets, scripts) re-read, while
-analysis results - pages, relations, indexes - come from the forest."
+  "Render and write using a MODEL built by a previous analysis of PROJECT.
+RETAINED-STATE is that build's on-disk state record; CHANGED names sources
+modified or added since, and REMOVED names deleted sources. Renderers and
+project configuration come from the freshly loaded PROJECT, while MODEL
+preserves the prior analysis result."
   (with-build-lock (project-output-directory project)
     (lambda ()
       (let* ((cache-directory
@@ -641,11 +640,11 @@ analysis results - pages, relations, indexes - come from the forest."
               (pipeline-owners (cdr pipeline-result))
               (retired (retired-pipeline-paths pipeline-artifacts
                                                previous-artifacts))
-              (identity (renderer-identity (project-cache? project) forest
+              (identity (renderer-identity (project-cache? project) model
                                            (project-renderers project)))
              (config-equal?
                 (equal? identity (build-state-identity retained-state)))
-             ;;     Capture content before rendering: the retained forest
+             ;;     Capture content before rendering: the retained model
              ;;     reflects these bytes, and a source edited during the
              ;;     render must not enter the state as if the render had
              ;;     seen it.
@@ -664,7 +663,7 @@ analysis results - pages, relations, indexes - come from the forest."
                 (begin
                   (progress 'render #f)
                   (if config-equal?
-                      (render-with-cache forest (project-renderers project)
+                      (render-with-cache model (project-renderers project)
                                          previous-artifacts
                                          (load-cached-artifacts
                                            (project-output-directory project)
@@ -675,8 +674,8 @@ analysis results - pages, relations, indexes - come from the forest."
                       ;;     that just changed: every artifact may differ,
                       ;;     so render everything with the fresh configs
                       ;;     - but the analysis still comes from the
-                      ;;     retained forest.
-                      (render-all forest (project-renderers project) progress))))
+                      ;;     retained model.
+                      (render-all model (project-renderers project) progress))))
               (artifacts (merge-pipeline-artifacts pipeline-artifacts
                                                    (car render-result) retired))
               (owners (append pipeline-owners (cadr render-result)))
@@ -694,7 +693,7 @@ analysis results - pages, relations, indexes - come from the forest."
              (write-build-state state-path state-temp-path current-sources
                                 artifacts owners identity)
              ;;     A source edited during the render is not in the
-             ;;     retained forest; dropping the state forces the next
+             ;;     retained model; dropping the state forces the next
              ;;     build to analyze instead of trusting a cache hit.
              (let ((drifted?
                      (any (lambda (entry)

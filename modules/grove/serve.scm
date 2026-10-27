@@ -85,10 +85,10 @@
                                       (profile? #f))
   "Build in a resident worker process and preview the last successful
 artifact set on localhost.  The worker stays alive across rebuilds and
-retains its analysis forest; requests and results travel through files
+retains its analysis model; requests and results travel through files
 in the workspace, numbered so both sides can tell stale from current.
 Only an edit to a Scheme module or the project file restarts the
-worker - its loaded modules and forest are only safe in the process
+worker - its loaded modules and model are only safe in the process
 that loaded them."
   (let* ((filename (call-with-project-stage 'load filename
                      (lambda () (canonicalize-path filename))))
@@ -172,7 +172,7 @@ that loaded them."
     (define (worker-stuck-on-module? pending)
       ;;     Module and project-file edits cannot be applied inside
       ;;     the resident worker: Guile will not reload a module into
-      ;;     a running process, and the retained forest was built by
+      ;;     a running process, and the retained model was built by
       ;;     the modules the process loaded.  Such an edit restarts
       ;;     the worker instead of becoming a request.
       (any (lambda (path)

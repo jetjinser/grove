@@ -56,7 +56,7 @@
 
 ;;     The resident worker's own record of what the world looked like
 ;;     after its last successful build is what turns a rebuild request
-;;     into forest reuse or a fresh analysis.  Stamps are file
+;;     into model reuse or a fresh analysis.  Stamps are file
 ;;     signatures, so reverted edits and same-size writes are caught.
 (define (diff-known-stamps known paths)
   (let loop ((paths (delete-duplicates paths string=?))
@@ -76,15 +76,15 @@
             (else
              (loop (cdr paths) changed removed)))))))
 
-(define (forest-reusable? project forest retained-state changed removed restart-paths)
-  ;;     The forest is the analysis output, so it survives exactly the
+(define (model-reusable? project model retained-state changed removed restart-paths)
+  ;;     The model is the analysis output, so it survives exactly the
   ;;     changes analysis cannot see: documents (the collector's set,
   ;;     including newly added ones) and anything else analysis read -
   ;;     prepared outputs, analyzer-time includes, module resolutions.
-  ;;     Load-time extra sources ride the forest by design; removals and
+  ;;     Load-time extra sources ride the model by design; removals and
   ;;     restart paths need the full path.  Everything else only
-  ;;     invalidates render output, which rebuild-from-forest refreshes.
-  (and forest retained-state
+  ;;     invalidates render output, which rebuild-from-model refreshes.
+  (and model retained-state
        (null? removed)
        ;;     The watch walk and the collector can spell one file two
        ;;     ways through a symlinked source directory, and a deleted
@@ -123,12 +123,12 @@
         (newline port)))
     (rename-file temporary result-path)))
 
-(define (build-once request forest retained-state known result-path built?)
+(define (build-once request model retained-state known result-path built?)
   ;;     Run one build request against the current generation.  The
   ;;     project is loaded fresh - renderers and load-time assets are
-  ;;     per-request - but analysis comes from the retained forest
+  ;;     per-request - but analysis comes from the retained model
   ;;     whenever nothing analysis-visible changed.  Returns three
-  ;;     values for the next generation: forest, build state, stamps.
+  ;;     values for the next generation: model, build state, stamps.
   (match request
     ((request-serial filename output previous-modules previous-roots
                      previous-files debug? profile?)
@@ -177,9 +177,9 @@
                       (removed (cadr changes))
                       ;;     Restart paths never reach a request in
                       ;;     normal operation - serve restarts the
-                      ;;     worker for them first - but a forest is
+                      ;;     worker for them first - but a model is
                       ;;     never trusted across one anyway.
-                      (reuse? (forest-reusable? configured forest
+                      (reuse? (model-reusable? configured model
                                                  retained-state changed removed
                                                  (cons filename modules))))
                   ;;     Analysis re-evaluates the project's module
@@ -197,7 +197,7 @@
                              (call-with-cli-progress "Building" filename
                                (lambda (progress)
                                  (if reuse?
-                                     (rebuild-from-forest configured forest
+                                     (rebuild-from-model configured model
                                                           retained-state
                                                           changed removed
                                                           #:progress progress)
@@ -232,7 +232,7 @@
                    ;;     analysis it skipped by having nothing to split.
                    (when profile-timings
                      (report-profile (current-error-port) profile-timings))
-                   (values (if reuse? forest (last-build-model))
+                   (values (if reuse? model (last-build-model))
                            (read-build-state (worker-state-path output))
                            ;;     Keep the pre-build snapshot as the
                            ;;     next diff's baseline: edits that land
@@ -317,7 +317,7 @@
            (serve-pid (getppid)))
        (call-with-serve-watch live-path
          (lambda ()
-           (let loop ((serial 0) (forest #f) (retained-state #f) (known '())
+           (let loop ((serial 0) (model #f) (retained-state #f) (known '())
                       (built? #f))
              (let ((request (await-request request-path serial live-path serve-pid)))
                (match request
@@ -327,10 +327,10 @@
                     (lambda ()
                       (call-with-project-stage 'build #f
                         (lambda ()
-                          (let-values (((next-forest next-state next-known)
-                                        (build-once request forest retained-state
+                          (let-values (((next-model next-state next-known)
+                                        (build-once request model retained-state
                                                     known result-path built?)))
-                            (loop request-serial next-forest next-state
+                            (loop request-serial next-model next-state
                                   next-known #t)))))
                     (lambda (unexpected error)
                       (print-project-error error profile?)

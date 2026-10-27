@@ -189,7 +189,7 @@
                    (when (string-contains text \"FAIL\") (error \"article failure\"))
                    text))
   #:analyze (lambda (context)
-             ;;     Analysis counter: the retained-forest contract is
+             ;;     Analysis counter: the retained-model contract is
              ;;     observable here - asset edits re-render without
              ;;     analysis, document edits re-analyze.
              (let ((port (open-file \".cache/analyze.count\" \"a\")))

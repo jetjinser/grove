@@ -50,7 +50,7 @@
                             previous-sources changed progress
                             #:key (model-retained? #f))
   ;; MODEL-RETAINED? promises that MODEL is the same analysis the
-  ;; previous-entries were rendered from (the retained forest) and
+  ;; previous-entries were rendered from (the retained model) and
   ;; that renderer configurations are unchanged (identity checked
   ;; by the caller).  render-model is then a pure function of
   ;; unchanged inputs for every artifact whose recorded sources did
