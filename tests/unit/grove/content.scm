@@ -39,6 +39,15 @@
   (html-attributes:merge-html-attributes
     '((id . "tree-1")) '((id . "author-id"))))
 
+(test-error "HTML style merge rejects duplicate renderer-owned attributes" #t
+  (html-attributes:merge-html-attributes
+    '((class . "first") (class . "second")) '()))
+
+(test-equal "HTML style additions compose repeated class attributes in order"
+  '((class . "tree first second"))
+  (html-attributes:merge-html-attributes
+    '((class . "tree")) '((class . "first") (class . "second"))))
+
 (let* ((text-value (string-copy "hello"))
        (text-source (string-copy "page.plant"))
        (location-file (string-copy "page.plant"))

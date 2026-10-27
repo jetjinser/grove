@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove render html attributes)
+  #:use-module (grove private html-attributes)
   #:use-module (grove style)
   #:use-module (grove style html)
   #:use-module (srfi srfi-1)
@@ -49,9 +50,10 @@
   "Merge style ADDITIONS into renderer-owned ORIGINAL HTML attributes.
 Classes and inline styles concatenate; other style values override, except
 that a style cannot replace a renderer-owned ID."
-  (unless (and (html-attribute-assoc? original)
+  (unless (and (valid-html-attribute-list? original)
                (html-attribute-assoc? additions))
-    (error "HTML attributes must be symbol/string pairs" original additions))
+    (error "renderer attributes must be unique symbol/string pairs, and style additions must be symbol/string pairs"
+           original additions))
   (fold
     (lambda (addition attributes)
       (let* ((name (car addition))
