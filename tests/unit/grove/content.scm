@@ -174,6 +174,17 @@
   (make-content-layout "newline" "\n"))
 (test-error "content layout raw values are strings" #t
   (make-content-layout 'newline 10))
+(test-error "content text locations must be source-location alists" #t
+  (make-content-text "text" #:location '(file "page.plant")))
+(test-error "content source locations require string filenames" #t
+  (content-with-source-location
+    (make-content-text "text") '((file . 42))))
+(test-error "content source locations require positive line numbers" #t
+  (content-with-source-location
+    (make-content-text "text") '((file . "page.plant") (line . 0))))
+(test-error "content source locations reject duplicate fields" #t
+  (content-with-source-location
+    (make-content-text "text") '((line . 1) (line . 2))))
 (test-error "element kinds are symbols" #t
   (make-content-element "paragraph" '()))
 (test-error "content elements reject non-content children" #t

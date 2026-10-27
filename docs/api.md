@@ -114,6 +114,12 @@ kind, source, properties, style, and flow behavior.
 Opaque extension values embedded in properties remain shared and follow their
 own type's contract.
 
+Content source locations are association lists with unique symbol keys. The
+`file` value, when present, is a string; `line` and `column`, when present,
+are positive one-based integers. Text constructors validate and snapshot a
+supplied `#:location`, and `content-with-source-location` applies the same
+contract when attaching a location to content.
+
 `(grove ir)` defines these content values and their structural operations.
 Text has two intentionally different projections. Use
 `(grove render plain-text)` for a readable projection of a content value
