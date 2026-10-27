@@ -25,6 +25,7 @@ the work; drop lower only when you need to replace part of its behavior.
 | Add a terminal browser to a Forester project | `(forester browse)` → `make-forest-browser` | the project needs its own `#:browse` callback |
 | Change how content renders | the format's renderer options and `(grove render rules)` | the project needs a new output format or a different build stage |
 | Define a reusable custom HTML element command | `(grove render html element)` → `make-element` | the element needs semantic data or a non-HTML interpretation; use `(grove ir)` and add render rules as needed |
+| Construct a titled disclosure block | `(grove ir)` → `make-content-disclosure` | `#:addressable? #t` is interpreted by Forester as an anonymous subtree; see [tree composition](forester-composition.md) |
 | Rewrite content before analysis | `(grove content transform)` → `compose-content-transforms`; project constructors accept `#:transforms` | the behavior depends on the analyzed site model; use a renderer or render rule |
 | Localize interface text and formatting | `(grove i18n)` plus renderer `#:locale` and `#:messages`; see the [localization guide](i18n.md) | project-specific content should be translated; keep that data in the content model |
 | Pass explicit state through a render pass | `(grove render context)` → `make-render-context`, `render-context-with`; Forester renderers can use `(forester render context)` → `make-site-render-context` | renderer options configure a renderer; context carries values to rules and custom rendering code |
@@ -114,6 +115,11 @@ or list returned by an accessor does not alter the node. Use
 intentional change;
 `content-element-with-children` replaces its children while preserving its
 kind, source, properties, style, and flow behavior.
+`make-content-disclosure` constructs a titled block disclosure with an
+optional initial `open?` state. Its `addressable?` flag is a Forester
+integration hint: Forester converts it to an unnamed `unstable-N` subtree
+during site analysis, so the subtree can be queried or transcluded but its ID
+is unstable. Other Grove renderers keep the value as a disclosure.
 Opaque extension values embedded in properties remain shared and follow their
 own type's contract.
 

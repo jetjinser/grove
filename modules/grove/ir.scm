@@ -235,7 +235,10 @@
 
 (define* (make-content-disclosure title children #:key (open? #t)
                                   (addressable? #f) (style #f))
-  "Make a titled disclosure. Addressable disclosures may become trees in a host site."
+  "Make a titled block disclosure.
+
+Forester promotes a disclosure with ADDRESSABLE? set to #t to an anonymous
+subtree during site analysis. Other Grove renderers treat it as a disclosure."
   (unless (non-empty-string? title)
     (error "content disclosure requires a non-empty title" title))
   (unless (boolean? open?)
