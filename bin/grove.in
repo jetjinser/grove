@@ -18,5 +18,5 @@
               (if existing (string-split existing #\:) '())))
     ":"))
 
-(use-modules (grove cli))
+(use-modules (grove private cli))
 (exit (main (cdr (command-line))))

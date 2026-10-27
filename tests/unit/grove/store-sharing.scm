@@ -54,7 +54,7 @@
       "                 (site-pages site)))))\n"
       "  #:output-directory \"build\")\n"))
   (write-file (string-append worktree "/entry.scm")
-    "(use-modules (grove cli))\n(exit (main (cdr (command-line))))\n"))
+    "(use-modules (grove private cli))\n(exit (main (cdr (command-line))))\n"))
 
 (define run-counter 0)
 

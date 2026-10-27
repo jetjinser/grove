@@ -136,12 +136,12 @@
       (covered-call
         (lambda ()
           ;;     Resolve the CLI and install the worker wrapper inside the
-          ;;     coverage window: (grove cli) imports (grove serve), and a
+          ;;     coverage window: (grove private cli) imports (grove serve), and a
           ;;     module loaded before the debug engine takes over is never
           ;;     instrumented.
-          (resolve-interface '(grove cli))
+          (resolve-interface '(grove private cli))
           (when (coverage-enabled?) (cover-workers!))
-          ((module-ref (resolve-module '(grove cli)) 'main) arguments))))
+          ((module-ref (resolve-module '(grove private cli)) 'main) arguments))))
     (lambda args
       (dump-child-environment "failure")
       (apply throw args))))

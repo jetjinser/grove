@@ -59,7 +59,7 @@
          (compiled-arguments
            (append-map (lambda (path) (list "-C" path)) %load-compiled-path))
          (program
-           (format #f "(use-modules (grove cli)) (exit (main '~s))"
+           (format #f "(use-modules (grove private cli)) (exit (main '~s))"
              arguments))
          (status
            (popen "guile"
