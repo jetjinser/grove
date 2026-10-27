@@ -39,6 +39,7 @@ the work; drop lower only when you need to replace part of its behavior.
 | Reuse derived bytes inside an extension | `(grove cache)` → `make-content-cache` | cache-aware renderer artifacts and pipeline outputs are cached by the project |
 | Write or extend math | `(grove math formula)` for text-based writing and calculations; `(grove math semantic)` for typed values; `(grove math notation)` for display layout; see the [Math reference](math.md) | inspect results with `(grove math report)` and `(grove math diagnostic)`; verify or audit derivations with `(grove math verification)` and `(grove math audit)`; compose passes or query rule relations |
 | Query finite relations | `(grove relation)` for relation values and miniKanren goals; `(grove relation dsl)` for named schemas and rules; see the [Relation reference](relations.md) | a domain API should return ordered, domain-specific results |
+| Query Forester pages, content, references, and terms | `(forester relations)` for finite relation goals and row queries | use `(forester site)` when results should be page/content records in site order; see the [Relation reference](relations.md) |
 | Count user-perceived text units | `grapheme-count` from `(grove unicode)` | the task needs codepoint or UTF-8 byte counts instead |
 | Run a live preview from Scheme | `(grove serve)` → `serve-project` | ordinary local previews can use the `grove serve` command |
 
