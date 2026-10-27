@@ -60,14 +60,12 @@ set; this general constructor installs no format-specific renderer."
     (error "site transforms must be procedures" transforms))
   (unless (or (not home) (non-empty-string? home))
     (error "site home must be a non-empty page ID or #f" home))
-  (when reader-locale
-    (unless (string? reader-locale)
-      (error "site reader locale must be a tag or #f" reader-locale))
-    (make-locale reader-locale))
-  (let ((locale-tag (and reader-locale
-                         (locale-tag (make-locale reader-locale))))
-        (transform (and (pair? transforms)
-                        (apply compose-content-transforms transforms))))
+  (when (and reader-locale (not (string? reader-locale)))
+    (error "site reader locale must be a tag or #f" reader-locale))
+  (let* ((locale (and reader-locale (make-locale reader-locale)))
+         (locale-tag (and locale (locale-tag locale)))
+         (transform (and (pair? transforms)
+                         (apply compose-content-transforms transforms))))
     (make-project
       #:source-directory source-directory
       #:source-filter source-filter
