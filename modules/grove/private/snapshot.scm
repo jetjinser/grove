@@ -13,7 +13,12 @@ records remain shared values; their own constructors define their semantics."
   (let ((seen (make-hash-table)))
     (let copy ((value value))
       (cond
-       ((string? value) (string-copy value))
+       ((string? value)
+        (let ((result (string-copy value))
+              (properties (source-properties value)))
+          (when properties
+            (set-source-properties! result (copy properties)))
+          result))
        ((pair? value)
         (or (hashq-ref seen value)
             (let ((result (cons #f #f)))

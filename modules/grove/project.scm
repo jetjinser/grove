@@ -58,17 +58,40 @@
             browse-project))
 
 (define-record-type <project-input>
-  (make-project-input path value)
+  (%make-project-input path value)
   project-input?
-  (path project-input-path)
-  (value project-input-value))
+  (path project-input-path/raw)
+  (value project-input-value/raw))
+
+(define (make-project-input path value)
+  (%make-project-input (snapshot-data path) (snapshot-data value)))
+
+(define (project-input-path input)
+  (snapshot-data (project-input-path/raw input)))
+
+(define (project-input-value input)
+  (snapshot-data (project-input-value/raw input)))
 
 (define-record-type <project-context>
-  (make-project-context inputs prepared-sources extra-sources)
+  (%make-project-context inputs prepared-sources extra-sources)
   project-context?
-  (inputs project-context-inputs)
-  (prepared-sources project-context-prepared-sources)
-  (extra-sources project-context-extra-sources))
+  (inputs project-context-inputs/raw)
+  (prepared-sources project-context-prepared-sources/raw)
+  (extra-sources project-context-extra-sources/raw))
+
+(define (make-project-context inputs prepared-sources extra-sources)
+  (%make-project-context (snapshot-data inputs)
+                         (snapshot-data prepared-sources)
+                         (snapshot-data extra-sources)))
+
+(define (project-context-inputs context)
+  (snapshot-data (project-context-inputs/raw context)))
+
+(define (project-context-prepared-sources context)
+  (snapshot-data (project-context-prepared-sources/raw context)))
+
+(define (project-context-extra-sources context)
+  (snapshot-data (project-context-extra-sources/raw context)))
 
 (define-record-type <build-report>
   (%make-build-report sources artifacts added modified removed affected rendered?)

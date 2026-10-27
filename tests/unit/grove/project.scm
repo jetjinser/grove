@@ -159,6 +159,55 @@
                 #:read-source (lambda (_) #f)
                 #:output-directory ""))
 
+(let* ((body (string-copy "before"))
+       (_ (set-source-properties! body '((filename . "page.plant") (line . 4))))
+       (source-value (list (cons 'body body)))
+       (prepared-source (list (string-copy "prepared.scm")))
+       (extra-source (list (string-copy "theme.css")))
+       (captured-context #f)
+       (project
+        (make-project
+          #:collect-sources (lambda () '("page.plant"))
+          #:prepare (lambda () prepared-source)
+          #:extra-sources extra-source
+          #:read-source (lambda (_) source-value)
+          #:analyze
+          (lambda (context)
+            (set! captured-context context)
+            (set-cdr! (car source-value) "changed reader value")
+            (set-source-properties! body '((filename . "changed.plant") (line . 9)))
+            (set-car! prepared-source "changed-prepared.scm")
+            (set-car! extra-source "changed-theme.css")
+            (set-car! (project-context-inputs context) #f)
+            (string-set! (project-input-path
+                           (car (project-context-inputs context)))
+                         0 #\x)
+            (set-cdr! (car (project-input-value
+                             (car (project-context-inputs context))))
+                      "changed accessor value")
+            (set-car! (project-context-prepared-sources context)
+                      "changed-accessor-prepared.scm")
+            (set-car! (project-context-extra-sources context)
+                      "changed-accessor-theme.css")
+            'model)
+          #:output-directory "unused")))
+  (test-equal "analyzer input contexts expose independent snapshots"
+    'model (analyze-project project))
+  (test-equal "analyzer mutations cannot alter project context values"
+    '("page.plant" ((body . "before"))
+      ("prepared.scm") ("theme.css"))
+       (list (project-input-path
+               (car (project-context-inputs captured-context)))
+             (project-input-value
+               (car (project-context-inputs captured-context)))
+             (project-context-prepared-sources captured-context)
+             (project-context-extra-sources captured-context)))
+  (test-equal "source value snapshots preserve independent source properties"
+    '((filename . "page.plant") (line . 4))
+    (source-properties
+      (cdr (car (project-input-value
+                  (car (project-context-inputs captured-context))))))))
+
 (let* ((source-directory (string-copy "sources"))
        (output-directory (string-copy "output"))
        (source-creator (lambda (_prefix _destination) "created"))

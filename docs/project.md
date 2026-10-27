@@ -97,6 +97,12 @@ configuration accessors return fresh copies of those values. Reader, analyzer,
 renderer, collector, and preparation procedures remain the project author's
 code and are retained as callbacks.
 
+The analyzer's `project-context` follows the same value rule: its input list,
+source-path strings, and pair-based source values are copied when the context is
+made and when accessed. Prepared and extra source lists are also independent
+copies. Opaque reader values such as records remain shared and follow the
+reader's own contract.
+
 The default collector walks recursively in sorted order, skipping hidden
 directories. The generic project filter skips dot-prefixed basenames; the site
 project filter selects non-hidden `.plant` files. `#:source-filter` selects
