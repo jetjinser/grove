@@ -40,7 +40,21 @@ list. Use `make-cached-renderer` when it needs cache configuration Grove cannot
 infer. Built-in renderers return cache-aware renderer values and include their
 settings in cache identity.
 
+For an advanced renderer that can update only affected outputs, pass
+`#:render-changed` to `make-cached-renderer`. Grove calls it with the analyzed
+model, changed source paths, dirty artifact paths, and the renderer's previous
+artifacts. Return the complete current artifact list, reusing unaffected old
+artifacts when appropriate; return `#f` to ask Grove to run the full renderer
+procedure. Grove uses this path only when it can localize source changes and
+the renderer configuration is cacheable; project-wide or untracked changes
+fall back to the full renderer. Keep the normal full renderer for initial
+builds and as the explicit fallback.
+
 Asset pipelines remain separate because they declare file inputs and drive
 external tools. Use a renderer for a projection of the analyzed model; use a
 pipeline when generated output depends on declared files or external tool
-execution. See the [customization guide](customizing.md) for examples.
+execution. A pipeline procedure receives an input lookup and an emit callback;
+the lookup resolves only declared `#:inputs` to materialized paths, while emit
+accepts a relative artifact path and string or bytevector content. It must emit
+at least one artifact. See the [customization guide](customizing.md) for
+examples.

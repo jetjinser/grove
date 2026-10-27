@@ -22,6 +22,13 @@
   (and (string? input) (not (string-null? input))))
 
 (define* (make-asset-pipeline #:key name (version "") (inputs '()) procedure)
+  "Construct a file-driven build step named NAME.
+
+PROCEDURE is called with an input lookup and an emit callback. The lookup
+accepts only declared INPUTS and returns a materialized path. EMIT accepts a
+relative artifact path and a string or bytevector; the procedure must emit at
+least one artifact, and its own return value is ignored. VERSION distinguishes
+behavior depending on state Grove cannot track, such as an external toolchain."
   (unless (and (string? name) (not (string-null? name)))
     (error "asset pipeline requires a name" name))
   (unless (string? version)

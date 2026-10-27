@@ -590,6 +590,7 @@
               (build-report-affected-artifacts project-key-change))))
         (let* ((full-count 0)
                (partial-count 0)
+               (partial-details #f)
                (incremental-renderer
                  (make-cached-renderer
                    (lambda (site)
@@ -609,6 +610,9 @@
                    #:render-changed
                    (lambda (site changed-paths dirty-paths old-artifacts)
                      (set! partial-count (+ partial-count 1))
+                     (set! partial-details
+                       (list changed-paths dirty-paths
+                             (map artifact-path old-artifacts)))
                      (let ((current-ids
                              (map site-page-id (site-pages site))))
                        (append
@@ -655,6 +659,17 @@
               1 partial-count)
             (test-equal "source changes do not rerun full renderer"
               1 full-count)
+            (test-assert "partial renderer receives source changes and reusable artifacts"
+              (let ((changed-paths (car partial-details))
+                    (dirty-paths (cadr partial-details))
+                    (old-paths (caddr partial-details)))
+                (and (member (string-append source-directory "/first.plant")
+                             changed-paths string=?)
+                     (member (string-append source-directory "/third.plant")
+                             changed-paths string=?)
+                     (member "index.txt" dirty-paths string=?)
+                     (member "pages/first.txt" old-paths string=?)
+                     (member "pages/third.txt" old-paths string=?))))
             (test-assert "partial render is reported as rendering"
               (build-report-rendered? partial))
             (test-equal "partial renderer preserves current output set"

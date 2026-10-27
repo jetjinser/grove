@@ -9,6 +9,15 @@
             make-cached-renderer))
 
 (define* (make-cached-renderer procedure #:key (cache? #t) (configuration '()) render-changed inputs)
+  "Wrap PROCEDURE for project use with explicit cache behavior.
+
+CONFIGURATION is data or a model-to-data procedure included in cache identity.
+INPUTS, when supplied, is a no-argument procedure returning additional paths
+to track. RENDER-CHANGED, when supplied, receives the model, changed source
+paths, dirty artifact paths, and this renderer's previous artifacts. It must
+return the renderer's complete current artifact list, or #f to request a full
+render. CACHE? false marks this renderer uncached; in a project this disables
+the shared artifact cache for the renderer set."
   (unless (boolean? cache?)
     (error "renderer cache option must be a boolean" cache?))
   (unless (procedure? procedure)
