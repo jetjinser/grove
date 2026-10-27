@@ -107,6 +107,7 @@ Other project commands:
 | `grove browse` | Analyze the project and browse its model in the terminal. |
 | `grove ssh-keygen` | Generate an RSA host key for `grove browse --ssh`. |
 | `grove new` | Ask the project to create a source file. |
+| `grove store size` / `grove store gc` | Inspect shared-store usage or prune old entries. |
 
 `grove browse` can also serve the same browser over SSH with `--ssh PORT`
 (plus `--host-key` and `--authorized-keys`); see
