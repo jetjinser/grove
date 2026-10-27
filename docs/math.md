@@ -211,10 +211,15 @@ This is a lower-level relational interface. The high-level `math-*` operations,
 Formula helpers, and derivation verifiers select rule names from Grove's
 registered rule set; a locally constructed rule is not added to that registry
 or its catalog, so it cannot participate in their report and verification
-pipeline. The built-in rule-pack modules also expose rule lists for direct
-relational queries, but loading a pack does not register or replace high-level
-rules. Use this API when project code wants to run or compose a custom relation
-directly.
+pipeline. This keeps report step names resolvable against the same rule
+definitions used by the catalog and verifier. The built-in rule-pack modules
+also expose rule lists for direct relational queries: `(grove math rewrite)`
+provides the complete set, while `(grove math arithmetic)`,
+`(grove math differentiation)`, `(grove math identities)`,
+`(grove math integration)`, `(grove math normalization)`,
+`(grove math spatial)`, and `(grove math vector)` expose domain-specific packs.
+Loading a pack does not register or replace high-level rules. Use this API when
+project code wants to run or compose a custom relation directly.
 
 Rule declarations and RuleSpec values snapshot their string and pair-based
 data at construction. Their accessors return independent copies, so inspection
