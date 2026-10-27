@@ -853,8 +853,11 @@
                  #:inputs (list input)
                  #:procedure
                  (lambda (in)
-                   (list (make-artifact "assets/result.txt"
-                           (call-with-input-file (in input) get-string-all))))))
+                   (let ((content
+                           (call-with-input-file (in input) get-string-all)))
+                     (if (string-null? content)
+                         '()
+                         (list (make-artifact "assets/result.txt" content)))))))
              (project
                (make-forester-project
                  #:home "hello"
@@ -923,7 +926,29 @@
           (and (string-contains text-html "Hello")
                (string-contains topic-html "Topic")
                (string-contains sitemap
-                                "https://notes.example/notes/topic.html")))))
+                                "https://notes.example/notes/topic.html")))
+        (write-test-file input "")
+        (let ((empty-output (build-project/report project)))
+          (test-assert "empty pipeline output retires its previous artifact"
+            (and (not (file-exists?
+                       (string-append output "/assets/result.txt")))
+                 (not (member "assets/result.txt"
+                              (map artifact-path
+                                   (build-report-artifacts empty-output))
+                              string=?))
+                 (member "assets/result.txt"
+                         (build-report-affected-artifacts empty-output)
+                         string=?)))
+          (write-test-file input "external result")
+          (let ((restored-output (build-project/report project)))
+            (test-assert "pipeline output returns after its input becomes productive"
+              (and (member "assets/result.txt"
+                           (map artifact-path
+                                (build-report-artifacts restored-output))
+                           string=?)
+                   (string=? "external result"
+                     (read-test-file
+                       (string-append output "/assets/result.txt")))))))))
     (lambda () (system* "rm" "-rf" root))))
 
 (let ((root (mkdtemp "/tmp/forester-text-route-cache-test-XXXXXX")))
