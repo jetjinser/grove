@@ -18,6 +18,7 @@
   #:use-module (forester render sitemap)
   #:use-module (forester render site)
   #:use-module (forester render text)
+  #:use-module (forester render text routes)
   #:use-module (forester site)
   #:use-module (grove input scribble)
   #:use-module (grove ir)
@@ -681,9 +682,14 @@
             (build-report-affected-artifacts changed-module)))
         (delete-file (string-append source-directory "/orphan.plant"))
         (let ((removed-page (build-project/report incremental-project)))
-          (test-equal "removing a page affects indexes and its own outputs"
+          (test-equal "removing a page invalidates renderers whose route maps changed"
             '("text/index.txt" "notes/orphan.html"
-              "text/orphan.txt")
+              "text/orphan.txt" "forester.css" "highlight.css" "index.html"
+              "notes/limits.html" "notes/unicode-accent.html"
+              "notes/unicode.html" "notes/unlinked.html"
+              "notes/quadratic-equations.html" "text/algebra.txt"
+              "text/limits.txt" "text/unicode-accent.txt" "text/unicode.txt"
+              "text/unlinked.txt" "text/quadratic-equations.txt")
             (build-report-affected-artifacts removed-page))
           (test-assert "removed page output is cleaned from HTML and text targets"
             (and (not (file-exists?
@@ -918,6 +924,99 @@
                (string-contains topic-html "Topic")
                (string-contains sitemap
                                 "https://notes.example/notes/topic.html")))))
+    (lambda () (system* "rm" "-rf" root))))
+
+(let ((root (mkdtemp "/tmp/forester-text-route-cache-test-XXXXXX")))
+  (dynamic-wind
+    (lambda ()
+      (write-test-file (string-append root "/source") "source")
+      (write-test-file (string-append root "/target") "target"))
+    (lambda ()
+      (let* ((source-path (string-append root "/source"))
+             (target-path (string-append root "/target"))
+             (source-page
+              (make-site-page
+                "source" "Source"
+                (make-content-document
+                  (list (make-content-element 'paragraph
+                          (list (make-content-element 'link '("Target")
+                                  #:properties '((target . "target")))))))
+                source-path))
+             (target-page
+              (make-site-page "target" "Target"
+                (make-content-document '()) target-path))
+             (moved? #f)
+             (html-routes
+              (make-html-routes
+                #:home-page "source"
+                #:page-path
+                (lambda (id)
+                  (string-append
+                    (if (and moved? (string=? id "target"))
+                        "moved/target" id)
+                    ".html"))))
+             (routes
+              (make-text-routes
+                #:page-path
+                (lambda (id)
+                  (if (and moved? (string=? id "target"))
+                      "moved/target.txt"
+                      (string-append id ".txt")))))
+             (project
+              (make-site-project
+                #:collect-sources
+                (lambda () (list source-path target-path))
+                #:read-page
+                (lambda (path)
+                  (if (string=? path source-path) source-page target-page))
+                #:analyze make-forest
+                #:renderers
+                (list (make-html-renderer
+                        #:options (make-html-options #:routes html-routes))
+                      (make-text-renderer
+                        #:options (make-text-options #:routes routes)))
+                #:output-directory (string-append root "/output")))
+             (initial (build-project/report project))
+             (initial-home-page
+              (find (lambda (artifact)
+                      (string=? (artifact-path artifact) "index.html"))
+                    (build-report-artifacts initial)))
+             (initial-source
+              (find (lambda (artifact)
+                      (string=? (artifact-path artifact) "source.txt"))
+                    (build-report-artifacts initial))))
+        (test-assert "renderer route fixture starts with the original target URLs"
+          (and initial-home-page
+               (string-contains (artifact-content initial-home-page)
+                                "href=\"/target.html\"")
+               initial-source
+               (string-contains (artifact-content initial-source) "target.txt")))
+        (set! moved? #t)
+        (let* ((updated (build-project/report project))
+               (artifacts (build-report-artifacts updated))
+               (updated-source
+                (find (lambda (artifact)
+                        (string=? (artifact-path artifact) "source.txt"))
+                      artifacts))
+               (updated-home-page
+                (find (lambda (artifact)
+                        (string=? (artifact-path artifact) "index.html"))
+                      artifacts)))
+          (test-assert "renderer route changes update links and move target outputs"
+            (and updated-home-page
+                 (string-contains (artifact-content updated-home-page)
+                                  "href=\"/moved/target.html\"")
+                 updated-source
+                 (string-contains (artifact-content updated-source)
+                                  "moved/target.txt")
+                 (member "moved/target.html" (map artifact-path artifacts)
+                         string=?)
+                 (member "moved/target.txt" (map artifact-path artifacts)
+                         string=?)
+                 (not (member "target.html" (map artifact-path artifacts)
+                              string=?))
+                 (not (member "target.txt" (map artifact-path artifacts)
+                              string=?)))))))
     (lambda () (system* "rm" "-rf" root))))
 
 (test-end "forester project")

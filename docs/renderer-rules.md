@@ -216,7 +216,7 @@ rather than render options.
 `make-forester-project` constructs its standard HTML renderer for you; give
 that renderer's opaque rules identity with `#:html-rules-id`, and list files
 read by the rules in the project's `#:extra-sources`.
-Declarative HTML presentation data is part of the
-presentation and therefore part of its cache identity. This applies to HTML,
-text, and gemtext. Derived artifacts require a `#:configuration` procedure so
-their inputs are part of the cache identity.
+HTML renderer identity includes declarative presentation data and resolved
+page routes. Text and Gemtext identities include their own options and routes;
+custom rules need a stable `#:rules-id`. Derived artifacts require a
+`#:configuration` procedure so their inputs are part of the cache identity.

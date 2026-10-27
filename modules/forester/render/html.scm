@@ -1253,6 +1253,8 @@ Entry points take this value with #:options."
                     (site-description (site forest))
                     (html-home-page routes)
                     (html-index-url routes)
+                    (html-route-table routes
+                                      (map site-page-id (pages forest)))
                     mathjax-src backmatter reference-taxon-id
                     article? backmatter-details? html-attributes
                     (presentation-cache-identity presentation-data)

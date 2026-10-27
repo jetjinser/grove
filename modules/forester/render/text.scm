@@ -395,7 +395,12 @@
           #:configuration
           (lambda (forest)
             (append
-              (list 'text prefix (site-title (site forest))
+              (list 'text prefix
+                    (map (lambda (page)
+                           (cons (site-page-id page)
+                                 (text-page-path routes (site-page-id page))))
+                         (pages forest))
+                    (site-title (site forest))
                     (site-description (site forest)) (text-index-path routes)
                     backmatter reference-taxon-id rules-id)
               (interface-cache-identity locale messages)))
