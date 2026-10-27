@@ -103,10 +103,13 @@ interpreters accept render rules and context; stock renderers use private
 dispatch details for tree traversal and format-specific behavior.
 
 For math, Formula is the writing-oriented facade and Semantic constructors
-are the typed extension surface. `(grove math pipeline)` and the rule, proof,
-and audit modules expose lower-level calculation machinery for code that needs
-to inspect and compose those results; ordinary article authors should not need
-them.
+are the typed extension surface. `(grove math pipeline)` is the procedural
+calculation facade: it also re-exports the report, diagnostic, derivation,
+verification, audit, and source-provenance accessors used to inspect its
+results. Import `(grove math report)`, `(grove math diagnostic)`, or another
+focused module when code needs only that layer. The rule, proof, and audit
+modules expose lower-level calculation machinery; ordinary article authors
+should not need them.
 
 ## Content values
 
