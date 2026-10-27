@@ -9,6 +9,7 @@
   #:use-module (grove output)
   #:use-module (grove private snapshot)
   #:use-module (grove private render text)
+  #:use-module (grove private uri)
   #:use-module (grove render rules)
   #:use-module (grove render context)
   #:use-module (forester render text routes)
@@ -21,11 +22,9 @@
   #:use-module (forester i18n)
   #:use-module (forester site)
   #:use-module (grove site)
-  #:use-module (web uri)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
-  #:use-module (srfi srfi-14)
   #:export (site->gemtext
             render-gemtext
             make-gemtext-options
@@ -63,10 +62,6 @@
                          (string-append uri "\n"))))
                  uris))))))
 
-(define gemtext-uri-path-characters
-  (string->char-set
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~!$&'()*+,;=:@/"))
-
 (define (uri-scheme? value)
   (let ((colon (string-index value #\:)))
     (and colon (> colon 0)
@@ -91,7 +86,7 @@
       (values (substring value 0 end) (substring value end)))))
 
 (define (route-uri path)
-  (uri-encode path #:unescaped-chars gemtext-uri-path-characters))
+  (uri-encode-path path))
 
 (define (page-url routes from-id to-id)
   (route-uri

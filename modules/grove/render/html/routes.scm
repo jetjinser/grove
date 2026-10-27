@@ -6,6 +6,7 @@
   #:use-module (grove i18n)
   #:use-module (grove private snapshot)
   #:use-module (grove private string-fun)
+  #:use-module (grove private uri)
   #:use-module (grove output)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-1)
@@ -98,11 +99,12 @@
     (snapshot-data table)))
 
 (define (html-asset-url routes path)
+  "Return the URL for a relative artifact path under ROUTES' URL prefix."
   (unless (html-routes? routes)
     (error "HTML asset URL requires HTML routes" routes))
   (unless (artifact-path? path)
     (error "HTML URL requires a relative artifact path" path))
-  (string-append (html-url-prefix routes) path))
+  (string-append (html-url-prefix routes) (uri-encode-path path)))
 
 (define (html-page-url routes id)
   (html-asset-url routes (html-page-path routes id)))

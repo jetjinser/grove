@@ -41,6 +41,13 @@
   (text-page-path (make-text-routes) ""))
 (test-error "locale page paths reject empty page IDs" #t
   ((locale-page-path (lambda (_) #f)) ""))
+(test-equal "HTML asset URLs encode URI delimiters in artifact paths"
+  "/docs/pages/a%20b%3F%23%25.html"
+  (html-asset-url (make-html-routes #:url-prefix "/docs/")
+                  "pages/a b?#%.html"))
+(test-equal "HTML asset URLs encode non-ASCII artifact paths as UTF-8"
+  "/%E8%8A%B1.html"
+  (html-asset-url (make-html-routes) "花.html"))
 
 (let* ((id (string-copy "guide"))
        (shared-path (string-copy "pages/guide.html"))
