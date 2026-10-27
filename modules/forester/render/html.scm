@@ -944,70 +944,6 @@ to the lane, and an in-place numbered marker links to it."
                       '()
                       (list backmatter-fetch-script))))))
 
-(define* (render-html-changed forest style routes mathjax-src backmatter
-                             reference-taxon-id
-                             changed old-artifacts highlighters
-                             #:key (title-decoration #f) (article? #f)
-                             (backmatter-details? #f) (html-attributes '())
-                             (head '()) (site-nav '()) (home-link #f)
-                             (metadata-items default-metadata-items)
-                             (side-lane '())
-                             (rules empty-render-rules)
-                             (presentation #f)
-                             (context #f)
-                             (dirty-paths '()))
-  (when presentation
-    (set! style (html-presentation-style presentation))
-    (set! rules (html-presentation-rules presentation)))
-  (set! routes (resolve-site-routes forest routes))
-  (check-html-input forest style routes mathjax-src)
-  (let ((style-artifacts (html-style-artifacts style)))
-    (let ((style-paths (map out:artifact-path/raw style-artifacts)))
-      (let ((old-page-artifacts
-             (filter (lambda (artifact)
-                       (not (member (out:artifact-path/raw artifact) style-paths string=?)))
-                     old-artifacts)))
-        (if (and (every (lambda (path)
-                          ;;     Only load-time style artifacts are
-                          ;;     dirty: their bytes feed the @font-face
-                          ;;     rules and stylesheet links, never a page body,
-                          ;;     so every page artifact keeps its
-                          ;;     previous bytes under the retained
-                          ;;     forest and the page walk is skipped -
-                          ;;     the difference between a seconds-long
-                          ;;     asset-only preview cycle and a full
-                          ;;     re-render.
-                          (member path style-paths string=?))
-                        dirty-paths)
-                 ;;     Same page count: no page appeared or vanished,
-                 ;;     so a changed count falls back to the walk and
-                 ;;     new and removed pages still render.
-                 (= (length (pages forest)) (length old-page-artifacts)))
-            (append style-artifacts old-page-artifacts)
-            (let* ((route-table
-                     (html-route-table routes (map site-page-id (pages forest))))
-                   (page-artifacts
-                     (map (lambda (page)
-                            (let* ((path (cdr (assoc (site-page-id page) route-table)))
-                                   (sources (page-source-paths forest page)))
-                              (reuse-artifact path sources old-artifacts changed
-                                (lambda ()
-                                  (page-html forest page style routes mathjax-src
-                                             backmatter reference-taxon-id #f highlighters
-                                             #:title-decoration title-decoration
-                                             #:article? article?
-                                             #:backmatter-details? backmatter-details?
-                                             #:html-attributes html-attributes
-                                             #:head head
-                                             #:site-nav site-nav
-                                             #:home-link home-link
-                                             #:metadata-items metadata-items
-                                             #:side-lane side-lane
-                                             #:rules rules
-                                             #:context context)))))
-                          (pages forest))))
-              (append style-artifacts page-artifacts)))))))
-
 (define (check-html-input forest style routes mathjax-src)
   (unless (forest? forest)
     (error "Forester HTML renderer requires a forest" forest))
@@ -1056,6 +992,78 @@ to the lane, and an in-place numbered marker links to it."
   (unless (html-options? options)
     (error (string-append who " requires HTML options") options))
   options)
+
+(define (make-html-page-renderer forest options routes)
+  (let* ((presentation (html-options-presentation options))
+         (style (html-presentation-style presentation))
+         (highlighters (html-options-highlighters options))
+         (mathjax-src (html-options-mathjax-src options))
+         (backmatter (html-options-backmatter options))
+         (reference-taxon-id (html-options-reference-taxon-id options))
+         (title-decoration
+           (presentation-title-decoration-procedure presentation))
+         (article? (html-options-article? options))
+         (backmatter-details? (html-options-backmatter-details? options))
+         (html-attributes (html-options-html-attributes options))
+         (head (html-presentation-head presentation))
+         (site-nav (html-presentation-site-nav presentation))
+         (home-link (html-presentation-home-link presentation))
+         (metadata-items
+           (presentation-metadata-items-procedure presentation))
+         (side-lane (html-options-side-lane options))
+         (rules (html-presentation-rules presentation))
+         (context (make-html-render-context forest routes options)))
+    (check-html-input forest style routes mathjax-src)
+    (lambda (page inline-stylesheets?)
+      (page-html forest page style routes mathjax-src backmatter
+                 reference-taxon-id inline-stylesheets? highlighters
+                 #:title-decoration title-decoration
+                 #:article? article?
+                 #:backmatter-details? backmatter-details?
+                 #:html-attributes html-attributes
+                 #:head head
+                 #:site-nav site-nav
+                 #:home-link home-link
+                 #:metadata-items metadata-items
+                 #:side-lane side-lane
+                 #:rules rules
+                 #:context context))))
+
+(define (render-html-changed forest options changed old-artifacts dirty-paths)
+  (let* ((presentation (html-options-presentation options))
+         (style (html-presentation-style presentation))
+         (routes (resolve-site-routes forest (html-options-routes options)))
+         (render-page (make-html-page-renderer forest options routes))
+         (style-artifacts (html-style-artifacts style))
+         (style-paths (map out:artifact-path/raw style-artifacts))
+         (old-page-artifacts
+           (filter (lambda (artifact)
+                     (not (member (out:artifact-path/raw artifact)
+                                  style-paths string=?)))
+                   old-artifacts)))
+    (if (and (every (lambda (path)
+                      ;;     Only load-time style artifacts are dirty: their
+                      ;;     bytes feed the @font-face rules and stylesheet
+                      ;;     links, never a page body, so every page artifact
+                      ;;     keeps its previous bytes under the retained forest
+                      ;;     and the page walk is skipped.
+                      (member path style-paths string=?))
+                    dirty-paths)
+             ;;     Same page count: no page appeared or vanished, so a changed
+             ;;     count falls back to the walk and new and removed pages
+             ;;     still render.
+             (= (length (pages forest)) (length old-page-artifacts)))
+        (append style-artifacts old-page-artifacts)
+        (let* ((route-table
+                 (html-route-table routes (map site-page-id (pages forest))))
+               (page-artifacts
+                 (map (lambda (page)
+                        (let* ((path (cdr (assoc (site-page-id page) route-table)))
+                               (sources (page-source-paths forest page)))
+                          (reuse-artifact path sources old-artifacts changed
+                            (lambda () (render-page page #f)))))
+                      (pages forest))))
+          (append style-artifacts page-artifacts)))))
 
 (define (snapshot-html-presentation presentation)
   (make-html-presentation
@@ -1176,65 +1184,18 @@ Entry points take this value with #:options."
 
 (define* (site->html forest #:key (options (make-html-options)))
   (let* ((_ (require-html-options options "site->html"))
-         (presentation (html-options-presentation options))
-         (presentation-data presentation)
-         (style (html-presentation-style presentation))
-         (highlighters (html-options-highlighters options))
          (routes (resolve-site-routes forest (html-options-routes options)))
-         (mathjax-src (html-options-mathjax-src options))
-         (backmatter (html-options-backmatter options))
-         (reference-taxon-id (html-options-reference-taxon-id options))
-         (title-decoration (presentation-title-decoration-procedure presentation-data))
-         (article? (html-options-article? options))
-         (backmatter-details? (html-options-backmatter-details? options))
-         (html-attributes (html-options-html-attributes options))
-         (head (html-presentation-head presentation))
-         (site-nav (html-presentation-site-nav presentation))
-         (home-link (html-presentation-home-link presentation))
-         (metadata-items (presentation-metadata-items-procedure presentation-data))
-         (side-lane (html-options-side-lane options))
-         (rules (html-presentation-rules presentation))
-         (context (make-html-render-context forest routes options)))
-    (check-html-input forest style routes mathjax-src)
+         (render-page (make-html-page-renderer forest options routes)))
     (map (lambda (page)
            (cons (site-page-id page)
-                 (page-html forest page style routes mathjax-src
-                            backmatter
-                            reference-taxon-id #t highlighters
-                            #:title-decoration title-decoration
-                            #:article? article?
-                            #:backmatter-details? backmatter-details?
-                            #:html-attributes html-attributes
-                            #:head head
-                            #:site-nav site-nav
-                            #:home-link home-link
-                            #:metadata-items metadata-items
-                            #:side-lane side-lane
-                            #:rules rules
-                            #:context context)))
+                 (render-page page #t)))
          (pages forest))))
 (define* (render-html forest #:key (options (make-html-options)))
-    (let* ((_ (require-html-options options "render-html"))
-          (presentation (html-options-presentation options))
-          (presentation-data presentation)
-          (style (html-presentation-style presentation))
-          (highlighters (html-options-highlighters options))
-          (routes (resolve-site-routes forest (html-options-routes options)))
-          (mathjax-src (html-options-mathjax-src options))
-          (backmatter (html-options-backmatter options))
-          (reference-taxon-id (html-options-reference-taxon-id options))
-          (title-decoration (presentation-title-decoration-procedure presentation-data))
-          (article? (html-options-article? options))
-          (backmatter-details? (html-options-backmatter-details? options))
-          (html-attributes (html-options-html-attributes options))
-          (head (html-presentation-head presentation))
-          (site-nav (html-presentation-site-nav presentation))
-          (home-link (html-presentation-home-link presentation))
-          (metadata-items (presentation-metadata-items-procedure presentation-data))
-          (side-lane (html-options-side-lane options))
-          (rules (html-presentation-rules presentation))
-          (context (make-html-render-context forest routes options)))
-    (check-html-input forest style routes mathjax-src)
+  (let* ((_ (require-html-options options "render-html"))
+         (presentation (html-options-presentation options))
+         (style (html-presentation-style presentation))
+         (routes (resolve-site-routes forest (html-options-routes options)))
+         (render-page (make-html-page-renderer forest options routes)))
     (append
       (html-style-artifacts style)
       (let* ((forest-pages (pages forest))
@@ -1244,19 +1205,7 @@ Entry points take this value with #:options."
         (map (lambda (page index)
                (make-artifact
                  (cdr (assoc (site-page-id page) route-table))
-                 (page-html forest page style routes mathjax-src backmatter
-                            reference-taxon-id #f highlighters
-                            #:title-decoration title-decoration
-                            #:article? article?
-                            #:backmatter-details? backmatter-details?
-                            #:html-attributes html-attributes
-                            #:head head
-                            #:site-nav site-nav
-                            #:home-link home-link
-                            #:metadata-items metadata-items
-                            #:side-lane side-lane
-                            #:rules rules
-                            #:context context)
+                 (render-page page #f)
                  (page-source-paths forest page)))
              forest-pages
              (iota total 1))))))
@@ -1272,14 +1221,9 @@ Entry points take this value with #:options."
           (mathjax-src (html-options-mathjax-src options))
           (backmatter (html-options-backmatter options))
           (reference-taxon-id (html-options-reference-taxon-id options))
-          (title-decoration (presentation-title-decoration-procedure presentation-data))
           (article? (html-options-article? options))
           (backmatter-details? (html-options-backmatter-details? options))
           (html-attributes (html-options-html-attributes options))
-          (head (html-presentation-head presentation))
-          (site-nav (html-presentation-site-nav presentation))
-          (home-link (html-presentation-home-link presentation))
-          (metadata-items (presentation-metadata-items-procedure presentation-data))
           (side-lane (html-options-side-lane options))
           (rules (html-presentation-rules presentation))
           (locale (html-options-locale options))
@@ -1332,24 +1276,9 @@ Entry points take this value with #:options."
                                    (html-style-artifacts style))))
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
-            (let* ((routes (resolve-site-routes forest routes))
-                   (context (make-html-render-context forest routes options)))
-              (if (any (lambda (entry)
-                           (any (lambda (path) (member path changed string=?))
-                                (highlighter-inputs (cdr entry)))) highlighters)
-                    (render forest)
-                    (render-html-changed forest style routes mathjax-src backmatter
-                                         reference-taxon-id
-                                         changed old-artifacts highlighters
-                                         #:title-decoration title-decoration
-                                         #:article? article?
-                                         #:backmatter-details? backmatter-details?
-                                         #:html-attributes html-attributes
-                                         #:head head
-                                         #:site-nav site-nav
-                                         #:home-link home-link
-                                         #:metadata-items metadata-items
-                                         #:side-lane side-lane
-                                         #:rules rules
-                                         #:context context
-                                         #:dirty-paths dirty-paths))))))))
+            (if (any (lambda (entry)
+                       (any (lambda (path) (member path changed string=?))
+                            (highlighter-inputs (cdr entry)))) highlighters)
+                (render forest)
+                (render-html-changed forest options changed old-artifacts
+                                     dirty-paths)))))))
