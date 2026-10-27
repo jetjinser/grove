@@ -23,7 +23,8 @@
                                      #:key
                                      (module-filter scribble-source-file?))
   "Return a project preparation procedure that loads Scribble module sources.
-MODULE-DIRECTORY must be non-empty and is copied at construction. The
+MODULE-DIRECTORY must be non-empty and is copied at construction. MODULE-FILTER
+receives each regular file's basename and defaults to `.plant` files. The
 procedure returns loaded paths so Grove can track them as build inputs."
   (unless (and (string? module-directory)
                (not (string-null? module-directory))
