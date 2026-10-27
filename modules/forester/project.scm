@@ -17,6 +17,7 @@
           (title "Site")
           (description #f)
           (prepare (lambda () '()))
+          (read-page (make-page-reader (make-scribble-document-reader)))
           (html-options (make-html-options))
           (additional-renderers '())
           (transforms '())
@@ -28,7 +29,8 @@
   "Build a Forester project with standard HTML and optional peer renderers.
 HOME is the tree ID rendered at the site index. HTML-OPTIONS configures the
 standard HTML renderer; ADDITIONAL-RENDERERS adds peer formats and projections;
-TRANSFORMS compose content changes before Forester analysis."
+TRANSFORMS compose content changes before Forester analysis. READ-PAGE, when
+provided, replaces the default `.plant' page reader and must return a site page."
   (unless (and (string? home) (> (string-length home) 0))
     (error "Forester project requires a non-empty home tree ID" home))
   (make-site-project
@@ -37,7 +39,7 @@ TRANSFORMS compose content changes before Forester analysis."
     #:source-directory source-directory
     #:home home
     #:prepare prepare
-    #:read-page (make-page-reader (make-scribble-document-reader))
+    #:read-page read-page
     #:analyze make-forest
     #:transforms transforms
     #:renderers (cons (make-html-renderer #:options html-options)
