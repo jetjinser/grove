@@ -205,6 +205,10 @@
     (error "content-with-property requires a content element" element))
   (unless (symbol? key)
     (error "content property key must be a symbol" key))
+  (when (eq? key 'source-location)
+    (unless (valid-source-location? value)
+      (error "content element source-location must be a source-location alist"
+             value)))
   (%make-content-element
     (content-element-kind element) (content-element-children element)
     (cons (cons key (snapshot-data value))
@@ -309,7 +313,9 @@ values."
   (and (list? properties)
        (every (lambda (entry)
                 (and (pair? entry)
-                     (symbol? (car entry))))
+                     (symbol? (car entry))
+                     (or (not (eq? (car entry) 'source-location))
+                         (valid-source-location? (cdr entry)))))
               properties)
        (let loop ((entries properties) (keys '()))
          (or (null? entries)

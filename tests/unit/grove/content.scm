@@ -244,6 +244,12 @@
 (test-error "element property keys are unique" #t
   (make-content-element 'paragraph '()
     #:properties '((role . "status") (role . "note"))))
+(test-error "element source-location properties are validated at construction" #t
+  (make-content-element 'paragraph '()
+    #:properties '((source-location . ((file . ""))))))
+(test-error "content-with-property validates source locations" #t
+  (content-with-property (make-content-element 'paragraph '())
+    'source-location '((file . ""))))
 (test-error "element flow kinds are constrained" #t
   (make-content-element 'paragraph '() #:flow-kind 'floating))
 (test-error "site construction rejects duplicate page IDs" #t
