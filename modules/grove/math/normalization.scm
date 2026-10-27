@@ -2,7 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math normalization)
-  #:use-module (grove math scalar)
+  #:use-module (grove math private scalar)
   #:use-module (grove math types)
   #:use-module (grove math rule)
   #:use-module (grove relation)

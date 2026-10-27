@@ -3,7 +3,7 @@
 
 (define-module (grove math premise)
   #:use-module (grove math private number)
-  #:use-module (grove math scalar)
+  #:use-module (grove math private scalar)
   #:use-module (grove math declaration)
   #:use-module (grove math term)
   #:use-module (grove math private function-derivative)
