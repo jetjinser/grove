@@ -3,7 +3,6 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (language scribble commands)
-  #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove ir)
   #:use-module (ice-9 optargs)
   #:use-module (language scribble command)
@@ -15,7 +14,6 @@
   #:use-module (grove math expression)
   #:use-module (grove math layout)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:export (use-commands))
 
 (define-public (use-command-module module-name)
@@ -53,32 +51,6 @@
               (module (if (list? base) base (list base))))
          (with-syntax ((quoted (datum->syntax #'name (list 'quote module))))
            #'(use-command-module quoted)))))))
-
-(define-public (text-paragraphs value)
-  (unless (or (string? value) (content-text? value))
-    (error "text-paragraphs expects plain text" value))
-  (let* ((text (if (content-text? value)
-                   (ir:content-text-value/raw value)
-                   value))
-         (source (and (content-text? value)
-                      (ir:content-text-source/raw value))))
-    (define (make-paragraph-text lines)
-      (make-content-text (string-join (reverse lines) " ") source))
-    (let loop ((lines (string-split text #\newline))
-               (current '())
-               (paragraphs '()))
-      (if (null? lines)
-          (reverse
-            (if (null? current)
-                paragraphs
-                (cons (make-paragraph-text current) paragraphs)))
-          (let ((line (string-trim-both (car lines))))
-            (if (string-null? line)
-                (loop (cdr lines) '()
-                      (if (null? current)
-                          paragraphs
-                          (cons (make-paragraph-text current) paragraphs)))
-                (loop (cdr lines) (cons line current) paragraphs)))))))
 
 (define*-public (bold #:key (style #f) . body)
   (set! body (command-body body))

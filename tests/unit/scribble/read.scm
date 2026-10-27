@@ -413,8 +413,8 @@
   (let ((document
           (evaluate-document
             env
-            "@(define (sample-text) (string-append \"First paragraph.\" (make-string 2 (integer->char 10)) \"Second paragraph.\"))\n@(map paragraph (text-paragraphs (sample-text)))")))
-    (test-equal "text-paragraphs works with any plain-text command"
+            "@use-modules[(language scribble flow)]\n@(define (sample-text) (string-append \"First paragraph.\" (make-string 2 (integer->char 10)) \"Second paragraph.\"))\n@(decode-flow (list (sample-text)))")))
+    (test-equal "decode-flow turns multiline text into paragraphs"
       '("First paragraph." "Second paragraph.")
       (map (lambda (element)
              (content-verbatim-string (content-element-children element)))
