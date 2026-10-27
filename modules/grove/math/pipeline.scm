@@ -9,7 +9,7 @@
   #:use-module (grove math context)
   #:use-module (grove math rewrite)
   #:use-module (grove math derivation)
-  #:use-module (grove math strategy)
+  #:use-module (grove math private strategy)
   #:use-module (grove math verification)
   #:use-module (grove math semantic-check)
   #:use-module (grove math audit)
