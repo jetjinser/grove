@@ -195,6 +195,11 @@
                 #:extra-sources '("")
                 #:read-source (lambda (_) #f)
                 #:output-directory "output"))
+(test-error "generic projects reject duplicate extra source paths" #t
+  (make-project #:source-directory "sources"
+                #:extra-sources '("theme.css" "theme.css")
+                #:read-source (lambda (_) #f)
+                #:output-directory "output"))
 (test-error "generic projects reject empty output paths" #t
   (make-project #:source-directory "sources"
                 #:read-source (lambda (_) #f)
