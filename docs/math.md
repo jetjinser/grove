@@ -44,6 +44,14 @@ structured verification results. Formula is the convenient text-reading and
 article-writing facade; use the pipeline when code needs to inspect or compose
 those results.
 
+Scheme code can inspect those values through `(grove math report)` and
+`(grove math diagnostic)`. `math-report-result` from `(grove math pipeline)`
+returns a reusable Semantic value only for a complete calculation;
+`math-report-final` exposes the final term of a partial derivation for
+inspection. Use `math-verify-derivation` from `(grove math verification)` to
+replay a certificate, or `math-audit-calculation` from `(grove math audit)` to
+combine replay, the independent polynomial contract check, and proof evidence.
+
 Formula text accepts identifiers, integer numerals, function calls,
 parentheses, unary minus, powers, equations, and the operators `+`, `-`, `*`,
 `/` (also `−`, `×`). It follows conventional precedence. Numeric coefficients
