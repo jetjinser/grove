@@ -11,10 +11,10 @@
 (define-module (grove private store-gc)
   #:use-module (grove private cache-dir)
   #:use-module (srfi srfi-1)
+  #:use-module (ice-9 format)
   #:use-module (ice-9 ftw)
   #:use-module (srfi srfi-19)
-  #:export (store-subtrees
-            store-summary
+  #:export (store-summary
             store-prune
             format-bytes))
 

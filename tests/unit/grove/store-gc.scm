@@ -81,6 +81,10 @@ paths do not."
 (test-assert "summary carries byte sizes"
   (every (lambda (e) (>= (caddr e) 1)) summary))
 
+(test-equal "store sizes use binary units with one decimal place"
+  '("0.0 B" "1.0 KiB" "1.5 MiB" "1.0 TiB")
+  (map format-bytes '(0 1024 1572864 1099511627776)))
+
 ;;; Dry run: nothing is removed.  The stale set = one artifact, one
 ;;; key, and one analysis.
 (let-values (((count bytes) (store-prune store 30 #t)))
