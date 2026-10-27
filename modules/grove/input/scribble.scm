@@ -35,8 +35,8 @@ their named modules.  Each source selects its module through Guile's normal
                                      #:key
                                      (module-filter scribble-source-file?)
                                      (load-modules load-scribble-modules!))
-  "Return a project prepare hook that loads Scribble module sources.
-The hook returns the loaded paths so Grove can track them as build inputs."
+  "Return a project preparation procedure that loads Scribble module sources.
+It returns the loaded paths so Grove can track them as build inputs."
   (unless (and (string? module-directory) (procedure? module-filter))
     (error "Scribble module setup requires a directory and filter"
            module-directory module-filter))
@@ -50,7 +50,7 @@ The hook returns the loaded paths so Grove can track them as build inputs."
 (define* (make-scribble-module-session paths
                                       #:key
                                       (read-document (make-scribble-document-reader)))
-  "Return two procedures: a project prepare hook and its document reader.
+  "Return a project preparation procedure and its document reader.
 PREPARE evaluates module articles in PATHS order, once per preparation. The
 reader reuses those document results within that preparation and delegates
 other paths. Preparing again resets reuse; this is not a persistent cache."

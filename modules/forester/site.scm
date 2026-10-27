@@ -486,7 +486,7 @@ anchors."
     pages))
 
 (define (report-forest-phase phase seconds)
-  "Forward to the caller's analysis-timing hook when one is installed."
+  "Forward analysis timing to the caller's callback when one is installed."
   ((current-analysis-timings) phase seconds))
 
 (define* (make-forest site #:key (timings #f))

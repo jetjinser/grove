@@ -206,7 +206,7 @@
     (error "project source directory must be a non-empty path"
            source-directory))
   (unless (procedure? prepare)
-    (error "project prepare hook must be a procedure" prepare))
+    (error "project preparation step must be a procedure" prepare))
   (unless (and (list? extra-sources)
                (every non-empty-string? extra-sources))
     (error "project extra sources must be a list of paths" extra-sources))
@@ -292,9 +292,9 @@
                  (every (lambda (path)
                           (non-empty-string? path))
                         paths))
-      (error "project prepare hook must return source paths" paths))
+      (error "project preparation must return source paths" paths))
     (when (not (= (length paths) (length (delete-duplicates paths string=?))))
-      (error "project prepare hook returned duplicate paths" paths))
+      (error "project preparation returned duplicate paths" paths))
     paths))
 
 (define* (analyze-project/result project write?
@@ -378,8 +378,9 @@ Return the internal analysis record used by the build pipeline."
   (unless (project? project)
     (error "project execution requires a Grove project" project))
   (let* (;;     Capture extra-sources fingerprints before anything runs:
-         ;;     these files are read at project-load time (their content
-         ;;     is baked into the style/hooks), so this is the baseline
+         ;;     these files are read at project-load time and may define
+         ;;     configuration values or procedures used by later stages,
+         ;;     so this is the baseline
          ;;     the end-of-build drift check must compare against.
          (pre-build-sources
            (map (lambda (path) (list path (input-fingerprint path)))
