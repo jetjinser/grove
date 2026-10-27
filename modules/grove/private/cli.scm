@@ -38,7 +38,22 @@
 
 ;;; Options are described once and drive parsing, validation, and help.
 
-(define command-names '("build" "check" "serve" "new" "browse" "ssh-keygen" "store"))
+(define command-synopses
+  '(("build" . "Usage: grove build [OPTIONS]\n\nBuild the project and update its outputs.\n")
+    ("check" . "Usage: grove check [OPTIONS]\n\nRead, analyze, render, and validate without writing outputs.\n")
+    ("serve" . "Usage: grove serve [OPTIONS]\n\nServe successful build outputs on localhost and watch for changes.\n")
+    ("browse" . "Usage: grove browse [OPTIONS]\n\nRead and analyze the project, then browse its model in the terminal.\n")
+    ("ssh-keygen" . "Usage: grove ssh-keygen --host-key PATH [OPTIONS]\n\nGenerate an RSA host key for 'grove browse --ssh'.\n")
+    ("new" . "Usage: grove new [PREFIX] [OPTIONS]\n\nAsk the project to create a source, optionally using PREFIX.\n")
+    ("store" . "Usage: grove store (size|gc) [OPTIONS]\n\nReport the size of the per-user shared store, or prune stale entries.\n")))
+
+(define command-names (map car command-synopses))
+
+(define (command-summary synopsis)
+  (let* ((usage-end (string-index synopsis #\newline))
+         (start (+ usage-end 2))
+         (end (string-index synopsis #\newline start)))
+    (substring synopsis start end)))
 
 (define (validate-store-action action)
   (unless (member action '("size" "gc"))
@@ -215,20 +230,19 @@ with HELP overrides keyed by command."
                 (acons 'store-action (validate-store-action argument) options)))
          (else (usage-error "unknown command or option: ~a" argument)))))))
 
-(define command-synopses
-  '(("new" . "Usage: grove new [PREFIX] [OPTIONS]\n\nAsk the project to create a source, optionally using PREFIX.\n")
-    ("build" . "Usage: grove build [OPTIONS]\n\nBuild the project and update its outputs.\n")
-    ("check" . "Usage: grove check [OPTIONS]\n\nRead, analyze, render, and validate without writing outputs.\n")
-    ("serve" . "Usage: grove serve [OPTIONS]\n\nServe successful build outputs on localhost and watch for changes.\n")
-    ("browse" . "Usage: grove browse [OPTIONS]\n\nRead and analyze the project, then browse its model in the terminal.\n")
-    ("ssh-keygen" . "Usage: grove ssh-keygen --host-key PATH [OPTIONS]\n\nGenerate an RSA host key for 'grove browse --ssh'.\n")
-    ("store" . "Usage: grove store (size|gc) [OPTIONS]\n\nReport the size of the per-user shared store, or prune stale entries.\n")))
-
-(define general-synopsis
-  "Usage: grove COMMAND [OPTIONS]\n\nCommands:\n  build       Build the project and update its outputs.\n  check       Validate the complete pipeline without writing outputs.\n  serve       Preview on localhost and rebuild when inputs change.\n  browse      Analyze the project and browse its model in the terminal.\n  ssh-keygen  Generate an RSA host key for --ssh.\n  new         Create a tree with an increasing base36 ID.\n  store       Report the size of the shared content store or prune it.\n")
+(define (general-synopsis)
+  (call-with-output-string
+    (lambda (port)
+      (display "Usage: grove COMMAND [OPTIONS]\n\nCommands:\n" port)
+      (for-each
+        (lambda (entry)
+          (format port "  ~a  ~a\n"
+                  (car entry) (command-summary (cdr entry))))
+        command-synopses))))
 
 (define (print-help command)
-  (display (or (and command (assq-ref command-synopses command)) general-synopsis))
+  (display (or (and command (assq-ref command-synopses command))
+               (general-synopsis)))
   (let ((lines
          (filter-map
            (lambda (spec)
