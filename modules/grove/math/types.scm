@@ -7,7 +7,7 @@
   #:use-module (grove relation)
   #:use-module ((grove relation dsl) #:select (project))
   #:use-module (grove math private operator)
-  #:use-module (grove math assumption)
+  #:use-module (grove math private assumption)
   #:use-module (grove math term)
   #:use-module (grove math diagnostic)
   #:use-module (grove math declaration)

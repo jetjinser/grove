@@ -27,7 +27,7 @@
   #:use-module (grove math presentation)
   #:use-module (grove math layout)
   #:use-module (grove math premise)
-  #:use-module (grove math assumption)
+  #:use-module (grove math private assumption)
   #:use-module (srfi srfi-1)
   #:export (math-derive
             math-search math-search-backward math-simplify math-calculate math-collect

@@ -8,7 +8,7 @@
   #:use-module ((grove math pipeline) #:prefix core:)
   #:use-module (grove math presentation)
   #:use-module (grove math expression)
-  #:use-module (grove math assumption)
+  #:use-module (grove math private assumption)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (read read-lines assumptions term

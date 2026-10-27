@@ -4,7 +4,7 @@
 (use-modules (grove math pipeline) (grove math context) (grove math types)
              ((grove math formula) #:prefix φ:)
              (grove math term) (grove math derivation)
-             (grove math assumption) (grove math layout) (grove math expression)
+             (grove math private assumption) (grove math layout) (grove math expression)
              ((grove math semantic) #:prefix semantic:)
              (grove render html) (grove ir) (grove relation)
              (srfi srfi-1) (srfi srfi-13) (srfi srfi-64))

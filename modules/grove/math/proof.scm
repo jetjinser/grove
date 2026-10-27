@@ -3,7 +3,7 @@
 
 (define-module (grove math proof)
   #:use-module (grove private snapshot)
-  #:use-module (grove math assumption)
+  #:use-module (grove math private assumption)
   #:use-module (grove math derivation)
   #:use-module (grove math rewrite)
   #:use-module (grove math semantic-check)
