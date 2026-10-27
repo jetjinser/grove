@@ -18,7 +18,7 @@ This is the shortest path from “I want to change X” to the right Grove API.
 | the home link | a declarative home-link value | `make-html-presentation #:home-link` |
 | tree headings or the table of contents | page-specific presentation data | `make-html-presentation #:title-decorations` |
 | locale, messages, or date formatting | renderer options | `make-html-options #:locale/#:messages` |
-| output paths | routes | `(grove render html routes)` → `make-html-routes`; `(forester render text routes)` → `make-text-routes`; renderer `#:prefix` |
+| output paths | routes | `(grove render html routes)` → `make-html-routes`; `(forester render text routes)` → `make-text-routes` for text and Gemtext; renderer `#:prefix` |
 | a site-wide sitemap, feed, or graph projection | additional renderers | Forester: `make-forester-project #:additional-renderers`; general sites: `make-site-project #:renderers` |
 | content before Forester analysis | content transforms | `make-forester-project #:transforms` |
 | content before a custom site's analysis | content transforms | `make-site-project #:transforms` |

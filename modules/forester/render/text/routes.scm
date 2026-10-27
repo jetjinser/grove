@@ -28,6 +28,11 @@
                            (page-path (lambda (id)
                                         (string-append id ".txt")))
                            (index-path "index.txt"))
+  "Construct file routes shared by Forester's text and Gemtext renderers.
+
+PAGE-PATH maps a page ID to its artifact path; INDEX-PATH names the aggregate
+index artifact. Gemtext uses `.gmi` defaults, while this constructor defaults
+to `.txt` paths."
   (unless (procedure? page-path)
     (error "text page path requires a procedure" page-path))
   (unless (artifact-path? index-path)
