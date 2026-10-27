@@ -116,9 +116,10 @@ boundary to update.
 The Forester reference adapter lives in `(forester relations)` independently
 of `(forester site)`. It stores each reference occurrence as a four-column
 row: `(source-page-id local-reference-id target-page-id label)`. Its
-exports provide incoming and outgoing reference queries, backlinks, common
-backlinks, and transitive reachability. The site layer maps those query
-results back to page and reference records and preserves site ordering.
+low-level incoming and outgoing queries return complete occurrence rows; its
+other helpers provide backlinks, common backlinks, and transitive reachability.
+Use `(forester site)` when the operation should return page or reference
+records and preserve site ordering.
 
 A link fragment (`@link["page#node"]`) is not part of the reference row: the
 reader splits it off, so `target-page-id` is the page and the relation stays

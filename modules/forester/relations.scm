@@ -10,9 +10,7 @@
   #:use-module (srfi srfi-13)
   #:export (make-reference-relation
             incoming-reference-rows
-            incoming-reference-keys
             outgoing-reference-rows
-            outgoing-reference-ids
             backlink-page-ids
             common-backlink-page-ids
             reachable-page-ids
@@ -237,15 +235,8 @@
 (define (incoming-reference-rows relation target-page-id)
   (relation-index-rows relation 2 target-page-id))
 
-(define (incoming-reference-keys relation target-page-id)
-  (map (lambda (row) (list (car row) (cadr row)))
-       (incoming-reference-rows relation target-page-id)))
-
 (define (outgoing-reference-rows relation source-page-id)
   (relation-index-rows relation 0 source-page-id))
-
-(define (outgoing-reference-ids relation source-page-id)
-  (map cadr (outgoing-reference-rows relation source-page-id)))
 
 (define (backlink-page-ids relation target-page-id)
   (delete-duplicates

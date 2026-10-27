@@ -30,14 +30,6 @@
     ("a" "ref-3" "c" "C"))
   (outgoing-reference-rows references "a"))
 
-(test-equal "incoming queries retain reference occurrences and order"
-  '(("a" "ref-1") ("a" "ref-2") ("d" "ref-1"))
-  (incoming-reference-keys references "b"))
-
-(test-equal "outgoing queries return local reference ids"
-  '("ref-1" "ref-2" "ref-3")
-  (outgoing-reference-ids references "a"))
-
 (test-equal "backlinks return each source page once"
   '("a" "d")
   (backlink-page-ids references "b"))
