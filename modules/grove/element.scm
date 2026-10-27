@@ -4,7 +4,6 @@
 
 (define-module (grove element)
   #:use-module (grove ir)
-  #:use-module (grove string-fun)
   #:use-module (grove style)
   #:use-module (grove style html)
   #:export (make-element))
@@ -42,9 +41,11 @@ whose kind is declared here."
     (error "custom element requires a tag" tag))
   (unless (symbol? kind)
     (error "custom element kind must be a symbol" kind))
-  (when anchor
-    (unless (non-empty-string? anchor)
-      (error "custom element anchor must be a non-empty string" anchor)))
+  (unless (boolean? void?)
+    (error "custom element void? must be a boolean" void?))
+  (unless (memq flow-kind '(inline block))
+    (error "custom element flow kind must be inline or block" flow-kind))
+  (set! anchor (checked-anchor-id anchor))
   ;;     Validate at definition time, not first use.
   (let ((tag (make-html-tag tag))
         (attributes

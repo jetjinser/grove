@@ -275,7 +275,13 @@
     (content->text document))
   (test-error "void elements reject content" #t (wbr "oops"))
   (test-error "invalid tag names fail at definition" #t
-    (make-element #:tag "1bad")))
+    (make-element #:tag "1bad"))
+  (test-error "invalid flow kinds fail at definition" #t
+    (make-element #:tag "aside" #:flow-kind 'column))
+  (test-error "void? must be boolean at definition" #t
+    (make-element #:tag "wbr" #:void? 'yes))
+  (test-error "invalid anchor IDs fail at definition" #t
+    (make-element #:tag "dfn" #:anchor "term id")))
 
 (let* ((base (make-content-style 'base (list (make-html-attributes '((role . "region"))))))
        (tagged (make-content-style #f (list (make-html-tag 'aside))))
