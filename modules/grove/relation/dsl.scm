@@ -4,6 +4,8 @@
 
 (define-module (grove relation dsl)
   #:use-module (grove relation)
+  #:use-module ((grove private minikanren)
+                #:select (with-projected-terms))
   #:use-module (srfi srfi-1)
   #:re-export (relation?
                make-relation
@@ -188,7 +190,7 @@
 (define-syntax project
   (syntax-rules ()
     ((_ (term ...) body ...)
-     ((@@ (faster-minikanren mk-guile) project) (term ...) body ...))))
+     (with-projected-terms (term ...) body ...))))
 
 (define-syntax query
   (syntax-rules ()
