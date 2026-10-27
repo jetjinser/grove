@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester render rss)
+  #:use-module (grove i18n)
   #:use-module (forester private render-routes)
   #:use-module (grove build)
   #:use-module (forester render site)
@@ -142,6 +143,8 @@
            stylesheet-url))
   (unless (or (not language) (non-empty-string? language))
     (error "RSS language must be a non-empty tag or #f" language))
+  (when language
+    (set! language (locale-tag (make-locale language))))
   (unless (rss-stylesheet-url? stylesheet-type)
     (error "RSS stylesheet type must be a non-empty media type without whitespace"
            stylesheet-type))
@@ -167,6 +170,10 @@
                                       (site-settings-default-locale settings))))
   (unless (or (not settings) (site-settings? settings))
     (error "RSS settings must be site settings or #f" settings))
+  (when language
+    (unless (string? language)
+      (error "RSS language must be a tag or #f" language))
+    (set! language (locale-tag (make-locale language))))
   (let* ((site-url (or site-url
                        (and settings (site-settings-site-url settings))))
          (configuration

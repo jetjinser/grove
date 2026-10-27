@@ -109,6 +109,11 @@
     (list (site-settings-site-url settings)
           (site-settings-default-locale settings))))
 
+(test-equal "site settings canonicalize locale aliases"
+  "zh-Hans"
+  (site-settings-default-locale
+    (make-site-settings #:default-locale "zh-CN")))
+
 (define (make-page id locale translation)
   (make-site-page
     id (string-append "Page " id)
@@ -118,8 +123,19 @@
 
 (define home (make-page "home" #f #f))
 (define guide-en (make-page "guide" "en" "guide"))
-(define guide-zh (make-page "guide-zh" "zh-Hans" "guide"))
+(define guide-zh (make-page "guide-zh" "zh-CN" "guide"))
 (define forest (make-forest (make-site (list home guide-en guide-zh))))
+
+(test-equal "forest construction canonicalizes programmatic page locales"
+  "zh-Hans"
+  (assq-ref (site-page-metadata (find-page forest "guide-zh")) 'locale))
+(test-equal "the Forest's exposed site shares canonical page metadata"
+  "zh-Hans"
+  (assq-ref (site-page-metadata
+              (find (lambda (page)
+                      (string=? "guide-zh" (site-page-id page)))
+                    (site-pages (site forest))))
+            'locale))
 
 (define (locale-of id)
   (let ((page (find-page forest id)))
@@ -146,6 +162,13 @@
   "guide.html" (html-page-path routes "guide"))
 (test-equal "locale page paths suffix other locales"
   "guide-zh.zh-Hans.html" (html-page-path routes "guide-zh"))
+(test-equal "locale routes canonicalize aliases before comparing defaults"
+  "guide.html"
+  (html-page-path
+    (make-html-routes
+      #:page-path (locale-page-path (lambda (_) "zh-CN")
+                                    #:default-locale "zh-Hans"))
+    "guide"))
 (test-equal "custom locale path builders keep directory layouts"
   "zh-Hans/guide-zh.html"
   (html-page-path
@@ -199,16 +222,18 @@
 (let ((sitemap (artifact-content
                  (car (render-sitemap forest #:site-url "https://example.org"
                                       #:routes routes
-                                      #:default-locale "en")))))
+                                      #:default-locale "zh-CN")))))
   (test-assert "sitemap carries hreflang alternates"
     (and (string-contains sitemap "xhtml:link")
          (string-contains sitemap "hreflang=\"zh-Hans\"")
-         (string-contains sitemap "hreflang=\"x-default\""))))
+         (string-contains sitemap "hreflang=\"x-default\"")
+         (string-contains sitemap
+           "hreflang=\"x-default\" href=\"https://example.org/guide-zh.zh-Hans.html\""))))
 
 (let ((page (document->tree-page
               "x"
               (evaluate-document
-                "@title{X}\n@locale[\"zh-Hans\"]\n@translation[\"intro\"]\n@paragraph{Body.}")
+                "@title{X}\n@locale[\"zh-CN\"]\n@translation[\"intro\"]\n@paragraph{Body.}")
               #f)))
   (test-equal "reader extracts the page locale" "zh-Hans"
     (assq-ref (site-page-metadata page) 'locale))
@@ -243,7 +268,7 @@
            (string-append "<loc>" site-url "/guide.html</loc>")))))
 
 (let* ((settings (make-site-settings #:site-url "https://example.org"
-                                     #:default-locale "en"))
+                                     #:default-locale "EN-us"))
        (html (assoc-ref (site->html forest
                                     #:options
                                     (make-html-options
@@ -260,10 +285,10 @@
   (test-assert "site settings feed HTML, sitemap, and RSS"
     (and (string-contains html "https://example.org/guide.html")
          (string-contains sitemap "<loc>https://example.org/guide.html</loc>")
-         (string-contains feed "<language>en</language>"))))
+         (string-contains feed "<language>en-US</language>"))))
 
 (let* ((settings (make-site-settings #:site-url "https://example.org"
-                                     #:default-locale "en"))
+                                     #:default-locale "zh-CN"))
        (html (site->html forest
                          #:options
                          (make-html-options
@@ -276,7 +301,7 @@
   (test-assert "page fallback locale and translation default are independent"
     (and (string-contains home "<html lang=\"zh-Hans\"")
          (string-contains guide
-                          "hreflang=\"x-default\" href=\"/guide.html\""))))
+                          "hreflang=\"x-default\" href=\"/guide-zh.zh-Hans.html\""))))
 
 (let* ((settings (make-site-settings #:site-url "https://example.org"
                                      #:default-locale "zh-Hans"))
@@ -294,6 +319,8 @@
   (make-site-settings #:site-url ""))
 (test-error "site settings reject an empty locale" #t
   (make-site-settings #:default-locale ""))
+(test-error "site settings reject malformed locale tags" #t
+  (make-site-settings #:default-locale "not a locale"))
 (test-error "RSS rejects a non-settings value" #t
   (render-rss forest #:settings 'not-site-settings
               #:site-url "https://example.org"))

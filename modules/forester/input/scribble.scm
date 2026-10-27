@@ -57,12 +57,11 @@
 
 (define (locale-metadata elements kind path)
   (let ((value (one-metadata-value elements kind path)))
-    (when value
-      (catch #t
-        (lambda () (make-locale value))
-        (lambda (key . args)
-          (error "Forester page locale must be a BCP 47 tag" path value))))
-    value))
+    (and value
+         (catch #t
+           (lambda () (locale-tag (make-locale value)))
+           (lambda (key . args)
+             (error "Forester page locale must be a BCP 47 tag" path value))))))
 
 (define (topic-metadata elements kind path)
   (let ((topics

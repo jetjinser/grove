@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester render sitemap)
+  #:use-module (grove i18n)
   #:use-module (grove build)
   #:use-module (forester private date)
   #:use-module (forester private render-routes)
@@ -113,6 +114,10 @@
     (error "Sitemap path must be a relative artifact path" sitemap-path))
   (unless (html-routes? routes)
     (error "Forester sitemap renderer requires HTML routes" routes))
+  (when default-locale
+    (unless (string? default-locale)
+      (error "Sitemap default locale must be a tag or #f" default-locale))
+    (set! default-locale (locale-tag (make-locale default-locale))))
   (set! routes (resolve-site-routes forest routes))
   ;;     home-page 是可选的：没有主页的项目不需要校验它存在。
   (unless (or (not (html-home-page routes))
@@ -135,6 +140,10 @@
                                            settings))))
   (unless (or (not settings) (site-settings? settings))
     (error "sitemap settings must be site settings or #f" settings))
+  (when default-locale
+    (unless (string? default-locale)
+      (error "Sitemap default locale must be a tag or #f" default-locale))
+    (set! default-locale (locale-tag (make-locale default-locale))))
   (let* ((site-url (or site-url
                        (and settings (site-settings-site-url settings))))
          (configuration

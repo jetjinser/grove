@@ -1120,6 +1120,8 @@ Entry points take this value with #:options."
     (validate-backmatter-sections backmatter)
     (check-reference-taxon-id reference-taxon-id)
     (validate-chrome-options locale messages)
+    (when (string? locale)
+      (set! locale (locale-tag (make-locale locale))))
     (unless (valid-html-attributes? html-attributes)
       (error "HTML root attributes must be unique symbol/string pairs"
              html-attributes))
@@ -1128,7 +1130,7 @@ Entry points take this value with #:options."
     (when default-locale
       (unless (string? default-locale)
         (error "HTML default locale must be a tag or #f" default-locale))
-      (make-locale default-locale))
+      (set! default-locale (locale-tag (make-locale default-locale))))
     (unless (or (not site-url) (non-empty-string? site-url))
       (error "HTML site URL must be a non-empty string or #f" site-url))
     (unless (or (not og-image) (non-empty-string? og-image))

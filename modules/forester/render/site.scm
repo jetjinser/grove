@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester render site)
+  #:use-module (grove i18n)
   #:use-module (grove private snapshot)
   #:use-module (grove string-fun)
   #:use-module (srfi srfi-9)
@@ -34,5 +35,7 @@ feed language."
   (unless (or (not default-locale) (non-empty-string? default-locale))
     (error "Site settings default locale must be a tag or #f"
            default-locale))
+  (when default-locale
+    (set! default-locale (locale-tag (make-locale default-locale))))
   (make-site-settings* (snapshot-data site-url)
                        (snapshot-data default-locale)))

@@ -56,6 +56,8 @@ dynamic chrome parameters."
     (error "render context requires a forest" forest))
   (unless (or (not settings) (site-settings? settings))
     (error "render context settings must be site settings or #f" settings))
+  (when default-locale
+    (set! default-locale (locale-tag (make-locale default-locale))))
   (make-render-context
     #:forest forest
     #:routes routes

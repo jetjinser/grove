@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove render html routes)
+  #:use-module (grove i18n)
   #:use-module (grove private snapshot)
   #:use-module (grove string-fun)
   #:use-module (grove output)
@@ -114,6 +115,8 @@ Pages without a locale, and pages in DEFAULT-LOCALE, use `id.html'."
   (unless (or (not default-locale) (non-empty-string? default-locale))
     (error "Locale page path default locale must be a string or #f"
            default-locale))
+  (when default-locale
+    (set! default-locale (locale-tag (make-locale default-locale))))
   (set! default-locale (snapshot-data default-locale))
   (let ((build (or build
                    (lambda (locale id)
@@ -124,6 +127,8 @@ Pages without a locale, and pages in DEFAULT-LOCALE, use `id.html'."
       (let ((locale (snapshot-data (locale-of (snapshot-data id)))))
         (unless (or (not locale) (non-empty-string? locale))
           (error "Locale page path requires a locale tag or #f" id locale))
+        (when locale
+          (set! locale (locale-tag (make-locale locale))))
         (snapshot-data
           (build (snapshot-data (and (not (equal? locale default-locale)) locale))
                  (snapshot-data id)))))))

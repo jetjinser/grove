@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester site)
+  #:use-module (grove i18n)
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove private snapshot)
   #:use-module (grove string-fun)
@@ -490,6 +491,31 @@ anchors."
   "Forward analysis timing to the caller's callback when one is installed."
   ((current-analysis-timings) phase seconds))
 
+(define (normalize-page-locale page)
+  (let* ((metadata (site-page-metadata page))
+         (locale (assq-ref metadata 'locale)))
+    (if (not locale)
+        page
+        (let ((canonical
+                (catch #t
+                  (lambda () (locale-tag (make-locale locale)))
+                  (lambda (key . arguments)
+                    (error "Forester page locale must be a BCP 47 tag"
+                           (site-page-source page) locale)))))
+          (if (string=? locale canonical)
+              page
+              (make-site-page
+                (site-page-id page)
+                (site-page-title page)
+                (site-page-document page)
+                (site-page-source page)
+                #:metadata
+                (map (lambda (entry)
+                       (if (eq? (car entry) 'locale)
+                           (cons 'locale canonical)
+                           entry))
+                     metadata)))))))
+
 (define* (make-forest site #:key (timings #f))
   (define (report-phase phase thunk)
     (let ((report (or timings
@@ -511,9 +537,16 @@ anchors."
     (error "forest requires a Grove site" site))
   (unless (or (not timings) (procedure? timings))
     (error "forest timings must be a procedure" timings))
+  (set! site
+    (make-site (map normalize-page-locale (site-pages site))
+      #:title (site-title site)
+      #:description (site-description site)
+      #:sources (site-sources site)
+      #:home (site-home site)))
   (let* ((root-pages
            (measure 'identify-trees
-             (tree-pass:assign-subtree-identifiers (site-pages site))))
+             (tree-pass:assign-subtree-identifiers
+               (site-pages site))))
          (subtrees (measure 'extract-trees (tree-pass:subtree-pages root-pages)))
          (pages (append root-pages subtrees))
          (pages (measure 'occurrence-anchors
