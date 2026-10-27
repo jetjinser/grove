@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester composition)
+  #:use-module (grove private snapshot)
   #:use-module (grove private string-fun)
   #:use-module (grove relation dsl)
   #:use-module (srfi srfi-1)
@@ -94,8 +95,8 @@
     (error "composition definitions must be subtree definitions" definitions))
   (unless (and (list? transclusions) (every transclusion? transclusions))
     (error "composition transclusions must be transclusion records" transclusions))
-  (set! definitions (map identity definitions))
-  (set! transclusions (map identity transclusions))
+  (set! definitions (snapshot-data definitions))
+  (set! transclusions (snapshot-data transclusions))
   (unless (= (length definitions)
              (length (delete-duplicates
                        (map (lambda (definition)
@@ -172,14 +173,14 @@
                    source-tree-id '()))))
 
 (define (subtree-definitions composition)
-  (map identity (composition-definitions composition)))
+  (snapshot-data (composition-definitions composition)))
 
 (define (outgoing-transclusions composition source-tree-id)
-  (map identity
-       (hash-ref (composition-transclusions-by-source composition)
-                 source-tree-id '())))
+  (snapshot-data
+    (hash-ref (composition-transclusions-by-source composition)
+              source-tree-id '())))
 
 (define (incoming-transclusions composition target-tree-id)
-  (map identity
-       (hash-ref (composition-transclusions-by-target composition)
-                 target-tree-id '())))
+  (snapshot-data
+    (hash-ref (composition-transclusions-by-target composition)
+              target-tree-id '())))
