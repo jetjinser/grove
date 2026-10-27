@@ -104,7 +104,10 @@ after the built-in date items:
 `subtree-definitions`, `outgoing-transclusions`, or `incoming-transclusions`.
 Occurrence order is preserved; duplicate definitions and duplicate occurrence
 IDs within a source tree are rejected. Tuple layout and relation implementation
-remain private, so other providers can supply the same semantic facts.
+remain private, so other providers can supply the same semantic facts. These
+records and query results are snapshots: construction copies their strings and
+list structure, and accessors return independent strings and lists. Mutating
+input or returned data therefore cannot change a composition after construction.
 
 See [linked notes](../examples/linked-notes/project.scm) for an executable
 composition example.

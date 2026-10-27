@@ -11,8 +11,9 @@
 ;;;
 ;;; How it works.  A build key for <guile-module> covers the content
 ;;; digest of every input, the blueprint-relative outputs, the
-;;; toolchain, the warning and optimization settings, and the
-;;; effective compiler version - deliberately not the canonicalized
+;;; toolchain, the warning and optimization settings, the transitive
+;;; project-local modules imported by a Guile source, and the effective
+;;; compiler version - deliberately not the canonicalized
 ;;; checkout-local absolute paths.  Before BLUE's base build logic
 ;;; runs, the module's output is restored from the content store when
 ;;; a blob under the current key exists, and the key is recorded so
@@ -38,6 +39,7 @@
   #:use-module (blue file-system directory)
   #:use-module (ice-9 binary-ports)
   #:use-module (ice-9 textual-ports)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:use-module (rnrs bytevectors)
   #:export (file-digest))
@@ -163,6 +165,55 @@ the store without the entry and the build simply remains local."
          (rename-file temp index)))
      #t)))
 
+;;; A Guile module's compiled output depends on the interfaces of the
+;;; modules it imports.  BLUE's buildable input list only names this
+;;; module's source file, so include the transitive local module sources
+;;; in the content key.  This keeps a cached consumer from retaining
+;;; compiled references to an older imported interface.
+(define (module-import-specs source)
+  (call-with-input-file source
+    (lambda (port)
+      (let find-module-form ()
+        (let ((form (read port)))
+          (cond
+           ((eof-object? form) '())
+           ((and (pair? form) (eq? (car form) 'define-module))
+            (let loop ((options (cddr form)) (imports '()))
+              (cond
+               ((null? options) (reverse imports))
+               ((and (pair? (cdr options))
+                     (eq? (car options) #:use-module))
+                (let* ((spec (cadr options))
+                       (name (if (and (pair? spec) (pair? (car spec)))
+                                 (car spec)
+                                 spec)))
+                  (loop (cddr options)
+                        (if (and (list? name) (every symbol? name))
+                            (cons name imports)
+                            imports))))
+               (else (loop (cdr options) imports)))))
+           (else (find-module-form))))))))
+
+(define (module-name->source name)
+  (let ((path (string-append
+                "modules/"
+                (string-join (map symbol->string name) "/")
+                ".scm")))
+    (and (file-exists? path) path)))
+
+(define (transitive-module-sources source)
+  (let loop ((pending (list source)) (seen '()))
+    (if (null? pending)
+        (sort seen string<?)
+        (let ((current (car pending)))
+          (if (member current seen string=?)
+              (loop (cdr pending) seen)
+              (let ((imports
+                      (filter-map module-name->source
+                                  (module-import-specs current))))
+                (loop (append imports (cdr pending))
+                      (cons current seen))))))))
+
 ;;; The key override: content digests and compiler identity instead
 ;;; of checkout-local absolute paths.
 (define-blue-method (ask-build-key (this <guile-module>))
@@ -174,6 +225,8 @@ the store without the entry and the build simply remains local."
    (slot* this 'optimizations)
    (slot* this 'optimization-level)
    (map file-digest (slot* this 'inputs))
+   (map file-digest
+        (transitive-module-sources (car (slot* this 'inputs))))
    (effective-version)))
 
 (define-blue-method (shareable-output? (this <guile-module>))

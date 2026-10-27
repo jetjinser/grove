@@ -91,6 +91,58 @@
                (transclusion-source-id transclusion)))
        (incoming-transclusions composition "exercise")))
 
+(let* ((parent (string-copy "parent"))
+       (child (string-copy "child"))
+       (definition (make-subtree-definition parent child)))
+  (string-set! parent 0 #\P)
+  (string-set! child 0 #\C)
+  (test-equal "subtree definitions copy constructor strings"
+    '("parent" "child")
+    (list (subtree-definition-parent definition)
+          (subtree-definition-child definition)))
+  (let ((parent-copy (subtree-definition-parent definition)))
+    (string-set! parent-copy 0 #\P)
+    (test-equal "subtree definition accessors return independent strings"
+      "parent" (subtree-definition-parent definition))))
+
+(let* ((source (string-copy "source"))
+       (occurrence (string-copy "occurrence"))
+       (target (string-copy "target"))
+       (transclusion (make-transclusion source occurrence target)))
+  (string-set! source 0 #\S)
+  (string-set! occurrence 0 #\O)
+  (string-set! target 0 #\T)
+  (test-equal "transclusions copy constructor strings"
+    '("source" "occurrence" "target")
+    (list (transclusion-source-tree-id transclusion)
+          (transclusion-source-id transclusion)
+          (transclusion-target-tree-id transclusion))))
+
+(let* ((definition (make-subtree-definition "parent" "child"))
+       (transclusion (make-transclusion "parent" "embed" "target"))
+       (definitions (list definition))
+       (transclusions (list transclusion))
+       (snapshot (make-composition definitions transclusions)))
+  (set-car! definitions (make-subtree-definition "other" "page"))
+  (set-car! transclusions (make-transclusion "other" "embed" "page"))
+  (test-equal "composition copies constructor list structure"
+    '(("parent" "child"))
+    (map (lambda (item)
+           (list (subtree-definition-parent item)
+                 (subtree-definition-child item)))
+         (subtree-definitions snapshot)))
+  (let ((definitions-copy (subtree-definitions snapshot)))
+    (set-car! definitions-copy (make-subtree-definition "changed" "page"))
+    (test-equal "composition accessors return independent list structure"
+      '("child")
+      (map subtree-definition-child (subtree-definitions snapshot))))
+  (let ((outgoing (outgoing-transclusions snapshot "parent")))
+    (set-car! outgoing (make-transclusion "changed" "other" "page"))
+    (test-equal "transclusion queries return independent list structure"
+      '("embed")
+      (map transclusion-source-id
+           (outgoing-transclusions snapshot "parent")))))
+
 (test-error "subtree definition API rejects empty tree IDs" #t
   (make-subtree-definition "parent" ""))
 

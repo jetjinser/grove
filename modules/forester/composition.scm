@@ -35,27 +35,44 @@
 (define-record-type <subtree-definition>
   (%make-subtree-definition parent child)
   subtree-definition?
-  (parent subtree-definition-parent)
-  (child subtree-definition-child))
+  (parent %subtree-definition-parent)
+  (child %subtree-definition-child))
 
 (define-record-type <transclusion>
   (%make-transclusion source-tree-id source-id target-tree-id)
   transclusion?
-  (source-tree-id transclusion-source-tree-id)
-  (source-id transclusion-source-id)
-  (target-tree-id transclusion-target-tree-id))
+  (source-tree-id %transclusion-source-tree-id)
+  (source-id %transclusion-source-id)
+  (target-tree-id %transclusion-target-tree-id))
+
+(define (subtree-definition-parent definition)
+  (string-copy (%subtree-definition-parent definition)))
+
+(define (subtree-definition-child definition)
+  (string-copy (%subtree-definition-child definition)))
+
+(define (transclusion-source-tree-id transclusion)
+  (string-copy (%transclusion-source-tree-id transclusion)))
+
+(define (transclusion-source-id transclusion)
+  (string-copy (%transclusion-source-id transclusion)))
+
+(define (transclusion-target-tree-id transclusion)
+  (string-copy (%transclusion-target-tree-id transclusion)))
 
 (define (make-subtree-definition parent child)
   (unless (all-of non-empty-string? parent child)
     (error "subtree definition requires non-empty tree IDs"
            parent child))
-  (%make-subtree-definition parent child))
+  (%make-subtree-definition (string-copy parent) (string-copy child)))
 
 (define (make-transclusion source-tree-id source-id target-tree-id)
   (unless (all-of non-empty-string? source-tree-id source-id target-tree-id)
     (error "transclusion requires non-empty tree and occurrence IDs"
            source-tree-id source-id target-tree-id))
-  (%make-transclusion source-tree-id source-id target-tree-id))
+  (%make-transclusion (string-copy source-tree-id)
+                      (string-copy source-id)
+                      (string-copy target-tree-id)))
 
 (define-relation-schema make-composition-relation compositiono
   (kind source occurrence target))
@@ -77,6 +94,8 @@
     (error "composition definitions must be subtree definitions" definitions))
   (unless (and (list? transclusions) (every transclusion? transclusions))
     (error "composition transclusions must be transclusion records" transclusions))
+  (set! definitions (map identity definitions))
+  (set! transclusions (map identity transclusions))
   (unless (= (length definitions)
              (length (delete-duplicates
                        (map (lambda (definition)
@@ -153,12 +172,14 @@
                    source-tree-id '()))))
 
 (define (subtree-definitions composition)
-  (composition-definitions composition))
+  (map identity (composition-definitions composition)))
 
 (define (outgoing-transclusions composition source-tree-id)
-  (hash-ref (composition-transclusions-by-source composition)
-            source-tree-id '()))
+  (map identity
+       (hash-ref (composition-transclusions-by-source composition)
+                 source-tree-id '())))
 
 (define (incoming-transclusions composition target-tree-id)
-  (hash-ref (composition-transclusions-by-target composition)
-            target-tree-id '()))
+  (map identity
+       (hash-ref (composition-transclusions-by-target composition)
+                 target-tree-id '())))
