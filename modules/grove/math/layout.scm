@@ -7,7 +7,7 @@
   #:use-module (grove math term)
   #:use-module (grove math private operator)
   #:use-module (grove math expression)
-  #:use-module (grove math declaration)
+  #:use-module (grove math private declaration)
   #:use-module (grove math private function-derivative)
   #:use-module ((grove math private notation) #:prefix notation:)
   #:use-module (srfi srfi-1)

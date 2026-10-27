@@ -4,7 +4,7 @@
 (define-module (grove math private assumption)
   #:use-module (grove math term)
   #:use-module (grove math diagnostic)
-  #:use-module (grove math declaration)
+  #:use-module (grove math private declaration)
   #:use-module (grove math private number)
   #:use-module (srfi srfi-1)
   #:export (math-assumption? math-assumption-diagnostics))

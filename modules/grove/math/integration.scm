@@ -4,7 +4,7 @@
   #:use-module (grove relation)
   #:use-module ((grove relation dsl) #:select (project))
   #:use-module (grove math private polynomial)
-  #:use-module (grove math declaration)
+  #:use-module (grove math private declaration)
   #:use-module (grove math rule)
   #:use-module (grove math diagnostic)
   #:use-module (grove math term)

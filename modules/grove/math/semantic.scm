@@ -6,7 +6,7 @@
   #:use-module (grove math expression)
   #:use-module (grove math term)
   #:use-module (grove math source)
-  #:use-module (grove math declaration)
+  #:use-module (grove math private declaration)
   #:use-module (srfi srfi-1)
   #:re-export (math-value? math-value-term math-value-origin math-value-properties math-value-declarations math-value-requirements)
   #:export (variable coordinate parameter function field space call constant add subtract negate multiply divide power dot cross

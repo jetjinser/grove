@@ -3,7 +3,7 @@
 (define-module (grove math private exact-polynomial)
   #:use-module (grove math private number)
   #:use-module (grove math term)
-  #:use-module (grove math declaration)
+  #:use-module (grove math private declaration)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)

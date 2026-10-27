@@ -18,7 +18,7 @@
   #:use-module (grove math partial)
   #:use-module (grove math integration)
   #:use-module (grove math private polynomial)
-  #:use-module (grove math declaration)
+  #:use-module (grove math private declaration)
   #:use-module (grove math pass)
   #:use-module (grove math report)
   #:use-module (grove math diagnostic)

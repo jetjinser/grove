@@ -3,7 +3,7 @@
 
 (use-modules ((grove math formula) #:prefix φ:) ((grove math semantic) #:prefix ◆:)
              (grove math expression) (grove math pipeline) (grove math types)
-             (grove math declaration) (grove math context)
+             (grove math context)
              (grove render html) (language scribble spec) (system base language)
              (srfi srfi-64) (srfi srfi-13))
 (define x (◆:coordinate 'x))
