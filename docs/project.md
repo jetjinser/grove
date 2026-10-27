@@ -185,7 +185,10 @@ arguments. Summaries use stdout; diagnostics use stderr.
 Artifacts carry relative paths, text or bytes, and optional source dependencies.
 Validation rejects duplicate, reserved, and conflicting output paths. Writing
 preserves unchanged files and removes obsolete manifest-owned artifacts; other
-files remain untouched. Writing is not transactional across the directory.
+files remain untouched. The configured output root may be a symlink, but
+artifact parent directories beneath it may not: Grove refuses to write through
+or clean stale outputs through a symlinked parent. Writing is not transactional
+across the directory.
 
 A site declares its start tree once with
 `(make-site-project #:home ID ...)`. HTML routes

@@ -22,6 +22,7 @@
 (define transition-path (string-append output-directory "/transition"))
 (define transition-page-path
   (string-append output-directory "/transition/page.html"))
+(define outside-directory (string-append test-root "/outside"))
 
 (test-begin "grove output")
 
@@ -126,6 +127,29 @@
       (and (regular-file? linked-path #:follow-links? #f)
            (equal? "user-owned"
                    (call-with-input-file unmanaged-path get-string-all))))
+    (mkdir outside-directory)
+    (symlink outside-directory (string-append output-directory "/escape"))
+    (test-error "artifact writer rejects symlinked parent directories" #t
+      (write-artifacts output-directory
+        (list (make-artifact "escape/outside.txt" "must stay inside"))))
+    (test-assert "artifact writer leaves symlink targets untouched"
+      (not (file-exists? (string-append outside-directory "/outside.txt"))))
+    (write-artifacts output-directory
+      (list (make-artifact "retired/file.txt" "managed before symlink")))
+    (delete-file (string-append output-directory "/retired/file.txt"))
+    (rmdir (string-append output-directory "/retired"))
+    (mkdir (string-append outside-directory "/retired"))
+    (call-with-output-file (string-append outside-directory "/retired/file.txt")
+      (lambda (port) (display "outside-owned" port)))
+    (symlink (string-append outside-directory "/retired")
+             (string-append output-directory "/retired"))
+    (test-error "stale artifact cleanup rejects symlinked parent directories" #t
+      (write-artifacts output-directory '()))
+    (test-equal "stale cleanup leaves symlink targets untouched"
+      "outside-owned"
+      (call-with-input-file (string-append outside-directory "/retired/file.txt")
+        get-string-all))
+    (delete-file (string-append output-directory "/retired"))
     (write-artifacts output-directory
       (list (make-artifact "nested/page.txt" "updated content")))
     (test-assert "artifact writer removes outputs absent from the next build"

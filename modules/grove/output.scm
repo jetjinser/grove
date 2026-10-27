@@ -185,9 +185,39 @@ Validate ARTIFACTS as one complete set before prefixing it."
           (rmdir full-path)
           (loop (dirname parent))))))))
 
+(define (safe-artifact-path directory path create-parents?)
+  "Resolve PATH below DIRECTORY without following artifact parent symlinks.
+
+The output directory itself may be a symlink chosen by the project. Once
+inside that root, every artifact parent must be an ordinary directory. Return
+#f when a parent is missing and CREATE-PARENTS? is false."
+  (let* ((parts (string-split path #\/))
+         (filename (last parts)))
+    (let loop ((parent directory) (components (drop-right parts 1)))
+      (if (null? components)
+          (string-append parent "/" filename)
+          (let* ((next (string-append parent "/" (car components)))
+                 (info (false-if-exception (lstat next))))
+            (cond
+             ((not info)
+              (if (not create-parents?)
+                  #f
+                  (begin
+                    ;; Recheck after mkdir so a concurrent creator is accepted
+                    ;; only when it made a real directory, not a symlink.
+                    (false-if-exception (mkdir next))
+                    (let ((created (false-if-exception (lstat next))))
+                      (unless (and created (eq? (stat:type created) 'directory))
+                        (error "artifact parent is not a real directory" next))
+                      (loop next (cdr components))))))
+             ((eq? (stat:type info) 'directory)
+              (loop next (cdr components)))
+             (else
+              (error "artifact parent must not be a symlink or file" next))))))))
+
 (define (remove-stale-artifact! directory stale-path)
-  (let ((full-path (string-append directory "/" stale-path)))
-    (when (file-exists? full-path)
+  (let ((full-path (safe-artifact-path directory stale-path #f)))
+    (when (and full-path (file-exists? full-path))
       (when (file-is-directory? full-path)
         (error "stale artifact path is a directory; refusing to remove"
                full-path))
@@ -196,6 +226,10 @@ Validate ARTIFACTS as one complete set before prefixing it."
 
 (define (write-artifacts directory artifacts)
   (validate-artifacts artifacts)
+  (ensure-directory directory)
+  ;; A configured output root may itself be a symlink. Resolve it once, then
+  ;; refuse symlinks below it so artifact paths cannot escape that root.
+  (set! directory (canonicalize-path directory))
   (let* ((paths (map artifact:artifact-path/raw artifacts))
          (cache-directory (grove-cache-directory directory))
          (manifest-path
@@ -210,7 +244,6 @@ Validate ARTIFACTS as one complete set before prefixing it."
                                  (artifact-paths-overlap? stale-path path))
                                paths)))
                    previous-paths)))
-    (ensure-directory directory)
     (ensure-directory cache-directory)
     ;;     Remove only manifest-owned paths that obstruct this build's
     ;;     file/directory layout. Other stale outputs remain until all current
@@ -219,13 +252,13 @@ Validate ARTIFACTS as one complete set before prefixing it."
               conflicting-stale-paths)
     (for-each
       (lambda (artifact)
-        (let* ((path (string-append directory "/" (artifact:artifact-path/raw artifact)))
+        (let* ((path (safe-artifact-path
+                       directory (artifact:artifact-path/raw artifact) #t))
                (content (artifact:artifact-content/raw artifact))
                (fingerprint (content-fingerprint content)))
           (when (and (file-exists? path) (file-is-directory? path))
             (error "artifact path is occupied by a directory; refusing to replace"
                    path))
-          (ensure-directory (dirname path))
           (if (artifact-content-current? path content)
               ;;     The bytes are already in place; make sure the
               ;;     shared store has the blob so other checkouts and
