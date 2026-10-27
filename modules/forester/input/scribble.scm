@@ -5,7 +5,6 @@
 (define-module (forester input scribble)
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (ice-9 ftw)
-  #:use-module (forester private date)
   #:use-module (forester private entity-uri)
   #:use-module (grove i18n)
   #:use-module (grove ir)
@@ -50,7 +49,7 @@
 
 (define (date-metadata elements kind path)
   (let ((value (one-metadata-value elements kind path)))
-    (when (and value (not (forester-date? value)))
+    (when (and value (not (iso-date? value)))
       (error (format #f "Forester page date ~a in ~a must use YYYY-MM-DD: ~a"
                      kind path value)))
     value))

@@ -29,6 +29,7 @@
             merge-message-catalogs
             message
             message-format
+            iso-date?
             format-date
             format-number
             plural
@@ -410,6 +411,10 @@ catalog keeps the built-in messages for everything it does not name."
                      maximum-day
                      (<= 1 day maximum-day)
                      (list year month day)))))))
+
+(define (iso-date? value)
+  "Return true when VALUE is a valid Gregorian date in YYYY-MM-DD form."
+  (and (parse-iso-date value) #t))
 
 (define* (format-date locale date #:key (style 'medium))
   "Format an ISO YYYY-MM-DD DATE for LOCALE.  Unparseable dates and

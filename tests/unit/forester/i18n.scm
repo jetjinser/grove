@@ -399,6 +399,12 @@
 
 ;;; Formatting
 
+(test-assert "ISO date predicate accepts valid leap days"
+  (iso-date? "2024-02-29"))
+(test-assert "ISO date predicate rejects impossible calendar dates"
+  (not (iso-date? "1900-02-29")))
+(test-assert "ISO date predicate requires a string"
+  (not (iso-date? #f)))
 (test-equal "English long dates"
   "September 27, 2026" (format-date "en" "2026-09-27" #:style 'long))
 (test-equal "English medium dates"

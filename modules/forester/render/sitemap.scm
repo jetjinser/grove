@@ -5,7 +5,6 @@
 (define-module (forester render sitemap)
   #:use-module (grove i18n)
   #:use-module (grove build)
-  #:use-module (forester private date)
   #:use-module (forester private render-routes)
   #:use-module (forester private translations)
   #:use-module (forester private web)
@@ -22,7 +21,7 @@
 
 (define (page-lastmod page)
   (let ((updated (assq-ref (site-page-metadata page) 'updated)))
-    (when (and updated (not (forester-date? updated)))
+    (when (and updated (not (iso-date? updated)))
       (error "Forester sitemap updated metadata must use YYYY-MM-DD"
              (site-page-id page) updated))
     updated))
