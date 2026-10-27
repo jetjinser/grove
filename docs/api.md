@@ -14,6 +14,7 @@ the work; drop lower only when you need to replace part of its behavior.
 | Write a Forester page | `(forester commands)` and `(language scribble commands)` in `.plant` | the page needs project-local Scheme modules or a new command vocabulary |
 | Configure the normal Forester site | `(forester project)` → `make-forester-project` | the reader, analysis, or complete renderer set needs replacing |
 | Build a site from page documents | `(grove project site)` → `make-site-project` | the input is not a page or the model is project-specific |
+| Assemble a page model directly | `(grove site)` → `make-site-page`, `make-site` | the project should collect and read source pages itself |
 | Build an arbitrary file-based model | `(grove project)` → `make-project` | custom collection, reading, analysis, artifacts, or execution options are needed |
 | Apply renderers directly to an existing model | `(grove build)` → `render-model` | input collection, caching, validation, or output writing is needed; use a project |
 | Create a source for a project | `(grove project)` → `create-project-source`, or the `grove new` command | the project must supply its own `#:create-source` policy |
@@ -48,11 +49,12 @@ how these layers compose.
 `(grove site)` provides `make-site-page` and `make-site` for code assembling a
 page-based model directly. A site page holds an ID, title, Content IR document,
 an optional primary source path, and metadata. The site holds the ordered pages,
-descriptive fields, an optional home page ID, and a separate list of tracked
-source paths. Page IDs must be unique, and a supplied home ID must name one of
-the pages. `make-site-project` builds these values from collected inputs; use
-the constructors directly when synthesizing pages or composing a custom
-analysis stage.
+descriptive fields, an optional home page ID, and a separate list of site-wide
+source dependencies that renderers can attach to aggregate outputs. This list
+does not configure project input collection. Page IDs must be unique, and a
+supplied home ID must name one of the pages. `make-site-project` builds these
+values from collected inputs; use the constructors directly when synthesizing
+pages or composing a custom analysis stage.
 
 ## API layers
 

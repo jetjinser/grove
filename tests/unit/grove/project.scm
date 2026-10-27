@@ -78,6 +78,25 @@
 (test-error "site sources reject empty paths" #t
   (make-site '() #:sources '("")))
 
+(let* ((first (make-site-page "first" "First" (make-content-document '())))
+       (second (make-site-page "second" "Second" (make-content-document '())))
+       (site (make-site (list first second) #:home "second")))
+  (test-equal "site preserves caller page order"
+    '("first" "second")
+    (map site-page-id (site-pages site)))
+  (test-equal "site accepts a home page named by its ID"
+    "second"
+    (site-home site)))
+
+(test-error "site rejects duplicate page IDs" #t
+  (make-site
+    (list (make-site-page "same" "First" (make-content-document '()))
+          (make-site-page "same" "Second" (make-content-document '())))))
+(test-error "site rejects a home ID without a matching page" #t
+  (make-site
+    (list (make-site-page "page" "Page" (make-content-document '())))
+    #:home "missing"))
+
 (let* ((page (make-site-page "home" "Home" (make-content-document '())))
        (pages (list page))
        (title (string-copy "Site"))

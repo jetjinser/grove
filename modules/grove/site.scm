@@ -106,8 +106,9 @@ project code."
   "Construct a site from PAGES, preserving their order.
 
 Each page ID must be unique. HOME is an optional page ID and must identify one
-of PAGES. SOURCES is the site's tracked source-path list; it is independent of
-each page's optional primary source path."
+of PAGES. SOURCES lists site-wide source dependencies that renderers may attach
+to aggregate outputs; it is independent of each page's optional primary source
+path and does not configure project input collection."
   (unless (and (list? pages) (every site-page? pages))
     (error "site requires pages" pages))
   (unless (non-empty-string? title)
