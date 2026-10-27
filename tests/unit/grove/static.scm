@@ -58,6 +58,18 @@
       (test-equal "static renderer tracks its source files as project inputs"
         (list asset-path)
         ((cached-renderer-inputs renderer)))
+      (let* ((trailing-slash-renderer
+               (make-static-assets-renderer
+                 #:source-directory (string-append source-directory "/")
+                 #:prefix "assets"))
+             (trailing-slash-artifact
+               (car ((cached-renderer-procedure trailing-slash-renderer) #f))))
+        (test-equal "static renderer handles a trailing source-directory separator"
+          "assets/images/data.bin"
+          (artifact-path trailing-slash-artifact))
+        (test-equal "equivalent source-directory spellings share cache identity"
+          (cached-renderer-configuration renderer)
+          (cached-renderer-configuration trailing-slash-renderer)))
       (let ((port (open-file asset-path "wb")))
         (put-bytevector port (u8-list->bytevector '(3 4 5)))
         (close-port port))

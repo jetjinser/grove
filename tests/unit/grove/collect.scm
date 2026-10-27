@@ -49,6 +49,9 @@
             (string-append test-directory "/root.plant"))
       (collect-directory test-directory
         (lambda (filename) (string-suffix? ".plant" filename))))
+    (test-equal "collection does not duplicate a trailing directory separator"
+      (collect-directory test-directory)
+      (collect-directory (string-append test-directory "/")))
     (test-assert "collection skips directory symlinks that could leave the tree or loop"
       (not (member (string-append nested-directory "/cycle/nested.plant")
                    (collect-directory test-directory)

@@ -13,15 +13,18 @@
 "Recursively collect regular files below DIRECTORY that satisfy INCLUDE?.
 DIRECTORY must name an existing directory.
 INCLUDE? receives each regular file's basename; returned paths retain their
-full directory structure. Symlinks to regular files are included. Hidden
-directories, directory symlinks, and special files are skipped."
+full directory structure. A trailing slash in DIRECTORY is not duplicated.
+Symlinks to regular files are included. Hidden directories, directory
+symlinks, and special files are skipped."
   (define (directory-entry? path)
     (let ((info (false-if-exception (lstat path))))
       (and info (eq? (stat:type info) 'directory))))
   (define (collect path)
     (append-map
       (lambda (filename)
-        (let ((child (string-append path "/" filename)))
+        (let ((child (string-append path
+                                   (if (string-suffix? "/" path) "" "/")
+                                   filename)))
           (cond
             ((and (not (string-prefix? "." filename))
                   (directory-entry? child))
