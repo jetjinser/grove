@@ -67,6 +67,13 @@ axe-core; `blue a11y [HTML ...]` audits explicit pages; `blue lint` runs
 into `${XDG_CACHE_HOME:-$HOME/.cache}/grove` and verifies its SHA-256, so it
 needs network access once.
 
+The blueprint discovers Scheme modules by scanning `modules/`. After a
+module-tree refactor, an old `.blue-store` can retain buildable records for
+removed source paths; `blue clean` removes current outputs but does not prune
+those records. If `blue build` fails with `buildable-inputs` for a missing
+module, move `.blue-store` to an unused backup path, then run `blue configure`
+and `blue build` to create a store for the current module tree.
+
 Each suite runs under a wall-clock limit (two minutes by default; set
 `GROVE_TESTS_TIME_LIMIT` to override), and blue runs the suites in parallel by
 default. When a full run reports failures, re-run the failing suite alone
