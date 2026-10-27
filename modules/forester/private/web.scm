@@ -7,7 +7,6 @@
   #:use-module (srfi srfi-13)
   #:export (web-url?
             web-base-url
-            web-absolute-url
             web-absolute-route-url
             web-xml-escape))
 
@@ -32,13 +31,10 @@
         (web-base-url (substring url 0 (- end 1)))
         url)))
 
-(define (web-absolute-url base path)
-  (string-append base "/" path))
-
 (define (web-absolute-route-url base route)
   (unless (and (string? route) (string-prefix? "/" route))
     (error "Web route URL must begin with /" route))
-  (web-absolute-url base (substring route 1)))
+  (string-append base route))
 
 (define (web-xml-escape text)
   (string-concatenate
