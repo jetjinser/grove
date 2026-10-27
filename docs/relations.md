@@ -16,9 +16,11 @@ proper Scheme list containing one or more terms, and every row in one relation
 has the same arity. A term can be an atomic Scheme value or a pair tree of
 terms. Vectors are reserved by faster-minikanren for logic variables and are
 not valid relation data. A relation cannot contain a live logic variable.
-Fact rows and pair terms are ordinary Scheme data; callers must treat them as
-read-only after relation construction, including values returned by
-`relation-facts` and query answers.
+Construction copies mutable strings and pair structure. `relation-facts` and
+query answers return independent copies of that mutable data, so edits to
+caller-owned facts or answers cannot change the relation or invalidate its
+indexes. Opaque values such as records and procedures remain shared and follow
+their own type's contract.
 
 Base facts have set semantics: structurally equal rows occur once. The
 constructor retains the first occurrence order, and `relation-facts` exposes

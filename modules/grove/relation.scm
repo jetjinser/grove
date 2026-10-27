@@ -5,6 +5,7 @@
 (define-module (grove relation)
   #:use-module (faster-minikanren mk-guile)
   #:use-module (grove private minikanren)
+  #:use-module (grove private snapshot)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:re-export (run
@@ -31,8 +32,11 @@
   (%make-relation arity facts indexes)
   relation?
   (arity relation-arity)
-  (facts relation-facts)
+  (facts relation-facts/raw)
   (indexes %relation-indexes))
+
+(define (relation-facts relation)
+  (snapshot-data (relation-facts/raw relation)))
 
 (define (make-index facts position)
   ;;     Rows within one key keep their facts order: walk in reverse so
@@ -76,7 +80,7 @@
            arity facts))
   (unless (every (lambda (fact) (every vector-free-term? fact)) facts)
     (error "relation facts cannot contain vectors; miniKanren uses them for logic variables" facts))
-  (let* ((facts (unique-facts facts))
+  (let* ((facts (unique-facts (snapshot-data facts)))
          ;; A content relation has nine columns; most queries bind only one or
          ;; two. Build each index on first use and share it within this snapshot.
          (indexes (map (lambda (position) (delay (make-index facts position)))
@@ -116,15 +120,16 @@
   (let find-candidates ((remaining terms)
                         (indexes (%relation-indexes relation)))
     (if (null? remaining)
-        (membero terms (relation-facts relation))
+        (membero terms (snapshot-data (relation-facts/raw relation)))
         (if (ground-term? (car remaining))
             ;;     The column index narrows the facts to this
             ;;     constraint's rows; the solver unifies the rest.
             (membero terms
-                     (filter (lambda (row)
-                               (ground-row-matches? row terms))
-                             (indexed-values (force (car indexes))
-                                             (car remaining))))
+                     (snapshot-data
+                       (filter (lambda (row)
+                                 (ground-row-matches? row terms))
+                               (indexed-values (force (car indexes))
+                                               (car remaining)))))
             (find-candidates (cdr remaining)
                              (cdr indexes))))))
 

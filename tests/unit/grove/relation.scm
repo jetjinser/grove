@@ -42,6 +42,35 @@
     (delta alpha))
   (relation-facts links))
 
+(let* ((source (string-copy "source"))
+       (target (string-copy "target"))
+       (row (list source (list 'tag target)))
+       (relation (make-relation (list row))))
+  (string-set! source 0 #\x)
+  (string-set! target 0 #\x)
+  (set-car! row "changed")
+  (test-equal "relations snapshot caller-owned strings and pair structure"
+    '(("source" (tag "target")))
+    (relation-facts relation))
+  (let ((facts (relation-facts relation)))
+    (set-car! facts '(changed . #t)))
+  (let ((facts (relation-facts relation)))
+    (string-set! (cadr (cadar facts)) 0 #\x))
+  (test-equal "relation-facts returns an independent value snapshot"
+    '(("source" (tag "target")))
+    (relation-facts relation))
+  (let ((answer
+         (car (run* (value)
+                (relationo relation "source" value)))))
+    (string-set! (cadr answer) 0 #\x))
+  (test-equal "query answers cannot mutate relation facts or indexes"
+    '(("source" (tag "target")))
+    (relation-facts relation))
+  (test-equal "queries remain valid after callers mutate their snapshots"
+    '((tag "target"))
+    (run* (value)
+      (relationo relation "source" value))))
+
 (test-equal "fact deduplication compares compound terms structurally"
   2
   (length
