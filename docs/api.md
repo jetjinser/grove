@@ -83,9 +83,15 @@ Opaque extension values embedded in properties remain shared and follow their
 own type's contract.
 
 `(grove ir)` defines these content values and their structural operations.
-Text projection is an interpreter: use `(grove render plain-text)` for a
-readable text form, including math-specific notation, and `(grove render text)`
-for formatted text output.
+Text has two intentionally different projections. Use
+`(grove render plain-text)` for a readable projection of a content value
+without document-level formatting, including human-oriented notation for
+structured math. It does not preserve all content semantics and is not a
+serialization format.
+Use `(grove render text)` to interpret content as rendered text: it adds
+document formatting, accepts render rules and context, and is the basis for
+Forester's text and Gemtext outputs. Choose it when output behavior or custom
+content kinds matter.
 
 Scribble forms may return content values or recursively nested lists of them;
 the reader flattens those sequences and decodes prose into paragraphs. Authors
