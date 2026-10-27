@@ -111,8 +111,8 @@ does not export: identifying a logic variable and projecting ground values
 inside a goal. Their `@@` access is confined to `(grove private minikanren)`;
 the public relation tests exercise indexing, unification, joins, and variable
 projection through `(grove relation)`. If faster-minikanren changes these
-internals, this adapter and those public behavior tests are the compatibility
-boundary to update.
+internals, update the adapter and use those behavior tests to preserve Grove's
+public relation contract.
 
 The Forester reference adapter lives in `(forester relations)` independently
 of `(forester site)`. It stores each reference occurrence as a four-column
