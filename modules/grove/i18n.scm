@@ -515,9 +515,28 @@ comma-separated groups of three digits."
              ((and (>= n 11) (<= n 99)) 'many)
              (else 'other)))
       (else (if (= n 1) 'one 'other)))))
+
+(define plural-categories '(zero one two few many other))
+
+(define (valid-plural-forms? forms)
+  (and (list? forms)
+       (every (match-lambda
+                ((category . text)
+                 (and (memq category plural-categories)
+                      (string? text)))
+                (_ #f))
+              forms)
+       (= (length forms)
+          (length (delete-duplicates (map car forms) eq?)))))
+
 (define* (plural locale count forms)
   "Choose the plural form for COUNT from FORMS, an alist of CLDR
-categories such as one and other.  The caller formats the chosen string."
+categories (`zero', `one', `two', `few', `many', or `other'). COUNT must be an
+integer. The caller formats the chosen string."
+  (unless (integer? count)
+    (error "plural count must be an integer" count))
+  (unless (valid-plural-forms? forms)
+    (error "plural forms must map unique CLDR categories to strings" forms))
   (let* ((locale (if (locale? locale) locale (make-locale locale)))
          (category (plural-category (locale-lang locale) count)))
     (or (assq-ref forms category)

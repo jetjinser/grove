@@ -541,6 +541,14 @@
   "other" (plural "ru" 5 '((other . "other"))))
 (test-equal "plural falls back to the empty string"
   "" (plural "ru" 5 '()))
+(test-error "plural requires an integer count"
+  #t (plural "en" 1.5 '((one . "one") (other . "other"))))
+(test-error "plural rejects unknown categories"
+  #t (plural "en" 1 '((singular . "one"))))
+(test-error "plural rejects duplicate categories"
+  #t (plural "en" 1 '((one . "one") (one . "another"))))
+(test-error "plural requires string forms"
+  #t (plural "en" 1 '((one . 1))))
 
 (test-equal "generic Chinese tags fall back to the zh catalog"
   "站点导航" (message default-message-catalog 'nav-site "zh-CN"))
