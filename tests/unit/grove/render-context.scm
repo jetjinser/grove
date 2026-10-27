@@ -19,6 +19,28 @@
   (test-equal "construction keeps unknown keys"
     "v" (render-context-ref context 'custom-key)))
 
+(let* ((text (string-copy "authored"))
+       (data (list (cons 'label text)))
+       (context (make-render-context #:custom data)))
+  (string-set! text 0 #\x)
+  (set-car! data '(changed . #t))
+  (test-equal "contexts snapshot mutable strings and pair data on input"
+    '((label . "authored"))
+    (render-context-ref context 'custom))
+  (let ((exposed (render-context-ref context 'custom)))
+    (string-set! (cdar exposed) 0 #\x)
+    (set-car! exposed '(changed-again . #t)))
+  (test-equal "context accessors return independent mutable-data snapshots"
+    '((label . "authored"))
+    (render-context-ref context 'custom)))
+
+(let* ((value (string-copy "overlay"))
+       (base (make-render-context #:page "base"))
+       (derived (render-context-with base #:custom value)))
+  (string-set! value 0 #\x)
+  (test-equal "context derivation snapshots newly supplied values"
+    "overlay" (render-context-ref derived 'custom)))
+
 (let ((context (make-render-context #:forest "forest"
                                     #:routes "routes"
                                     #:page "page"

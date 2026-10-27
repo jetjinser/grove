@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove render context)
+  #:use-module (grove private snapshot)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:export (render-context?
@@ -70,17 +71,18 @@ Known keys get their defaults; unknown keys are kept so projects can add
 namespaced data without changing the record."
   (let ((provided (keyword-plist->alist entries 'make-render-context)))
     (%make-render-context
-      (append provided
-              (filter (lambda (entry)
-                        (not (assq (car entry) provided)))
-                      default-render-context-values)))))
+      (snapshot-data
+        (append provided
+                (filter (lambda (entry)
+                          (not (assq (car entry) provided)))
+                        default-render-context-values))))))
 
 (define (render-context-ref context key)
   (unless (render-context? context)
     (error "not a render context" context))
   (unless (symbol? key)
     (error "render context keys must be symbols" key))
-  (assq-ref (render-context-values context) key))
+  (snapshot-data (assq-ref (render-context-values context) key)))
 
 ;; Typed accessors for the documented keys.  RENDER-CONTEXT-REF remains the
 ;; escape hatch for project-defined namespaced keys.
@@ -144,10 +146,11 @@ to inherit it, or use RENDER-CONTEXT-WITHOUT to remove it."
     (error "not a render context" context))
   (let ((overlay (keyword-plist->alist entries 'render-context-with)))
     (%make-render-context
-      (append overlay
-              (remove (lambda (entry)
-                        (assq (car entry) overlay))
-                      (render-context-values context))))))
+      (snapshot-data
+        (append overlay
+                (remove (lambda (entry)
+                          (assq (car entry) overlay))
+                        (render-context-values context)))))))
 
 (define (render-context-without context . keys)
   "Return CONTEXT without KEYS.  Removing a key makes RENDER-CONTEXT-REF

@@ -38,6 +38,9 @@ own layers; merging them would turn the context into a new global state.
   key to inherit it; use `render-context-without` to remove a key.
 - Unknown namespaced keys are allowed, so projects can add data without
   changing the core record.
+- Constructors and `render-context-ref` copy mutable strings and pair
+  structure. Opaque values such as records, procedures, and hash tables remain
+  shared; treat those values as read-only for the render pass.
 - The context is shared with rules and custom renderers for the duration of a
   render pass. Treat it and its values as read-only; use `render-context-with`
   or `render-context-without` to derive a context with different bindings.
