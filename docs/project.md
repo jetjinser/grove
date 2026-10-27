@@ -256,15 +256,20 @@ conservative because renderers run in order over the same project model.
 Project files, imported modules, loader dependencies, framework source/data,
 compiled files, and effective renderer settings are fingerprinted automatically.
 Module search paths and absent preferred compiled files are also tracked.
-There are no user-maintained cache keys or version numbers for document and
-renderer caches. Asset pipelines also fingerprint the project file, its
-load-time inputs, declared files, and Scheme files loaded while the pipeline
-runs. A self-contained pipeline can omit `#:inputs`. Set a pipeline's
-`#:version` when behavior depends on external toolchain
-state, environment variables, or runtime arguments Grove cannot inspect.
-Pipeline artifacts and build reports retain the file inputs and loaded Scheme
-dependencies, so cache invalidation and affected-artifact reporting use the
-same dependency set.
+Ordinary renderers need no hand-written cache key: project inputs and renderer
+configuration define cache reuse, and plain callbacks are assumed to depend on
+the analyzed model. Built-in factories include their settings;
+`make-cached-renderer` accepts `#:inputs` and `#:configuration` for custom
+renderers with dependencies Grove cannot observe, and opaque render rules need
+a stable `#:rules-id`.
+
+Asset pipelines fingerprint the project file, its load-time inputs, declared
+files, and Scheme files loaded while the pipeline runs. A self-contained
+pipeline can omit `#:inputs`. Set its `#:version` when behavior depends on
+external toolchain state, environment variables, or runtime arguments Grove
+cannot inspect. Pipeline artifacts and build reports retain the file inputs
+and loaded Scheme dependencies, so cache invalidation and affected-artifact
+reporting use the same dependency set.
 
 Arbitrary Scheme I/O is not intercepted. Declare a file before reading it:
 
@@ -278,17 +283,12 @@ Time, randomness, network state, and effects that must repeat require opting
 out with `disable-cache!` or disabling reader caching. Imported module
 definitions remain uncached so their bindings exist in every build process.
 
-Plain renderer callbacks and asset pipelines are assumed deterministic under
-tracked inputs and declared configuration. Grove verifies cached bytes against
-their content hashes; it cannot verify that a callback or external tool will
-repeat the same output. Include hidden state in `#:configuration` or pipeline
-`#:version`, or disable caching when that state cannot be represented.
-`make-cached-renderer` adds `#:inputs` and `#:configuration` (data or a
-model-to-data procedure), or disables caching. Grove cannot infer hidden
-closure state. Built-in factories declare their settings themselves.
-Most project code should pass a plain renderer procedure and leave cache
-configuration alone. Add explicit inputs or configuration only when a custom
-renderer depends on data outside the analyzed model and tracked project files.
+Renderers and pipelines are assumed deterministic for their tracked inputs and
+declared configuration. Grove verifies cached bytes against their content
+hashes, but cannot verify that a callback or external tool repeats the same
+output. Most project code should pass a plain renderer procedure and leave
+cache configuration alone; declare hidden dependencies only when a custom
+renderer or pipeline actually uses them.
 
 Document entries live in the machine-global content store,
 `$XDG_CACHE_HOME/grove/store/input-cache` (override the base with
