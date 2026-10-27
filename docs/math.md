@@ -217,7 +217,8 @@ also expose rule lists for direct relational queries: `(grove math rewrite)`
 provides the complete set, while `(grove math arithmetic)`,
 `(grove math differentiation)`, `(grove math identities)`,
 `(grove math integration)`, `(grove math normalization)`,
-`(grove math spatial)`, and `(grove math vector)` expose domain-specific packs.
+`(grove math partial)`, `(grove math components)`, `(grove math spatial)`, and
+`(grove math vector)` expose domain-specific packs.
 Loading a pack does not register or replace high-level rules. Use this API when
 project code wants to run or compose a custom relation directly.
 
