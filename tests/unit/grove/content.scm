@@ -101,6 +101,30 @@
       (list (content-element-property updated 'role)
             (content-element-property located 'source-location)))))
 
+(let* ((location '((file . "included.plant") (line . 12) (column . 4)))
+       (original (make-content-document
+                   (list (make-content-text "top-level")
+                         (make-content-element
+                           'paragraph (list "returned document")
+                           "paragraph.plant"))
+                   "origin.plant"))
+       (located (content-with-source-location original location))
+       (children (content-document-children located))
+       (text (car children))
+       (paragraph (cadr children)))
+  (test-equal "source locations descend into returned documents and preserve source"
+    (list "origin.plant" "paragraph.plant" location
+          "included.plant" location #f #f)
+    (list (content-document-source located)
+          (content-element-source paragraph)
+          (content-element-property paragraph 'source-location)
+          (content-text-source text)
+          (content-text-location text)
+          (content-text-source
+            (car (content-element-children paragraph)))
+          (content-text-location
+            (car (content-element-children paragraph))))))
+
 (test-error "content text values are strings" #t
   (make-content-text 42))
 (test-error "content layout kinds are symbols" #t

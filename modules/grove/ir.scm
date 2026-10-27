@@ -255,7 +255,8 @@
                             (snapshot-data source))))
 
 (define (content-with-source-location content location)
-  "Attach a source start alist with file, one-based line and column fields."
+  "Attach a source start alist with file, one-based line and column fields.
+For a document, attach the location to each top-level content value."
   (cond
     ((content-text? content)
      (%make-content-text (content-text-value content)
@@ -275,8 +276,10 @@
          (content-element-source content)
          (content-element-flow-kind content))))
     ((content-document? content)
-     (make-content-document (content-document-children content)
-                           (content-document-source content)))
+     (make-content-document
+       (map (lambda (child) (content-with-source-location child location))
+            (content-document-children content))
+       (content-document-source content)))
     ((and (list? content) (every content-child? content))
      (map (lambda (child) (content-with-source-location child location))
           content))
