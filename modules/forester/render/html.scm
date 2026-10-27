@@ -336,7 +336,7 @@ from the HTML presentation are appended after these."
                           #:key (open? #t) anchor (depth 2)
                           (title-decoration '()) (style #f) (id-prefix "")
                           (metadata-items '()) (context #f))
-  (let* ((style-attributes (style-attribute-assoc style id-prefix))
+  (let* ((style-attributes (content-style-html-attributes style id-prefix))
          (_ (when (assq 'id style-attributes)
               (error "tree container style cannot set an id; the occurrence anchor owns it"
                      (cdr (assq 'id style-attributes)))))

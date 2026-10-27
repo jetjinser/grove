@@ -7,65 +7,13 @@
   #:use-module (grove ir)
   #:use-module (grove style)
   #:use-module (grove style html)
+  #:use-module (grove render html attributes)
   #:use-module (grove render rules)
   #:use-module (grove highlight)
   #:use-module (ice-9 format)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (content->sxml/internal
-            style-attribute-assoc
-            merge-html-attributes))
-
-(define (style-attribute-assoc style id-prefix)
-  "The style's HTML attributes as an assoc list: the style name's class
-first, then each attribute set, with ids and local hrefs scoped by
-ID-PREFIX."
-  (if (not style) '()
-      (append
-        (let ((name (content-style-name style)))
-          (if name
-              `((class . ,(if (symbol? name) (symbol->string name) name)))
-              '()))
-        (append-map
-          (lambda (property)
-            (if (html-attributes? property)
-                (map (lambda (attribute)
-                       (let ((name (car attribute)) (value (cdr attribute)))
-                         (cons name
-                           (cond
-                             ((eq? name 'id) (string-append id-prefix value))
-                             ((and (eq? name 'href) (string-prefix? "#" value))
-                              (string-append "#" id-prefix (substring value 1)))
-                             (else value)))))
-                     (html-attributes-assoc property))
-                '()))
-          (content-style-properties style)))))
-
-(define (merge-html-attributes original additions)
-  (fold
-    (lambda (addition attributes)
-      (let* ((name (car addition))
-             (value (cdr addition))
-             (existing (assq name attributes)))
-        (cond
-          ((not existing) (append attributes (list addition)))
-          ((eq? name 'id)
-           (error "HTML style cannot replace a renderer-owned ID" (cdr existing) value))
-          ((eq? name 'class)
-           (map (lambda (attribute)
-                  (if (eq? (car attribute) name)
-                      (cons name (string-append (cdr attribute) " " value))
-                      attribute)) attributes))
-          ((eq? name 'style)
-           (map (lambda (attribute)
-                  (if (eq? (car attribute) name)
-                      (cons name (string-append (cdr attribute) "; " value))
-                      attribute)) attributes))
-          (else
-           (map (lambda (attribute)
-                  (if (eq? (car attribute) name) addition attribute))
-                attributes)))))
-    original additions))
+  #:export (content->sxml/internal))
 (define* (content->sxml/internal content #:key (internal-handlers '())
                                  (internal-lazy-handlers '()) (id-prefix "")
                                  (highlighters (default-highlighters))
@@ -101,7 +49,7 @@ ID-PREFIX."
 
   (define (apply-element-style element rendered)
     (let* ((style (content-element-style element))
-           (attributes (style-attribute-assoc style id-prefix))
+           (attributes (content-style-html-attributes style id-prefix))
            (tag (style-html-tag style))
            (void? (style-html-void? style)))
       (cond

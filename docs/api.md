@@ -86,6 +86,15 @@ Text projection is an interpreter: use `(grove render plain-text)` for a
 readable text form, including math-specific notation, and `(grove render text)`
 for formatted text output.
 
+`content->sxml` applies a content element's HTML style automatically when a
+render rule returns one root element. A custom HTML renderer assembling its
+own root can use `content-style-html-attributes` from
+`(grove render html attributes)` to apply the same class, attributes, and
+scoped IDs; `merge-html-attributes`
+combines them with renderer-owned attributes while protecting renderer-owned
+IDs. These helpers are for custom SXML assembly; ordinary render rules do not
+need to call them.
+
 Artifacts use the same ownership rule: `make-artifact` and
 `make-byte-artifact` snapshot their path, content, and source paths. The public
 `artifact-content` accessor returns a fresh string or bytevector.

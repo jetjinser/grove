@@ -9,6 +9,7 @@
   #:use-module (grove style)
   #:use-module (grove style html)
   #:use-module (grove render html)
+  #:use-module ((grove render html attributes) #:prefix html-attributes:)
   #:use-module (grove render html routes)
   #:use-module (grove render text)
   #:use-module (grove render plain-text)
@@ -19,6 +20,23 @@
   #:use-module (forester site))
 
 (test-begin "grove content")
+
+(test-equal "content styles expose scoped HTML attributes"
+  '((class . "note") (id . "page-term") (href . "#page-term"))
+  (html-attributes:content-style-html-attributes
+    (make-content-style 'note
+      (list (make-html-attributes
+              '((id . "term") (href . "#term")))))
+    "page-"))
+
+(test-equal "HTML style attributes preserve renderer attributes and merge classes"
+  '((class . "tree note") (id . "tree-1") (data-kind . "note"))
+  (merge-html-attributes
+    '((class . "tree") (id . "tree-1"))
+    '((class . "note") (data-kind . "note"))))
+
+(test-error "HTML style attributes cannot replace renderer-owned IDs" #t
+  (merge-html-attributes '((id . "tree-1")) '((id . "author-id"))))
 
 (let* ((text-value (string-copy "hello"))
        (text-source (string-copy "page.plant"))
