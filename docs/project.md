@@ -195,10 +195,13 @@ protocol.
 ## Dependencies and caching
 
 Projects, document readers, and built-in renderers cache by default. Set
-`#:cache? #f` to opt out; readers also accept a path predicate. Preparation and
-whole-project analysis still run. Document hits reuse Content IR; renderer
-hits reuse artifacts. Shared code changes conservatively force full rendering.
-Standalone reader calls evaluate normally; `check` bypasses published caches.
+`#:cache? #f` to opt out; `project-with-options` applies this to any project,
+including Forester projects. Constructors such as `make-site-project` also
+accept it directly. Readers accept a path predicate for finer control.
+Preparation and whole-project analysis still run. Document hits reuse Content
+IR; renderer hits reuse artifacts. Shared code changes conservatively force
+full rendering. Standalone reader calls evaluate normally; `check` bypasses
+published caches.
 
 Project files, imported modules, loader dependencies, framework source/data,
 compiled files, and effective renderer settings are fingerprinted automatically.
