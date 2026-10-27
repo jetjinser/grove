@@ -271,12 +271,12 @@ own small Scheme implementation; it is independently implemented from the
 rewrite relations, but is not itself formally verified. A rule check proves
 the equation in the rule's existing rewrite schema, specializing declared
 zero-valued operands to scalar zero. It does not add a second public rule-law
-representation. The rule relation is generated from the same schema, but
-guards and procedural details still need testing. Tests replay each supported
-polynomial schema on variable and compound substitutions; those finite tests
-do not establish implementation equivalence for every possible input. For an
-individual rewrite step, the ordinary checker replays the registered
-relation, while the polynomial checker checks the recorded path and whole-term
+representation. Tests compare each supported polynomial schema's generated
+relation with the independent checker using variable and compound substitutions.
+These finite cases provide regression coverage, but do not establish
+implementation equivalence for every possible input. For each rewrite step,
+the ordinary checker replays the registered relation, while the polynomial
+checker checks the recorded path and whole-term
 denotation independently. It reuses Grove's type inference to establish that
 the supplied assumptions make both terms scalar. For polynomial derivative
 certificates, the same derivation record retains the rule, path and endpoints;
