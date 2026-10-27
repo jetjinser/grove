@@ -348,7 +348,7 @@
     (error "Forester Gemtext options require text routes" routes))
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
-  (validate-interface-options locale messages)
+  (set! locale (validate-interface-options locale messages))
   (unless (render-rules? rules)
     (error "Forester Gemtext options require render rules" rules))
   (%make-gemtext-options prefix routes backmatter

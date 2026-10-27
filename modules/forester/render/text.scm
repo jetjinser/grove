@@ -327,7 +327,7 @@
     (error "Forester text options require text routes" routes))
   (validate-backmatter-sections backmatter)
   (check-reference-taxon-id reference-taxon-id)
-  (validate-interface-options locale messages)
+  (set! locale (validate-interface-options locale messages))
   (unless (render-rules? rules)
     (error "Forester text options require render rules" rules))
   (%make-text-options prefix routes backmatter

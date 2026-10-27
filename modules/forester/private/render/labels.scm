@@ -18,13 +18,17 @@
 ;; Built-in interface messages read their render context explicitly.
 
 (define (validate-interface-options locale messages)
-  (unless (or (not locale) (locale? locale) (string? locale))
-    (error "renderer locale must be a locale, tag, or #f" locale))
-  (when (string? locale)
-    (make-locale locale))
-  (unless (message-catalog? messages)
-    (error "renderer messages must be a message catalog" messages))
-  #t)
+  "Validate interface options and return LOCALE as a locale value or #f."
+  (let ((locale
+          (cond
+            ((not locale) #f)
+            ((locale? locale) locale)
+            ((string? locale) (make-locale locale))
+            (else
+             (error "renderer locale must be a locale, tag, or #f" locale)))))
+    (unless (message-catalog? messages)
+      (error "renderer messages must be a message catalog" messages))
+    locale))
 
 (define (validate-rules-id rules-id)
   (unless (or (not rules-id)

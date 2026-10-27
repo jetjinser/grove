@@ -1125,9 +1125,7 @@ Entry points take this value with #:options."
       (error "HTML options require HTML routes" routes))
     (validate-backmatter-sections backmatter)
     (check-reference-taxon-id reference-taxon-id)
-    (validate-interface-options locale messages)
-    (when (string? locale)
-      (set! locale (locale-tag (make-locale locale))))
+    (set! locale (validate-interface-options locale messages))
     (unless (valid-html-attribute-list? html-attributes)
       (error "HTML root attributes must be unique symbol/string pairs"
              html-attributes))
