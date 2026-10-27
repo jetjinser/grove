@@ -12,8 +12,7 @@
   #:use-module (grove ir)
   #:use-module ((language scribble spec)
                 #:select (scribble scribble-evaluate-document))
-  #:export (load-scribble-modules!
-            make-scribble-module-setup
+  #:export (make-scribble-module-setup
             make-scribble-module-session
             make-scribble-document-reader)
   #:re-export (depend-on! disable-cache!))
@@ -21,31 +20,19 @@
 (define (scribble-source-file? filename)
   (string-suffix? ".plant" filename))
 
-(define* (load-scribble-modules! paths
-                                #:key
-                                (read-document
-                                 (make-scribble-document-reader)))
-  "Evaluate PATHS as Scribble sources before reading documents that import
-their named modules.  Each source selects its module through Guile's normal
-`define-module' form."
-  (for-each read-document paths)
-  (values))
-
 (define* (make-scribble-module-setup module-directory
                                      #:key
-                                     (module-filter scribble-source-file?)
-                                     (load-modules load-scribble-modules!))
+                                     (module-filter scribble-source-file?))
   "Return a project preparation procedure that loads Scribble module sources.
 It returns the loaded paths so Grove can track them as build inputs."
   (unless (and (string? module-directory) (procedure? module-filter))
     (error "Scribble module setup requires a directory and filter"
            module-directory module-filter))
-  (unless (procedure? load-modules)
-    (error "Scribble module setup requires a loader" load-modules))
-  (lambda ()
-    (let ((paths (collect-directory module-directory module-filter)))
-      (load-modules paths)
-      paths)))
+  (let ((read-document (make-scribble-document-reader)))
+    (lambda ()
+      (let ((paths (collect-directory module-directory module-filter)))
+        (for-each read-document paths)
+        paths))))
 
 (define* (make-scribble-module-session paths
                                       #:key

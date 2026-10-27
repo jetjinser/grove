@@ -6,6 +6,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64)
+  #:use-module (ice-9 ftw)
   #:use-module (rnrs io ports)
   #:use-module (system base language)
   #:use-module (language scheme spec)
@@ -516,11 +517,22 @@
           (content-verbatim-string
             (content-element-children paragraph)))))))
 
-(let ((read-document (make-scribble-document-reader)))
-  (call-with-temporary-source
-    "@(define-module (tests unit scribble preloaded-module) #:use-module (forester commands) #:export (preloaded-label))\n@(define preloaded-label \"preloaded module\")"
-    (lambda (module-path)
-      (load-scribble-modules! (list module-path))
+(let* ((root (mkdtemp "/tmp/grove-scribble-modules-XXXXXX"))
+       (module-directory (string-append root "/modules"))
+       (module-path (string-append module-directory "/preloaded.plant"))
+       (read-document (make-scribble-document-reader)))
+  (dynamic-wind
+    (lambda ()
+      (mkdir module-directory)
+      (call-with-output-file module-path
+        (lambda (port)
+          (display
+            "@(define-module (tests unit scribble preloaded-module) #:use-module (forester commands) #:export (preloaded-label))\n@(define preloaded-label \"preloaded module\")"
+            port))))
+    (lambda ()
+      (test-equal "module setup returns the loaded source paths"
+        (list module-path)
+        ((make-scribble-module-setup module-directory)))
       (call-with-temporary-source
         "@use-modules[(tests unit scribble preloaded-module)]@paragraph{@|preloaded-label|}"
         (lambda (page-path)
@@ -529,7 +541,8 @@
             (test-equal "preloaded named modules are available to pages"
               "preloaded module"
               (content-verbatim-string
-                (content-element-children paragraph)))))))))
+                (content-element-children paragraph)))))))
+    (lambda () (system* "rm" "-rf" root))))
 
 (let ((read-document (make-scribble-document-reader)))
   (call-with-temporary-source
