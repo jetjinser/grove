@@ -4,6 +4,7 @@
 
 (define-module (grove render html image)
   #:use-module ((grove private ir) #:prefix ir:)
+  #:use-module (grove private snapshot)
   #:use-module (grove ir)
   #:use-module (grove render rules)
   #:use-module (srfi srfi-1)
@@ -25,17 +26,40 @@
 ;; The rule interprets an image element with the matching set as <picture>.
 
 (define-record-type <image-variant>
-  (make-image-variant type url)
+  (%make-image-variant type url)
   image-variant?
-  (type image-variant-type)
-  (url image-variant-url))
+  (type image-variant-type/raw)
+  (url image-variant-url/raw))
+
+(define (image-variant-type variant)
+  (snapshot-data (image-variant-type/raw variant)))
+
+(define (image-variant-url variant)
+  (snapshot-data (image-variant-url/raw variant)))
+
+(define (make-image-variant type url)
+  "Construct an image source variant from its MIME TYPE and URL."
+  (unless (and (string? type) (not (string-null? type)))
+    (error "image variant type must be a non-empty MIME type" type))
+  (unless (and (string? url) (not (string-null? url)))
+    (error "image variant URL must be a non-empty string" url))
+  (%make-image-variant (snapshot-data type) (snapshot-data url)))
 
 (define-record-type <image-set>
   (%make-image-set source variants fallback)
   image-set?
-  (source image-set-source)
-  (variants image-set-variants)
-  (fallback image-set-fallback))
+  (source image-set-source/raw)
+  (variants image-set-variants/raw)
+  (fallback image-set-fallback/raw))
+
+(define (image-set-source image-set)
+  (snapshot-data (image-set-source/raw image-set)))
+
+(define (image-set-variants image-set)
+  (snapshot-data (image-set-variants/raw image-set)))
+
+(define (image-set-fallback image-set)
+  (snapshot-data (image-set-fallback/raw image-set)))
 
 (define* (make-image-set source #:key (variants '()) (fallback #f))
   (unless (and (string? source) (not (string-null? source)))
@@ -44,31 +68,34 @@
     (error "image set variants must be image variants" variants))
   (unless (and (string? fallback) (not (string-null? fallback)))
     (error "image set fallback must be a non-empty string" fallback))
-  (%make-image-set source variants fallback))
+  (%make-image-set (snapshot-data source)
+                   (snapshot-data variants)
+                   (snapshot-data fallback)))
 
 (define-syntax define-image-sets
   (syntax-rules ()
     ((_ name (image-set source (variant type url) ... (fallback fallback-url)) ...)
      (define name
        (list
-         (cons source
-               (make-image-set source
-                               #:variants
-                               (list (make-image-variant type url) ...)
-                               #:fallback fallback-url))
+         (make-image-set source
+                         #:variants
+                         (list (make-image-variant type url) ...)
+                         #:fallback fallback-url)
          ...)))))
 
 (define (image-set-rule sets)
-  (unless (and (list? sets) (every (lambda (entry)
-                                     (and (pair? entry)
-                                          (string? (car entry))
-                                          (image-set? (cdr entry))))
-                                   sets))
-    (error "image-set-rule requires an association list of image sets" sets))
+  (unless (and (list? sets) (every image-set? sets))
+    (error "image-set-rule requires a list of image sets" sets))
+  (let ((sources (map image-set-source sets)))
+    (unless (= (length sources) (length (delete-duplicates sources string=?)))
+      (error "image-set-rule requires unique image sources" sources)))
+  (set! sets (snapshot-data sets))
   (lambda (context element children next)
     (let* ((source (ir:content-element-property/raw element 'source))
            (alt (content-verbatim-string children))
-           (set (assoc-ref sets source)))
+           (set (find (lambda (candidate)
+                        (string=? source (image-set-source candidate)))
+                      sets)))
       (if set
           `(picture
              ,@(map (lambda (variant)

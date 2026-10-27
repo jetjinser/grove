@@ -390,6 +390,54 @@
     (variant "image/jxl" "/images/forest.jxl")
     (fallback "/images/forest.jpg")))
 
+(test-assert "image variants snapshot constructor strings and accessors"
+  (let* ((type (string-copy "image/avif"))
+         (url (string-copy "/images/forest.avif"))
+         (variant (make-image-variant type url)))
+    (string-set! type 0 #\x)
+    (string-set! url 0 #\x)
+    (let ((returned-type (image-variant-type variant))
+          (returned-url (image-variant-url variant)))
+      (string-set! returned-type 0 #\x)
+      (string-set! returned-url 0 #\x))
+    (and (string=? (image-variant-type variant) "image/avif")
+         (string=? (image-variant-url variant) "/images/forest.avif"))))
+
+(test-assert "image sets snapshot source, variants, and fallback"
+  (let* ((source (string-copy "forest.jpg"))
+         (fallback (string-copy "/images/forest.jpg"))
+         (variants (list (make-image-variant
+                           (string-copy "image/avif")
+                           (string-copy "/images/forest.avif"))))
+         (image-set (make-image-set source
+                       #:variants variants #:fallback fallback)))
+    (string-set! source 0 #\x)
+    (string-set! fallback 0 #\x)
+    (set-car! variants (make-image-variant "image/webp" "/forest.webp"))
+    (let ((returned-source (image-set-source image-set))
+          (returned-fallback (image-set-fallback image-set))
+          (returned-variants (image-set-variants image-set)))
+      (string-set! returned-source 0 #\x)
+      (string-set! returned-fallback 0 #\x)
+      (set-car! returned-variants (make-image-variant "image/jpeg" "/x.jpg")))
+    (and (string=? (image-set-source image-set) "forest.jpg")
+         (string=? (image-set-fallback image-set) "/images/forest.jpg")
+         (string=? (image-variant-type (car (image-set-variants image-set)))
+                   "image/avif"))))
+
+(test-assert "image-set macro stores sets as values with their own sources"
+  (and (list? image-sets)
+       (every image-set? image-sets)
+       (string=? (image-set-source (car image-sets)) "forest.jpg")))
+(test-error "image variants require a non-empty media type" #t
+  (make-image-variant "" "/forest.avif"))
+(test-error "image variants require a non-empty URL" #t
+  (make-image-variant "image/avif" ""))
+(test-error "image-set-rule requires a list of image-set values" #t
+  (image-set-rule (list (cons "forest.jpg" (car image-sets)))))
+(test-error "image-set-rule rejects duplicate image sources" #t
+  (image-set-rule (list (car image-sets) (car image-sets))))
+
 (let* ((rules (make-render-rules
                 (list (cons 'image (image-set-rule image-sets)))))
        (sxml (render-with rules)))
