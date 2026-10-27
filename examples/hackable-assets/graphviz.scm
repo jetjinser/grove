@@ -3,6 +3,7 @@
 
 (define-module (examples hackable-assets graphviz)
   #:use-module (grove pipeline)
+  #:use-module (grove output)
   #:use-module (ice-9 binary-ports)
   #:use-module (ice-9 popen)
   #:use-module (ice-9 textual-ports)
@@ -31,10 +32,10 @@ to the pipeline through Grove's declared-input accessor."
     #:version (string-append "dot-svg-v1:" (graphviz-version))
     #:inputs (list input)
     #:procedure
-    (lambda (in emit)
+    (lambda (in)
       (let* ((pipe (open-pipe* OPEN_READ "dot" "-Tsvg" (in input)))
              (svg (get-bytevector-all pipe))
              (status (close-pipe pipe)))
         (unless (zero? (status:exit-val status))
           (error "Graphviz failed to render diagram" input status))
-        (emit output svg)))))
+        (list (make-byte-artifact output svg))))))

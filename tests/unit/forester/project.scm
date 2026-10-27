@@ -845,9 +845,9 @@
                  #:name "forester-pipeline"
                  #:inputs (list input)
                  #:procedure
-                 (lambda (in emit)
-                   (emit "assets/result.txt"
-                         (call-with-input-file (in input) get-string-all)))))
+                 (lambda (in)
+                   (list (make-artifact "assets/result.txt"
+                           (call-with-input-file (in input) get-string-all))))))
              (project
                (make-forester-project
                  #:home "hello"

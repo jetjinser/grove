@@ -10,7 +10,6 @@
   #:use-module (grove private fingerprint)
   #:use-module (grove private input dependencies)
   #:use-module (ice-9 binary-ports)
-  #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
   #:export (run-asset-pipelines
             merge-pipeline-artifacts))
@@ -72,7 +71,7 @@
 
 (define (read-pipeline-index identity)
   ;; Runtime Scheme loads are discovered while the procedure runs. Keep their
-  ;; fingerprints in this pipeline-specific index beside its emitted outputs.
+  ;; fingerprints in this pipeline-specific index beside its returned outputs.
   (catch #t
     (lambda ()
       (let ((path (artifact-blob-path identity)))
@@ -106,51 +105,52 @@
       (write (list 'grove-pipeline-index 1 dependencies entries) port))))
 
 (define (run-pipeline-procedure pipeline identity inputs cache?)
-  (let ((entries '()) (artifacts '()))
-    (define (emit path content)
-      (unless (or (string? content) (bytevector? content))
-        (error "asset pipelines emit strings or bytevectors" path content))
-      (unless (artifact-path? path)
-        (error "asset pipeline emitted an invalid artifact path" path))
-      (let ((fingerprint
-              (if cache?
-                  (publish-content-blob! content)
-                  (content-fingerprint content))))
-        (set! entries (cons (cons path fingerprint) entries))
-        (set! artifacts
-              (cons ((if (string? content) make-artifact make-byte-artifact)
-                     path content (map cdr inputs))
-                    artifacts))))
-    ;;     A procedure result is ignored on purpose: outputs reach
-    ;;     Grove only through emit, which keeps the content
-    ;;     addressing honest even when a tool wrote stray files.
-    (let ((trace (make-hash-table)))
-      (call-with-input-trace trace
-        (lambda ()
-          ((asset-pipeline-procedure pipeline)
-           (lambda (declared)
-             (or (assoc-ref inputs declared)
-                 (error "asset pipeline asked for an undeclared input" declared)))
-           emit)))
-      (let ((entry-list (reverse entries))
-            (artifact-list (reverse artifacts))
-            (dependencies
-             (sort (map (lambda (path)
-                          (list path (input-fingerprint path)))
-                        (trace-inputs trace))
-                   (lambda (left right) (string<? (car left) (car right))))))
-        (unless (pair? entry-list)
-          (error "asset pipeline emitted no outputs"
-                 (asset-pipeline-name pipeline)))
-        (when cache?
-          (write-pipeline-index identity dependencies entry-list))
-        (map (lambda (artifact)
-               ((if (string? (out:artifact-content/raw artifact))
-                    make-artifact make-byte-artifact)
-                (out:artifact-path/raw artifact)
-                (out:artifact-content/raw artifact)
-                (pipeline-artifact-sources inputs dependencies)))
-             artifact-list)))))
+  (let* ((trace (make-hash-table))
+         (artifact-list
+          (call-with-input-trace trace
+            (lambda ()
+              (let ((artifacts
+                      ((asset-pipeline-procedure pipeline)
+                       (lambda (declared)
+                         (or (assoc-ref inputs declared)
+                             (error "asset pipeline asked for an undeclared input"
+                                    declared))))))
+                (unless (and (list? artifacts) (every artifact? artifacts))
+                  (error "asset pipeline must return a list of artifacts"
+                         (asset-pipeline-name pipeline) artifacts))
+                (validate-artifacts artifacts)
+                ;; Artifact-local sources are tracked like explicit reads.
+                (for-each
+                  (lambda (artifact)
+                    (for-each depend-on! (or (artifact-sources artifact) '())))
+                  artifacts)
+                artifacts))))
+         (dependencies
+          (sort (map (lambda (path)
+                       (list path (input-fingerprint path)))
+                     (trace-inputs trace))
+                (lambda (left right) (string<? (car left) (car right)))))
+         (sources (pipeline-artifact-sources inputs dependencies)))
+    (unless (pair? artifact-list)
+      (error "asset pipeline returned no artifacts"
+             (asset-pipeline-name pipeline)))
+    (let* ((entries
+            (map (lambda (artifact)
+                   (let ((content (artifact-content artifact)))
+                     (cons (artifact-path artifact)
+                       (if cache?
+                           (publish-content-blob! content)
+                           (content-fingerprint content)))))
+                 artifact-list))
+           (outputs
+            (map (lambda (artifact)
+                   ((if (string? (artifact-content artifact))
+                        make-artifact make-byte-artifact)
+                    (artifact-path artifact) (artifact-content artifact) sources))
+                 artifact-list)))
+      (when cache?
+        (write-pipeline-index identity dependencies entries))
+      outputs)))
 
 (define* (run-asset-pipelines pipelines project-key #:key (cache? #t))
   "Run every declared asset pipeline; return (artifacts . owners),

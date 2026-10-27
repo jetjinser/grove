@@ -10,9 +10,9 @@
   #:export (make-asset-pipeline))
 
 ;;     An asset pipeline derives build assets with Scheme code: the
-;;     procedure receives an input table (declared path -> materialized
-;;     path) and an emit sink (artifact path -> bytes), and Grove turns
-;;     what it emits into ordinary content-addressed artifacts. The
+;;     procedure receives an input lookup (declared path -> materialized
+;;     path) and returns Grove artifacts, which become ordinary
+;;     content-addressed outputs. The
 ;;     project file, declared inputs, and Scheme files loaded during
 ;;     execution participate in cache validation. #:version is an explicit
 ;;     invalidation token for behavior Grove cannot observe, such as changes
@@ -24,12 +24,12 @@
 (define* (make-asset-pipeline #:key name (version "") (inputs '()) procedure)
   "Construct a file-driven build step named NAME.
 
-PROCEDURE is called with an input lookup and an emit callback. The lookup
-accepts only declared INPUTS, which must have unique paths, and returns a
-materialized path. EMIT accepts a relative artifact path and a string or
-bytevector; the procedure must emit at least one artifact, and its own return
-value is ignored. VERSION distinguishes behavior depending on state Grove
-cannot track, such as an external toolchain."
+PROCEDURE is called with an input lookup. The lookup accepts only declared
+INPUTS, which must have unique paths, and returns a materialized path. The
+procedure returns a non-empty list of Grove artifacts. Their source
+dependencies are combined with the pipeline's declared inputs and files read
+through the input tracker. VERSION distinguishes behavior depending on state
+Grove cannot track, such as an external toolchain."
   (unless (and (string? name) (not (string-null? name)))
     (error "asset pipeline requires a name" name))
   (unless (string? version)

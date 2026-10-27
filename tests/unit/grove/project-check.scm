@@ -97,9 +97,9 @@
             (make-asset-pipeline
               #:name pipeline-name
               #:procedure
-              (lambda (_ emit)
+              (lambda (_)
                 (set! pipeline-runs (+ pipeline-runs 1))
-                (emit "derived.txt" "pipeline output"))))
+                (list (make-artifact "derived.txt" "pipeline output")))))
            (pipeline-project
             (make-project
               #:collect-sources (lambda () '())

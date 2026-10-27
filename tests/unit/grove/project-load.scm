@@ -44,13 +44,13 @@
     (list (make-asset-pipeline
             #:name \"adapter\"
             #:inputs '(\"pipeline-sources/input.txt\")
-            #:procedure (lambda (_input emit)
+            #:procedure (lambda (_input)
                          (save-module-excursion
                            (lambda ()
                              (set-current-module pipeline-environment)
                              (load \"adapter.scm\")))
-                         (emit \"generated.txt\"
-                               (module-ref pipeline-environment 'pipeline-output)))))
+                         (list (make-artifact \"generated.txt\"
+                                 (module-ref pipeline-environment 'pipeline-output))))))
   #:output-directory \"pipeline-output\")\n"))
 
 (define (error-stage thunk)
@@ -96,7 +96,7 @@
     (call-with-loaded-project pipeline-config
       (lambda (project)
         (set! first-pipeline-report (build-project/report project))))
-    (test-equal "asset pipeline emits its initial output" "before"
+    (test-equal "asset pipeline returns its initial output" "before"
       (call-with-input-file pipeline-output get-string-all))
     (test-assert "runtime Scheme inputs appear in build source provenance"
       (member (canonicalize-path pipeline-adapter)

@@ -168,10 +168,10 @@
 (define duplicate-pipelines
   (list (make-asset-pipeline
           #:name "math-assets" #:inputs '("math.typ")
-          #:procedure (lambda (_input emit) (emit "math/a.svg" "a")))
+          #:procedure (lambda (_) (list (make-artifact "math/a.svg" "a"))))
         (make-asset-pipeline
           #:name "math-assets" #:inputs '("math.typ")
-          #:procedure (lambda (_input emit) (emit "math/b.svg" "b")))))
+          #:procedure (lambda (_) (list (make-artifact "math/b.svg" "b"))))))
 
 (test-error "site projects reject duplicate asset pipeline names" #t
   (make-site-project #:source-directory "sources"

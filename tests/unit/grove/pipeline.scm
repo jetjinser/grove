@@ -18,7 +18,7 @@
 ;;     Asset pipelines are the third content-addressed boundary: the
 ;;     procedure runs only when its identity - name, version, project
 ;;     fingerprint, input fingerprints - misses the shared store, and
-;;     everything it emits rides the ordinary artifact machinery.
+;;     everything it returns rides the ordinary artifact machinery.
 
 (define root (string-append "/tmp/grove-pipeline-test-"
                             (number->string (getpid))))
@@ -63,19 +63,22 @@
    #:version version
    #:inputs (list input-a input-b)
    #:procedure
-   (lambda (in emit)
+   (lambda (in)
      (set! runs (+ runs 1))
-     (emit "fig/one.txt"
-           (string-append (call-with-input-file (in input-a)
-                            get-string-all)
-                          "\n"))
-     (emit "fig/two.bin"
-           (string->utf8 (call-with-input-file (in input-b)
-                            get-string-all))))))
+     (list
+       (make-artifact "fig/one.txt"
+         (string-append (call-with-input-file (in input-a)
+                          get-string-all)
+                        "\n"))
+       (make-byte-artifact "fig/two.bin"
+         (string->utf8 (call-with-input-file (in input-b)
+                          get-string-all)))))))
 
 (define (run-pipelines version)
   (run-asset-pipelines (list (make-figures-pipeline version))
                        (current-project-key)))
+
+(test-begin "grove asset pipelines")
 
 (let* ((declared-inputs (list (string-copy input-a)))
        (pipeline
@@ -83,9 +86,9 @@
           #:name "pipeline-snapshot"
           #:inputs declared-inputs
           #:procedure
-          (lambda (in emit)
-            (emit "snapshot.txt"
-                  (call-with-input-file (in input-a) get-string-all))))))
+          (lambda (in)
+            (list (make-artifact "snapshot.txt"
+                    (call-with-input-file (in input-a) get-string-all)))))))
   (set-car! declared-inputs input-b)
   (let ((artifacts
          (car (run-asset-pipelines (list pipeline) "snapshot-project"))))
@@ -118,8 +121,6 @@
   (call-with-output-file (string-append store "/artifacts/" name)
     (lambda (port) (display text port))))
 
-(test-begin "grove asset pipelines")
-
 (test-assert "asset pipeline representation stays private"
   (not (module-variable
          (module-public-interface (resolve-module '(grove pipeline)))
@@ -129,7 +130,7 @@
   (make-asset-pipeline
     #:name "duplicate-input"
     #:inputs (list input-a input-a)
-    #:procedure (lambda (_input _emit) #t)))
+    #:procedure (lambda (_input) '())))
 
 (let ((runs 0))
   (define (path-sensitive-pipeline input)
@@ -137,9 +138,9 @@
       #:name "path-sensitive-input"
       #:inputs (list input)
       #:procedure
-      (lambda (in emit)
+      (lambda (in)
         (set! runs (1+ runs))
-        (emit "path-sensitive.txt" (basename (in input))))))
+        (list (make-artifact "path-sensitive.txt" (basename (in input)))))))
   (define (run-path-sensitive input)
     (car (run-asset-pipelines (list (path-sensitive-pipeline input))
                               "path-sensitive-project")))
@@ -163,9 +164,9 @@
                 #:name "materialized-path-input"
                 #:inputs '("input.txt")
                 #:procedure
-                (lambda (in emit)
+                (lambda (in)
                   (set! runs (1+ runs))
-                  (emit "materialized-path.txt" (in "input.txt")))))
+                  (list (make-artifact "materialized-path.txt" (in "input.txt"))))))
             "same-project-key")))
       (lambda () (chdir original-directory))))
   (let ((path-a (string-append (canonicalize-path path-directory-a)
@@ -190,7 +191,7 @@
   (test-equal "pipeline artifacts take precedence over renderer paths"
     '("shared.css" "page.html")
     (map artifact-path merged))
-  (test-equal "pipeline precedence keeps the emitted content"
+  (test-equal "pipeline precedence keeps the returned content"
     "pipeline"
     (artifact-content (car merged))))
 
@@ -220,7 +221,7 @@
        (artifacts (car result))
        (owners (cdr result)))
   (test-equal "the first run executes the procedure" 1 runs)
-  (test-equal "every emitted output becomes an artifact"
+(test-equal "every returned output becomes an artifact"
     '("fig/one.txt" "fig/two.bin")
     (map artifact-path artifacts))
   (test-equal "string outputs keep their bytes"
@@ -245,10 +246,10 @@
                 #:name "runtime-load"
                 #:inputs (list input-a)
                 #:procedure
-                (lambda (in emit)
+                (lambda (in)
                   (set! runtime-runs (+ runtime-runs 1))
                   (load runtime-script)
-                  (emit "runtime.txt" runtime-marker))))
+                  (list (make-artifact "runtime.txt" runtime-marker)))))
          (current-project-key))))
 
 (define (artifact-text artifact)
@@ -282,9 +283,9 @@
          (list (make-asset-pipeline
                 #:name "constant-output"
                 #:procedure
-                (lambda (_ emit)
+                (lambda (_)
                   (set! constant-runs (+ constant-runs 1))
-                  (emit "constant.txt" "fixed"))))
+                  (list (make-artifact "constant.txt" "fixed")))))
          (current-project-key))))
 
 (test-equal "a self-contained pipeline needs no declared file inputs"
@@ -322,19 +323,19 @@
          #:name "independent-stage-one"
          #:inputs (list input-a)
          #:procedure
-         (lambda (in emit)
-           (emit "assets/intermediate.txt"
-                 (call-with-input-file (in input-a) get-string-all)))))
+         (lambda (in)
+           (list (make-artifact "assets/intermediate.txt"
+                   (call-with-input-file (in input-a) get-string-all))))))
        (stage-two
         (make-asset-pipeline
          #:name "independent-stage-two"
          #:inputs '("assets/intermediate.txt")
          #:procedure
-         (lambda (in emit)
-           (emit "assets/final.txt"
-                 (call-with-input-file (in "assets/intermediate.txt")
-                   get-string-all))))))
-  (test-assert "one pipeline cannot consume another pipeline's emitted artifact"
+         (lambda (in)
+           (list (make-artifact "assets/final.txt"
+                   (call-with-input-file (in "assets/intermediate.txt")
+                     get-string-all)))))))
+  (test-assert "one pipeline cannot consume another pipeline's output artifact"
     (catch #t
       (lambda ()
         (run-asset-pipelines (list stage-one stage-two)
@@ -350,14 +351,14 @@
           #:version "stage-one-v1-stage-two-v1"
           #:inputs (list input-a)
           #:procedure
-          (lambda (in emit)
+          (lambda (in)
             (let* ((source (call-with-input-file (in input-a) get-string-all))
                    (intermediate (string-append source "\nstage-one"))
                    (final (string-append intermediate "\nstage-two")))
-              (emit "assets/composed-intermediate.txt" intermediate)
-              (emit "assets/composed-final.txt" final)))))
+              (list (make-artifact "assets/composed-intermediate.txt" intermediate)
+                    (make-artifact "assets/composed-final.txt" final))))))
         (current-project-key))))
-  (test-equal "one Guile pipeline can compose and emit multiple stages"
+  (test-equal "one Guile pipeline can compose and return multiple stages"
     '("assets/composed-intermediate.txt" "assets/composed-final.txt")
     (map artifact-path (car result)))
   (test-equal "the composed final artifact includes both stages"
@@ -390,14 +391,14 @@
     (test-equal "recovered bytes are exact"
       "alpha\n" (artifact-content (car artifacts)))))
 
-(test-assert "an invalid emitted path fails the pipeline"
+(test-assert "an invalid pipeline artifact path fails"
   (catch #t
     (lambda ()
       (run-asset-pipelines
        (list (make-asset-pipeline
               #:name "bad-path"
               #:inputs (list input-a)
-              #:procedure (lambda (in emit) (emit "../evil.png" "x"))))
+              #:procedure (lambda (_) (list (make-artifact "../evil.png" "x")))))
        (current-project-key))
       #f)
     (lambda args #t)))
@@ -409,22 +410,33 @@
        (list (make-asset-pipeline
               #:name "bad-input"
               #:inputs (list input-a)
-              #:procedure (lambda (in emit)
-                            (emit "ok.txt"
-                                  (call-with-input-file (in "/etc/passwd")
-                                    get-string-all)))))
+              #:procedure (lambda (in)
+                            (list (make-artifact "ok.txt"
+                                    (call-with-input-file (in "/etc/passwd")
+                                      get-string-all))))))
        (current-project-key))
       #f)
     (lambda args #t)))
 
-(test-assert "an empty emission fails the pipeline"
+(test-assert "a pipeline must return at least one artifact"
   (catch #t
     (lambda ()
       (run-asset-pipelines
        (list (make-asset-pipeline
               #:name "no-outputs"
               #:inputs (list input-a)
-              #:procedure (lambda (in emit) #t)))
+              #:procedure (lambda (_) '())))
+       (current-project-key))
+      #f)
+    (lambda args #t)))
+
+(test-assert "a pipeline must return artifacts rather than arbitrary values"
+  (catch #t
+    (lambda ()
+      (run-asset-pipelines
+       (list (make-asset-pipeline
+              #:name "invalid-result"
+              #:procedure (lambda (_) #t)))
        (current-project-key))
       #f)
     (lambda args #t)))
@@ -438,10 +450,10 @@
               #:name "missing-input"
               #:inputs (list input-b)
               #:procedure
-              (lambda (in emit)
-                (emit "x.txt"
-                      (call-with-input-file (in input-b)
-                        get-string-all)))))
+              (lambda (in)
+                (list (make-artifact "x.txt"
+                        (call-with-input-file (in input-b)
+                          get-string-all))))))
        (current-project-key))
       #f)
     (lambda args #t)))

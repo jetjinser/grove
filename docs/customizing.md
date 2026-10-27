@@ -88,15 +88,15 @@ renderer:
 ```
 
 The [Graphviz adapter](../examples/hackable-assets/graphviz.scm) is a small
-example: it declares a source file, runs `dot`, and emits the SVG as an ordinary
-Grove artifact. A pipeline procedure receives an input lookup and an `emit`
-callback; it can use any executable or library available to the project. Grove
-tracks declared files and loaded Scheme code. Include tool identity in the
-pipeline's `#:version` when Grove cannot observe it, as the Graphviz adapter
-does.
+example: it declares a source file, runs `dot`, and returns the SVG as an
+ordinary Grove artifact. A pipeline procedure receives an input lookup and
+returns an artifact list; it can use any executable or library available to
+the project. Grove tracks declared files and loaded Scheme code. Include tool
+identity in the pipeline's `#:version` when Grove cannot observe it, as the
+Graphviz adapter does.
 
 Pipeline caching assumes that the same project code, declared and materialized
-input paths, input bytes, and version produce the same emitted bytes. Both
+input paths, input bytes, and version produce the same returned bytes. Both
 path forms participate in identity because the procedure receives materialized
 paths and may use their names or locations. Grove verifies stored bytes against
 their content hashes, but cannot verify that an external tool is deterministic.
@@ -104,7 +104,7 @@ Include relevant tool and environment state in `#:version`, or disable project
 caching when that state cannot be represented.
 
 Choose the extension point by the data flow, not by whether the adapter starts
-a process. A pipeline consumes declared project files and emits artifacts
+a process. A pipeline consumes declared project files and returns artifacts
 independently of the analyzed model. A renderer can consume values already in
 the model and emit corresponding assets; the
 [hackable math experiment](../examples/hackable-math/README.md) uses this for
@@ -126,7 +126,7 @@ Use a Scheme expression in `.plant` when the tool's result belongs inline in
 that document. Declare file reads with `depend-on!` from `(grove input
 scribble)` and opt out of reader caching when behavior depends on untracked
 external state. Use a pipeline when the tool consumes declared project files
-and emits standalone build artifacts. Both keep the integration code in the
+and returns standalone build artifacts. Both keep the integration code in the
 project. Pipelines use Grove's artifact validation and content-addressed cache;
 declare opaque tool identity with `#:version`.
 

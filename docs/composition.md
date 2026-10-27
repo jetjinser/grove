@@ -25,7 +25,7 @@ justify a distinct type.
 | HTML presentation | typed product of style, rules, head, navigation, and page fragments | `compose-html-presentations` combines any number of layers left to right; the empty presentation is the unit | HTML renderer |
 | Site outputs | ordinary renderer procedures or cached renderer values | ordered renderer list | project build |
 | Render context | typed wrapper around an association list | `render-context-with` overlays keys; present `#f` remains distinct from absence | rules and renderers |
-| Asset pipelines | typed producer with name, version, inputs, and procedure | ordered independent producers; each producer may emit several artifacts | build pipeline with content-addressed caching |
+| Asset pipelines | typed producer with name, version, inputs, and procedure | ordered independent producers; each producer returns an artifact list | build pipeline with content-addressed caching |
 
 An HTML presentation is a product of distinct composition laws: styles and
 head/navigation nodes append in order, later rules override and may delegate,
@@ -76,13 +76,13 @@ protocol.
   records and composition should remain separate even though both contain
   associations internally.
 - Asset pipelines and filesystem effects declare dependencies and produce
-  artifacts. They belong to the build interpreter, not to a pure value
+  artifact lists. They belong to the build interpreter, not to a pure value
   composition protocol. Pipeline order is execution order, not a dependency
-  graph: one pipeline cannot declare another pipeline's emitted artifact as an
-  input. Pipeline artifacts take precedence over same-path renderer artifacts;
-  duplicate paths emitted by two pipelines fail artifact validation. Compose
-  dependent stages inside one producer procedure, or declare a real source
-  file as the shared input to independent producers.
+  graph: one pipeline cannot declare another pipeline's output as an input.
+  Pipeline artifacts take precedence over same-path renderer artifacts;
+  duplicate output paths fail artifact validation. Compose dependent stages
+  inside one producer procedure, or declare a real source file as the shared
+  input to independent producers.
 - The content algebra remains a free set of constructors; sequencing it as a
   monad would conflate content structure with rendering order.
 
