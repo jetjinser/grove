@@ -4,7 +4,7 @@
 
 (define-module (grove cache)
   #:use-module ((grove private fingerprint) #:prefix private:)
-  #:use-module (grove private pipeline)
+  #:use-module (grove private content-store)
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
@@ -41,14 +41,14 @@
 (define (content-cache-ref cache key)
   "Return the verified bytevector for KEY, or #f when it is not cached."
   (let* ((identity (content-cache-identity cache key))
-         (entries (read-boundary-index identity))
+         (entries (read-content-index identity))
          (entry (and entries (assoc "value" entries))))
-    (and entry (restore-boundary-bytes (cdr entry)))))
+    (and entry (restore-content-bytes (cdr entry)))))
 
 (define (content-cache-store! cache key bytes)
   "Store deterministic bytevector BYTES for KEY; return #f if the cache is unavailable."
   (unless (bytevector? bytes)
     (error "content cache stores bytevectors" bytes))
   (let* ((identity (content-cache-identity cache key))
-         (fingerprint (publish-boundary-bytes bytes)))
-    (write-boundary-index identity (list (cons "value" fingerprint)))))
+         (fingerprint (publish-content-bytes bytes)))
+    (write-content-index identity (list (cons "value" fingerprint)))))

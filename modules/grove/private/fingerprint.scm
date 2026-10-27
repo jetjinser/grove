@@ -8,8 +8,17 @@
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
   #:export (fingerprint-bytes
+            fingerprint?
             content-fingerprint
             file-fingerprint))
+
+(define (fingerprint? value)
+  (and (string? value)
+       (= (string-length value) 64)
+       (every (lambda (character)
+                (or (and (char>=? character #\0) (char<=? character #\9))
+                    (and (char>=? character #\a) (char<=? character #\f))))
+              (string->list value))))
 
 (define (fingerprint-bytes bytes)
   (let ((digest (sha256 bytes))

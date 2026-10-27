@@ -7,17 +7,14 @@
   #:use-module (grove private asset-pipeline)
   #:use-module (grove output)
   #:use-module (grove private artifact-store)
+  #:use-module (grove private content-store)
   #:use-module (grove private fingerprint)
   #:use-module (grove private input dependencies)
   #:use-module (ice-9 binary-ports)
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
   #:export (run-asset-pipelines
-            merge-pipeline-artifacts
-            read-boundary-index
-            write-boundary-index
-            restore-boundary-bytes
-            publish-boundary-bytes))
+            merge-pipeline-artifacts))
 
 ;;     Run declared asset pipelines against the shared store.  Each
 ;;     pipeline's identity is its name, version, the project file's
@@ -52,50 +49,6 @@
                         input-table))
              port)))))
 
-(define (pipeline-fingerprint? value)
-  (and (string? value)
-       (= (string-length value) 64)
-       (every (lambda (character)
-                (or (and (char>=? character #\0) (char<=? character #\9))
-                    (and (char>=? character #\a) (char<=? character #\f))))
-              (string->list value))))
-
-(define (read-boundary-index identity)
-  ;;     The index has no self-verifying content hash; the worst a
-  ;;     corrupted one can do is read as garbage (a miss) or name
-  ;;     blobs that fail their own verification (also a miss).
-  (catch #t
-    (lambda ()
-      (let ((path (artifact-blob-path identity)))
-        (and (file-exists? path)
-             (call-with-input-file path
-               (lambda (port)
-                 (let ((index (read port)))
-                   (and (list? index)
-                        (every (lambda (entry)
-                                 (and (pair? entry)
-                                      (artifact-path? (car entry))
-                                      (pipeline-fingerprint? (cdr entry))))
-                               index)
-                        index)))))))
-    (lambda args #f)))
-
-(define (write-boundary-index identity entries)
-  (publish-artifact-blob! identity
-    (lambda (port)
-      (write (map (lambda (entry) (cons (car entry) (cdr entry))) entries)
-             port))))
-
-(define (restore-boundary-bytes fingerprint)
-  (catch #t
-    (lambda ()
-      (let ((path (artifact-blob-path fingerprint)))
-        (and (file-exists? path)
-             (let ((bytes (call-with-input-file path get-bytevector-all)))
-               (and (string=? (fingerprint-bytes bytes) fingerprint)
-                    bytes)))))
-    (lambda args #f)))
-
 (define (restore-pipeline-artifacts identity inputs)
   (let ((index (read-pipeline-index identity)))
     (and index
@@ -108,7 +61,7 @@
            (if (null? entries)
                (reverse artifacts)
                (let* ((entry (car entries))
-                      (bytes (restore-boundary-bytes (cdr entry))))
+                      (bytes (restore-content-bytes (cdr entry))))
                  (and bytes
                       (loop (cdr entries)
                             (cons (make-byte-artifact
@@ -117,8 +70,7 @@
 
 (define (read-pipeline-index identity)
   ;; Runtime Scheme loads are discovered while the procedure runs. Keep their
-  ;; fingerprints beside this pipeline's outputs; the shared boundary index
-  ;; remains a plain out:artifact-path/raw table for the other cache users.
+  ;; fingerprints in this pipeline-specific index beside its emitted outputs.
   (catch #t
     (lambda ()
       (let ((path (artifact-blob-path identity)))
@@ -135,13 +87,13 @@
                                  (and (list? entry)
                                       (= (length entry) 2)
                                       (string? (car entry))
-                                      (pipeline-fingerprint? (cadr entry))))
+                                      (fingerprint? (cadr entry))))
                                (caddr index))
                         (list? (cadddr index))
                         (every (lambda (entry)
                                  (and (pair? entry)
                                       (artifact-path? (car entry))
-                                      (pipeline-fingerprint? (cdr entry))))
+                                      (fingerprint? (cdr entry))))
                                (cadddr index))
                         (list (caddr index) (cadddr index)))))))))
     (lambda args #f)))
@@ -218,14 +170,6 @@ build state's renderer field."
           (loop (cdr pipelines)
                 (append (reverse produced) artifacts)
                 (append (reverse markers) owners))))))
-
-;;     Publish BYTES under their content fingerprint; return the
-;;     fingerprint for index bookkeeping.
-(define (publish-boundary-bytes bytes)
-  (let ((fingerprint (content-fingerprint bytes)))
-    (publish-artifact-blob! fingerprint
-      (lambda (port) (put-bytevector port bytes)))
-    fingerprint))
 
 ;;     Pipeline outputs shadow same-path artifacts from renderers and
 ;;     the previous state, and outputs retired from a pipeline's
