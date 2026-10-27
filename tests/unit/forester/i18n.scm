@@ -396,6 +396,10 @@
   "1,234,567" (format-number "en" 1234567))
 (test-equal "negative numbers keep their sign"
   "-1,234" (format-number "en" -1234))
+(test-equal "number grouping follows the requested locale"
+  "1.234.567" (format-number "de" 1234567))
+(test-equal "unsupported number locales use deterministic grouping"
+  "1,234,567" (format-number "sw" 1234567))
 (test-equal "English singular"
   "~a item" (plural "en" 1 '((one . "~a item") (other . "~a items"))))
 (test-equal "English plural"

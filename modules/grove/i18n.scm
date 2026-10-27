@@ -435,15 +435,24 @@ locales without date data return DATE unchanged."
               (cons (string-append "," (substring digits (- end 3) end)) acc)))))
 
 (define* (format-number locale number #:key (group? #t))
-  "Format an integer NUMBER with the locale's digit grouping.  Other
-number types pass through number->string."
-  (if (not (integer? number))
-      (number->string number)
-      (let* ((text (number->string number))
-             (negative? (string-prefix? "-" text))
-             (digits (if negative? (substring text 1) text))
-             (digits (if group? (group-digits digits) digits)))
-        (if negative? (string-append "-" digits) digits))))
+  "Format an integer NUMBER with LOCALE's digit grouping.  Other number
+types pass through number->string.  When locale data is unavailable, use
+comma-separated groups of three digits."
+  (let ((locale (if (locale? locale) locale (make-locale locale))))
+    (if (not (and group? (integer? number)))
+        (number->string number)
+        (or (let ((glibc-locale (make-glibc-locale locale LC_NUMERIC)))
+              (and glibc-locale
+                   (not (string-null?
+                         (glibc:locale-thousands-separator glibc-locale)))
+                   (false-if-exception
+                     (format #f "~:h" number glibc-locale))))
+            (let* ((text (number->string number))
+                   (negative? (string-prefix? "-" text))
+                   (digits (if negative? (substring text 1) text)))
+              (if negative?
+                  (string-append "-" (group-digits digits))
+                  (group-digits digits)))))))
 
 (define (plural-category lang count)
   (let ((n (abs count))
@@ -517,12 +526,18 @@ point rather than by language-tailored rules."
   "Return the glibc locale name for LOCALE, or #f when unsupported.
 
 LOCALE is a tag string or a locale object.  Regional variants fall back
-to their primary language, so `fr-CA' uses the `fr_FR' collation."
+to their primary language, so `fr-CA' uses the `fr_FR' locale data."
   (let* ((locale (if (locale? locale) locale (make-locale locale)))
          (tag (locale-tag locale))
          (lang (locale-lang locale)))
     (or (assoc-ref glibc-locale-names tag)
         (assoc-ref glibc-locale-names lang))))
+
+(define (make-glibc-locale locale category)
+  (let ((name (glibc-locale-name locale)))
+    (and name
+         (false-if-exception
+           (glibc:make-locale (list category) name)))))
 
 (define* (locale-collation-comparator locale)
   "Return a caseless collation comparator for LOCALE, or #f.
@@ -531,20 +546,19 @@ The comparator uses the platform's locale collation data (glibc's
 ISO 14651 tables, not a full UCA/CLDR implementation).  It returns #f
 when the locale is unsupported or its data is missing, so callers can
 fall back to folded code-point order."
-  (let ((name (glibc-locale-name locale)))
-    (and name
+  (let ((loc (make-glibc-locale locale LC_ALL)))
+    (and loc
          (false-if-exception
-           (let ((loc (glibc:make-locale (list LC_ALL) name)))
-             ;;     A missing locale silently behaves like C, where
-             ;;     uppercase sorts first; use that as the probe.
-             (and (glibc:string-locale<? "a" "B" loc)
-                  (lambda (a b)
-                    (let ((ka (match-key a))
-                          (kb (match-key b)))
-                      (cond
-                        ((string=? ka kb) #f)
-                        ((glibc:string-locale<? ka kb loc) #t)
-                        (else #f))))))))))
+           ;; A missing locale silently behaves like C, where uppercase sorts
+           ;; first; use that as the probe.
+           (and (glibc:string-locale<? "a" "B" loc)
+                (lambda (a b)
+                  (let ((ka (match-key a))
+                        (kb (match-key b)))
+                    (cond
+                      ((string=? ka kb) #f)
+                      ((glibc:string-locale<? ka kb loc) #t)
+                      (else #f)))))))))
 
 (define (folded-order a b)
   (let ((ka (locale-sort-key a))
