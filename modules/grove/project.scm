@@ -261,6 +261,10 @@ defaults to the project's source directory."
                                (extra-sources '())
                                (cache? (project-cache? project)))
   "Copy PROJECT with execution options and additional tracked source paths."
+  (unless (and (list? extra-sources)
+               (every non-empty-string? extra-sources))
+    (error "project additional sources must be a list of non-empty paths"
+           extra-sources))
   (make-project
     #:source-directory (project-source-directory project)
     #:source-filter (project-source-filter project)

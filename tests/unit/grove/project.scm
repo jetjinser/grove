@@ -158,6 +158,18 @@
   (make-project #:source-directory "sources"
                 #:read-source (lambda (_) #f)
                 #:output-directory ""))
+(test-equal "project options diagnose malformed additional sources early"
+  "project additional sources must be a list of non-empty paths"
+  (catch 'misc-error
+    (lambda ()
+      (project-with-options
+        (make-project #:source-directory "sources"
+                      #:read-source (lambda (_) #f)
+                      #:output-directory "output")
+        #:extra-sources '(not-a-path))
+      #f)
+    (lambda (_key _module _template arguments _rest)
+      (car arguments))))
 
 (let* ((body (string-copy "before"))
        (_ (set-source-properties! body '((filename . "page.plant") (line . 4))))
