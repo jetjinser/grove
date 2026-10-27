@@ -103,6 +103,27 @@ report without changing the result observed by another consumer. Project
 execution errors likewise snapshot the original exception key, arguments, and
 source path; the captured stack remains an opaque diagnostic value.
 
+Scheme hosts can catch the `grove-project-error` key and inspect the resulting
+`project-error` with accessors from `(grove project diagnostic)`. The original
+Guile exception key and arguments remain available, alongside Grove's stage,
+path, and opaque stack. Use `print-project-error` to preserve Grove's concise
+or debug formatting:
+
+```scheme
+(use-modules (grove project)
+             (grove project diagnostic))
+
+(catch 'grove-project-error
+  (lambda () (build-project project))
+  (lambda (_ error)
+    (print-project-error error #f)
+    1))
+```
+
+When a host adds its own operation around Grove, `call-with-project-stage`
+attaches a stage and optional path without flattening the original Guile
+exception. Grove's project callbacks already receive stage context automatically.
+
 The analyzer's `project-context` follows the same value rule: its input list,
 source-path strings, and pair-based source values are copied when the context is
 made and when accessed. Prepared and extra source lists are also independent
