@@ -80,3 +80,8 @@ own type's contract.
 Artifacts use the same ownership rule: `make-artifact` and
 `make-byte-artifact` snapshot their path, content, and source paths. The public
 `artifact-content` accessor returns a fresh string or bytevector.
+
+HTML presentation, home-link, and navigation-link values apply the same rule
+to their SXML, labels, IDs, and attribute lists. Their accessors return copies
+of mutable data, so editing a returned fragment does not change the configured
+presentation.

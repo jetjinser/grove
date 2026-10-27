@@ -34,9 +34,18 @@
 (define-record-type <html-nav-link>
   (%make-html-nav-link page-id label attributes)
   html-nav-link?
-  (page-id html-nav-link-page-id)
-  (label html-nav-link-label)
-  (attributes html-nav-link-attributes))
+  (page-id html-nav-link-page-id/raw)
+  (label html-nav-link-label/raw)
+  (attributes html-nav-link-attributes/raw))
+
+(define (html-nav-link-page-id link)
+  (snapshot-data (html-nav-link-page-id/raw link)))
+
+(define (html-nav-link-label link)
+  (snapshot-data (html-nav-link-label/raw link)))
+
+(define (html-nav-link-attributes link)
+  (snapshot-data (html-nav-link-attributes/raw link)))
 
 (define* (make-html-nav-link page-id label #:key (attributes '()))
   "Describe a route-aware site navigation link."
@@ -120,8 +129,14 @@
 (define-record-type <html-home-link>
   (%make-html-home-link content attributes)
   html-home-link?
-  (content html-home-link-content)
-  (attributes html-home-link-attributes))
+  (content html-home-link-content/raw)
+  (attributes html-home-link-attributes/raw))
+
+(define (html-home-link-content link)
+  (snapshot-data (html-home-link-content/raw link)))
+
+(define (html-home-link-attributes link)
+  (snapshot-data (html-home-link-attributes/raw link)))
 
 (define* (make-html-home-link content #:key (attributes '()))
   "Describe the content and attributes of the routed home link.
@@ -153,11 +168,23 @@ is a list of symbol/string pairs."
   html-presentation?
   (style html-presentation-style)
   (rules html-presentation-rules)
-  (head html-presentation-head)
+  (head html-presentation-head/raw)
   (home-link html-presentation-home-link)
-  (site-nav html-presentation-site-nav)
-  (title-decorations html-presentation-title-decorations)
-  (metadata-items html-presentation-metadata-item-map))
+  (site-nav html-presentation-site-nav/raw)
+  (title-decorations html-presentation-title-decorations/raw)
+  (metadata-items html-presentation-metadata-item-map/raw))
+
+(define (html-presentation-head presentation)
+  (snapshot-data (html-presentation-head/raw presentation)))
+
+(define (html-presentation-site-nav presentation)
+  (snapshot-data (html-presentation-site-nav/raw presentation)))
+
+(define (html-presentation-title-decorations presentation)
+  (snapshot-data (html-presentation-title-decorations/raw presentation)))
+
+(define (html-presentation-metadata-item-map presentation)
+  (snapshot-data (html-presentation-metadata-item-map/raw presentation)))
 
 (define* (make-html-presentation #:key (style (make-html-style))
                                  (rules empty-render-rules)
@@ -220,14 +247,16 @@ METADATA-ITEMS map page IDs to static SXML child lists."
 (define (html-presentation-title-decoration presentation page-id)
   (let ((entry (and page-id
                     (assoc page-id
-                           (html-presentation-title-decorations presentation)))))
-    (if entry (cdr entry) '())))
+                           (html-presentation-title-decorations/raw
+                             presentation)))))
+    (if entry (snapshot-data (cdr entry)) '())))
 
 (define (html-presentation-metadata-items presentation page-id)
   (let ((entry (and page-id
                     (assoc page-id
-                           (html-presentation-metadata-item-map presentation)))))
-    (if entry (cdr entry) '())))
+                           (html-presentation-metadata-item-map/raw
+                             presentation)))))
+    (if entry (snapshot-data (cdr entry)) '())))
 
 (define empty-html-presentation (make-html-presentation))
 

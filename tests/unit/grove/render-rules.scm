@@ -204,6 +204,63 @@
     '((meta (@ (name "author"))))
     (html-presentation-head presentation)))
 
+(let* ((nav (make-html-nav-link "home" "Home"
+               #:attributes '((title . "Home page"))))
+       (home (make-html-home-link '("Home")
+                #:attributes '((title . "Home page"))))
+       (presentation
+        (make-html-presentation
+          #:head '((title "Home"))
+          #:home-link home
+          #:site-nav (list nav)
+          #:title-decorations '(("home" . ((span "Home"))))
+          #:metadata-items '(("home" . ((li "Home"))))))
+       (head (html-presentation-head presentation))
+       (site-nav (html-presentation-site-nav presentation))
+       (decorations (html-presentation-title-decorations presentation))
+       (metadata (html-presentation-metadata-item-map presentation))
+       (decoration (html-presentation-title-decoration presentation "home"))
+       (metadata-items (html-presentation-metadata-items presentation "home"))
+       (home-content (html-home-link-content home))
+       (home-attributes (html-home-link-attributes home))
+       (nav-attributes (html-nav-link-attributes nav)))
+  (set-car! head '(script "changed"))
+  (set-car! site-nav 'changed)
+  (set-cdr! (car decorations) 'changed)
+  (set-cdr! (car metadata) 'changed)
+  (set-car! decoration '(script "changed"))
+  (set-car! metadata-items '(script "changed"))
+  (string-set! (car home-content) 0 #\x)
+  (set-cdr! (car home-attributes) "changed")
+  (set-cdr! (car nav-attributes) "changed")
+  (let ((page-id (html-nav-link-page-id nav))
+        (label (html-nav-link-label nav)))
+    (string-set! page-id 0 #\x)
+    (string-set! label 0 #\x))
+  (test-equal "presentation accessors return independent snapshots"
+    '((title "Home"))
+    (html-presentation-head presentation))
+  (test-equal "presentation navigation accessors protect their list"
+    (list nav) (html-presentation-site-nav presentation))
+  (test-equal "presentation map accessors protect their pair structure"
+    '(("home" . ((span "Home"))))
+    (html-presentation-title-decorations presentation))
+  (test-equal "presentation fragment accessors return independent snapshots"
+    '((span "Home"))
+    (html-presentation-title-decoration presentation "home"))
+  (test-equal "presentation metadata fragment accessors return snapshots"
+    '((li "Home"))
+    (html-presentation-metadata-items presentation "home"))
+  (test-equal "home-link accessors return independent snapshots"
+    '("Home") (html-home-link-content home))
+  (test-equal "home-link attribute accessors return independent snapshots"
+    '((title . "Home page")) (html-home-link-attributes home))
+  (test-equal "navigation accessors return independent string snapshots"
+    '("home" "Home" ((title . "Home page")))
+    (list (html-nav-link-page-id nav)
+          (html-nav-link-label nav)
+          (html-nav-link-attributes nav))))
+
 (test-error "presentation rejects procedure-valued SXML"
   #t
   (make-html-presentation #:head (list (lambda () '((meta))))))
