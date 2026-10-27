@@ -50,9 +50,11 @@ own URL and from ordinary links. For example, a literature page can declare
 `@describes{doi:10.1146/annurev.fluid.29.1.123}`. The declared URI is the
 entity identity; its scheme guides link presentation. Grove links HTTP(S) URIs
 directly and presents DOI URIs through `https://doi.org/`. Other absolute URIs
-remain visible as identifiers without an assumed resolver. Grove retains the
-declared URI for queries and compares it exactly, so choose one spelling
-consistently. It does not fetch metadata from the identifier.
+remain visible as identifiers without an assumed resolver. Values must use
+ASCII URI syntax: percent-encode non-ASCII path data and use an ASCII
+IDNA-compatible hostname. Grove retains the declared URI for queries and
+compares it exactly, so choose one spelling consistently. It does not fetch
+metadata from the identifier.
 
 ## Content
 

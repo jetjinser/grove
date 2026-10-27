@@ -585,9 +585,44 @@
     (map content-element-kind
          (content-document-children (site-page-document page)))))
 
+(test-equal "describes accepts percent-encoded Unicode URI paths"
+  '("https://example.test/%E8%B3%87%E6%96%99")
+  (assq-ref
+    (site-page-metadata
+      (document->tree-page "encoded"
+        (evaluate-document
+          "@title{Encoded}@describes{https://example.test/%E8%B3%87%E6%96%99}")
+        "encoded.plant"))
+    'describes))
+
+(test-equal "describes accepts an ASCII IDNA hostname"
+  '("https://xn--r8jz45g.xn--zckzah/")
+  (assq-ref
+    (site-page-metadata
+      (document->tree-page "idna"
+        (evaluate-document
+          "@title{IDNA}@describes{https://xn--r8jz45g.xn--zckzah/}")
+        "idna.plant"))
+    'describes))
+
 (test-error "describes requires an absolute URI" #t
   (document->tree-page "bad"
     (evaluate-document "@title{Bad}@describes{relative-id}") "bad.plant"))
+
+(test-error "describes requires ASCII URI encoding" #t
+  (document->tree-page "bad"
+    (evaluate-document "@title{Bad}@describes{https://example.test/资料}")
+    "bad.plant"))
+
+(test-error "describes rejects URI spaces" #t
+  (document->tree-page "bad"
+    (evaluate-document "@title{Bad}@describes{https://example.test/a b}")
+    "bad.plant"))
+
+(test-error "describes rejects malformed percent escapes" #t
+  (document->tree-page "bad"
+    (evaluate-document "@title{Bad}@describes{https://example.test/a%ZZ}")
+    "bad.plant"))
 
 (test-error "describes requires a host for HTTP(S) URIs" #t
   (document->tree-page "bad"
