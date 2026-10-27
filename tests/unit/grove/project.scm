@@ -13,6 +13,7 @@
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove project)
+  #:use-module (grove private project model)
   #:use-module (grove project diagnostic)
   #:use-module (grove project site)
   #:use-module (grove pipeline)
@@ -45,6 +46,12 @@
        (string-suffix? ".plant" filename)))
 
 (test-begin "grove project")
+
+(test-assert "project execution details stay out of the public project API"
+  (let ((interface (module-public-interface (resolve-module '(grove project)))))
+    (every (lambda (name) (not (module-variable interface name)))
+      '(project-source-directory project-renderers project-extra-sources
+        project-output-directory project-cache? project-browse))))
 
 (test-error "site pages require a non-empty string ID" #t
   (make-site-page "" "Page" (make-content-document '())))

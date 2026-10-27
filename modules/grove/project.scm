@@ -7,14 +7,8 @@
   #:use-module (grove private project lifecycle)
   #:re-export (project?
                make-project
-               project-source-directory
                create-project-source
-               project-renderers
                collect-project-sources
-               project-extra-sources
-               project-output-directory
-               project-cache?
-               project-browse
                project-with-options
                project-input?
                project-input-path

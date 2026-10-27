@@ -3,6 +3,7 @@
 
 (define-module (tests unit grove project-load)
   #:use-module (grove project)
+  #:use-module (grove private project model)
   #:use-module (grove project load)
   #:use-module (grove project diagnostic)
   #:use-module (grove output)

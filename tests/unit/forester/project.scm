@@ -21,6 +21,7 @@
   #:use-module (forester site)
   #:use-module (grove input scribble)
   #:use-module (grove ir)
+  #:use-module (grove private project model)
   #:use-module (grove output)
   #:use-module (grove pipeline)
   #:use-module (grove project)

@@ -2,7 +2,8 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove private cli)
-  #:use-module (grove project)
+  #:use-module (grove private project model)
+  #:use-module (grove private project lifecycle)
   #:use-module (grove build)
   #:use-module (grove serve)
   #:use-module (grove private cache-dir)

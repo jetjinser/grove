@@ -2,7 +2,8 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove project load)
-  #:use-module (grove project)
+  #:use-module (grove private project model)
+  #:use-module (grove private project lifecycle)
   #:use-module (grove project diagnostic)
   #:use-module (grove private project timing)
   #:use-module (grove private fingerprint)
