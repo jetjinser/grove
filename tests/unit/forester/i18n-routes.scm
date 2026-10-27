@@ -13,6 +13,7 @@
   #:use-module (forester render sitemap)
   #:use-module (forester render text routes)
   #:use-module (forester site)
+  #:use-module (grove build)
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove render html routes)
@@ -347,6 +348,42 @@
     (and (string-contains html "https://example.org/guide.html")
          (string-contains sitemap "<loc>https://example.org/guide.html</loc>")
          (string-contains feed "<language>en-US</language>"))))
+
+(let* ((settings (make-site-settings #:site-url "https://shared.example"
+                                     #:default-locale "en"))
+       (rss-direct
+        (car (render-rss forest #:settings settings
+                         #:site-url "https://rss.example"
+                         #:language "fr")))
+       (rss-renderer
+        (car (render-model forest
+               (list (make-rss-renderer #:settings settings
+                                        #:site-url "https://rss.example"
+                                        #:language "fr")))))
+       (sitemap-direct
+        (car (render-sitemap forest #:settings settings
+                             #:site-url "https://map.example"
+                             #:default-locale "zh-Hans")))
+       (sitemap-renderer
+        (car (render-model forest
+               (list (make-sitemap-renderer #:settings settings
+                                            #:site-url "https://map.example"
+                                            #:default-locale "zh-Hans"))))))
+  (test-equal "RSS direct and cached entry points honor renderer overrides"
+    (artifact-content rss-direct) (artifact-content rss-renderer))
+  (test-assert "RSS overrides shared URL and language"
+    (and (string-contains (artifact-content rss-renderer)
+                          "https://rss.example/")
+         (string-contains (artifact-content rss-renderer)
+                          "<language>fr</language>")))
+  (test-equal "sitemap direct and cached entry points honor renderer overrides"
+    (artifact-content sitemap-direct) (artifact-content sitemap-renderer))
+  (test-assert "sitemap overrides shared URL and default locale"
+    (and (string-contains (artifact-content sitemap-renderer)
+                          "https://map.example/")
+         (string-contains
+           (artifact-content sitemap-renderer)
+           "hreflang=\"x-default\" href=\"https://map.example/guide-zh.html\""))))
 
 (let* ((settings (make-site-settings #:site-url "https://example.org"
                                      #:default-locale "zh-CN"))
