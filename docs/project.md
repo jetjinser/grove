@@ -104,11 +104,12 @@ and rendering. `make-site-project` assembles page inputs into a site before
 calling its analyzer. All renderers receive the same model and return artifacts.
 `project-with-options` returns a project copy with an output-directory override,
 additional tracked inputs, or a cache setting; the original project is unchanged.
-Project constructors snapshot declared path strings and list containers, and
-configuration accessors return fresh copies of those values. Reader, analyzer,
-renderer, collector, and preparation procedures remain the project author's
-code and are retained as callbacks. Paths returned by collector and preparation
-callbacks are copied before Grove reads them or includes them in analysis.
+Project constructors snapshot declared path strings and list containers.
+Project inputs and callback contexts return independent copies of mutable data
+and collection containers; Grove keeps the reader, analyzer, renderer, collector,
+and preparation procedures as the project author's callbacks. Paths returned by
+collector and preparation callbacks are copied before Grove reads them or
+includes them in analysis.
 
 Build reports snapshot their source, artifact, and change lists. Their list
 accessors return independent copies, so a caller can annotate or filter a
