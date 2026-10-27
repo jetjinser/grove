@@ -87,7 +87,9 @@
        (properties (list (cons 'role property-value)))
        (element-source (string-copy "page.plant"))
        (element (make-content-element 'paragraph children element-source
-                   #:properties properties))
+                   #:properties properties
+                   #:style (make-content-style 'emphasis)
+                   #:flow-kind 'block))
        (document-source (string-copy "page.plant"))
        (document-children (list element))
        (document (make-content-document document-children document-source)))
@@ -122,6 +124,7 @@
           (content-element? (car (content-document-children document)))))
   (let* ((new-property (string-copy "updated"))
          (updated (content-with-property element 'role new-property))
+         (replaced-children (content-element-with-children element '("replacement")))
          (new-location
           (list (cons 'file (string-copy "other.plant")) (cons 'line 8)))
          (located (content-with-source-location element new-location)))
@@ -130,7 +133,16 @@
     (test-equal "content derivation helpers snapshot new values"
       '("updated" ((file . "other.plant") (line . 8)))
       (list (content-element-property updated 'role)
-            (content-element-property located 'source-location)))))
+            (content-element-property located 'source-location)))
+    (test-equal "replacing element children preserves its other fields"
+      '(paragraph "replacement" "page.plant" ((role . "note")) emphasis block)
+      (list (content-element-kind replaced-children)
+            (content-text-value
+              (car (content-element-children replaced-children)))
+            (content-element-source replaced-children)
+            (content-element-properties replaced-children)
+            (content-style-name (content-element-style replaced-children))
+            (content-element-flow-kind replaced-children)))))
 
 (let* ((location '((file . "included.plant") (line . 12) (column . 4)))
        (original (make-content-document

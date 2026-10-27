@@ -103,7 +103,9 @@ Content text, layout, element, document, and style records are values. Their
 constructors copy mutable strings and pair structure, and their public
 accessors return independent copies of mutable data. Changing a string or list
 returned by an accessor does not alter the node. Use `content-with-style` and
-`content-with-property` to derive an element with an intentional change.
+`content-with-property` to derive an element with an intentional change;
+`content-element-with-children` replaces its children while preserving its
+kind, source, properties, style, and flow behavior.
 Opaque extension values embedded in properties remain shared and follow their
 own type's contract.
 

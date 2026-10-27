@@ -27,6 +27,7 @@
             content-element-flow-kind
             content-element-block?
             content-element-children
+            content-element-with-children
             content-element-properties
             content-element-property
             content-element-style
@@ -100,6 +101,17 @@
 
 (define (content-element-children element)
   (snapshot-data (content-element-children/raw element)))
+
+(define (content-element-with-children element children)
+  "Return ELEMENT with CHILDREN, preserving its kind and other properties."
+  (unless (content-element? element)
+    (error "content-element-with-children requires a content element" element))
+  (make-content-element
+    (content-element-kind element) children
+    (content-element-source/raw element)
+    #:properties (content-element-properties/raw element)
+    #:style (content-element-style element)
+    #:flow-kind (content-element-flow-kind element)))
 
 (define (content-element-properties element)
   (snapshot-data (content-element-properties/raw element)))

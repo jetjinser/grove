@@ -87,13 +87,9 @@
           (eq? (content-element-kind value) 'math-token))
      (list value))
     ((math-fragment? value)
-     (list (make-content-element
-             (content-element-kind value)
-             (decode-math-fragments (ir:content-element-children/raw value))
-             (ir:content-element-source/raw value)
-             #:properties (ir:content-element-properties/raw value)
-             #:style (content-element-style value)
-             #:flow-kind (content-element-flow-kind value))))
+     (list (content-element-with-children
+             value
+             (decode-math-fragments (ir:content-element-children/raw value)))))
     (else (error "unsupported value in math expression" value))))
 
 (define (decode-math-fragments values)

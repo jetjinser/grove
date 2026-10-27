@@ -87,13 +87,9 @@
     ((content-element? content)
      (if (memq (content-element-kind content) '(subtree forest-query))
          #f
-         (make-content-element
-           (content-element-kind content)
-           (filter-map owned-content (ir:content-element-children/raw content))
-           (ir:content-element-source/raw content)
-           #:properties (ir:content-element-properties/raw content)
-           #:style (content-element-style content)
-           #:flow-kind (content-element-flow-kind content))))
+         (content-element-with-children
+           content
+           (filter-map owned-content (ir:content-element-children/raw content)))))
     ((content-document? content)
      (make-content-document
        (filter-map owned-content (ir:content-document-children/raw content))
@@ -289,14 +285,10 @@ invented here."
                #:style (content-element-style content)
                #:flow-kind (content-element-flow-kind content))))
           (else
-           (make-content-element
-             (content-element-kind content)
+           (content-element-with-children
+             content
              (map (lambda (child) (next child nested?))
-                  (ir:content-element-children/raw content))
-             (ir:content-element-source/raw content)
-             #:properties (ir:content-element-properties/raw content)
-             #:style (content-element-style content)
-             #:flow-kind (content-element-flow-kind content)))))))
+                  (ir:content-element-children/raw content))))))))
   (map (lambda (page)
          (make-site-page
            (site-page-id page)
