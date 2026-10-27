@@ -42,49 +42,29 @@ return any project model. READ-PAGE and OUTPUT-DIRECTORY are required."
   ;;     declarative containers now, while keeping caller procedures shared.
   (set! title (snapshot-data title))
   (set! description (snapshot-data description))
-  (set! source-directory (snapshot-data source-directory))
-  (set! extra-sources (snapshot-data extra-sources))
   (set! transforms (snapshot-data transforms))
-  (set! renderers (snapshot-data renderers))
-  (set! pipelines (snapshot-data pipelines))
-  (set! output-directory (snapshot-data output-directory))
   (set! home (snapshot-data home))
   (set! reader-locale (snapshot-data reader-locale))
   (unless (non-empty-string? title)
     (error "site title must be a non-empty string" title))
   (unless (or (not description) (non-empty-string? description))
     (error "site description must be a non-empty string or #f" description))
-  (unless (and (or (not source-directory)
-                   (non-empty-string? source-directory))
-               (or (not collect-sources) (procedure? collect-sources))
-               (or source-directory collect-sources))
-    (error "site project requires a source directory or collector"
-           source-directory collect-sources))
-  (unless (procedure? source-filter)
-    (error "site source filter must be a procedure" source-filter))
-  (unless (procedure? prepare)
-    (error "site prepare step must be a procedure" prepare))
-  (unless (and (list? extra-sources) (every non-empty-string? extra-sources))
-    (error "site extra sources must be a list of non-empty paths"
-           extra-sources))
   (unless (procedure? read-page)
     (error "site project requires a page reader" read-page))
   (unless (procedure? analyze)
     (error "site analyzer must be a procedure" analyze))
   (unless (and (list? transforms) (every procedure? transforms))
     (error "site transforms must be procedures" transforms))
-  (unless (non-empty-string? output-directory)
-    (error "site project requires an output directory" output-directory))
   (unless (or (not home) (non-empty-string? home))
     (error "site home must be a non-empty page ID or #f" home))
-  (unless (or (not create-source) (procedure? create-source))
-    (error "site source creator must be a procedure or #f" create-source))
   (when reader-locale
     (unless (string? reader-locale)
       (error "site reader locale must be a tag or #f" reader-locale))
     (make-locale reader-locale))
   (let ((locale-tag (and reader-locale
-                         (locale-tag (make-locale reader-locale)))))
+                         (locale-tag (make-locale reader-locale))))
+        (transform (and (pair? transforms)
+                        (apply compose-content-transforms transforms))))
     (make-project
       #:source-directory source-directory
       #:source-filter source-filter
@@ -96,14 +76,12 @@ return any project model. READ-PAGE and OUTPUT-DIRECTORY are required."
         (parameterize ((current-reader-locale
                          locale-tag))
           (let ((page (read-page source)))
-            (if (null? transforms)
+            (if (not transform)
                 page
                 (make-site-page
                   (site-page-id page)
                   (site-page-title page)
-                  (transform-document
-                    (apply compose-content-transforms transforms)
-                    (site-page-document page))
+                  (transform-document transform (site-page-document page))
                   (site-page-source page)
                   #:metadata (site-page-metadata page))))))
       #:analyze
