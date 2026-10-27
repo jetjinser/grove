@@ -307,15 +307,15 @@ Arbitrary Scheme I/O is not intercepted. Declare a file before reading it:
 (call-with-input-file (depend-on! "data.txt") get-string-all)
 ```
 
-`depend-on!` and `disable-cache!` are exported by `(grove input scribble)`.
-Use `depend-on!` for files discovered while evaluating a document: Grove
-records those reads and checks the recorded files before reusing that
-document. A reader's `#:cache-dependencies` collector is for reader-wide files
-that may affect any document even when its evaluation does not open them; it
-runs before each document cache lookup. Time, randomness, network state, and
-effects that must repeat require opting out with `disable-cache!` or disabling
-reader caching. Imported module definitions remain uncached so their bindings
-exist in every build process.
+`depend-on!` is exported by `(grove input)`; `disable-cache!` is exported by
+`(grove input scribble)`. Use `depend-on!` for files discovered while
+evaluating a document: Grove records those reads and checks the recorded files
+before reusing that document. A reader's `#:cache-dependencies` collector is
+for reader-wide files that may affect any document even when its evaluation
+does not open them; it runs before each document cache lookup. Time,
+randomness, network state, and effects that must repeat require opting out
+with `disable-cache!` or disabling reader caching. Imported module definitions
+remain uncached so their bindings exist in every build process.
 
 Cached renderers and pipelines are assumed deterministic for their tracked
 inputs and declared configuration. Grove verifies cached bytes against their

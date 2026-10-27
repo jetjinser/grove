@@ -342,7 +342,7 @@
     (let ((data (string-append root "/data.txt")))
       (put data "alpha")
       (put source (format #f
-        "@use-modules[(grove input scribble) (ice-9 textual-ports)]\n@(call-with-input-file (depend-on! ~s) get-string-all)" data))
+        "@use-modules[(grove input) (ice-9 textual-ports)]\n@(call-with-input-file (depend-on! ~s) get-string-all)" data))
       (build-project (project #t))
       (let ((before evaluations))
         (build-project (project #t))

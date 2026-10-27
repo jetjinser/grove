@@ -124,7 +124,7 @@ or environment variables.
 
 Use a Scheme expression in `.plant` when the tool's result belongs inline in
 that document. Declare files read during evaluation with `depend-on!` from
-`(grove input scribble)`; Grove remembers those reads for the next cache
+`(grove input)`; Grove remembers those reads for the next cache
 lookup. Use the reader's `#:cache-dependencies` option for files that can
 affect every document even when an individual evaluation does not open them.
 Opt out of reader caching when behavior depends on untracked external state.
