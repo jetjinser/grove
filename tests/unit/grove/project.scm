@@ -13,6 +13,7 @@
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove project)
+  #:use-module (grove project diagnostic)
   #:use-module (grove project site)
   #:use-module (grove pipeline)
   #:use-module (grove site))
@@ -345,6 +346,21 @@
       (test-equal "generic site collection accepts non-hidden source formats"
         '("first.plant" "ignore.txt" "second.plant")
         (map basename (collect-project-sources project))))
+    (let* ((path (string-append source-directory "/first.plant"))
+           (project
+             (make-site-project
+               #:collect-sources (lambda () (list path))
+               #:read-page (lambda (_) #f)
+               #:output-directory "invalid-page-output"))
+           (error
+             (catch 'grove-project-error
+               (lambda () (build-project project) #f)
+               (lambda (_ error) error))))
+      (test-equal "site readers fail at the read stage with their source path"
+        (list 'read path)
+        (and error
+             (list (project-error-stage error)
+                   (project-error-path error)))))
     (let* ((generic-events '())
            (generic-project
              (make-project

@@ -78,6 +78,9 @@ as the default source-creation destination."
         (parameterize ((current-reader-locale
                          locale-tag))
           (let ((page (read-page source)))
+            (unless (site-page? page)
+              (error "site page reader must return a Grove site page"
+                     page))
             (if (not transform)
                 page
                 (make-site-page

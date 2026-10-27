@@ -68,6 +68,25 @@
     (lambda () (make-forester-project #:home ""))
     "requires a non-empty home tree ID"))
 
+(test-assert "Forester project caching defaults to enabled"
+  (project-cache? (make-forester-project #:home "root")))
+
+(test-assert "Forester project can disable lifecycle caching"
+  (not (project-cache? (make-forester-project #:home "root" #:cache? #f))))
+
+(test-equal "Forester projects honor a custom source order"
+  '("second.plant" "first.plant")
+  (collect-project-sources
+    (make-forester-project
+      #:home "root"
+      #:collect-sources (lambda () '("second.plant" "first.plant")))))
+
+(test-equal "Forester projects declare additional tracked inputs"
+  '("glossary.scm")
+  (project-extra-sources
+    (make-forester-project #:home "root"
+                           #:extra-sources '("glossary.scm"))))
+
 (dynamic-wind
   (lambda ()
     (setenv "XDG_CACHE_HOME" (string-append project-root "/.cache"))
@@ -478,7 +497,7 @@
                         (string-length algebra-html)))
                (body (substring algebra-html 0 cut)))
           ;;     Taxa surface only inside backmatter entries; the page
-          ;;     body and titles stay free of topic chrome.
+          ;;     body and titles stay free of topic navigation.
           (and (not (string-contains algebra-html "page-topics"))
                (not (string-contains body "class=\"tag\""))
                (not (string-contains body "class=\"taxon\""))
@@ -662,25 +681,25 @@
                                `(("algebra" . ((span ,decoration))))))))
                      #:output-directory presentation-output))))
         (let ((first (build-project/report
-                       (make-presentation-project "Chrome first"))))
-          (test-assert "initial declarative chrome is rendered"
+                       (make-presentation-project "Title decoration first"))))
+          (test-assert "initial title decoration is rendered"
             (and (build-report-rendered? first)
                  (string-contains
                    (read-test-file
                      (string-append presentation-output "/index.html"))
-                   "Chrome first"))))
+                   "Title decoration first"))))
         (let ((same (build-project/report
-                      (make-presentation-project "Chrome first"))))
-          (test-assert "identical declarative chrome reuses cached output"
+                      (make-presentation-project "Title decoration first"))))
+          (test-assert "identical title decoration reuses cached output"
             (not (build-report-rendered? same))))
         (let ((changed (build-project/report
-                         (make-presentation-project "Chrome changed"))))
-          (test-assert "changed declarative chrome invalidates cached output"
+                         (make-presentation-project "Title decoration changed"))))
+          (test-assert "changed title decoration invalidates cached output"
             (and (build-report-rendered? changed)
                  (string-contains
                    (read-test-file
                      (string-append presentation-output "/index.html"))
-                   "Chrome changed")))))
+                   "Title decoration changed")))))
       (write-test-file
         (string-append source-directory "/broken.plant")
         (string-append

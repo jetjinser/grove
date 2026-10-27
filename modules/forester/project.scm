@@ -19,21 +19,26 @@
           #:key home
           (source-directory "plants")
           (output-directory "build")
+          (collect-sources #f)
           (title "Site")
           (description #f)
           (prepare (lambda () '()))
+          (extra-sources '())
           (html-options (make-html-options))
           (additional-renderers '())
           (transforms '())
           (browse #f)
           (reader-locale #f)
           (pipelines '())
+          (cache? #t)
           (default-prefix #f)
           (tree-template #f))
   "Build a Forester project with standard HTML and optional peer renderers.
 HOME is the tree ID rendered at the site index. HTML-OPTIONS configures the
 standard HTML renderer; ADDITIONAL-RENDERERS adds peer formats and projections;
-TRANSFORMS compose content changes before Forester analysis."
+TRANSFORMS compose content changes before Forester analysis. COLLECT-SOURCES
+can replace directory traversal while retaining the standard reader and
+analysis stages. EXTRA-SOURCES declares additional project input files."
   (unless (and (string? home) (> (string-length home) 0))
     (error "Forester project requires a non-empty home tree ID" home))
   (make-site-project
@@ -41,14 +46,17 @@ TRANSFORMS compose content changes before Forester analysis."
     #:description description
     #:source-directory source-directory
     #:source-filter forester-source?
+    #:collect-sources collect-sources
     #:home home
     #:prepare prepare
+    #:extra-sources extra-sources
     #:read-page (make-page-reader (make-scribble-document-reader))
     #:analyze make-forest
     #:transforms transforms
     #:renderers (cons (make-html-renderer #:options html-options)
                       additional-renderers)
     #:pipelines pipelines
+    #:cache? cache?
     #:browse browse
     #:reader-locale reader-locale
     #:create-source
