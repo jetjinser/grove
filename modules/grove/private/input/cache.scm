@@ -234,14 +234,15 @@
     (_ (error "invalid cached content"))))
 
 (define (read-entry path)
-  (catch #t
-    (lambda ()
-      (call-with-input-file path
-        (lambda (port)
-          (set-port-encoding! port "UTF-8")
-          (let ((entry (read port)))
-            (and (eof-object? (read port)) entry)))))
-    (lambda _ #f)))
+  (and (regular-file? path #:follow-links? #f)
+       (catch #t
+         (lambda ()
+           (call-with-input-file path
+             (lambda (port)
+               (set-port-encoding! port "UTF-8")
+               (let ((entry (read port)))
+                 (and (eof-object? (read port)) entry)))))
+         (lambda _ #f))))
 
 (define (save-entry path entry)
   (ensure-directory (dirname path))

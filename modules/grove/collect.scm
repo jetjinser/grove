@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove collect)
+  #:use-module (grove private files)
   #:use-module (ice-9 ftw)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
@@ -17,11 +18,6 @@ directories, directory symlinks, and special files are skipped."
   (define (directory-entry? path)
     (let ((info (false-if-exception (lstat path))))
       (and info (eq? (stat:type info) 'directory))))
-  (define (regular-file-entry? path)
-    ;; STAT follows file symlinks, keeping source aliases useful while
-    ;; excluding FIFOs, sockets, devices, and dangling links.
-    (let ((info (false-if-exception (stat path))))
-      (and info (eq? (stat:type info) 'regular))))
   (define (collect path)
     (append-map
       (lambda (filename)
@@ -30,7 +26,7 @@ directories, directory symlinks, and special files are skipped."
             ((and (not (string-prefix? "." filename))
                   (directory-entry? child))
              (collect child))
-            ((and (regular-file-entry? child) (include? filename))
+            ((and (regular-file? child) (include? filename))
              (list child))
             (else '()))))
       (scandir path

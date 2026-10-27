@@ -132,12 +132,12 @@
                ;;     shared store holds the bytes under the entry's
                ;;     fingerprint, so restore the file instead of
                ;;     paying for a re-render.
-               (_ (when (and (not (regular-file-entry? path))
+               (_ (when (and (not (regular-file? path #:follow-links? #f))
                              (build-state-artifact-fingerprint entry))
                     (restore-artifact-blob!
                      (build-state-artifact-fingerprint entry) path)))
                (content
-                 (and (regular-file-entry? path)
+                 (and (regular-file? path #:follow-links? #f)
                       (catch #t
                         (lambda ()
                           (if (eq? (build-state-artifact-kind entry) 'bytes)

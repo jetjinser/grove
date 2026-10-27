@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit grove output)
+  #:use-module (grove private files)
   #:use-module (ice-9 textual-ports)
   #:use-module (ice-9 binary-ports)
   #:use-module (rnrs bytevectors)
@@ -16,6 +17,7 @@
 (define output-path (string-append output-directory "/nested/page.txt"))
 (define obsolete-path (string-append output-directory "/obsolete.html"))
 (define unmanaged-path (string-append output-directory "/user.txt"))
+(define linked-path (string-append output-directory "/linked.txt"))
 (define binary-path (string-append output-directory "/images/pixel.bin"))
 (define transition-path (string-append output-directory "/transition"))
 (define transition-page-path
@@ -88,6 +90,13 @@
         (stat:ino (stat output-path))))
     (call-with-output-file unmanaged-path
       (lambda (port) (display "user-owned" port)))
+    (symlink unmanaged-path linked-path)
+    (write-artifacts output-directory
+      (list (make-artifact "linked.txt" "user-owned")))
+    (test-assert "artifact writer replaces symlink outputs without changing their targets"
+      (and (regular-file? linked-path #:follow-links? #f)
+           (equal? "user-owned"
+                   (call-with-input-file unmanaged-path get-string-all))))
     (write-artifacts output-directory
       (list (make-artifact "nested/page.txt" "updated content")))
     (test-assert "artifact writer removes outputs absent from the next build"

@@ -73,7 +73,7 @@
   (catch #t
     (lambda ()
       (let ((path (artifact-blob-path identity)))
-        (and (file-exists? path)
+        (and (artifact-blob-exists? identity)
              (call-with-input-file path
                (lambda (port)
                  (let ((index (read port)))

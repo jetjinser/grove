@@ -86,7 +86,7 @@
 (define artifact-manifest-temp-name ".grove-artifacts.tmp")
 
 (define (read-artifact-manifest path)
-  (if (not (file-exists? path))
+  (if (not (regular-file? path #:follow-links? #f))
       '()
       (call-with-input-file path
         (lambda (port)
@@ -110,8 +110,7 @@
   (rename-file temp-path path))
 
 (define (artifact-content-current? path content)
-  (and (file-exists? path)
-       (not (file-is-directory? path))
+  (and (regular-file? path #:follow-links? #f)
        (catch #t
          (lambda ()
            (if (string? content)

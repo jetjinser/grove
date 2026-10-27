@@ -3,7 +3,7 @@
 
 (define-module (grove private files)
   #:export (file-signature
-            regular-file-entry?
+            regular-file?
             ensure-directory
             call-with-staging-file!))
 
@@ -15,9 +15,11 @@
                (stat:mtime info) (stat:mtimensec info)
                (stat:ctime info) (stat:ctimensec info)))))
 
-(define (regular-file-entry? path)
-  "Return #t only when PATH itself is a regular file, without following links."
-  (let ((info (stat path #f)))
+(define* (regular-file? path #:key (follow-links? #t))
+  "Return #t when PATH resolves to a regular file.
+
+When FOLLOW-LINKS? is false, inspect PATH itself instead of its target."
+  (let ((info (false-if-exception (stat path follow-links?))))
     (and info (eq? (stat:type info) 'regular))))
 
 (define (ensure-directory directory)

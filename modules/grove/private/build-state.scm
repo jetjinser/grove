@@ -97,7 +97,7 @@
            (string? (build-state-identity state)))))
 
 (define (read-build-state path)
-  (if (not (file-exists? path))
+  (if (not (regular-file? path #:follow-links? #f))
       #f
       (call-with-input-file path
         (lambda (port)
