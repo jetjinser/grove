@@ -4,7 +4,7 @@
 (define-module (grove cli)
   #:use-module (grove project)
   #:use-module (grove build)
-  #:use-module (grove project new)
+  #:use-module (grove private project new)
   #:use-module (grove serve)
   #:use-module (grove private cache-dir)
   #:use-module (grove private store-gc)

@@ -1,7 +1,7 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(define-module (grove project new)
+(define-module (grove private project new)
   #:use-module (grove project)
   #:export (create-source))
 
