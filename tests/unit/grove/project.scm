@@ -48,6 +48,70 @@
   (make-site-page "page" "Page" (make-content-document '())
     #:metadata '((summary . "first") (summary . "second"))))
 
+(let* ((id (string-copy "page"))
+       (title (string-copy "Title"))
+       (source (string-copy "page.plant"))
+       (summary (string-copy "Summary"))
+       (metadata (list (cons 'summary summary)))
+       (page (make-site-page id title (make-content-document '()) source
+                             #:metadata metadata)))
+  (string-set! id 0 #\x)
+  (string-set! title 0 #\x)
+  (string-set! source 0 #\x)
+  (string-set! summary 0 #\x)
+  (set-car! metadata '(summary . "changed"))
+  (test-equal "site pages snapshot caller-owned fields and metadata"
+    '("page" "Title" "page.plant" "Summary")
+    (list (site-page-id page)
+          (site-page-title page)
+          (site-page-source page)
+          (assq-ref (site-page-metadata page) 'summary)))
+  (let ((exposed-id (site-page-id page))
+        (exposed-metadata (site-page-metadata page)))
+    (string-set! exposed-id 0 #\x)
+    (set-cdr! (assq 'summary exposed-metadata) "changed again"))
+  (test-equal "site page accessors return independent value snapshots"
+    '("page" "Summary")
+    (list (site-page-id page)
+          (assq-ref (site-page-metadata page) 'summary))))
+
+(test-error "site sources reject empty paths" #t
+  (make-site '() #:sources '("")))
+
+(let* ((page (make-site-page "home" "Home" (make-content-document '())))
+       (pages (list page))
+       (title (string-copy "Site"))
+       (source (string-copy "home.plant"))
+       (sources (list source))
+       (description (string-copy "Description"))
+       (home (string-copy "home"))
+       (site (make-site pages #:title title #:sources sources
+                              #:description description #:home home)))
+  (set-car! pages #f)
+  (string-set! title 0 #\x)
+  (string-set! source 0 #\x)
+  (string-set! description 0 #\x)
+  (string-set! home 0 #\x)
+  (set-car! sources "changed.plant")
+  (test-equal "sites snapshot caller-owned page, path, and descriptive values"
+    '(#t "Site" ("home.plant") "Description" "home")
+    (list (site-page? (car (site-pages site)))
+          (site-title site)
+          (site-sources site)
+          (site-description site)
+          (site-home site)))
+  (let ((exposed-pages (site-pages site))
+        (exposed-sources (site-sources site))
+        (exposed-title (site-title site)))
+    (set-car! exposed-pages #f)
+    (set-car! exposed-sources "changed-again.plant")
+    (string-set! exposed-title 0 #\x))
+  (test-equal "site accessors return independent collection snapshots"
+    '(#t "Site" ("home.plant"))
+    (list (site-page? (car (site-pages site)))
+          (site-title site)
+          (site-sources site))))
+
 (test-error "site projects validate cache flags at construction" #t
   (make-site-project #:source-directory "sources"
                      #:read-page (lambda (_) #f)

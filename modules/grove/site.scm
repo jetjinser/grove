@@ -5,6 +5,7 @@
 (define-module (grove site)
   #:use-module (grove string-fun)
   #:use-module (grove ir)
+  #:use-module (grove private snapshot)
   #:use-module (ice-9 format)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-1)
@@ -26,11 +27,23 @@
 (define-record-type <site-page>
   (%make-site-page id title document source metadata)
   site-page?
-  (id site-page-id)
-  (title site-page-title)
+  (id site-page-id/raw)
+  (title site-page-title/raw)
   (document site-page-document)
-  (source site-page-source)
-  (metadata site-page-metadata))
+  (source site-page-source/raw)
+  (metadata site-page-metadata/raw))
+
+(define (site-page-id page)
+  (snapshot-data (site-page-id/raw page)))
+
+(define (site-page-title page)
+  (snapshot-data (site-page-title/raw page)))
+
+(define (site-page-source page)
+  (snapshot-data (site-page-source/raw page)))
+
+(define (site-page-metadata page)
+  (snapshot-data (site-page-metadata/raw page)))
 
 (define* (make-site-page id title document #:optional (source #f)
                          #:key (metadata '()))
@@ -53,28 +66,47 @@
                           (loop (cdr entries)
                                 (cons (caar entries) keys))))))
     (error "site page metadata must have unique symbol keys" metadata))
-  (%make-site-page id title document source metadata))
+  (%make-site-page (snapshot-data id)
+                   (snapshot-data title)
+                   document
+                   (snapshot-data source)
+                   (snapshot-data metadata)))
 
 (define-record-type <site>
   (%make-site pages title sources description home)
   site?
-  (pages site-pages)
-  (title site-title)
-  (sources site-sources)
-  (description site-description)
-  (home site-home))
+  (pages site-pages/raw)
+  (title site-title/raw)
+  (sources site-sources/raw)
+  (description site-description/raw)
+  (home site-home/raw))
+
+(define (site-pages site)
+  (snapshot-data (site-pages/raw site)))
+
+(define (site-title site)
+  (snapshot-data (site-title/raw site)))
+
+(define (site-sources site)
+  (snapshot-data (site-sources/raw site)))
+
+(define (site-description site)
+  (snapshot-data (site-description/raw site)))
+
+(define (site-home site)
+  (snapshot-data (site-home/raw site)))
 
 (define* (make-site pages #:key (title "Site") (description #f)
                     (sources '()) (home #f))
-  (unless (every site-page? pages)
+  (unless (and (list? pages) (every site-page? pages))
     (error "site requires pages" pages))
   (unless (non-empty-string? title)
     (error "site requires a title" title))
   (unless (or (not description)
               (non-empty-string? description))
     (error "site description must be a non-empty string or #f" description))
-  (unless (and (list? sources) (every string? sources))
-    (error "site sources must be a list of paths" sources))
+  (unless (and (list? sources) (every non-empty-string? sources))
+    (error "site sources must be a list of non-empty paths" sources))
   (unless (or (not home) (non-empty-string? home))
     (error "site home must be a page ID or #f" home))
   (let* ((seen (make-hash-table))
@@ -99,4 +131,8 @@
                              pages)))))
     (when (and home (not (hash-ref seen home)))
       (error "site home page was not found" home))
-    (%make-site pages title sources description home)))
+    (%make-site (snapshot-data pages)
+                (snapshot-data title)
+                (snapshot-data sources)
+                (snapshot-data description)
+                (snapshot-data home))))
