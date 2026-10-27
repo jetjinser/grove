@@ -79,8 +79,11 @@
     (test-error "artifact validation rejects duplicate paths" #t
       (validate-artifacts (list (make-artifact "a" "1")
                                 (make-artifact "a" "2"))))
-    (test-error "artifact validation rejects reserved paths without writing" #t
-      (validate-artifacts (list (make-artifact ".grove-build-state/data" "x"))))
+    (test-equal "artifact validation accepts Grove-named output paths"
+      '(".grove-build-state/data")
+      (map artifact-path
+        (validate-artifacts
+          (list (make-artifact ".grove-build-state/data" "x")))))
     (call-with-output-file
       (string-append (grove-cache-directory output) "/.grove-build-state")
       (lambda (port) (display "invalid state" port)))

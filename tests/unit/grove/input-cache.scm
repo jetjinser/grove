@@ -339,7 +339,10 @@
     (test-equal "entries outside the current selection are removed"
       '("." "..") (scandir (string-append (grove-store-directory)
                                           "/input-cache")))
-    (test-error "input cache directory is reserved from artifacts" #t
-      (validate-artifacts (list (make-artifact ".grove-input-cache/user" "x")))))
+    (test-equal "input cache path is an ordinary artifact path"
+      '(".grove-input-cache/user")
+      (map artifact-path
+        (validate-artifacts
+          (list (make-artifact ".grove-input-cache/user" "x"))))))
   (lambda () (system* "rm" "-rf" root)))
 (test-end "document result cache")

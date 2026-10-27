@@ -87,38 +87,6 @@
 (define artifact-manifest-name ".grove-artifacts")
 (define artifact-manifest-temp-name ".grove-artifacts.tmp")
 
-(define legacy-metadata-names
-  '(".grove-artifacts" ".grove-artifacts.tmp"
-    ".grove-build-state" ".grove-build-state.tmp"
-    ".grove-input-cache"
-    ".grove-build-lock"))
-
-(define (delete-tree path)
-  (if (file-is-directory? path)
-      (begin
-        (for-each (lambda (entry)
-                    (unless (member entry '("." ".."))
-                      (delete-tree (string-append path "/" entry))))
-                  (scandir path))
-        (rmdir path))
-      (delete-file path)))
-
-(define (delete-legacy-metadata directory)
-  ;;     Earlier versions kept these inside the output directory.
-  (for-each (lambda (name)
-              (let ((path (string-append directory "/" name)))
-                (when (file-exists? path)
-                  (delete-tree path))))
-            legacy-metadata-names))
-
-(define (reserved-artifact-path? path)
-  (any (lambda (reserved)
-         (or (string=? path reserved)
-             (string-prefix? (string-append reserved "/") path)))
-       (list artifact-manifest-name artifact-manifest-temp-name
-             ".grove-build-state" ".grove-build-state.tmp"
-             ".grove-input-cache" ".grove-build-lock")))
-
 (define (read-artifact-manifest path)
   (if (not (file-exists? path))
       '()
@@ -130,11 +98,7 @@
                          (= (length manifest) 2)
                          (eq? (car manifest) 'grove-artifacts-v1)
                          (list? (cadr manifest))
-                         (every (lambda (artifact-path)
-                                  (and (artifact-path? artifact-path)
-                                       (not (reserved-artifact-path?
-                                              artifact-path))))
-                                (cadr manifest))
+                         (every artifact-path? (cadr manifest))
                          (eof-object? (read port)))
               (error "invalid Grove artifact manifest" path manifest))
             (cadr manifest))))))
@@ -171,8 +135,6 @@
   (let ((paths (map artifact-path/raw artifacts)))
     (unless (= (length paths) (length (delete-duplicates paths string=?)))
       (error "duplicate artifact path" paths))
-    (when (any reserved-artifact-path? paths)
-      (error "artifact path is reserved for Grove metadata" paths))
     (for-each
       (lambda (path)
         (let loop ((parent (dirname path)))
@@ -279,5 +241,4 @@
                     (member stale-path conflicting-stale-paths string=?))
           (remove-stale-artifact! directory stale-path)))
       previous-paths)
-    (write-artifact-manifest manifest-path manifest-temp-path paths)
-    (delete-legacy-metadata directory)))
+    (write-artifact-manifest manifest-path manifest-temp-path paths)))

@@ -95,6 +95,21 @@
     (test-equal "artifact writer preserves files absent from its manifest"
       "user-owned"
       (call-with-input-file unmanaged-path get-string-all))
+    (mkdir (string-append output-directory "/.grove-input-cache"))
+    (call-with-output-file (string-append output-directory "/.grove-input-cache/user")
+      (lambda (port) (display "user cache" port)))
+    (call-with-output-file (string-append output-directory "/.grove-build-state")
+      (lambda (port) (display "user state" port)))
+    (write-artifacts output-directory
+      (list (make-artifact "nested/page.txt" "updated content")))
+    (test-equal "artifact writes preserve unmanaged Grove-named files"
+      '("user cache" "user state")
+      (list (call-with-input-file
+              (string-append output-directory "/.grove-input-cache/user")
+              get-string-all)
+            (call-with-input-file
+              (string-append output-directory "/.grove-build-state")
+              get-string-all)))
     (test-equal "artifact writer refreshes current artifact contents"
       "updated content"
       (call-with-input-file output-path get-string-all))
@@ -152,18 +167,15 @@
         (test-equal "UTF-8 comparison preserves unchanged artifacts" 0
           (stat:mtime (stat output-path)))
         (write-artifacts output-directory '())))
-    (test-error "artifact manifest path is reserved" #t
-      (write-artifacts output-directory
-        (list (make-artifact ".grove-artifacts" "user data"))))
-    (test-error "artifact manifest directory is reserved" #t
-      (write-artifacts output-directory
-        (list (make-artifact ".grove-artifacts/data" "user data"))))
-    (test-error "build state path is reserved" #t
-      (write-artifacts output-directory
-        (list (make-artifact ".grove-build-state" "user data"))))
-    (test-error "build state directory is reserved" #t
-      (write-artifacts output-directory
-        (list (make-artifact ".grove-build-state/data" "user data")))))
+    (test-equal "Grove-named output paths are ordinary artifact paths"
+      '(".grove-artifacts" ".grove-build-state/data"
+        ".grove-input-cache/user" ".grove-build-lock")
+      (map artifact-path
+        (validate-artifacts
+          (list (make-artifact ".grove-artifacts" "user data")
+                (make-artifact ".grove-build-state/data" "user data")
+                (make-artifact ".grove-input-cache/user" "user data")
+                (make-artifact ".grove-build-lock" "user data"))))))
   (lambda () (system* "rm" "-rf" test-root)))
 
 (test-end "grove output")
