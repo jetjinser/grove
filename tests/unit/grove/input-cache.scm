@@ -309,6 +309,29 @@
         (build-project uncached)
         (build-project uncached)
         (test-equal "renderer opt-out forces rendering on every build" 4 renders)))
+      (let* ((cached-runs 0)
+             (uncached-runs 0)
+             (mixed
+              (make-project
+                #:collect-sources (lambda () (list source))
+                #:read-source (lambda (path)
+                                (call-with-input-file path get-string-all))
+                #:renderers
+                (list
+                  (make-cached-renderer
+                    (lambda (_)
+                      (set! cached-runs (+ cached-runs 1))
+                      (list (make-artifact "cached.txt" "cached"))))
+                  (make-cached-renderer
+                    (lambda (_)
+                      (set! uncached-runs (+ uncached-runs 1))
+                      (list (make-artifact "uncached.txt" "uncached")))
+                    #:cache? #f))
+                #:output-directory (string-append root "/mixed"))))
+        (build-project mixed)
+        (build-project mixed)
+        (test-equal "one uncached renderer disables the shared artifact cache"
+          '(2 2) (list cached-runs uncached-runs)))
     (prune-input-cache! (make-input-cache-context output #t '()))
     ;;     The prune owns the input-cache subtree: entries outside the
     ;;   current selection go, while sibling subtrees (artifacts) are

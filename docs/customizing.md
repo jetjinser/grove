@@ -26,7 +26,13 @@ This is the shortest path from “I want to change X” to the right Grove API.
 | generate files from declared inputs with an external tool | an asset pipeline | `#:pipelines` |
 | choose the complete renderer set for a site | a renderer list | `make-site-project #:renderers` |
 | cache behavior for any project kind | project options | `project-with-options #:cache?` |
-| one renderer's cache behavior | cached renderer constructor | `make-*-renderer #:cache?`, `#:rules-id` |
+| renderer-set cache eligibility | cached renderer constructor | `make-*-renderer #:cache?`, `#:rules-id` |
+
+Renderers share one artifact-cache identity. If any renderer opts out with
+`#:cache? #f` or has opaque rules without a `#:rules-id`, Grove reruns the
+whole renderer set on each build. This conservative boundary keeps ordered
+renderers over a shared model predictable. Use `project-with-options
+#:cache? #f` to disable both document and artifact caching for a project.
 
 If the change is about *how one node is interpreted*, use rules.  If it is
 about *the environment of a render pass*, use a context.  If it is about

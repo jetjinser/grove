@@ -203,6 +203,11 @@ IR; renderer hits reuse artifacts. Shared code changes conservatively force
 full rendering. Standalone reader calls evaluate normally; `check` bypasses
 published caches.
 
+Renderer artifacts share one cache identity. If any renderer opts out with
+`#:cache? #f`, or has opaque rules without a stable `#:rules-id`, Grove reruns
+the whole renderer set on every build. This keeps the cache boundary
+conservative because renderers run in order over the same project model.
+
 Project files, imported modules, loader dependencies, framework source/data,
 compiled files, and effective renderer settings are fingerprinted automatically.
 Module search paths and absent preferred compiled files are also tracked.
