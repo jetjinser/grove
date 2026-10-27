@@ -614,6 +614,8 @@
           #:assumptions '("scalar(x); scalar(y)") #:steps '(add-zero multiply-one)))))
   (test-error "authored annotations must cover every adjacent pair" #t
     (φ:check-chain '("x + 0" "x") #:assumptions '("scalar(x)") #:steps '()))
+  (test-error "Formula chains require a list of source lines" #t
+    (φ:check-chain "x + 0"))
   (test-error "authored chains require at least two lines" #t (φ:check-chain '("0")))
   (test-equal "malformed certificates return diagnostics"
     '(invalid-chain)

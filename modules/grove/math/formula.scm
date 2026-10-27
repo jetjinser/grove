@@ -165,6 +165,8 @@
 
 (define-public check-chain
   (lambda* (sources #:key (assumptions '()) (steps #f) (rules #f))
+    (unless (list? sources)
+      (error "Formula check-chain requires a list of source lines" sources))
     (core:math-check-chain (map read sources)
       #:assumptions (parse-assumptions (list assumptions)) #:steps steps #:rules rules)))
 
