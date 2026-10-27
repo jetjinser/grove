@@ -7,6 +7,7 @@
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove build)
   #:use-module (grove private build-state)
+  #:use-module (grove private html-attributes)
   #:use-module (grove i18n)
   #:use-module (grove private string-fun)
   #:use-module (forester private render artifact)
@@ -1042,16 +1043,6 @@ to the lane, and an in-place numbered marker links to it."
   (hreflang? html-options-hreflang?)
   (language-switcher? html-options-language-switcher?))
 
-(define (valid-html-attributes? attributes)
-  (and (list? attributes)
-       (every (lambda (entry)
-                (and (pair? entry)
-                     (symbol? (car entry))
-                     (string? (cdr entry))))
-              attributes)
-       (= (length attributes)
-          (length (delete-duplicates (map car attributes) eq?)))))
-
 (define (valid-side-lane? kinds)
   (and (list? kinds)
        (every symbol? kinds)
@@ -1124,7 +1115,7 @@ Entry points take this value with #:options."
     (validate-chrome-options locale messages)
     (when (string? locale)
       (set! locale (locale-tag (make-locale locale))))
-    (unless (valid-html-attributes? html-attributes)
+    (unless (valid-html-attribute-list? html-attributes)
       (error "HTML root attributes must be unique symbol/string pairs"
              html-attributes))
     (unless (valid-side-lane? side-lane)

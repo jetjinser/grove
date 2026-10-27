@@ -4,6 +4,7 @@
 
 (define-module (grove style html)
   #:use-module ((grove private artifact) #:prefix out:)
+  #:use-module (grove private html-attributes)
   #:use-module (grove output)
   #:use-module (grove private snapshot)
   #:use-module (rnrs bytevectors)
@@ -72,21 +73,9 @@ With no arguments, return an empty HTML style."
 (define (html-attributes-assoc attributes)
   (snapshot-data (html-attributes-assoc/raw attributes)))
 
-(define (valid-html-attributes? assoc)
-  (and (list? assoc)
-       (every (lambda (attribute)
-                (and (pair? attribute)
-                     (symbol? (car attribute))
-                     (string? (cdr attribute))))
-              assoc)
-       (let loop ((remaining assoc) (seen '()))
-         (or (null? remaining)
-             (and (not (memq (caar remaining) seen))
-                  (loop (cdr remaining) (cons (caar remaining) seen)))))))
-
 (define (make-html-attributes assoc)
   "Add HTML attributes to the tag produced for a styled content element."
-  (unless (valid-html-attributes? assoc)
+  (unless (valid-html-attribute-list? assoc)
     (error "HTML attributes must be unique symbol/string pairs" assoc))
   (%make-html-attributes (snapshot-data assoc)))
 
