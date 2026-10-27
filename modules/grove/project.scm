@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove project)
+  #:use-module (grove private project model)
   #:use-module (grove private project lifecycle)
   #:re-export (project?
                make-project
