@@ -49,6 +49,10 @@ may omit `*`: `6x`, `6x^2`, `6(x+1)`, `6sin(x)`. Other adjacent identifiers
 remain one name (`xy`), and `f(x)` is a function call. Ambiguous `1/2x` is
 rejected; write `(1/2)*x` or `1/(2x)`.
 
+`φ:read` reads one expression. `φ:read-lines` reads a multiline sequence,
+returning one Semantic value for each nonblank line. `@check-derive` uses this
+form so each authored line is one step in the chain.
+
 ## Meaning and assumptions
 
 Expressions are checked against their declared types and computational
@@ -106,6 +110,16 @@ they applied. Supply assumptions in its argument when required:
 `@check-equation` instead checks an equation by reducing its residual. These
 checks establish only what the supported rules and calculation domain justify;
 they do not prove assumptions or validate an external mathematical model.
+
+Write one expression per line inside `@check-derive`; blank lines are ignored:
+
+```scribble
+@check-derive[#:view 'full]{
+  differentiate(log(x),x)
+  differentiate(x,x)/x
+  1/x
+}
+```
 
 Derivation and step records snapshot their term trees, paths, assumptions, and
 ordered collections. Accessors return independent copies, so changing a
