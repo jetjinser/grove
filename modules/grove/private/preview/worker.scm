@@ -4,6 +4,7 @@
 (define-module (grove private preview worker)
   #:use-module ((grove private artifact) #:prefix out:)
   #:use-module (grove project)
+  #:use-module (grove private project lifecycle)
   #:use-module (grove project load)
   #:use-module (grove private cache-dir)
   #:use-module (grove private build-lock)
@@ -21,9 +22,6 @@
   #:use-module (srfi srfi-11)
   #:use-module (srfi srfi-13)
   #:export (worker-main))
-
-(define rebuild-from-forest
-  (@@ (grove project) rebuild-from-forest))
 
 (define (existing-files paths)
   (filter (lambda (path)
