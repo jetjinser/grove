@@ -12,7 +12,7 @@
   #:use-module (forester render site)
   #:use-module (forester site)
   #:use-module (srfi srfi-1)
-  #:export (translation-groups
+  #:export (derive-translation-groups
             make-site-render-context))
 
 ;; Each renderer entry point builds a site-level context for one render pass;
@@ -40,8 +40,6 @@
     (map (lambda (key)
            (cons key (reverse (hash-ref groups key))))
          (reverse keys))))
-
-(define translation-groups derive-translation-groups)
 
 (define (valid-translation-groups? groups)
   (and (list? groups)

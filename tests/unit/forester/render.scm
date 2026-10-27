@@ -48,7 +48,7 @@
                                    (make-content-document '())
                                    #:metadata
                                    `((translation . ,(string-copy "guide"))))))))
-       (groups (translation-groups (pages forest))))
+       (groups (derive-translation-groups (pages forest))))
   (test-equal "translation groups follow first occurrence and site page order"
     '(("guide" "guide-en" "guide-zh")
       ("notes" "notes"))

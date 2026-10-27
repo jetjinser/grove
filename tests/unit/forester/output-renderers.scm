@@ -36,7 +36,7 @@
 
 (test-equal "translation groups use association-list data"
   (list (cons "guide" (list (car (pages forest)) (cadr (pages forest)))))
-  (translation-groups (pages forest)))
+  (derive-translation-groups (pages forest)))
 
 (let* ((settings (make-site-settings
                    #:site-url "https://example.org"

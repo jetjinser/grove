@@ -119,7 +119,7 @@
   (let* ((base (web-base-url site-url))
          (route-table
            (html-route-table routes (map site-page-id (pages forest))))
-         (groups (translation-groups (pages forest)))
+         (groups (derive-translation-groups (pages forest)))
          (content (sitemap-document base routes route-table groups
                                     default-locale (pages forest))))
     (list (make-artifact sitemap-path content (source-paths forest)))))
