@@ -492,6 +492,17 @@
     (string-contains
       (cdr (assoc "algebra" (site->html forest #:options options)))
       "lang=\"en\"")))
+(let* ((mathjax-src (string-copy "assets/mathjax.js"))
+       (options
+         (make-html-options
+           #:routes (make-html-routes #:home-page "algebra")
+           #:mathjax-src mathjax-src))
+       (forest (make-forest (make-site (list algebra limits)))))
+  (string-set! mathjax-src 0 #\X)
+  (test-assert "HTML options snapshot their MathJax source"
+    (string-contains
+      (cdr (assoc "algebra" (site->html forest #:options options)))
+      "src=\"/assets/mathjax.js\"")))
 (test-error "HTML renderer rejects unstable rules IDs" #t
   (make-html-renderer #:rules-id '(unstable value)))
 (test-error "text renderer rejects unstable rules IDs" #t

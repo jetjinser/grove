@@ -1087,6 +1087,7 @@ Entry points take this value with #:options."
          (locale (snapshot-data locale))
          (default-locale (snapshot-data default-locale))
          (site-url (snapshot-data site-url))
+         (mathjax-src (snapshot-data mathjax-src))
          (og-image (snapshot-data og-image))
          (og-image-alt (snapshot-data og-image-alt))
          (presentation
