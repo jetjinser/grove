@@ -102,14 +102,17 @@
     (lambda (port)
       (write (list 'grove-pipeline-index 1 dependencies entries) port))))
 
-(define (run-pipeline-procedure pipeline identity inputs)
+(define (run-pipeline-procedure pipeline identity inputs cache?)
   (let ((entries '()) (artifacts '()))
     (define (emit path content)
       (unless (or (string? content) (bytevector? content))
         (error "asset pipelines emit strings or bytevectors" path content))
       (unless (artifact-path? path)
         (error "asset pipeline emitted an invalid artifact path" path))
-      (let ((fingerprint (publish-content-blob! content)))
+      (let ((fingerprint
+              (if cache?
+                  (publish-content-blob! content)
+                  (content-fingerprint content))))
         (set! entries (cons (cons path fingerprint) entries))
         (set! artifacts
               (cons ((if (string? content) make-artifact make-byte-artifact)
@@ -136,7 +139,8 @@
         (unless (pair? entry-list)
           (error "asset pipeline emitted no outputs"
                  (asset-pipeline-name pipeline)))
-        (write-pipeline-index identity dependencies entry-list)
+        (when cache?
+          (write-pipeline-index identity dependencies entry-list))
         (map (lambda (artifact)
                ((if (string? (out:artifact-content/raw artifact))
                     make-artifact make-byte-artifact)
@@ -145,10 +149,13 @@
                 (pipeline-artifact-sources inputs dependencies)))
              artifact-list)))))
 
-(define (run-asset-pipelines pipelines project-key)
+(define* (run-asset-pipelines pipelines project-key #:key (cache? #t))
   "Run every declared asset pipeline; return (artifacts . owners),
 where each owner maps the artifact path to the pipeline name for the
-build state's renderer field."
+build state's renderer field. CACHE? controls reads and writes to the
+shared content store."
+  (unless (boolean? cache?)
+    (error "pipeline cache option must be a boolean" cache?))
   (let loop ((pipelines pipelines) (artifacts '()) (owners '()))
     (if (null? pipelines)
         (cons (reverse artifacts) (reverse owners))
@@ -156,8 +163,10 @@ build state's renderer field."
                (name (asset-pipeline-name pipeline))
                (inputs (pipeline-input-table pipeline))
                (identity (pipeline-identity pipeline project-key inputs))
-               (produced (or (restore-pipeline-artifacts identity inputs)
-                             (run-pipeline-procedure pipeline identity inputs)))
+               (produced (or (and cache?
+                                  (restore-pipeline-artifacts identity inputs))
+                             (run-pipeline-procedure pipeline identity inputs
+                                                     cache?)))
                (markers (map (lambda (artifact)
                                (cons (out:artifact-path/raw artifact) name))
                              produced)))

@@ -413,7 +413,9 @@ Return the internal analysis record used by the build pipeline."
          (pipeline-result
            (parameterize ((current-input-fingerprints (make-hash-table)))
              (run-asset-pipelines (project-pipelines project)
-                                  (current-project-key))))
+                                  (current-project-key)
+                                  #:cache? (and write?
+                                                (project-cache? project)))))
          (pipeline-artifacts (car pipeline-result))
          (pipeline-owners (cdr pipeline-result))
          (pipeline-declared-sources
@@ -619,7 +621,8 @@ analysis results - pages, relations, indexes - come from the forest."
               (pipeline-result
                (parameterize ((current-input-fingerprints (make-hash-table)))
                  (run-asset-pipelines (project-pipelines project)
-                                      (current-project-key))))
+                                      (current-project-key)
+                                      #:cache? (project-cache? project))))
               (pipeline-artifacts (car pipeline-result))
               (pipeline-owners (cdr pipeline-result))
               (retired (retired-pipeline-paths pipeline-artifacts

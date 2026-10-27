@@ -6,6 +6,7 @@
   #:use-module (grove private build-state)
   #:use-module (grove output)
   #:use-module (grove private cache-dir)
+  #:use-module (grove pipeline)
   #:use-module (grove project)
   #:use-module (grove project diagnostic)
   #:use-module (ice-9 ftw)
@@ -16,6 +17,7 @@
 (define output (string-append root "/output"))
 (define source (string-append root "/source.txt"))
 (define renders 0)
+(define pipeline-runs 0)
 (define broken? #f)
 (define artifacts (list (make-artifact "page.txt" "success")))
 (define project
@@ -89,7 +91,37 @@
       (lambda (port) (display "invalid state" port)))
     (set! artifacts '())
     (test-assert "check does not read malformed output cache state"
-      (null? (build-report-artifacts (check-project project)))))
+      (null? (build-report-artifacts (check-project project))))
+    (let* ((pipeline-name (format #f "check-pipeline-~a" (getpid)))
+           (pipeline
+            (make-asset-pipeline
+              #:name pipeline-name
+              #:procedure
+              (lambda (_ emit)
+                (set! pipeline-runs (+ pipeline-runs 1))
+                (emit "derived.txt" "pipeline output"))))
+           (pipeline-project
+            (make-project
+              #:collect-sources (lambda () '())
+              #:read-source (lambda (_) #f)
+              #:pipelines (list pipeline)
+              #:output-directory (string-append root "/pipeline-output"))))
+      (build-project pipeline-project)
+      (build-project pipeline-project)
+      (test-equal "ordinary project builds reuse pipeline output" 1 pipeline-runs)
+      (check-project pipeline-project)
+      (check-project pipeline-project)
+      (test-equal "project checks bypass pipeline cache reads and writes"
+        3 pipeline-runs)
+      (build-project pipeline-project)
+      (test-equal "checks leave the previous pipeline cache entry intact"
+        3 pipeline-runs)
+      (let ((uncached-project
+              (project-with-options pipeline-project #:cache? #f)))
+        (build-project uncached-project)
+        (build-project uncached-project)
+        (test-equal "disabling project caching also disables pipeline reuse"
+          5 pipeline-runs))))
   (lambda ()
     (system* "rm" "-rf" root)))
 (let* ((message (string-append (make-string 900 #\x) "END-OF-DIAGNOSTIC"))
