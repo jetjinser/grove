@@ -72,8 +72,11 @@
   (make-artifact* path content sources))
 
 (define (prefix-artifacts prefix artifacts)
+  "Prefix every artifact path while preserving its content and sources.
+Validate ARTIFACTS as one complete set before prefixing it."
   (unless (artifact-path? prefix)
     (error "artifact prefix requires a relative path" prefix))
+  (validate-artifacts artifacts)
   (map (lambda (artifact)
          ((if (string? (artifact:artifact-content/raw artifact)) make-artifact
               make-byte-artifact)
@@ -128,7 +131,7 @@
 (define (validate-artifacts artifacts)
   "Validate the complete output set without accessing the filesystem."
   (unless (and (list? artifacts) (every artifact? artifacts))
-    (error "renderers must return a list of artifacts" artifacts))
+    (error "expected a list of artifacts" artifacts))
   (let ((paths (map artifact:artifact-path/raw artifacts)))
     (unless (= (length paths) (length (delete-duplicates paths string=?)))
       (error "duplicate artifact path" paths))

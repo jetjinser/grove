@@ -65,6 +65,29 @@
 
 (test-error "artifact sources reject empty paths" #t
   (make-artifact "page.txt" "content" '("")))
+(test-error "artifact prefix requires a relative path" #t
+  (prefix-artifacts "../assets" '()))
+(test-error "artifact prefix requires a list of artifacts" #t
+  (prefix-artifacts "assets" '(not-an-artifact)))
+(test-error "artifact prefix validates the complete artifact set" #t
+  (prefix-artifacts "assets"
+    (list (make-artifact "page.txt" "one")
+          (make-artifact "page.txt" "two"))))
+(let ((sources '("page.plant")))
+  (test-equal "prefixing preserves text, byte content, and source paths"
+    '("assets/page.txt" "text" ("page.plant")
+      "assets/image.bin" (0 255) ("page.plant"))
+    (let ((artifacts
+            (prefix-artifacts "assets"
+              (list (make-artifact "page.txt" "text" sources)
+                    (make-byte-artifact "image.bin"
+                      (u8-list->bytevector '(0 255)) sources)))))
+      (list (artifact-path (car artifacts))
+            (artifact-content (car artifacts))
+            (artifact-sources (car artifacts))
+            (artifact-path (cadr artifacts))
+            (bytevector->u8-list (artifact-content (cadr artifacts)))
+            (artifact-sources (cadr artifacts))))))
 
 (dynamic-wind
   (lambda () (system* "rm" "-rf" test-root))

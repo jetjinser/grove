@@ -114,6 +114,8 @@ need to call them.
 Artifacts use the same ownership rule: `make-artifact` and
 `make-byte-artifact` snapshot their path, content, and source paths. The public
 `artifact-content` accessor returns a fresh string or bytevector.
+`prefix-artifacts` places a validated artifact set under a relative output
+directory while preserving each artifact's content and source dependencies.
 
 HTML presentation, home-link, and navigation-link values apply the same rule
 to their SXML, labels, IDs, and attribute lists. Their accessors return copies
