@@ -158,6 +158,13 @@
   (make-project #:source-directory "sources"
                 #:read-source (lambda (_) #f)
                 #:output-directory ""))
+(test-equal "explicit source collector takes precedence over source directory"
+  '("selected.plant")
+  (collect-project-sources
+    (make-project #:source-directory "unused-directory"
+                  #:collect-sources (lambda () '("selected.plant"))
+                  #:read-source (lambda (_) #f)
+                  #:output-directory "output")))
 (test-equal "project options diagnose malformed additional sources early"
   #t
   (catch 'misc-error

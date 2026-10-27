@@ -138,8 +138,10 @@ files. `(grove collect)` exposes `collect-directory` for custom collectors;
 its optional predicate sees each regular file basename, and by default it
 accepts hidden file basenames while still skipping hidden directories and
 special files.
-`#:source-filter` selects
-basenames; `#:collect-sources` supplies an ordered path list instead. `#:prepare`
+`#:source-filter` selects basenames; `#:collect-sources` supplies the ordered
+input paths instead of directory traversal. Both options can be supplied:
+the collector determines which paths are read, while `#:source-directory`
+remains the default destination for `create-project-source`. `#:prepare`
 runs before reading and returns additional tracked paths. It can load shared
 modules, but does not import their commands into individual articles.
 `#:extra-sources` declares other inputs.

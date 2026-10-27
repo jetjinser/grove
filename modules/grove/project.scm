@@ -212,8 +212,10 @@ defaults to the project's source directory."
 Provide SOURCE-DIRECTORY or COLLECT-SOURCES, READ-SOURCE, and
 OUTPUT-DIRECTORY. When COLLECT-SOURCES is absent, Grove recursively collects
 regular files from SOURCE-DIRECTORY using SOURCE-FILTER on each basename.
-COLLECT-SOURCES instead returns the ordered source path list. PREPARE returns
-additional tracked paths before reading; ANALYZE receives a project context;
+When supplied, COLLECT-SOURCES determines the ordered source path list instead;
+SOURCE-DIRECTORY may still be supplied as the default destination for
+CREATE-PROJECT-SOURCE. PREPARE returns additional tracked paths before reading;
+ANALYZE receives a project context;
 each RENDERER receives the analyzed model and returns artifacts. PIPELINES
 derive artifacts from declared files independently of the model. CACHE? controls
 document, renderer, and pipeline cache use."
