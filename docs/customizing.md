@@ -28,6 +28,14 @@ This is the shortest path from “I want to change X” to the right Grove API.
 | cache behavior for any project kind | project options | `project-with-options #:cache?` |
 | renderer-set cache eligibility | cached renderer constructor | `make-*-renderer #:cache?`, `#:rules-id` |
 
+HTML routes distinguish output paths from URLs. `#:page-path` and
+`#:index-path` choose artifact paths relative to the project's output
+directory. `#:url-prefix` is added to links emitted by the renderers; it does
+not move artifacts into a matching subdirectory. Set the project output
+directory to choose where files are written, and reuse the same routes for
+HTML, RSS, and sitemap so their links agree. The site's origin belongs in the
+RSS or sitemap renderer's `#:site-url` option.
+
 Renderers share one artifact-cache identity. If any renderer opts out with
 `#:cache? #f` or has opaque rules without a `#:rules-id`, Grove reruns the
 whole renderer set on each build. This conservative boundary keeps ordered
