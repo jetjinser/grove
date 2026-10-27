@@ -298,6 +298,7 @@ document, renderer, and pipeline cache use."
   (call-with-project-stage 'read path (lambda () (read-source path))))
 
 (define (collect-project-sources project)
+  "Return PROJECT's validated source paths as independent data."
   (let ((paths
           ((or (project-collect-sources project)
                (lambda ()
@@ -310,7 +311,7 @@ document, renderer, and pipeline cache use."
       (error "project collector must return a list of source paths" paths))
     (when (not (= (length paths) (length (delete-duplicates paths string=?))))
       (error "project collector returned duplicate paths" paths))
-    paths))
+    (snapshot-data paths)))
 
 (define (prepare-project-sources prepare)
   (let ((paths
@@ -322,7 +323,7 @@ document, renderer, and pipeline cache use."
       (error "project preparation must return source paths" paths))
     (when (not (= (length paths) (length (delete-duplicates paths string=?))))
       (error "project preparation returned duplicate paths" paths))
-    paths))
+    (snapshot-data paths)))
 
 (define* (analyze-project/result project write?
                                 #:key (progress (lambda (stage path) #t)))

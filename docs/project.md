@@ -95,7 +95,8 @@ additional tracked inputs, or a cache setting; the original project is unchanged
 Project constructors snapshot declared path strings and list containers, and
 configuration accessors return fresh copies of those values. Reader, analyzer,
 renderer, collector, and preparation procedures remain the project author's
-code and are retained as callbacks.
+code and are retained as callbacks. Paths returned by collector and preparation
+callbacks are copied before Grove reads them or includes them in analysis.
 
 Build reports snapshot their source, artifact, and change lists. Their list
 accessors return independent copies, so a caller can annotate or filter a

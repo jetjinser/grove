@@ -165,6 +165,22 @@
                   #:collect-sources (lambda () '("selected.plant"))
                   #:read-source (lambda (_) #f)
                   #:output-directory "output")))
+(let* ((path (string-copy "selected.plant"))
+       (collector-paths (list path))
+       (project
+         (make-project #:collect-sources (lambda () collector-paths)
+                       #:read-source (lambda (_) #f)
+                       #:output-directory "output"))
+       (collected (collect-project-sources project)))
+  (string-set! path 0 #\x)
+  (test-equal "collected paths do not alias collector-owned strings"
+    "selected.plant"
+    (car collected))
+  (string-set! (car collected) 0 #\y)
+  (set-car! collected "other.plant")
+  (test-equal "collected paths do not alias the collector-owned list"
+    '("xelected.plant")
+    collector-paths))
 (test-equal "project options diagnose malformed additional sources early"
   #t
   (catch 'misc-error
