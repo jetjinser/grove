@@ -484,22 +484,24 @@
                    site)
                  #:renderers
                  (list
-                   (lambda (site)
-                     (set! events (append events '(render)))
-                     (append
-                       (list
-                         (make-artifact
-                           "text/summary.txt"
-                           (number->string (length (site-pages site)))
-                           (site-sources site)))
-                       (map (lambda (page)
-                              (make-artifact
-                                (string-append "pages/"
-                                               (site-page-id page) ".txt")
-                                (site-page-id page)
-                                (list (site-page-source page))))
-                            (site-pages site))
-                       (list (make-artifact "opaque.txt" "opaque")))))
+                   (make-cached-renderer
+                     (lambda (site)
+                       (set! events (append events '(render)))
+                       (append
+                         (list
+                           (make-artifact
+                             "text/summary.txt"
+                             (number->string (length (site-pages site)))
+                             (site-sources site)))
+                         (map (lambda (page)
+                                (make-artifact
+                                  (string-append "pages/"
+                                                 (site-page-id page) ".txt")
+                                  (site-page-id page)
+                                  (list (site-page-source page))))
+                              (site-pages site))
+                         (list (make-artifact "opaque.txt" "opaque"))))
+                     #:configuration 'configured-site-renderer))
                  #:output-directory output-directory))
              (report (build-project/report project))
              (artifacts (build-report-artifacts report)))

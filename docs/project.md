@@ -246,8 +246,11 @@ protocol.
 
 ## Dependencies and caching
 
-Projects, document readers, and built-in renderers cache by default. Set
-`#:cache? #f` to opt out; `project-with-options` applies this to any project,
+Projects and document readers cache by default, as do Grove's built-in
+renderers. Plain renderer procedures run on every build because a procedure
+does not have a stable cache identity. Wrap a renderer with
+`make-cached-renderer` to opt into artifact reuse. Set `#:cache? #f` to disable
+the project caches; `project-with-options` applies this to any project,
 including Forester projects. Both `make-site-project` and
 `make-forester-project` accept it directly. Readers accept a path predicate for
 finer control.
@@ -256,20 +259,20 @@ IR; renderer hits reuse artifacts. Shared code changes conservatively force
 full rendering. Standalone reader calls evaluate normally; `check` bypasses
 published caches.
 
-Renderer artifacts share one cache identity. If any renderer opts out with
-`#:cache? #f`, or has opaque rules without a stable `#:rules-id`, Grove reruns
-the whole renderer set on every build. This keeps the cache boundary
-conservative because renderers run in order over the same project model.
+Renderer artifacts share one cache identity. If any renderer is a plain
+procedure, opts out with `#:cache? #f`, or has opaque rules without a stable
+`#:rules-id`, Grove reruns the whole renderer set on every build. This keeps
+the cache boundary conservative because renderers run in order over the same
+project model.
 
 Project files, imported modules, loader dependencies, framework source/data,
 compiled files, and effective renderer settings are fingerprinted automatically.
 Module search paths and absent preferred compiled files are also tracked.
-Ordinary renderers need no hand-written cache key: project inputs and renderer
-configuration define cache reuse, and plain callbacks are assumed to depend on
-the analyzed model. Built-in factories include their settings;
-`make-cached-renderer` accepts `#:inputs` and `#:configuration` for custom
-renderers with dependencies Grove cannot observe, and opaque render rules need
-a stable `#:rules-id`.
+Built-in factories include their settings in cache identity. A custom cached
+renderer should declare extra files with `#:inputs` and any output-affecting
+state not represented by the model or tracked project files with
+`#:configuration`. Plain procedures avoid this declaration by running on every
+build. Opaque render rules need a stable `#:rules-id`.
 
 Asset pipelines fingerprint the project file, its load-time inputs, declared
 files, and Scheme files loaded while the pipeline runs. A self-contained
@@ -291,12 +294,12 @@ Time, randomness, network state, and effects that must repeat require opting
 out with `disable-cache!` or disabling reader caching. Imported module
 definitions remain uncached so their bindings exist in every build process.
 
-Renderers and pipelines are assumed deterministic for their tracked inputs and
-declared configuration. Grove verifies cached bytes against their content
-hashes, but cannot verify that a callback or external tool repeats the same
-output. Most project code should pass a plain renderer procedure and leave
-cache configuration alone; declare hidden dependencies only when a custom
-renderer or pipeline actually uses them.
+Cached renderers and pipelines are assumed deterministic for their tracked
+inputs and declared configuration. Grove verifies cached bytes against their
+content hashes, but cannot verify that a callback or external tool repeats the
+same output. A plain renderer procedure is the safe default and reruns on each
+build; use `make-cached-renderer` when avoiding that work is worth declaring a
+stable cache identity.
 
 Document entries live in the per-user shared content store,
 `$XDG_CACHE_HOME/grove/store/input-cache` (override the base with

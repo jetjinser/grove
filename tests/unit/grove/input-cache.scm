@@ -346,9 +346,28 @@
                     #:output-directory (string-append root "/plain"))))
       (build-project plain)
       (build-project plain)
-      (test-equal "plain project renderers cache by default without keys" 1 renders)
+      (test-equal "plain project renderers rerun without a cache declaration"
+        2 renders)
+      (let* ((replacement-renders 0)
+             (replacement
+              (make-project
+                #:collect-sources (lambda () (list source))
+                #:read-source (lambda (path)
+                                (call-with-input-file path get-string-all))
+                #:renderers
+                (list (lambda (_)
+                        (set! replacement-renders (+ replacement-renders 1))
+                        (list (make-artifact "plain.txt" "replacement"))))
+                #:output-directory (string-append root "/plain"))))
+        (build-project replacement)
+        (test-equal "a replacement renderer runs against an existing output cache"
+          1 replacement-renders)
+        (test-equal "replacement renderer output replaces the prior project's bytes"
+          "replacement"
+          (call-with-input-file (string-append root "/plain/plain.txt")
+            get-string-all)))
       (build-project (project-with-options plain #:cache? #f))
-      (test-equal "project opt-out forces rendering" 2 renders)
+      (test-equal "project opt-out forces rendering" 3 renders)
       (let ((uncached (make-project
                        #:collect-sources (lambda () (list source))
                        #:read-source (lambda (path) (call-with-input-file path get-string-all))
@@ -356,7 +375,7 @@
                        #:output-directory (string-append root "/plain"))))
         (build-project uncached)
         (build-project uncached)
-        (test-equal "renderer opt-out forces rendering on every build" 4 renders)))
+        (test-equal "renderer opt-out forces rendering on every build" 5 renders)))
       (let* ((cached-runs 0)
              (uncached-runs 0)
              (mixed

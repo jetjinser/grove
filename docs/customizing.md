@@ -38,11 +38,12 @@ HTML, RSS, and sitemap so their links agree. Set the absolute HTTP(S) site base
 with `#:site-url`; it may include a path prefix but cannot include a query or
 fragment.
 
-Renderers share one artifact-cache identity. If any renderer opts out with
-`#:cache? #f` or has opaque rules without a `#:rules-id`, Grove reruns the
-whole renderer set on each build. This conservative boundary keeps ordered
-renderers over a shared model predictable. Use `project-with-options
-#:cache? #f` to disable both document and artifact caching for a project.
+Renderers share one artifact-cache identity. If any renderer is a plain
+procedure, opts out with `#:cache? #f`, or has opaque rules without a
+`#:rules-id`, Grove reruns the whole renderer set on each build. This
+conservative boundary keeps ordered renderers over a shared model predictable.
+Use `project-with-options #:cache? #f` to disable both document and artifact
+caching for a project.
 
 If the change is about *how one node is interpreted*, use rules.  If it is
 about *the environment of a render pass*, use a context.  If it is about
@@ -107,14 +108,14 @@ content node into inline markup; the same experiment demonstrates this with
 SMathML. Declare external files and tool identity in the renderer or HTML
 configuration so cache reuse stays correct.
 
-The ordinary path needs no cache key: Grove wraps plain renderer procedures
-for caching and tracks project inputs. A pipeline may omit `#:inputs` when it
-does not read project files, and may keep the default empty `#:version` when
-its behavior is determined by project code and declared inputs. Add a version
-only for relevant state Grove cannot observe, such as an external toolchain
-version or environment variables. Use `make-cached-renderer` only when a
-renderer reads additional files or has hidden configuration; declare those
-dependencies so the cache stays correct.
+Plain renderer procedures run on each build because Scheme procedures have no
+stable cache identity. Use `make-cached-renderer` when artifact reuse is useful;
+declare extra files with `#:inputs` and state not represented by the model or
+tracked project files with `#:configuration`. A pipeline may omit `#:inputs`
+when it does not read project files, and may keep the default empty `#:version`
+when its behavior is determined by project code and declared inputs. Add a
+version for state Grove cannot observe, such as an external toolchain version
+or environment variables.
 
 Use a Scheme expression in `.plant` when the tool's result belongs inline in
 that document. Declare file reads with `depend-on!` from `(grove input
@@ -159,11 +160,11 @@ For example, a text summary can be added alongside the built-in renderers:
   (list (make-artifact "summary.txt" (forest->summary forest))))
 ```
 
-Pass `summary-renderer` in `make-site-project`'s `#:renderers` list. Grove
-wraps plain renderer procedures for caching. Use `make-cached-renderer` when
-the renderer reads inputs outside the model or needs an explicit cache
-configuration; declare those inputs there so Grove can invalidate its output
-correctly. See [project.md](project.md#dependencies-and-caching).
+Pass `summary-renderer` in `make-site-project`'s `#:renderers` list. Plain
+procedures rerun on each build. Wrap the renderer with `make-cached-renderer`
+when avoiding that work is worth declaring a stable cache identity; include
+extra inputs there so Grove can invalidate its output correctly. See
+[project.md](project.md#dependencies-and-caching).
 
 ## Options vs context
 

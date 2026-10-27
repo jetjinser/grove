@@ -219,7 +219,9 @@ CREATE-PROJECT-SOURCE. PREPARE returns additional tracked paths before reading;
 ANALYZE receives a project context;
 each RENDERER receives the analyzed model and returns artifacts. PIPELINES
 derive artifacts from declared files independently of the model. CACHE? controls
-document, renderer, and pipeline cache use."
+document, renderer, and pipeline cache use. Plain renderer procedures run on
+every build; wrap one with MAKE-CACHED-RENDERER only when its stable cache
+identity is declared."
   (unless (or (not source-directory) (string? source-directory))
     (error "project source directory must be a path or #f" source-directory))
   (when (and source-directory (not (non-empty-string? source-directory)))
@@ -266,9 +268,7 @@ document, renderer, and pipeline cache use."
   (%make-project (snapshot-data source-directory)
                  source-filter collect-sources prepare
                  (snapshot-data extra-sources) read-source analyze
-                 (map (lambda (renderer)
-                        (if (cached-renderer? renderer) renderer
-                            (make-cached-renderer renderer))) renderers)
+                 (append renderers '())
                  (snapshot-data output-directory) cache? browse
                  (snapshot-data pipelines) create-source))
 

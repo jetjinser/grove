@@ -43,7 +43,8 @@ renderer. If a project customizes page paths, pass the same route value to HTML,
 RSS, and sitemap so their canonical links agree.
 
 An extension can use a plain procedure from the analyzed model to an artifact
-list. Use `make-cached-renderer` when it needs cache configuration Grove cannot
+list; plain procedures rerun on each build. Wrap it with
+`make-cached-renderer` to reuse artifacts, declaring configuration Grove cannot
 infer. Built-in renderers return cache-aware renderer values and include their
 settings in cache identity.
 
