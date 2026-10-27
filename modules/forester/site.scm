@@ -286,7 +286,7 @@
                 tree-display? #:stop? tree-display?))
 
 (define (tree-occurrence-target element)
-  (ir:content-element-property/raw element
+  (content-element-property element
     (if (eq? (content-element-kind element) 'subtree) 'tree-id 'target)))
 
 (define (resolve-forest-queries forest anchor-index)

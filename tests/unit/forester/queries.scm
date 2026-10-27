@@ -42,6 +42,14 @@
 
 (test-begin "forester site queries")
 
+(let* ((target (string-copy "reusable-tree"))
+       (element (make-content-element 'transclude '()
+                  #:properties (list (cons 'target target))))
+       (exposed-target (tree-occurrence-target element)))
+  (string-set! exposed-target 0 #\X)
+  (test-equal "tree occurrence target accessors return independent strings"
+    "reusable-tree" (tree-occurrence-target element)))
+
 (let* ((source (page-with-links "source" '("target")))
        (target (page-with-links "target" '()))
        (forest (make-forest (make-site (list source target))))
