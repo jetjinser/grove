@@ -12,6 +12,7 @@
   #:use-module (grove private pipeline)
   #:use-module (grove private asset-pipeline)
   #:use-module (grove private project artifacts)
+  #:use-module (grove private project renderers)
   #:use-module (grove private project state)
   #:use-module (grove private renderer)
   #:use-module (grove build)
@@ -245,136 +246,6 @@
       (error "project prepare hook returned duplicate paths" paths))
     paths))
 
-(define (project-renderer-identity project model)
-  (let ((configurations (renderer-configurations model (project-renderers project))))
-    (and (project-cache? project) configurations
-         (content-fingerprint
-           (call-with-output-string
-             (lambda (port) (write (list (version) (setlocale LC_CTYPE) configurations) port)))))))
-
-(define (render-all model renderers progress)
-  (let loop ((renderers renderers)
-             (index 0)
-             (artifacts '())
-             (owners '()))
-    (if (null? renderers)
-        (list artifacts owners)
-        (let* ((start (get-internal-real-time))
-               (generated (call-with-project-stage 'render #f
-                            (lambda () (render-model model (list (car renderers))))))
-               (seconds (/ (- (get-internal-real-time) start)
-                           internal-time-units-per-second)))
-          (progress 'render-renderer (list index seconds (length generated)))
-          (loop (cdr renderers)
-                (+ index 1)
-                (append artifacts generated)
-                (append owners
-                        (map (lambda (artifact)
-                               (cons (artifact-path artifact) index))
-                             generated)))))))
-
-(define* (render-with-cache model renderers previous-entries cached-artifacts
-                            previous-sources changed progress
-                            #:key (model-retained? #f))
-  ;;     MODEL-RETAINED? promises that MODEL is the same analysis the
-  ;;     previous-entries were rendered from (the retained forest) and
-  ;;     that renderer configurations are unchanged (identity checked
-  ;;     by the caller).  render-model is then a pure function of
-  ;;     unchanged inputs for every artifact whose recorded sources did
-  ;;     not change, so a renderer without an incremental callback can
-  ;;     keep its whole previous output instead of re-rendering it -
-  ;;     but only when every one of its artifacts recorded sources:
-  ;;     undeclared render-time file reads are not visible here, and
-  ;;     such renderers conservatively re-run in full.
-  (let loop ((renderers renderers)
-             (index 0)
-             (artifacts '())
-             (owners '()))
-    (if (null? renderers)
-        (list artifacts owners)
-        (let* ((start (get-internal-real-time))
-               (renderer (car renderers))
-               (old-entries
-                 (filter (lambda (entry)
-                           (equal? (build-state-artifact-renderer entry)
-                                   index))
-                         previous-entries))
-               (old-artifacts
-                 (filter (lambda (artifact)
-                           (and (artifact-entry-by-path
-                                  old-entries (artifact-path artifact))
-                                #t))
-                         cached-artifacts))
-               (changed-proc
-                 (and (cached-renderer? renderer)
-                      (cached-renderer-render-changed renderer)))
-               (partial? (and changed-proc
-                              (every (lambda (entry)
-                                       (integer?
-                                         (build-state-artifact-renderer entry)))
-                                     old-entries)))
-               (reusable?
-                 (and model-retained?
-                      (pair? old-entries)
-                      (not partial?)
-                      ;;     Every artifact must have recorded sources:
-                      ;;     a renderer that reads files at render time
-                      ;;     without declaring them is not a pure
-                      ;;     function of the retained model, so its
-                      ;;     output can only be trusted as unchanged
-                      ;;     when its declared sources did not change.
-                      (every build-state-artifact-sources old-entries)
-                      (not (any (lambda (entry)
-                                  (paths-intersect?
-                                    (build-state-artifact-sources entry)
-                                    changed))
-                                old-entries))))
-               (dirty-entries
-                 (filter (lambda (entry)
-                           (or (any (lambda (path)
-                                       (not (source-entry-by-path
-                                             previous-sources path)))
-                                    changed)
-                               (not (build-state-artifact-sources entry))
-                               (paths-intersect?
-                                 (build-state-artifact-sources entry) changed)))
-                         old-entries))
-               (dirty-paths (map car dirty-entries))
-               (generated
-                 (and partial?
-                      (call-with-project-stage 'render #f
-                        (lambda ()
-                          (changed-proc model changed dirty-paths old-artifacts)))))
-               (rendered-fully? (or (not partial?) (not generated)))
-               (new-artifacts
-                 (if reusable?
-                     old-artifacts
-                     (call-with-project-stage 'render #f
-                       (lambda ()
-                         (if rendered-fully?
-                             (render-model model (list renderer))
-                             (begin
-                               (unless (and (list? generated) (every artifact? generated))
-                                 (error "incremental renderer must return artifacts or #f"
-                                        generated))
-                               generated))))))
-               ;; An incremental callback returns the complete current output
-               ;; set for its renderer. This lets it preserve unaffected
-               ;; artifacts from OLD-ARTIFACTS and omit outputs that vanished.
-               (current new-artifacts)
-               (current-owners
-                 (map (lambda (artifact)
-                        (cons (artifact-path artifact) index))
-                      current))
-               (seconds (/ (- (get-internal-real-time) start)
-                           internal-time-units-per-second)))
-          (progress 'render-renderer
-                    (list index seconds (length current)))
-          (loop (cdr renderers)
-                (+ index 1)
-                (append artifacts current)
-                (append owners current-owners))))))
-
 (define* (analyze-project/result project write?
                                 #:key (progress (lambda (stage path) #t)))
   "Collect, read, and analyze PROJECT without rendering or writing outputs.
@@ -546,7 +417,8 @@ Return the internal analysis record used by the build pipeline."
          (modified (cadr source-changes))
          (removed (caddr source-changes))
          (changed (append added modified removed))
-          (identity (project-renderer-identity project model))
+          (identity (renderer-identity (project-cache? project) model
+                                       (project-renderers project)))
           (retired (retired-pipeline-paths pipeline-artifacts previous-artifacts))
           (cache-ready?
            (and identity previous-state
@@ -685,7 +557,8 @@ analysis results - pages, relations, indexes - come from the forest."
               (pipeline-owners (cdr pipeline-result))
               (retired (retired-pipeline-paths pipeline-artifacts
                                                previous-artifacts))
-              (identity (project-renderer-identity project forest))
+              (identity (renderer-identity (project-cache? project) forest
+                                           (project-renderers project)))
              (config-equal?
                 (equal? identity (build-state-identity retained-state)))
              ;;     Capture content before rendering: the retained forest
