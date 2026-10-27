@@ -15,6 +15,7 @@ the work; drop lower only when you need to replace part of its behavior.
 | Configure the normal Forester site | `(forester project)` → `make-forester-project` | the reader, analysis, or complete renderer set needs replacing |
 | Build a site from page documents | `(grove project site)` → `make-site-project` | the input is not a page or the model is project-specific |
 | Build an arbitrary file-based model | `(grove project)` → `make-project` | custom collection, reading, analysis, artifacts, or execution options are needed |
+| Apply renderers directly to an existing model | `(grove build)` → `render-model` | input collection, caching, validation, or output writing is needed; use a project |
 | Create a source for a project | `(grove project)` → `create-project-source`, or the `grove new` command | the project must supply its own `#:create-source` policy |
 | Collect files recursively | `(grove collect)` → `collect-directory` | project-specific collection needs explicit ordering or more context; use `#:collect-sources` |
 | Handle project failures in a Scheme host | `(grove project diagnostic)` for structured errors and Grove's formatter | custom work needs to add a stage or path; use `call-with-project-stage` |
