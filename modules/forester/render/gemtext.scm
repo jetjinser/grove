@@ -290,13 +290,6 @@
                          reference-taxon-id)
         (if (string-suffix? "\n" body) "" "\n")))))
 
-(define (check-routes forest routes)
-  (let ((paths (cons (text-index-path routes)
-                     (map (lambda (page)
-                            (text-page-path routes (site-page-id page)))
-                          (pages forest)))))
-    (validate-unique-render-paths! "Gemtext" paths)))
-
 (define-record-type <gemtext-options>
   (%make-gemtext-options prefix routes backmatter
                          reference-taxon-id locale messages rules)
@@ -324,7 +317,7 @@
                                       (gemtext-options-rules options))))
     (unless (forest? forest)
       (error "Forester Gemtext renderer requires a forest" forest))
-    (check-routes forest routes)
+    (resolve-text-route-table "Gemtext" forest routes)
     (let* ((context
              (make-site-render-context forest
                                        #:routes routes
@@ -414,10 +407,7 @@
       (lambda (forest)
         (append
           (list 'gemtext prefix
-                (map (lambda (page)
-                       (cons (site-page-id page)
-                             (text-page-path routes (site-page-id page))))
-                     (pages forest))
+                (resolve-text-route-table "Gemtext" forest routes)
                 (text-index-path routes)
                 backmatter reference-taxon-id rules-id
                 (site-title (site forest)) (site-description (site forest)))

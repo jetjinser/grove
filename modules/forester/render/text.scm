@@ -244,14 +244,6 @@
       (backmatter-text forest page routes backmatter backmatter-labels
                        reference-taxon-id))))
 
-(define (check-text-routes forest routes)
-  (let* ((site (site forest))
-         (paths (cons (text-index-path routes)
-                      (map (lambda (page)
-                             (text-page-path routes (site-page-id page)))
-                           (pages forest)))))
-    (validate-unique-render-paths! "text" paths)))
-
 (define (output-path prefix name)
   (if prefix
       (string-append prefix "/" name)
@@ -284,7 +276,7 @@
                                       (text-options-rules options))))
     (unless (forest? forest)
       (error "Forester text renderer requires a forest" forest))
-    (check-text-routes forest routes)
+    (resolve-text-route-table "text" forest routes)
     (let* ((context
              (make-site-render-context forest
                                        #:routes routes
@@ -396,10 +388,7 @@
           (lambda (forest)
             (append
               (list 'text prefix
-                    (map (lambda (page)
-                           (cons (site-page-id page)
-                                 (text-page-path routes (site-page-id page))))
-                         (pages forest))
+                    (resolve-text-route-table "text" forest routes)
                     (site-title (site forest))
                     (site-description (site forest)) (text-index-path routes)
                     backmatter reference-taxon-id rules-id)
