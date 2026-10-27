@@ -357,6 +357,32 @@
             (string-contains
               (call-with-input-file (string-append output "/page.html") get-string-all)
               "beta")))))
+    (let* ((first-target (string-append root "/target-first.txt"))
+           (second-target (string-append root "/target-second.txt"))
+           (alias (string-append root "/data-alias.txt")))
+      (put first-target "same target")
+      (put second-target "same target")
+      (symlink first-target alias)
+      (put source (format #f
+        "@use-modules[(grove input) (ice-9 textual-ports)]\n@(let ((resolved (depend-on! ~s))) (string-append (call-with-input-file resolved get-string-all) \" \" resolved))"
+        alias))
+      (build-project (project #t))
+      (test-assert "registered symlink input reads its original target"
+        (let ((html (call-with-input-file
+                      (string-append output "/page.html") get-string-all)))
+          (and (string-contains html "same target")
+               (string-contains html first-target))))
+      (let ((before evaluations))
+        (delete-file alias)
+        (symlink second-target alias)
+        (build-project (project #t))
+        (test-equal "retargeting a registered symlink invalidates the document"
+          (+ before 1) evaluations)
+        (test-assert "retargeting a registered symlink updates path-sensitive output"
+          (string-contains
+            (call-with-input-file (string-append output "/page.html") get-string-all)
+            second-target)))
+      (delete-file alias))
     (put source "@use-modules[(grove input scribble)]\n@(disable-cache!)\nAlways execute")
     (let ((before evaluations))
       (build-project (project #t))

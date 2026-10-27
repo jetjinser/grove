@@ -7,13 +7,30 @@
   #:use-module (grove private files)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (runtime-inputs input-fingerprint current-input-fingerprints record-module-inputs!
+  #:export (runtime-inputs input-fingerprint normalize-input-path
+            current-input-fingerprints record-module-inputs!
             current-input-trace call-with-input-trace trace-inputs depend-on! disable-cache!))
 
 ;; Each document owns a trace. External effects must either register their
 ;; inputs before reading them or opt out; arbitrary Scheme I/O isn't intercepted.
 (define current-input-trace (make-parameter #f))
 (define current-input-fingerprints (make-parameter #f))
+
+(define (normalize-input-path path)
+  "Key paths inside the current project relative to its checkout root."
+  (let ((root (getcwd)))
+    (cond
+      ((string=? path root) ".")
+      ((string-prefix? (string-append root "/") path)
+       (substring path (+ (string-length root) 1)))
+      (else path))))
+
+(define (input-signature path)
+  (let ((signature (file-signature path)))
+    (and signature
+         (let ((resolved (false-if-exception (canonicalize-path path))))
+           (and resolved
+                (list signature (normalize-input-path resolved)))))))
 
 (define (trace-inputs trace)
   (hash-fold (lambda (path digest paths)
@@ -59,26 +76,41 @@
         '())))
 
 (define (input-fingerprint path)
-  ;; Only share digests inside one build. Re-stat on every observation, including
-  ;; the post-evaluation check; edits invalidate the memo even if size/mtime match.
+  ;; The resolved path is part of the identity because depend-on! returns that
+  ;; path to its caller; retargeting a symlink can change behavior even when
+  ;; its old target remains unchanged. Only share digests inside one build.
+  ;; Re-stat on every observation, including the post-evaluation check; edits
+  ;; invalidate the memo even if size/mtime match.
   (let* ((memo (current-input-fingerprints))
-         (signature (file-signature path))
+         (signature (input-signature path))
          (entry (and memo (hash-get-handle memo path))))
     (if (and entry (equal? signature (cadr entry)))
         (cddr entry)
-        (let ((digest (and signature (file-fingerprint path))))
-          (when (and memo (equal? signature (file-signature path)))
+        (let ((digest
+                (and signature
+                     (content-fingerprint
+                       (string-append (cadr signature) "\0"
+                                      (file-fingerprint path))))))
+          (when (and memo (equal? signature (input-signature path)))
             (hash-set! memo path (cons signature digest)))
           digest))))
 
 (define (depend-on! path)
   "Register a file input before reading it; return its absolute path."
-  (let ((path (if (file-exists? path) (canonicalize-path path)
-                  (if (absolute-file-name? path) path
-                      (string-append (getcwd) "/" path))))
-        (trace (current-input-trace)))
+  (let* ((requested (if (absolute-file-name? path) path
+                        (string-append (getcwd) "/" path)))
+         (path (if (file-exists? requested) (canonicalize-path requested)
+                   requested))
+         (trace (current-input-trace)))
     (when trace
-      (unless (hash-get-handle trace path)
+      (unless (hash-get-handle trace requested)
+        (hash-set! trace requested (input-fingerprint requested)))
+      ;; Keep a canonical trace entry for paths containing `..` and for
+      ;; module input discovery, while retaining REQUESTED to detect symlink
+      ;; retargeting.
+      (when (and (file-exists? requested)
+                 (not (string=? requested path))
+                 (not (hash-get-handle trace path)))
         (hash-set! trace path (input-fingerprint path))))
     path))
 

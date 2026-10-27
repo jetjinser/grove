@@ -45,24 +45,11 @@
 ;; the whole miss side (read-document).
 (define current-input-cache-timings (make-parameter #f))
 
-;;     Cross-checkout normalization: paths inside the loading process's
-;;     working directory key project-relative (identical across
-;;     checkouts of one project); foreign paths (module trees, stores)
-;;     key as given - they are machine-stable parts of the toolchain
-;;     identity, not of the project.
-(define (normalize-key-path path)
-  (let ((root (getcwd)))
-    (cond
-      ((string=? path root) ".")
-      ((string-prefix? (string-append root "/") path)
-       (substring path (+ (string-length root) 1)))
-      (else path))))
-
 (define (entry-key path)
   (content-fingerprint
     (string-append (or (current-project-key) "")
                    "\0"
-                   (normalize-key-path path))))
+                   (normalize-input-path path))))
 
 ;;     Profile-mode miss diagnosis: when an entry exists but its
 ;;     identity check fails, name the first element that differs, so
@@ -293,8 +280,9 @@
            (register (append shared dependencies))
            (let* ((paths (unique-paths (cons path (append shared dependencies))))
                   (snapshot (map (lambda (file)
-                                   (let ((key (normalize-key-path file)))
-                                     (list key (input-fingerprint key))))
+                                   (let ((key (normalize-input-path file)))
+                                     (list (normalize-input-path key)
+                                           (input-fingerprint file))))
                                  paths))
                   (identity (list reader (version) (setlocale LC_CTYPE)
                                   %load-path %load-compiled-path snapshot))
@@ -330,7 +318,7 @@
                         (extra (sort
                                  (hash-fold (lambda (file digest inputs)
                                               (if (and (string? file) (not (string=? file canonical)))
-                                                  (cons (list (normalize-key-path file) digest)
+                                                  (cons (list (normalize-input-path file) digest)
                                                         inputs)
                                                   inputs))
                                             '() trace)
