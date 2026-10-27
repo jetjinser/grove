@@ -50,10 +50,10 @@
 (test-equal "differentiation is explicitly constructive, not inverse integration"
   '(forward check) (math-rewrite-rule-modes (math-rewrite-rule-ref 'differentiate-power)))
 (test-error "inverse derivative selection reports its unsupported mode" #t
-  (φ:search-backward "1" "differentiate(x,x)" #:assumptions '("scalar(x)")
+  (φ:search "differentiate(x,x)" "1" #:backward? #t #:assumptions '("scalar(x)")
     #:rules '(differentiate-variable)))
 (test-error "inverse arithmetic computation is not silently ignored" #t
-  (φ:search-backward "6" "2*3" #:rules '(evaluate-constant)))
+  (φ:search "2*3" "6" #:backward? #t #:rules '(evaluate-constant)))
 (test-error "unknown modes are rejected even with no rules" #t
   (math-selected-rules '() '() #:mode 'unknown))
 

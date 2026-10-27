@@ -24,8 +24,10 @@
 (define (search-candidates . arguments)
   (math-report-candidates (apply φ:search arguments)))
 
-(define (backward-candidates . arguments)
-  (math-report-candidates (apply φ:search-backward arguments)))
+(define (backward-candidates target source . options)
+  (math-report-candidates
+    (apply φ:search
+      (append (list source target) options (list #:backward? #t)))))
 
 (define (diagnostic-codes verification)
   (map math-diagnostic-code (math-verification-diagnostics verification)))
@@ -468,13 +470,13 @@
   (test-equal "inverse generation respects the explicit term size bound"
     'term-size-limit
     (math-report-reason
-      (φ:search-backward "x" "y" #:assumptions '("scalar(x); scalar(y)")
+      (φ:search "y" "x" #:backward? #t #:assumptions '("scalar(x); scalar(y)")
         #:rules '(add-zero) #:max-term-size 3)))
   (test-equal "explicit inverse arithmetic rule selection enables bounded expansion"
     '((+ (var x) (num "0")) (var x))
     (math-derivation-terms
       (car (math-report-candidates
-             (φ:search-backward "x" "x + 0" #:assumptions '("scalar(x)")
+             (φ:search "x + 0" "x" #:backward? #t #:assumptions '("scalar(x)")
                #:rules '(add-zero) #:max-depth 1)))))
   (test-equal "rule selection excludes other applicable rules"
     '()

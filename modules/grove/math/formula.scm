@@ -15,7 +15,7 @@
             sin cos exp log grad divergence curl laplacian group styled
             derivative partial-expression antiderivative-expression poisson-particular
             call components
-            derive derive->content rewrite search search-backward simplify calculate normalize expand collect
+            derive derive->content rewrite search simplify calculate normalize expand collect
             check-chain check-polynomial-rule check-polynomial-derivation
             check-polynomial-step check-polynomial-derivative check-polynomial-antiderivative
             polynomial-check->content antiderivative
@@ -125,18 +125,25 @@
       #:max-steps max-steps #:max-term-size max-term-size)))
 
 (define-public search
-  (lambda* (source target #:key (assumptions '()) (rules #f) (max-depth 8)
-            (max-results 5) (max-states 256) (max-term-size 128))
-    (core:math-search (read source) (read target) #:assumptions (parse-assumptions (list assumptions)) #:rules rules
-      #:max-depth max-depth #:max-results max-results #:max-states max-states
-      #:max-term-size max-term-size)))
-
-(define-public search-backward
-  (lambda* (target source #:key (assumptions '()) (rules #f) (max-depth 8)
-            (max-results 5) (max-states 256) (max-term-size 128))
-    (core:math-search-backward (read target) (read source) #:assumptions (parse-assumptions (list assumptions)) #:rules rules
-      #:max-depth max-depth #:max-results max-results #:max-states max-states
-      #:max-term-size max-term-size)))
+  (lambda* (source target #:key (assumptions '()) (rules #f)
+            (backward? #f) (max-depth 8) (max-results 5)
+            (max-states 256) (max-term-size 128))
+    (unless (boolean? backward?)
+      (error "Formula search direction must be boolean" backward?))
+    (let* ((source-value (read source))
+           (target-value (read target))
+           (facts (parse-assumptions (list assumptions)))
+           (start (if backward? target-value source-value))
+           (goal (if backward? source-value target-value)))
+      (if backward?
+          (core:math-search-backward start goal
+            #:assumptions facts #:rules rules
+            #:max-depth max-depth #:max-results max-results
+            #:max-states max-states #:max-term-size max-term-size)
+          (core:math-search start goal
+            #:assumptions facts #:rules rules
+            #:max-depth max-depth #:max-results max-results
+            #:max-states max-states #:max-term-size max-term-size)))))
 
 (define-public simplify
   (lambda* (source #:key (assumptions '()) (rules #f) (max-steps 32) (max-term-size 2048))

@@ -63,7 +63,8 @@
                 #:assumptions '("scalar(x)"))))
   (test-equal "target diagnostics are not attributed to the search's starting expression" 7
     (math-location-line (math-diagnostic-source (car (math-report-diagnostics report))))))
-(let ((report (φ:search-backward (located "x" 4 0) (located "x+0" 0 0)
+(let ((report (φ:search (located "x+0" 0 0) (located "x" 4 0)
+                #:backward? #t
                 #:assumptions '("scalar(x)") #:rules '(add-zero) #:max-depth 1)))
   (test-equal "backward certificates propagate provenance in the forward certificate order" 1
     (math-location-line (math-origin-location

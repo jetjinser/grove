@@ -52,13 +52,16 @@
     (math-derivation-steps (car (math-report-candidates report)))))
 (for-each
   (lambda (size)
-    (let ((report (φ:search-backward "x" "y" #:assumptions facts #:rules '(add-zero)
+    (let ((report (φ:search "y" "x" #:backward? #t
+                    #:assumptions facts #:rules '(add-zero)
                     #:max-depth 3 #:max-states 6 #:max-term-size size)))
       (test-assert "inverse growth is bounded by the explored-state budget" (<= (math-report-states report) 6))
       (test-assert "unbounded inverse growth is reported as a cutoff" (not (math-report-complete? report)))
       (test-equal "inverse growth retains a term-size stopping cause" #t
         (and (memq 'term-size-limit (math-report-limits report)) #t))))
   '(1 3 5))
+(test-error "Formula search direction must be boolean" #t
+  (φ:search "x" "y" #:backward? 'reverse))
 ;; Inject a small cyclic transition graph at the answer boundary. This tests
 ;; traversal policy independently of the production rule implementation.
 (let ((saved math-rewrite-answers))

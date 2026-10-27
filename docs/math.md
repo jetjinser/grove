@@ -152,6 +152,8 @@ they applied. Supply assumptions in its argument when required:
 ```
 
 `@search-derive` searches within configured bounds for a path to a target.
+Scheme callers use `φ:search source target`; set `#:backward? #t` to traverse
+from the target toward the source without changing the argument order.
 `@check-derive` checks a hand-written sequence against the registered rules.
 `@check-equation` instead checks an equation by reducing its residual. These
 checks establish only what the supported rules and calculation domain justify;

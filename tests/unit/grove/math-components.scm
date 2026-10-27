@@ -157,7 +157,8 @@
 (test-equal "partial rules do not rewrite ordinary derivative terms" '()
   (math-rewrite-answers (math-assumptions (list r3)) (φ:term "differentiate(x,x)") math-partial-rules #f))
 (test-error "partial rules do not offer inverse integration" #t
-  (φ:search-backward "1" "partial(x,x)" #:assumptions (list r3) #:rules '(partial-variable)))
+  (φ:search "partial(x,x)" "1" #:backward? #t
+    #:assumptions (list r3) #:rules '(partial-variable)))
 (test-equal "zero step budget preserves the partial input" 'step-limit
   (math-report-reason (φ:partial "x^3" "x" #:assumptions (list r3) #:max-steps 0)))
 (test-equal "term-size budgets are enforced" 'term-size-limit
