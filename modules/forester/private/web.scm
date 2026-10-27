@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester private web)
+  #:use-module (web uri)
   #:use-module (srfi srfi-13)
   #:export (web-url?
             web-base-url
@@ -12,10 +13,18 @@
 
 (define (web-url? url)
   (and (string? url)
-       (or (string-prefix-ci? "https://" url)
-           (string-prefix-ci? "http://" url))
-       (> (string-length url)
-          (if (string-prefix-ci? "https://" url) 8 7))))
+       (catch #t
+         (lambda ()
+           (let* ((uri (string->uri url))
+                  (scheme (and uri (uri? uri) (uri-scheme uri)))
+                  (host (and uri (uri? uri) (uri-host uri))))
+             (and scheme
+                  (member (string-downcase (symbol->string scheme))
+                          '("http" "https"))
+                  (and (string? host) (not (string-null? host)))
+                  (not (uri-query uri))
+                  (not (uri-fragment uri)))))
+         (lambda _ #f))))
 
 (define (web-base-url url)
   (let ((end (string-length url)))

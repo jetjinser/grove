@@ -6,6 +6,7 @@
   #:use-module (grove i18n)
   #:use-module (grove private snapshot)
   #:use-module (grove private string-fun)
+  #:use-module (forester private web)
   #:use-module (srfi srfi-9)
   #:export (site-settings?
             make-site-settings
@@ -27,11 +28,12 @@
 (define* (make-site-settings #:key site-url (default-locale #f))
   "Shared site values for the HTML, sitemap, and RSS renderers.
 
-SITE-URL is the absolute base URL used for canonical links and feeds;
-DEFAULT-LOCALE is the language used for x-default alternates and the
-feed language."
-  (unless (or (not site-url) (non-empty-string? site-url))
-    (error "Site settings URL must be a non-empty string or #f" site-url))
+SITE-URL is an absolute HTTP(S) base URL with a host and no query or fragment.
+It may include a path prefix. DEFAULT-LOCALE is the language used for
+x-default alternates and the feed language."
+  (unless (or (not site-url) (web-url? site-url))
+    (error "Site settings URL must be an absolute HTTP(S) base URL or #f"
+           site-url))
   (unless (or (not default-locale) (non-empty-string? default-locale))
     (error "Site settings default locale must be a tag or #f"
            default-locale))

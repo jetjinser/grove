@@ -8,6 +8,7 @@
   #:use-module (grove site)
   #:use-module (grove private string-fun)
   #:use-module (forester private render labels)
+  #:use-module (forester private web)
   #:use-module (forester render site)
   #:use-module (forester site)
   #:use-module (srfi srfi-1)
@@ -81,8 +82,8 @@ dynamic chrome parameters."
   (unless (and (boolean? hreflang?) (boolean? language-switcher?))
     (error "render context language switches must be booleans"
            hreflang? language-switcher?))
-  (unless (or (not site-url) (non-empty-string? site-url))
-    (error "render context site URL must be a non-empty string or #f"
+  (unless (or (not site-url) (web-url? site-url))
+    (error "render context site URL must be an absolute HTTP(S) base URL or #f"
            site-url))
   (unless (or (not og-image) (non-empty-string? og-image))
     (error "render context Open Graph image must be a non-empty string or #f"

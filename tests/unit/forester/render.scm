@@ -77,6 +77,9 @@
   (test-error "site context rejects non-boolean language switches"
     #t
     (make-site-render-context forest #:hreflang? 'enabled))
+  (test-error "site context rejects malformed site URLs"
+    #t
+    (make-site-render-context forest #:site-url "https:///path"))
   (test-error "site context rejects empty Open Graph image URLs"
     #t
     (make-site-render-context forest #:og-image ""))
@@ -466,6 +469,8 @@
   (make-html-options #:side-lane '(sidenote "figure")))
 (test-error "HTML options reject invalid settings at construction" #t
   (make-html-options #:settings 'not-site-settings))
+(test-error "HTML options reject malformed site URLs" #t
+  (make-html-options #:site-url "https:///path"))
 (test-error "HTML options reject invalid default locales at construction" #t
   (make-html-options #:default-locale ""))
 (test-error "HTML options reject invalid Open Graph image values" #t

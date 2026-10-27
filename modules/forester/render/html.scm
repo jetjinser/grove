@@ -34,6 +34,7 @@
   #:use-module (forester backmatter)
   #:use-module (forester private entity-uri)
   #:use-module (forester private render-routes)
+  #:use-module (forester private web)
   #:use-module (forester relations)
   #:use-module (grove style html)
   #:use-module (forester style html)
@@ -1116,8 +1117,9 @@ Entry points take this value with #:options."
       (unless (string? default-locale)
         (error "HTML default locale must be a tag or #f" default-locale))
       (set! default-locale (locale-tag (make-locale default-locale))))
-    (unless (or (not site-url) (non-empty-string? site-url))
-      (error "HTML site URL must be a non-empty string or #f" site-url))
+    (unless (or (not site-url) (web-url? site-url))
+      (error "HTML site URL must be an absolute HTTP(S) base URL or #f"
+             site-url))
     (unless (or (not og-image) (non-empty-string? og-image))
       (error "HTML Open Graph image must be a non-empty string or #f"
              og-image))
