@@ -133,7 +133,10 @@ reader's own contract.
 The default collector walks recursively in sorted order, skipping hidden
 directories and directory symlinks. The generic project filter skips
 dot-prefixed basenames; the site project filter selects non-hidden `.plant`
-files. `#:source-filter` selects
+files. `(grove collect)` exposes `collect-directory` for custom collectors;
+its optional predicate sees each file basename, and by default it accepts
+hidden file basenames while still skipping hidden directories.
+`#:source-filter` selects
 basenames; `#:collect-sources` supplies an ordered path list instead. `#:prepare`
 runs before reading and returns additional tracked paths. It can load shared
 modules, but does not import their commands into individual articles.
@@ -362,6 +365,10 @@ build uses a fresh process. Edits observed during a build queue the next one;
 failure preserves the last successful in-memory artifact set. HTTP serves
 only those artifacts, supports GET/HEAD, disables browser caching, and exposes
 neither project files nor cache metadata. The browser does not refresh itself.
+Scheme hosts can call `serve-project` from `(grove serve)` with a project-file
+path and the same output, port, watch, debug, and profile options. The call
+blocks while the preview server runs; the command is the simpler entry point
+for ordinary local use.
 
 The watcher polls identity, size, and precise timestamps. It observes project
 and source directories, declared dependencies, loaded sources, and discovered
