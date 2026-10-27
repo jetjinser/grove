@@ -39,7 +39,7 @@
             related-pages
             reference-pages
             find-page
-            lookup-page
+            require-page
             page-taxon
             page-tags
             links
@@ -178,7 +178,7 @@
           (id-member-set
             (map site-page-id
                  (topic-pages forest reference-taxon-id 'taxon)))))
-    (map (lambda (target-id) (find-page forest target-id))
+    (map (lambda (target-id) (require-page forest target-id))
          (filter (lambda (target-id)
                    (not (hash-ref reference-ids target-id)))
                  (delete-duplicates
@@ -202,7 +202,7 @@
         (and (not (hash-ref seen target-id))
              (begin (hash-set! seen target-id #t)
                     (and (hash-ref reference-ids target-id)
-                         (find-page forest target-id)))))
+                         (require-page forest target-id)))))
       (append-map
         (lambda (tree-id)
           (map reference-target-page-id
@@ -259,7 +259,7 @@
                                 string=?)))))
           (ir:content-document-children/raw
             (query-output:prepare-query-output result source
-              (lambda (target) (find-page forest target))
+              (lambda (target) (require-page forest target))
               known-anchor?)))
         (list content)))
   (make-content-document
@@ -284,7 +284,7 @@
   (define (tree-display? node)
     (and (content-element? node)
          (memq (content-element-kind node) '(subtree transclude query-transclude))))
-  (tree-pass:walk-content (site-page-document (find-page forest id))
+  (tree-pass:walk-content (site-page-document (require-page forest id))
                 tree-display? #:stop? tree-display?))
 
 (define (tree-occurrence-target element)
@@ -765,14 +765,12 @@ anchors."
       anchor-index))))
 
 (define (find-page forest id)
-  (or (hash-ref (page-index forest) id)
-      (error "unknown forest page" id)))
-
-(define (lookup-page forest id)
-  "The page carrying ID from the index, or #f when none does.
-Backmatter entry rendering resolves relation-sourced ids through this
-index instead of scanning the page list per entry."
   (hash-ref (page-index forest) id))
+
+(define (require-page forest id)
+  "Return the page carrying ID, or raise an error when the ID is unknown."
+  (or (find-page forest id)
+      (error "unknown forest page" id)))
 
 (define (describing-pages forest uri)
   "Return pages that declare they describe URI, in site order."
@@ -814,19 +812,19 @@ index instead of scanning the page list per entry."
               value))))))
 
 (define (outgoing-references forest id)
-  (find-page forest id)
+  (require-page forest id)
   (cached-rows forest `(outgoing-references ,id)
     (lambda ()
       (map (lambda (row) (apply make-reference row))
            (outgoing-reference-rows (reference-relation forest) id)))))
 
 (define (outgoing-transclusions forest id)
-  (find-page forest id)
+  (require-page forest id)
   (composition:outgoing-transclusions
     (composition forest) id))
 
 (define (incoming-transclusions forest id)
-  (find-page forest id)
+  (require-page forest id)
   (composition:incoming-transclusions
     (composition forest) id))
 
@@ -899,14 +897,14 @@ MathJax draws it with its own fonts."
               (lambda (a b) (< (char->integer a) (char->integer b))))))))
 
 (define (incoming-references forest id)
-  (find-page forest id)
+  (require-page forest id)
   (cached-rows forest `(incoming-references ,id)
     (lambda ()
       (map (lambda (row) (apply make-reference row))
            (incoming-reference-rows (reference-relation forest) id)))))
 
 (define (backlinks forest id)
-  (find-page forest id)
+  (require-page forest id)
   (cached-rows forest `(backlink-pages ,id)
     (lambda ()
       (let ((source-ids
@@ -918,7 +916,7 @@ MathJax draws it with its own fonts."
 (define (common-backlinks forest left-id right-id)
   (for-each
     (lambda (id)
-      (find-page forest id))
+      (require-page forest id))
     (list left-id right-id))
   (let ((source-ids
           (id-member-set
@@ -928,7 +926,7 @@ MathJax draws it with its own fonts."
             (pages forest))))
 
 (define (reachable-pages forest id)
-  (find-page forest id)
+  (require-page forest id)
   (let ((reachable-ids
           (id-member-set
             (reachable-page-ids (reference-relation forest) id))))
@@ -1051,7 +1049,7 @@ pages that only exist inside another article's DOM."
             (let ((id (car pending)))
               (if (member id seen equal?)
                   (loop (cdr pending) seen)
-                  (let ((page (find-page forest id)))
+                  (let ((page (require-page forest id)))
                     (loop
                       (append
                        (map composition:transclusion-target-tree-id
@@ -1076,7 +1074,7 @@ pages that only exist inside another article's DOM."
           (append (module-paths forest)
                   (filter-map
                     (lambda (id)
-                      (site-page-source (find-page forest id)))
+                      (site-page-source (require-page forest id)))
                     included)
                   (tree-pass:content-source-paths (site-page-document page))
                   (filter-map site-page-source
@@ -1089,7 +1087,7 @@ pages that only exist inside another article's DOM."
                       (filter-map
                         (lambda (reference)
                           (site-page-source
-                            (find-page forest
+                            (require-page forest
                               (reference-target-page-id reference))))
                         (outgoing-references forest tree-id)))
                     included))

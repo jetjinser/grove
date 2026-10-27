@@ -143,7 +143,7 @@
                    (error "Gemtext link rendering exceeded its index"
                           (site-page-id page)))
                  (let* ((reference (car references))
-                        (target (find-page forest
+                        (target (require-page forest
                                            (reference-target-page-id reference)))
                         (url (page-url routes (site-page-id page)
                                        (reference-target-page-id reference)))
@@ -158,7 +158,7 @@
       (query-link . ,(lambda (element body)
                        (let* ((target-id (ir:content-element-property/raw element 'target))
                               (fragment (ir:content-element-property/raw element 'fragment))
-                              (target (find-page forest target-id))
+                              (target (require-page forest target-id))
                               (url (page-url routes (site-page-id page) target-id))
                               (url (if fragment (string-append url "#" fragment) url))
                               (label (line-text body)))
@@ -203,7 +203,7 @@
            (cons kind
              (lambda (element _render)
                  (let* ((id (tree-occurrence-target element))
-                      (target (find-page forest id))
+                      (target (require-page forest id))
                       (url (page-url routes (site-page-id page) id)))
                  (string-append "\n" (link-line url (site-page-title target)))))))
          '(subtree transclude query-transclude))))

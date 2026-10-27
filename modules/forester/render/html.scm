@@ -201,7 +201,7 @@ backlog report collects the mention."
     (define (render-tree element _render)
       (set! position (1+ position))
       (let* ((id (tree-occurrence-target element))
-             (target (find-page forest id))
+             (target (require-page forest id))
              (anchor (occurrence-anchor element anchor-prefix position)))
         (tree-block-sxml
           (if (eq? (content-element-kind element) 'subtree)
@@ -413,7 +413,7 @@ top-level taxon element; pages without one contribute nothing."
 
 (define (backlink-reference-sxml forest routes class reference
                                  metadata-items context)
-  (let ((source (lookup-page forest (reference-source-page-id reference))))
+  (let ((source (find-page forest (reference-source-page-id reference))))
     (backmatter-entry-sxml forest routes class source metadata-items
                            #:url (reference-source-url routes reference)
                            #:context context)))
@@ -512,7 +512,7 @@ top-level taxon element; pages without one contribute nothing."
              (lambda (id prefix visited)
                (map (lambda (element position)
                       (let* ((target-id (tree-occurrence-target element))
-                             (target (find-page forest target-id))
+                             (target (require-page forest target-id))
                              (anchor (occurrence-anchor element prefix
                                                         position))
                              (decoration

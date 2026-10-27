@@ -151,6 +151,10 @@ lists and reference string accessors are also independent copies. Forest query
 caching is therefore an implementation detail and cannot be changed through a
 returned result.
 
+`(find-page forest id)` returns the matching page or `#f`, which suits optional
+associations. `(require-page forest id)` returns the page or raises an error
+when the ID is unknown, which suits relationships whose targets must exist.
+
 The `text` column is the concatenation of descendant text and layout leaves,
 without renderer-specific formatting. `character-count` counts Unicode
 extended grapheme clusters, the default user-perceived text units; the public

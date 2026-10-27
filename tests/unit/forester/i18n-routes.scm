@@ -128,7 +128,7 @@
 
 (test-equal "forest construction canonicalizes programmatic page locales"
   "zh-Hans"
-  (assq-ref (site-page-metadata (find-page forest "guide-zh")) 'locale))
+  (assq-ref (site-page-metadata (require-page forest "guide-zh")) 'locale))
 (test-equal "the Forest's exposed site shares canonical page metadata"
   "zh-Hans"
   (assq-ref (site-page-metadata
@@ -138,7 +138,7 @@
             'locale))
 
 (define (locale-of id)
-  (let ((page (find-page forest id)))
+  (let ((page (require-page forest id)))
     (and page (assq-ref (site-page-metadata page) 'locale))))
 
 (define routes

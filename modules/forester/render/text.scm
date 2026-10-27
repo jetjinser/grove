@@ -75,7 +75,7 @@ HTML renderer so text and HTML address occurrences identically."
     (define (render-tree element _render)
       (set! position (1+ position))
       (let* ((id (tree-occurrence-target element))
-             (target (find-page forest id))
+             (target (require-page forest id))
              (anchor (occurrence-anchor element prefix position))
              (child-prefix (string-append anchor "--"))
              (target-context
@@ -121,7 +121,7 @@ HTML renderer so text and HTML address occurrences identically."
     (string-concatenate
       (map (lambda (element position)
              (let* ((target-id (tree-occurrence-target element))
-                    (target (find-page forest target-id))
+                    (target (require-page forest target-id))
                     (anchor (occurrence-anchor element prefix position)))
                (string-append indent "- " (site-page-title target) " [#" anchor "]\n"
                  (entries target-id (string-append anchor "--") (string-append indent "  ")))))
@@ -135,7 +135,7 @@ HTML renderer so text and HTML address occurrences identically."
 (define (text-backlink-reference forest page-id routes reference indent)
   ;;     Title plus the anchored path; the citing context's alt text
   ;;     stays in the body where it was written.
-  (let* ((source (lookup-page forest (reference-source-page-id reference)))
+  (let* ((source (find-page forest (reference-source-page-id reference)))
          (path (text-relative-path (text-page-path routes page-id)
                                    (text-page-path routes
                                                    (reference-source-page-id

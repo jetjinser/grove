@@ -41,7 +41,7 @@
                   (car (render-sitemap
                          forest #:site-url "https://notes.example"
                          #:routes routes))))
-       (inline (find-page forest "unstable-0")))
+       (inline (require-page forest "unstable-0")))
   (test-equal "inline subtrees become independently addressable trees"
     '("root" "unstable-0")
     (map site-page-id (pages forest)))
@@ -93,7 +93,7 @@
            (rendered (assoc-ref
                        (render-test-html forest #:mathjax-src #f)
                        "addressable")))
-      (and (find-page forest "unstable-0")
+      (and (require-page forest "unstable-0")
            (string-contains rendered "class=\"forest-tree-block inline-subtree\"")
            (string-contains rendered
                             "data-tree-id=\"unstable-0\" id=\"unstable-0\"")
@@ -204,7 +204,7 @@
              "@subtree{@title{Earlier anonymous piece}} @subtree[#:id \"stable-piece\"]{@title{Named piece} @paragraph{Reusable.}} @transclude[\"stable-piece\"]")))
        (changed-forest (make-forest (make-site (list changed-root)))))
   (test-assert "subtrees can use an author-chosen address"
-    (find-page forest "stable-piece"))
+    (require-page forest "stable-piece"))
   (test-assert "named subtrees receive a standalone HTML route"
     (string-contains (assoc-ref html "stable-piece") "Reusable."))
   (test-equal "explicit subtree addresses are included in composition data"
@@ -212,7 +212,7 @@
     (map composition:transclusion-target-tree-id
          (outgoing-transclusions forest "root")))
   (test-assert "explicit subtree addresses survive insertion of anonymous trees"
-    (find-page changed-forest "stable-piece"))
+    (require-page changed-forest "stable-piece"))
   (test-equal "anonymous subtree IDs remain generated around named trees"
     '("root" "unstable-0" "stable-piece")
     (map site-page-id (pages changed-forest))))
@@ -515,7 +515,7 @@
               (list (make-site-page "frontmatter" "Root"
                       (evaluate-document
                         "@subtree[#:id \"child\"]{@title{Child}@summary{Child summary}@published{2026-01-01}@tag[\"nested\"]@taxon[\"lemma\"]@paragraph{Child body.}}" "frontmatter.plant"))))))
-       (child (find-page forest "child")))
+       (child (require-page forest "child")))
   (test-equal "subtree uses root frontmatter extraction"
     "Child summary" (assq-ref (site-page-metadata child) 'summary))
   (test-equal "subtree dates are stored as frontmatter"
@@ -537,7 +537,7 @@
                  (make-site (list (make-site-page "flow" "Flow"
                    (evaluate-document
                      "@subtree[#:id \"flow-child\"]{@title{Child}\nFirst paragraph.\n\nSecond paragraph.}"))))))
-       (child (find-page forest "flow-child")))
+       (child (require-page forest "flow-child")))
   (test-equal "subtree bodies decode plain text into paragraphs"
     '(paragraph paragraph)
     (map content-element-kind (content-document-children (site-page-document child)))))

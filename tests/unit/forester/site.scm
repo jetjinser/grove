@@ -38,7 +38,7 @@
                  #:timings (lambda (phase seconds)
                              (set! phases (cons (cons phase seconds) phases))))))
   (test-equal "timing observation preserves the page"
-    "Measured" (site-page-title (find-page forest "measured")))
+    "Measured" (site-page-title (require-page forest "measured")))
   (test-equal "forest timings follow analysis order"
     '(identify-trees extract-trees occurrence-anchors equation-numbers
       references transclusions reference-index term-definitions page-index
@@ -329,11 +329,13 @@
   (test-equal "topic-pages answers absent topics with an empty list"
     '()
     (topic-pages forest "nonexistent-topic"))
-  (test-equal "lookup-page resolves known ids and misses unknown ones"
+  (test-equal "find-page returns a page or #f"
     (list "target" #f)
-    (list (and (lookup-page forest "target")
-               (site-page-id (lookup-page forest "target")))
-          (lookup-page forest "no-such-page")))
+    (list (and (find-page forest "target")
+               (site-page-id (find-page forest "target")))
+          (find-page forest "no-such-page")))
+  (test-error "require-page rejects an unknown page ID" #t
+    (require-page forest "no-such-page"))
   (test-equal "link nodes and their target properties remain in content IR"
     '("target")
     (query (target-id)
@@ -405,7 +407,7 @@
            "                (contains-texto nodes node-id \"范畴论\"))))\n"
            "       (make-content-document\n"
            "         (map (lambda (match)\n"
-           "                (let ((target (find-page forest (cadr match))))\n"
+           "                (let ((target (require-page forest (cadr match))))\n"
            "                  (make-content-element 'item\n"
            "                    (list (link (site-page-id target)\n"
            "                                (site-page-title target))\n"
@@ -426,7 +428,7 @@
          (make-forest
            (make-site (list catalog article manual)
              #:sources '("commands.scm"))))
-       (resolved-catalog (find-page forest "catalog"))
+       (resolved-catalog (require-page forest "catalog"))
        (resolved-children
          (content-document-children
            (site-page-document resolved-catalog)))

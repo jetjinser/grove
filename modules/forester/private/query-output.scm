@@ -7,7 +7,7 @@
   #:use-module (grove ir)
   #:export (prepare-query-output))
 
-(define* (prepare-query-output result source find-page
+(define* (prepare-query-output result source require-page
                                #:optional (known-anchor? #f))
   "Validate and normalize a query result before it joins the display tree.
 
@@ -15,7 +15,7 @@ KNOWN-ANCHOR?, when given, takes a target page id and a link fragment and
 reports whether the page declares that anchor; unknown fragments warn."
   (define (validate-query-link target)
     (catch #t
-      (lambda () (find-page target))
+      (lambda () (require-page target))
       (lambda (key . args)
         (error (format #f "Invalid query link at ~a to ~s: ~s"
                        source target (cons key args))))))

@@ -94,7 +94,7 @@
   (define (render-tree element _render)
     (let* ((kind (content-element-kind element))
            (target (tree-target element))
-           (target-page (find-page forest target))
+           (target-page (require-page forest target))
            (position (add-entry! kind (site-page-title target-page) target)))
       (if (and (memq kind '(transclude query-transclude))
                (member target expanded string=?))
@@ -129,7 +129,7 @@
                        (make-string (* 2 depth) #\space)
                        (case (content-element-kind element)
                          ((subtree) "@") ((transclude) ">") (else "?"))
-                       (site-page-title (find-page forest target-id)))))
+                       (site-page-title (require-page forest target-id)))))
         (if (< depth 2)
             (cons head (outline-lines forest target-id (+ depth 1)))
             (list head))))
@@ -190,9 +190,9 @@
                        (and (pair? pages) (site-page-id (car pages))))))
     (unless start-id
       (error "forest has no pages to browse"))
-    (find-page forest start-id)
+    (require-page forest start-id)
     (let loop ((current start-id) (history '()) (expanded '()))
-      (let* ((entries (render-page forest (find-page forest current) expanded
+      (let* ((entries (render-page forest (require-page forest current) expanded
                                    output))
              (_ (display-prompt output))
              (answer (read-line input)))
