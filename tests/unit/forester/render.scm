@@ -54,7 +54,22 @@
       ("notes" "notes"))
     (map (lambda (group)
            (cons (car group) (map site-page-id (cdr group))))
-         groups)))
+         groups))
+  (test-equal "site render context can explicitly omit translation groups"
+    '()
+    (render-context-translation-groups
+      (make-site-render-context forest #:translation-groups '()))))
+
+(let ((message
+        (catch #t
+          (lambda ()
+            (make-site-render-context #f)
+            #f)
+          (lambda (_ . arguments)
+            (and (pair? arguments) (format #f "~s" arguments))))))
+  (test-assert "site render context validates the forest before deriving defaults"
+    (and message
+         (string-contains message "render context requires a forest"))))
 
 (define (backmatter-messages backlink-label)
   (make-message-catalog
