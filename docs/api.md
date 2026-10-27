@@ -44,12 +44,13 @@ HTML renderer, and source-creation behavior. Configure the default HTML with
 `#:html-options`, transform pages before analysis with `#:transforms`, and add
 peer outputs with `#:additional-renderers`. These changes do not require
 reassembling the standard Forester reader and analyzer.
-`make-site-project` keeps the page and Content IR model while exposing the
-complete renderer set and other lifecycle stages for composition. It has no
-default output renderer: pass the complete `#:renderers` list. Forester's
-project constructor supplies the default HTML renderer and takes extra
-outputs as peers. `make-project` is the general lifecycle and does not require
-Grove's Content IR. See the
+`make-site-project` starts from the page and Content IR model, then exposes the
+complete renderer set and other lifecycle stages for composition. Its
+`#:analyze` callback receives the assembled site and may return another model;
+it has no default output renderer, so pass the complete `#:renderers` list.
+Forester's project constructor supplies the default HTML renderer and takes
+extra outputs as peers. `make-project` is the general lifecycle and does not
+require Grove's Content IR. See the
 [project reference](project.md) for callback contracts and examples.
 
 For renderer extensions, a plain procedure from model to artifact list is the
