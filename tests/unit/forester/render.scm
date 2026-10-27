@@ -1037,7 +1037,27 @@
   (test-assert "RSS lists dated pages newest first and undated pages last"
     (and newer-position older-position undated-position
          (< newer-position older-position)
-         (< older-position undated-position))))
+         (< older-position undated-position)))
+  (test-error "RSS rejects an invalid published date in a constructed forest"
+    #t
+    (render-rss
+      (make-forest
+        (make-site
+          (list (make-site-page
+                  "invalid-published" "Invalid published date"
+                  (make-content-document '())
+                  #:metadata '((published . "2026-02-31"))))))
+      #:site-url "https://notes.example"))
+  (test-error "RSS rejects an invalid updated date in a constructed forest"
+    #t
+    (render-rss
+      (make-forest
+        (make-site
+          (list (make-site-page
+                  "invalid-updated" "Invalid updated date"
+                  (make-content-document '())
+                  #:metadata '((updated . "2026-99-01"))))))
+      #:site-url "https://notes.example")))
 
 (let* ((forest
          (make-forest

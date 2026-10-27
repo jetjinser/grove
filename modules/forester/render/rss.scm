@@ -26,8 +26,12 @@
   (web-absolute-route-url base (html-page-url routes (site-page-id page))))
 
 (define (page-pub-date page)
-  (or (assq-ref (site-page-metadata page) 'updated)
-      (assq-ref (site-page-metadata page) 'published)))
+  (let ((date (or (assq-ref (site-page-metadata page) 'updated)
+                  (assq-ref (site-page-metadata page) 'published))))
+    (when (and date (not (iso-date? date)))
+      (error "RSS page date must use YYYY-MM-DD"
+             (site-page-id page) date))
+    date))
 
 (define rss-text-handlers
   `((tag . ,(lambda (_element _body) ""))
