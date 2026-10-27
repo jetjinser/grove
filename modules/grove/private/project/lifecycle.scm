@@ -33,6 +33,16 @@
 (define (read-source-with-context path read-source)
   (call-with-project-stage 'read path (lambda () (read-source path))))
 
+(define (renderer-input-paths renderer)
+  (let* ((input-spec (cached-renderer-inputs renderer))
+         (paths (cond ((not input-spec) '())
+                      ((procedure? input-spec) (input-spec))
+                      (else input-spec))))
+    (unless (and (list? paths) (every non-empty-string? paths))
+      (error "renderer input collector must return a list of non-empty paths"
+             paths))
+    (delete-duplicates paths string=?)))
+
 (define (collect-project-sources project)
   "Return PROJECT's validated source paths as independent data."
   (let ((paths
@@ -182,9 +192,8 @@ Return the internal analysis record used by the build pipeline."
                      pipeline-declared-sources
                      (append-map
                        (lambda (renderer)
-                         (if (and (cached-renderer? renderer)
-                                  (cached-renderer-inputs renderer))
-                             ((cached-renderer-inputs renderer))
+                         (if (cached-renderer? renderer)
+                             (renderer-input-paths renderer)
                              '()))
                        (project-renderers project))
                      (project-extra-sources project))

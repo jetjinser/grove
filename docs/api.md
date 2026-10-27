@@ -54,11 +54,11 @@ Grove's Content IR. See the
 
 For renderer extensions, a plain procedure from model to artifact list is the
 default and runs on each build. Wrap it with `make-cached-renderer` to reuse
-artifacts; provide `#:inputs` and `#:configuration` for dependencies Grove
-cannot observe through the model and tracked project files. `make-render-rules`
-is narrower: it changes the interpretation of content kinds inside an existing
-renderer. See the [customization guide](customizing.md) for how these layers
-compose.
+artifacts; provide fixed `#:inputs` paths or a collector, and `#:configuration`
+for state Grove cannot observe through the model and tracked project files.
+`make-render-rules` is narrower: it changes the interpretation of content kinds
+inside an existing renderer. See the [customization guide](customizing.md) for
+how these layers compose.
 
 ## Site model
 

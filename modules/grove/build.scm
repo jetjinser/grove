@@ -5,6 +5,8 @@
 (define-module (grove build)
   #:use-module (grove private renderer)
   #:use-module (grove private snapshot)
+  #:use-module (grove private string-fun)
+  #:use-module (srfi srfi-1)
   #:export (render-model
             make-cached-renderer))
 
@@ -13,7 +15,8 @@
 
 CONFIGURATION is data or a model-to-data procedure included in cache identity.
 INPUTS, when supplied, is a no-argument procedure returning additional paths
-to track. RENDER-CHANGED, when supplied, receives the model, changed source
+to track, or a list of paths when the dependencies are fixed. RENDER-CHANGED,
+when supplied, receives the model, changed source
 paths, dirty artifact paths, and this renderer's previous artifacts. It must
 return the renderer's complete current artifact list, or #f to request a full
 render. CACHE? false marks this renderer uncached; in a project this disables
@@ -27,8 +30,12 @@ safely."
     (error "cached renderer requires a procedure" procedure))
   (unless (or (not render-changed) (procedure? render-changed))
     (error "incremental renderer must be a procedure or #f" render-changed))
-  (unless (or (not inputs) (procedure? inputs))
-    (error "renderer input collector must be a procedure or #f" inputs))
+  (unless (or (not inputs)
+              (procedure? inputs)
+              (and (list? inputs) (every non-empty-string? inputs)))
+    (error "renderer inputs must be #f, a list of paths, or a path collector" inputs))
+  (when (list? inputs)
+    (set! inputs (snapshot-data inputs)))
   (%make-cached-renderer
     cache?
     (if (procedure? configuration) configuration (snapshot-data configuration))

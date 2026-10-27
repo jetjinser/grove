@@ -142,6 +142,29 @@
     (test-equal "unchanged source evaluates once" 1 evaluations)
     (test-equal "whole model is analyzed even on an input hit" 2 analyses)
     (test-equal "progress reports miss then hit" '((1 . 1) (0 . 1)) statuses)
+    (let* ((renders 0)
+           (external-project
+            (make-project
+              #:collect-sources (lambda () (list source))
+              #:read-source (lambda (_) 'model)
+              #:renderers
+              (list
+                (make-cached-renderer
+                  (lambda (_)
+                    (set! renders (+ renders 1))
+                    (list
+                      (make-artifact "external.txt"
+                        (call-with-input-file dependency get-string-all))))
+                  #:configuration 'external
+                  #:inputs (list dependency)))
+              #:output-directory (string-append root "/renderer-inputs"))))
+      (build-project external-project)
+      (build-project external-project)
+      (test-equal "fixed renderer inputs participate in cache identity" 1 renders)
+      (put dependency "three")
+      (build-project external-project)
+      (test-equal "changing a fixed renderer input reruns its renderer" 2 renders)
+      (put dependency "one"))
     (put source "Second")
     (build-project (project #t))
     (test-equal "source change invalidates its result" 2 evaluations)

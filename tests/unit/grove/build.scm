@@ -50,9 +50,21 @@
   (make-cached-renderer (lambda (site) '())
     #:render-changed #t))
 
-(test-error "renderer input collectors must be procedures" #t
+(test-error "renderer input collectors must be procedures or paths" #t
   (make-cached-renderer (lambda (site) '())
-    #:inputs '()))
+    #:inputs '(42)))
+(test-error "renderer input paths must be non-empty strings" #t
+  (make-cached-renderer (lambda (site) '())
+    #:inputs '("")))
+(test-assert "fixed renderer input paths are snapshotted"
+  (let* ((path (string-copy "theme.css"))
+         (paths (list path))
+         (renderer (make-cached-renderer (lambda (_) '()) #:inputs paths)))
+    (string-set! path 0 #\X)
+    (set-car! paths "changed.css")
+    (equal? '("theme.css")
+      (let ((inputs (cached-renderer-inputs renderer)))
+        (if (procedure? inputs) (inputs) inputs)))))
 
 (let* ((configuration (list (cons 'theme (string-copy "light"))))
        (renderer
