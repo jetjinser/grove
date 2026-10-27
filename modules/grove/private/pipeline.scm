@@ -17,8 +17,9 @@
 
 ;;     Run declared asset pipelines against the shared store. Each
 ;;     pipeline's identity includes its name, version, project fingerprint,
-;;     and each declared input path and content fingerprint. Outputs are
-;;     indexed under that key, and every output blob is content-addressed.
+;;     each declared and materialized input path, and each content
+;;     fingerprint. Outputs are indexed under that key, and every output
+;;     blob is content-addressed.
 ;;     A hit materializes artifacts without
 ;;     running the procedure at all; a miss - changed inputs, edited
 ;;     project, corrupted or missing index - runs it. The caller must ensure
@@ -45,6 +46,7 @@
                    (asset-pipeline-version pipeline)
                    project-key
                    (map car input-table)
+                   (map cdr input-table)
                    (map (lambda (pair) (input-fingerprint (cdr pair)))
                         input-table))
              port)))))

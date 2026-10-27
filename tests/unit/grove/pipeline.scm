@@ -27,6 +27,9 @@
 (define input-a (string-append inputs-directory "/a.txt"))
 (define input-b (string-append inputs-directory "/b.txt"))
 (define input-c (string-append inputs-directory "/c.txt"))
+(define path-root (string-append inputs-directory "/path-sensitive"))
+(define path-directory-a (string-append path-root "/a"))
+(define path-directory-b (string-append path-root "/b"))
 (define runtime-script (string-append inputs-directory "/runtime.scm"))
 (define runs 0)
 (define runtime-runs 0)
@@ -37,12 +40,20 @@
 (current-project-key "project-v1")
 (mkdir root)
 (mkdir inputs-directory)
+(mkdir path-root)
+(mkdir path-directory-a)
+(mkdir path-directory-b)
 (call-with-output-file input-a
   (lambda (port) (display "alpha" port)))
 (call-with-output-file input-b
   (lambda (port) (display "beta" port)))
 (call-with-output-file input-c
   (lambda (port) (display "alpha" port)))
+(for-each
+  (lambda (directory)
+    (call-with-output-file (string-append directory "/input.txt")
+      (lambda (port) (display "same bytes" port))))
+  (list path-directory-a path-directory-b))
 (call-with-output-file runtime-script
   (lambda (port) (display "(set! runtime-marker \"one\")\n" port)))
 
@@ -138,6 +149,37 @@
     "c.txt" (artifact-content (car (run-path-sensitive input-c))))
   (test-equal "different declared input paths have distinct cache identities"
     2 runs))
+
+(let ((runs 0)
+      (original-directory (getcwd)))
+  (define (run-materialized-path directory)
+    (dynamic-wind
+      (lambda () (chdir directory))
+      (lambda ()
+        (car
+          (run-asset-pipelines
+            (list
+              (make-asset-pipeline
+                #:name "materialized-path-input"
+                #:inputs '("input.txt")
+                #:procedure
+                (lambda (in emit)
+                  (set! runs (1+ runs))
+                  (emit "materialized-path.txt" (in "input.txt")))))
+            "same-project-key")))
+      (lambda () (chdir original-directory))))
+  (let ((path-a (string-append (canonicalize-path path-directory-a)
+                               "/input.txt"))
+        (path-b (string-append (canonicalize-path path-directory-b)
+                               "/input.txt")))
+    (test-equal "same declared path and bytes produce the materialized path"
+      path-a
+      (artifact-content (car (run-materialized-path path-directory-a))))
+    (test-equal "different materialized paths do not share cached output"
+      path-b
+      (artifact-content (car (run-materialized-path path-directory-b))))
+    (test-equal "materialized input paths have distinct cache identities"
+      2 runs)))
 
 (let ((merged
        (merge-pipeline-artifacts
