@@ -6,6 +6,7 @@
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove string-fun)
   #:use-module (grove ir)
+  #:use-module ((grove private render plain-text) #:prefix plain:)
   #:use-module (grove render plain-text)
   #:use-module (grove site)
   #:use-module (forester relations)
@@ -71,7 +72,7 @@
                                   (iota (length children)))))
                        (text (if (eq? kind 'subtree)
                                  (content->plain-text content)
-                                 (element->plain-text
+                                 (plain:element->plain-text
                                    kind properties
                                    (map cdr child-results)))))
                   (cons (cons
