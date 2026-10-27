@@ -202,7 +202,9 @@ Before introducing an IRI record or changing `@describes`, settle the page
 identity policy and the comparison contract. A string-only IRI convention may
 be enough for authored identifiers; a parsed IRI value is justified when
 Grove itself needs validation, relative-reference resolution, or URI
-conversion. SRFI 275 is a useful Scheme design reference, but remains a draft.
+conversion. SRFI 275 is a useful Scheme design reference and reached final
+status on 2026-10-15; its standardization does not by itself settle Grove's
+resource-identity policy or commit Grove to its API.
 
 ## References
 
