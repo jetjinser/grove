@@ -5,10 +5,9 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # Renderer rules
 
-A renderer is an interpretation of the content algebra, not a set of
-imperative hooks.  Content has constructors such as `paragraph`, `image`,
-`link`, and `subtree`; a rule set maps each constructor to a backend-specific
-interpretation.
+A renderer interprets the content algebra through a composed rule set. Content
+has constructors such as `paragraph`, `image`, `link`, and `subtree`; a rule
+set maps each constructor to a backend-specific interpretation.
 
 ## The model
 

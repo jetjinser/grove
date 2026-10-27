@@ -305,7 +305,7 @@ range table. Obtain text/ranges during expansion and keep those returned values
 if needed later. Unavailable ranges return `#f`; files are never reopened and
 there is no global source cache. Not all Guile reader extensions are supported.
 
-`make-scribble-module-session` returns a prepare hook and a reader:
+`make-scribble-module-session` returns a preparation procedure and a reader:
 
 ```scheme
 (define-values (prepare read-document)

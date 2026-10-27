@@ -29,12 +29,16 @@ nix build .#grove
 export PATH=$PWD/result/bin:$PATH
 ```
 
-With Guix, the manifest carries the same CLI; install or build it with:
+With Guix, enter the development environment and run the checkout's CLI with
+Blue:
 
 ```sh
-guix package -m manifest.scm
-guix build -m manifest.scm
+guix time-machine -C channels.scm -- shell -m manifest.scm
+blue grove build --project examples/linked-notes/project.scm --output /tmp/grove-preview
 ```
+
+The development manifest supplies Grove's build and test dependencies. The
+standalone Guix package is constructed separately through `grove-package.scm`.
 
 Build the linked-notes example:
 
@@ -79,10 +83,11 @@ Ordinary text becomes a paragraph.
 See @link["an-idea"]{the idea}, or embed it with @transclude["an-idea"].
 ```
 
-From the project directory, run `grove check` and `grove build`. The `#:home`
-ID selects the page rendered at `index.html`; the project constructor supplies
-the standard reader, analyzer, and HTML renderer. `grove serve` builds and
-previews the site locally.
+From the project directory, run `grove check` and `grove build` when the CLI is
+installed. In the Guix development shell, use `blue grove check` and
+`blue grove build`. The `#:home` ID selects the page rendered at `index.html`;
+the project constructor supplies the standard reader, analyzer, and HTML
+renderer. `grove serve` builds and previews the site locally.
 
 To add a tree, run `grove new`, then fill the required `@title{}` in its new
 file before building.

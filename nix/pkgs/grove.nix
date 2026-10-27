@@ -99,10 +99,10 @@ stdenv.mkDerivation {
   meta = {
     description = "Static site generator for executable, forester-style notes";
     longDescription = ''
-      Grove renders scribble-style trees into a connected site: analysis
-      builds a relation layer over pages, transclusions, and anchors, and
-      renderers turn it into HTML, text, RSS, and sitemaps. Projects extend
-      it through hooks and miniKanren queries over those relations.
+      Grove renders Scribble-style trees into connected sites. Analysis
+      builds relations over pages, transclusions, and anchors; renderers turn
+      the model into HTML, text, feeds, and other artifacts. Projects compose
+      build stages and renderers, and can query those relations with miniKanren.
     '';
     license = lib.licenses.gpl3Plus;
     mainProgram = "grove";

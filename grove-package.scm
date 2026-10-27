@@ -2,10 +2,10 @@
 ;;;
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-;;; The Grove package, loadable from manifest.scm.  blue drives the
-;;; build: it configures, compiles the module and object trees, and
-;;; installs the CLI wrapper with the dependency paths it sees at build
-;;; time, so every dependency must be visible in the build environment.
+;;; Factory for the standalone Grove Guix package. The development
+;;; manifest intentionally supplies tools and dependencies without
+;;; installing this checkout as a package. Blue configures and builds the
+;;; modules and installs a CLI wrapper with the dependency paths it sees.
 
 (define* (make-grove blue guile faster-minikanren grove-highlights libunistring
                      guile-gcrypt guile-ssh guile-ts coreutils
@@ -174,9 +174,9 @@
            (list "coreutils" "guile-gcrypt" "guile-ssh" "guile-ts"))))
     (synopsis "Static site generator for executable, forester-style notes")
     (description
-     "Grove renders scribble-style trees into a connected site: analysis
-builds a relation layer over pages, transclusions, and anchors, and
-renderers turn it into HTML, text, RSS, and sitemaps.  Projects extend
-it through hooks and miniKanren queries over those relations.")
+       "Grove renders Scribble-style trees into connected sites. Analysis
+builds relations over pages, transclusions, and anchors; renderers turn the
+model into HTML, text, feeds, and other artifacts. Projects compose build
+stages and renderers, and can query those relations with miniKanren.")
     (home-page #f)
     (license license:gpl3+)))
