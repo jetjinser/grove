@@ -52,6 +52,18 @@ inspection. Use `math-verify-derivation` from `(grove math verification)` to
 replay a certificate, or `math-audit-calculation` from `(grove math audit)` to
 combine replay, the independent polynomial contract check, and proof evidence.
 
+Formula readers and Semantic constructors share one value type: a `math-value`
+contains a mathematical term together with its source origin, presentation
+properties, declarations, and domain requirements. Formula and Semantic are
+different ways to construct that value, not separate expression models. The
+Semantic module re-exports its accessors. For a custom extension that needs to
+construct a term Grove does not provide a named constructor for, use
+`make-math-value` from `(grove math expression)` and attach any declarations or
+requirements the calculation needs. Prefer the named Semantic constructors
+when they express the intended concept; the lower-level constructor checks the
+term's shape, but cannot establish that a custom operator has supported
+calculation semantics.
+
 Formula text accepts identifiers, integer numerals, function calls,
 parentheses, unary minus, powers, equations, and the operators `+`, `-`, `*`,
 `/` (also `−`, `×`). It follows conventional precedence. Numeric coefficients
