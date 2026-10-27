@@ -3,9 +3,9 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove pipeline)
+  #:use-module (grove private asset-pipeline)
   #:use-module (grove private snapshot)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
   #:export (make-asset-pipeline))
 
@@ -17,14 +17,6 @@
 ;;     execution participate in cache validation. #:version is an explicit
 ;;     invalidation token for behavior Grove cannot observe, such as changes
 ;;     in the external toolchain, environment, or runtime arguments.
-
-(define-record-type <asset-pipeline>
-  (%make-asset-pipeline name version inputs procedure)
-  asset-pipeline?
-  (name asset-pipeline-name)
-  (version asset-pipeline-version)
-  (inputs asset-pipeline-inputs)
-  (procedure asset-pipeline-procedure))
 
 (define (valid-input? input)
   (and (string? input) (not (string-null? input))))

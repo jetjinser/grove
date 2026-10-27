@@ -10,6 +10,7 @@
   #:use-module (grove private input cache)
   #:use-module (grove private input dependencies)
   #:use-module (grove private pipeline)
+  #:use-module (grove private asset-pipeline)
   #:use-module (grove private project artifacts)
   #:use-module (grove private project state)
   #:use-module (grove private renderer)
@@ -53,13 +54,6 @@
             check-project
             analyze-project
             browse-project))
-
-(define asset-pipeline-name
-  (@@ (grove pipeline) asset-pipeline-name))
-(define asset-pipeline?
-  (@@ (grove pipeline) asset-pipeline?))
-(define asset-pipeline-inputs
-  (@@ (grove pipeline) asset-pipeline-inputs))
 
 (define-record-type <project-input>
   (make-project-input path value)
