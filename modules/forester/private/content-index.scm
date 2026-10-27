@@ -13,7 +13,6 @@
   #:use-module (forester relations)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:re-export (content->plain-text)
   #:export (element-plain-text?
             build-content-node-index))
 

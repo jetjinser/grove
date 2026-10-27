@@ -22,10 +22,11 @@
   #:use-module (grove render rules)
   #:use-module (grove render context)
   #:use-module (grove render html presentation)
+  #:use-module (grove render plain-text)
   #:use-module (grove highlight)
   #:use-module (grove render html routes)
   #:use-module (grove site)
-  #:use-module ((forester private content-index) #:prefix content-index:)
+  #:use-module (forester private content-index)
   #:use-module (forester backmatter)
   #:use-module (forester private entity-uri)
   #:use-module (forester private render-routes)
@@ -372,7 +373,7 @@ from the HTML presentation are appended after these."
 top-level taxon element; pages without one contribute nothing."
   (let ((taxon (page-taxon page)))
     (if taxon
-        (let ((text (content-index:content->plain-text taxon)))
+        (let ((text (content->plain-text taxon)))
           (if (string-null? text)
               '()
               (let ((id (ir:content-element-property/raw taxon 'id)))

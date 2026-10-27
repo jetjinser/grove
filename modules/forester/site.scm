@@ -16,7 +16,7 @@
   #:use-module (grove style)
   #:use-module (grove style html)
   #:use-module ((forester private trees) #:prefix tree-pass:)
-  #:use-module ((forester private content-index) #:prefix content-index:)
+  #:use-module (forester private content-index)
   #:use-module ((forester private query-output) #:prefix query-output:)
   #:use-module ((forester composition) #:prefix composition:)
   #:use-module (forester relations)
@@ -589,7 +589,7 @@ anchors."
                              target)))
                        (list source-id (format #f "ref-~a" index)
                              target-page-id
-                             (content-index:content->plain-text element))))
+                             (content->plain-text element))))
                    elements (iota (length elements) 1))))
              pages)))
          (transclusion-index
@@ -663,7 +663,7 @@ anchors."
                  pages))))
          (content-node-state
            (measure 'content (call-with-values
-             (lambda () (content-index:build-content-node-index pages))
+             (lambda () (build-content-node-index pages))
              list)))
          (composition
            (measure 'composition (composition:make-composition
@@ -881,7 +881,7 @@ MathJax draws it with its own fonts."
                   (lambda (char) (hash-set! codepoints char #t))
                   text))
                 (append (list (site-page-title page)
-                              (content-index:content->plain-text
+                              (content->plain-text
                                 (site-page-document page)))
                         ;;     Analysis strips link text from the document;
                         ;;     the label is what rendering puts back. Rows
