@@ -28,6 +28,7 @@
 (define analyses 0)
 (define partial-renders 0)
 (define statuses '())
+(define renderer-events '())
 (define (put path value)
   (call-with-output-file path (lambda (port) (display value port))))
 (define reader
@@ -93,10 +94,22 @@
           before (input-fingerprint dependency))))
     (build-project (project #t) #:progress
       (lambda (stage detail)
-        (when (eq? stage 'input-cache) (set! statuses (cons detail statuses)))))
+        (when (eq? stage 'input-cache) (set! statuses (cons detail statuses)))
+        (when (eq? stage 'render-renderer)
+          (set! renderer-events (cons detail renderer-events)))))
+    (test-assert "renderer progress identifies its index, duration, and artifact count"
+      (and (= (length renderer-events) 1)
+           (= (caar renderer-events) 0)
+           (number? (cadar renderer-events))
+           (= (caddar renderer-events) 1)))
+    (set! renderer-events '())
     (build-project (project #t) #:progress
       (lambda (stage detail)
-        (when (eq? stage 'input-cache) (set! statuses (cons detail statuses)))))
+        (when (eq? stage 'input-cache) (set! statuses (cons detail statuses)))
+        (when (eq? stage 'render-renderer)
+          (set! renderer-events (cons detail renderer-events)))))
+    (test-equal "complete build-cache hits skip renderer progress" '()
+      renderer-events)
     (test-equal "unchanged source evaluates once" 1 evaluations)
     (test-equal "whole model is analyzed even on an input hit" 2 analyses)
     (test-equal "progress reports miss then hit" '((1 . 1) (0 . 1)) statuses)

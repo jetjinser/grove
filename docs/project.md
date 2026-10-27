@@ -395,11 +395,13 @@ forest.
 
 Scheme runners are silent unless given `#:progress`, a `(stage detail)` callback.
 Stages are `collect`, `sources`, `prepare`, `read`, `read-done`, `input-cache`,
-`analyze`, `render`, `validate`, and `write`. `sources` carries a count, read
-events carry a path, and `write` carries the output directory. `input-cache`
-carries `(hits . total-inputs)` when the project read at least one input;
-other details are `#f`. Complete renderer hits skip `render`. CLI formatting
-uses the same events.
+`analyze`, `render`, `render-renderer`, `validate`, and `write`. `sources`
+carries a count, read events carry a path, and `write` carries the output
+directory. `input-cache` carries `(hits . total-inputs)` when the project read
+at least one input. Each `render-renderer` event carries `(index seconds
+artifact-count)`, with a zero-based renderer index and elapsed time in seconds.
+Other details are `#f`. A complete build-cache hit skips both render events.
+CLI formatting uses the same events.
 
 ## Tree creation
 
