@@ -58,7 +58,16 @@
   (test-equal "site render context can explicitly omit translation groups"
     '()
     (render-context-translation-groups
-      (make-site-render-context forest #:translation-groups '()))))
+      (make-site-render-context forest #:translation-groups '())))
+  (test-error "site context rejects non-boolean language switches"
+    #t
+    (make-site-render-context forest #:hreflang? 'enabled))
+  (test-error "site context rejects empty Open Graph image URLs"
+    #t
+    (make-site-render-context forest #:og-image ""))
+  (test-error "site context rejects non-string Open Graph alt text"
+    #t
+    (make-site-render-context forest #:og-image-alt 42)))
 
 (let ((message
         (catch #t

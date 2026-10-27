@@ -6,6 +6,7 @@
   #:use-module (grove i18n)
   #:use-module (grove render context)
   #:use-module (grove site)
+  #:use-module (grove private string-fun)
   #:use-module (forester private render labels)
   #:use-module (forester render site)
   #:use-module (forester site)
@@ -65,6 +66,18 @@ dynamic chrome parameters."
     (error "render context requires a forest" forest))
   (unless (or (not settings) (site-settings? settings))
     (error "render context settings must be site settings or #f" settings))
+  (unless (and (boolean? hreflang?) (boolean? language-switcher?))
+    (error "render context language switches must be booleans"
+           hreflang? language-switcher?))
+  (unless (or (not site-url) (non-empty-string? site-url))
+    (error "render context site URL must be a non-empty string or #f"
+           site-url))
+  (unless (or (not og-image) (non-empty-string? og-image))
+    (error "render context Open Graph image must be a non-empty string or #f"
+           og-image))
+  (unless (or (not og-image-alt) (string? og-image-alt))
+    (error "render context Open Graph image alt text must be a string or #f"
+           og-image-alt))
   (when (eq? translation-groups derive-translation-groups-later)
     (set! translation-groups (derive-translation-groups (pages forest))))
   (when default-locale
