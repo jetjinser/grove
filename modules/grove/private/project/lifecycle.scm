@@ -41,7 +41,9 @@
     (unless (and (list? paths) (every non-empty-string? paths))
       (error "renderer input collector must return a list of non-empty paths"
              paths))
-    (delete-duplicates paths string=?)))
+    (unless (= (length paths) (length (delete-duplicates paths string=?)))
+      (error "renderer input collector returned duplicate paths" paths))
+    (snapshot-data paths)))
 
 (define (collect-project-sources project)
   "Return PROJECT's validated source paths as independent data."

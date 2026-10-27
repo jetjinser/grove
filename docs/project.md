@@ -280,9 +280,10 @@ compiled files, and effective renderer settings are fingerprinted automatically.
 Module search paths and absent preferred compiled files are also tracked.
 Built-in factories include their settings in cache identity. A custom cached
 renderer should declare extra files with `#:inputs` (a fixed path list or a
-zero-argument collector) and any output-affecting state not represented by the
-model or tracked project files with `#:configuration`. Plain procedures avoid
-this declaration by running on every build. Opaque render rules need a stable
+zero-argument collector); each returned path must be unique. Declare any
+output-affecting state not represented by the model or tracked project files
+with `#:configuration`. Plain procedures avoid this declaration by running on
+every build. Opaque render rules need a stable
 `#:rules-id`.
 For the default HTML renderer installed by `make-forester-project`, pass this
 as `#:html-rules-id`; use `#:extra-sources` for files those rules read.

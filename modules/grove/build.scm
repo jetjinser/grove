@@ -36,6 +36,8 @@ safely."
               (and (list? inputs) (every non-empty-string? inputs)))
     (error "renderer inputs must be #f, a list of paths, or a path collector" inputs))
   (when (list? inputs)
+    (unless (= (length inputs) (length (delete-duplicates inputs string=?)))
+      (error "renderer input paths must be unique" inputs))
     (set! inputs (snapshot-data inputs)))
   (%make-cached-renderer
     cache?

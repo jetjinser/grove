@@ -76,6 +76,9 @@
 (test-error "renderer input paths must be non-empty strings" #t
   (make-cached-renderer (lambda (site) '())
     #:inputs '("")))
+(test-error "fixed renderer input paths must be unique" #t
+  (make-cached-renderer (lambda (site) '())
+    #:inputs '("theme.css" "theme.css")))
 (test-assert "fixed renderer input paths are snapshotted"
   (let* ((path (string-copy "theme.css"))
          (paths (list path))

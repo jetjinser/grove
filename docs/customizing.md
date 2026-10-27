@@ -115,8 +115,8 @@ configuration so cache reuse stays correct.
 
 Plain renderer procedures run on each build because Scheme procedures have no
 stable cache identity. Use `make-cached-renderer` when artifact reuse is useful;
-declare extra files with `#:inputs` and state not represented by the model or
-tracked project files with `#:configuration`. A pipeline may omit `#:inputs`
+declare unique extra file paths with `#:inputs` and state not represented by the
+model or tracked project files with `#:configuration`. A pipeline may omit `#:inputs`
 when it does not read project files, and may keep the default empty `#:version`
 when its behavior is determined by project code and declared inputs. Add a
 version for state Grove cannot observe, such as an external toolchain version

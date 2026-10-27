@@ -165,6 +165,15 @@
       (build-project external-project)
       (test-equal "changing a fixed renderer input reruns its renderer" 2 renders)
       (put dependency "one"))
+    (test-error "renderer input collectors reject duplicate paths" #t
+      (build-project
+        (make-project
+          #:collect-sources (lambda () (list source))
+          #:read-source (lambda (_) 'model)
+          #:renderers
+          (list (make-cached-renderer (lambda (_) '())
+                  #:inputs (lambda () (list dependency dependency))))
+          #:output-directory (string-append root "/duplicate-renderer-inputs"))))
     (put source "Second")
     (build-project (project #t))
     (test-equal "source change invalidates its result" 2 evaluations)
