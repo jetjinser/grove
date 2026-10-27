@@ -597,7 +597,6 @@ analysis results - pages, relations, indexes - come from the forest."
                                                    (car render-result) retired))
               (owners (append pipeline-owners (cadr render-result)))
              (affected (affected-artifacts artifacts previous-artifacts changed))
-             (kept (map build-state-source-path current-sources))
              (report-removed
                 (filter (lambda (p) (not (member p changed string=?))) removed)))
          (call-with-project-stage 'validate #f
