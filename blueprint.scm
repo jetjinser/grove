@@ -57,7 +57,9 @@
   (let* ((module-arguments
            (append-map (lambda (path) (list "-L" path)) %load-path))
          (compiled-arguments
-           (append-map (lambda (path) (list "-C" path)) %load-compiled-path))
+           (append (list "-C" (string-append (dirname (current-filename)) "/build"))
+                   (append-map (lambda (path) (list "-C" path))
+                               %load-compiled-path)))
          (program
            (format #f "(use-modules (grove private cli)) (exit (main '~s))"
              arguments))
