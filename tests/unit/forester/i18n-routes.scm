@@ -31,6 +31,16 @@
   (text-relative-path "/pages/guide.txt" "pages/chapter.txt"))
 (test-error "text relative paths reject traversal target paths" #t
   (text-relative-path "pages/guide.txt" "../outside.txt"))
+(test-error "HTML page paths reject empty page IDs" #t
+  (html-page-path (make-html-routes) ""))
+(test-error "HTML page paths reject non-route values" #t
+  (html-page-path #f "guide"))
+(test-error "HTML route tables reject malformed page ID lists" #t
+  (html-route-table (make-html-routes) '("guide" "")))
+(test-error "text page paths reject empty page IDs" #t
+  (text-page-path (make-text-routes) ""))
+(test-error "locale page paths reject empty page IDs" #t
+  ((locale-page-path (lambda (_) #f)) ""))
 
 (let* ((id (string-copy "guide"))
        (shared-path (string-copy "pages/guide.html"))

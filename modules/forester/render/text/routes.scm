@@ -4,6 +4,7 @@
 
 (define-module (forester render text routes)
   #:use-module (grove private snapshot)
+  #:use-module (grove private string-fun)
   #:use-module (grove output)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
@@ -36,6 +37,8 @@
 (define (text-page-path routes id)
   (unless (text-routes? routes)
     (error "text page path requires text routes" routes))
+  (unless (non-empty-string? id)
+    (error "text page path requires a non-empty page ID" id))
   (let ((path ((text-page-path-procedure routes) (snapshot-data id))))
     (unless (artifact-path? path)
       (error "text page requires a relative path" id path))
