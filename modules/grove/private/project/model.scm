@@ -34,7 +34,7 @@
             build-report-modified-sources
             build-report-removed-sources
             build-report-affected-artifacts
-            build-report-rendered?
+            build-report-render-cache-hit?
             ;; Private constructors and analysis record used by lifecycle.
             make-project-input
             make-project-context
@@ -91,7 +91,8 @@
   (snapshot-data (project-context-extra-sources/raw context)))
 
 (define-record-type <build-report>
-  (%make-build-report sources artifacts added modified removed affected rendered?)
+  (%make-build-report sources artifacts added modified removed affected
+                      render-cache-hit?)
   build-report?
   (sources build-report-sources/raw)
   (artifacts build-report-artifacts/raw)
@@ -99,16 +100,17 @@
   (modified build-report-modified-sources/raw)
   (removed build-report-removed-sources/raw)
   (affected build-report-affected-artifacts/raw)
-  (rendered? build-report-rendered?))
+  (render-cache-hit? build-report-render-cache-hit?))
 
-(define (make-build-report sources artifacts added modified removed affected rendered?)
+(define (make-build-report sources artifacts added modified removed affected
+                           render-cache-hit?)
   (%make-build-report (snapshot-data sources)
                       (snapshot-data artifacts)
                       (snapshot-data added)
                       (snapshot-data modified)
                       (snapshot-data removed)
                       (snapshot-data affected)
-                      rendered?))
+                      render-cache-hit?))
 
 (define (build-report-sources report)
   (snapshot-data (build-report-sources/raw report)))

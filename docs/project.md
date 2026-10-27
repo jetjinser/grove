@@ -115,6 +115,10 @@ accessors return independent copies, so a caller can annotate or filter a
 report without changing the result observed by another consumer. Project
 execution errors likewise snapshot the original exception key, arguments, and
 source path; the captured stack remains an opaque diagnostic value.
+`build-report-render-cache-hit?` reports whether the build reused the complete
+renderer result from cache. It does not report whether output files needed to
+be restored or written, and a false value does not imply every renderer ran:
+some renderers may reuse their outputs while others are invalidated.
 
 Scheme hosts can catch the `grove-project-error` key and inspect the resulting
 `project-error` with accessors from `(grove project diagnostic)`. The original

@@ -295,7 +295,7 @@ Return the internal analysis record used by the build pipeline."
         #:earlier-sources pre-build-sources
         #:prune (lambda () (prune-input-cache! input-cache-context))))
     (make-build-report (map build-state-source-path current-sources) artifacts added modified removed affected
-                       (not cache-hit?))))
+                       cache-hit?)))
 
 (define* (build-project/report project #:key (progress (lambda (stage path) #t)))
   "Build PROJECT, notifying PROGRESS with a stage symbol and detail.

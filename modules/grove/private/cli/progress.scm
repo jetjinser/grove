@@ -102,7 +102,7 @@ whole process lifetime, no sampling needed."
                 (length (build-report-affected-artifacts report))
                 (format-duration elapsed))))
   (when output (print-cli-status "Output" output))
-  (unless (build-report-rendered? report)
+  (when (build-report-render-cache-hit? report)
     (print-cli-status "Cached" "Renderer cache hit.")))
 
 (define (progress-bar completed total width)

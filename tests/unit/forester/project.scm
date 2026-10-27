@@ -551,7 +551,7 @@
                  #:output-directory cache-output-directory))
              (first (build-project/report incremental-project)))
         (test-assert "cached Forester HTML renderer performs initial render"
-          (build-report-rendered? first))
+          (not (build-report-render-cache-hit? first)))
         (write-test-file
           (string-append source-directory "/unlinked.plant")
           "@use-modules[(tests unit forester linked commands)]\n@title{Unlinked}\n@paragraph{Changed standalone page.}")
@@ -683,7 +683,7 @@
         (let ((first (build-project/report
                        (make-presentation-project "Title decoration first"))))
           (test-assert "initial title decoration is rendered"
-            (and (build-report-rendered? first)
+            (and (not (build-report-render-cache-hit? first))
                  (string-contains
                    (read-test-file
                      (string-append presentation-output "/index.html"))
@@ -691,11 +691,11 @@
         (let ((same (build-project/report
                       (make-presentation-project "Title decoration first"))))
           (test-assert "identical title decoration reuses cached output"
-            (not (build-report-rendered? same))))
+            (build-report-render-cache-hit? same)))
         (let ((changed (build-project/report
                          (make-presentation-project "Title decoration changed"))))
           (test-assert "changed title decoration invalidates cached output"
-            (and (build-report-rendered? changed)
+            (and (not (build-report-render-cache-hit? changed))
                  (string-contains
                    (read-test-file
                      (string-append presentation-output "/index.html"))

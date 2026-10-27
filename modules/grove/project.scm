@@ -30,7 +30,7 @@
                build-report-modified-sources
                build-report-removed-sources
                build-report-affected-artifacts
-               build-report-rendered?
+               build-report-render-cache-hit?
                build-project/report
                build-project
                check-project

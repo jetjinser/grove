@@ -148,7 +148,8 @@
     (test-equal "ordinary source changes retain incremental rendering" 1 partial-renders)
     (put dependency "two")
     (test-assert "dependency changes also invalidate renderer cache"
-      (build-report-rendered? (build-project/report (project #t))))
+      (not (build-report-render-cache-hit?
+             (build-project/report (project #t)))))
     (test-equal "declared dependency change invalidates result" 3 evaluations)
     (test-equal "reader dependencies conservatively force a full render" 1 partial-renders)
     (build-project (project #f))
@@ -328,7 +329,8 @@
     (let ((before evaluations))
       (build-project (project #t))
       (test-assert "document opt-out also prevents renderer reuse"
-        (build-report-rendered? (build-project/report (project #t))))
+        (not (build-report-render-cache-hit?
+               (build-project/report (project #t)))))
       (test-equal "document opt-out evaluates on every build" (+ before 2) evaluations))
     (put source "@(define-module (tests cached-article-module))\nModule body")
     (let ((before evaluations))

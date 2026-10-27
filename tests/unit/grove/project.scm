@@ -454,8 +454,8 @@
                  #:output-directory output)))
            (first (build-project/report project)))
       (test-equal "first render observes its original source snapshot" 1 renders)
-      (test-assert "a source drift during render is reported as a completed render"
-        (build-report-rendered? first))
+      (test-assert "a source drift during render is not reported as a cache hit"
+        (not (build-report-render-cache-hit? first)))
       (let ((second (build-project/report project)))
         (test-equal "source drift invalidates the just-written build state" 2 renders)
         (test-equal "the next render reads the changed source"
@@ -621,8 +621,8 @@
               1 render-count)
             (test-equal "first build still reads every page"
               2 reader-count)
-            (test-assert "first cacheable build reports rendering"
-              (build-report-rendered? first))
+            (test-assert "first cacheable build is a renderer cache miss"
+              (not (build-report-render-cache-hit? first)))
             (test-assert "extra source files appear in initial source report"
               (member external-source-path
                       (build-report-added-sources first)
@@ -633,8 +633,8 @@
                 1 render-count)
               (test-equal "cache hit still reads every page"
                 4 reader-count)
-              (test-assert "cache hit reports that rendering was skipped"
-                (not (build-report-rendered? second)))
+              (test-assert "cache hit is reported explicitly"
+                (build-report-render-cache-hit? second))
               (test-equal "cache hit has no affected artifacts"
                 '()
                 (build-report-affected-artifacts second))))
@@ -649,8 +649,8 @@
             (test-equal "the restored output holds the rendered bytes"
               "平方：2"
               (call-with-input-file cache-output-path get-string-all))
-            (test-assert "a restored cache hit reports that rendering was skipped"
-              (not (build-report-rendered? missing-output))))
+            (test-assert "restored artifacts preserve the renderer cache hit"
+              (build-report-render-cache-hit? missing-output)))
           (write-test-file cache-output-path "tampered")
           (let ((tampered-output (build-project/report cached-project)))
             (test-equal "modified cached outputs are rendered again"
@@ -658,8 +658,8 @@
             (test-equal "modified cached outputs are restored"
               "平方：2"
               (call-with-input-file cache-output-path get-string-all))
-            (test-assert "modified cached output reports rendering"
-              (build-report-rendered? tampered-output)))
+            (test-assert "modified cached output is a renderer cache miss"
+              (not (build-report-render-cache-hit? tampered-output))))
           (write-test-file (string-append source-directory "/first.plant")
                            "cache source changed")
           (let ((changed-source (build-project/report cached-project)))
@@ -822,8 +822,8 @@
                      (not (member "independent.txt" dirty-paths string=?))
                      (member "pages/first.txt" old-paths string=?)
                      (member "pages/third.txt" old-paths string=?))))
-            (test-assert "partial render is reported as rendering"
-              (build-report-rendered? partial))
+            (test-assert "partial render is a renderer cache miss"
+              (not (build-report-render-cache-hit? partial)))
             (test-equal "partial renderer preserves current output set"
               '("index.txt" "independent.txt" "unknown.txt"
                 "pages/first.txt")

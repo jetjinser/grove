@@ -83,7 +83,7 @@
     (call-with-loaded-project config
       (lambda (project)
         (test-assert "unchanged loaded projects reuse render cache"
-          (not (build-report-rendered? (build-project/report project))))))
+          (build-report-render-cache-hit? (build-project/report project)))))
     (write-project "two")
     (call-with-loaded-project config build-project)
     (test-equal "configuration changes invalidate cached rendered contents" "two"
