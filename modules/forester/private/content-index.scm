@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester private content-index)
+  #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove string-fun)
   #:use-module (grove ir)
   #:use-module (grove site)
@@ -16,7 +17,7 @@
 (define (element-plain-text? element)
   (and (content-element? element)
        (every (lambda (child) (not (content-element? child)))
-              (content-element-children element))))
+              (ir:content-element-children/raw element))))
 
 (define (validate-topic-facts! facts)
   (let ((topics
@@ -56,8 +57,8 @@
              (else
               (let* ((id next-id)
                      (kind (content-element-kind content))
-                     (properties (content-element-properties content))
-                     (children (content-element-children content)))
+                     (properties (ir:content-element-properties/raw content))
+                     (children (ir:content-element-children/raw content)))
                 (set! next-id (1+ next-id))
                 (set! index (cons (cons id content) index))
                 (let* ((child-results
@@ -83,7 +84,7 @@
               (append-map
                 (lambda (page)
                   (let ((children
-                          (content-document-children
+                          (ir:content-document-children/raw
                             (site-page-document page))))
                     (append-map
                       car

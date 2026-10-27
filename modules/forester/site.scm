@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester site)
+  #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove string-fun)
   #:use-module (grove ir)
   #:use-module (grove site)
@@ -189,7 +190,7 @@
        (any (lambda (child)
               (and (content-element? child)
                    (eq? (content-element-kind child) 'forest-query)))
-            (content-document-children content))))
+            (ir:content-document-children/raw content))))
 
 (define (nested-query-in-content? content)
   (cond
@@ -197,13 +198,13 @@
      (or (eq? (content-element-kind content) 'forest-query)
          (and (not (eq? (content-element-kind content) 'subtree))
               (any nested-query-in-content?
-                   (content-element-children content)))))
+                   (ir:content-element-children/raw content)))))
     ((content-document? content)
-     (any nested-query-in-content? (content-document-children content)))
+     (any nested-query-in-content? (ir:content-document-children/raw content)))
     (else #f)))
 
 (define (query-source-label page request)
-  (let ((location (content-element-property request 'source-location)))
+  (let ((location (ir:content-element-property/raw request 'source-location)))
     (format #f "~a~a"
       (or (and (list? location) (assq-ref location 'file))
           (site-page-source page)
@@ -219,7 +220,7 @@
     (if (and (content-element? content)
              (eq? (content-element-kind content) 'forest-query))
         (let* ((source (query-source-label page content))
-               (query (content-element-property content 'query))
+               (query (ir:content-element-property/raw content 'query))
                (result
                  (catch #t
                    (lambda () (query forest (site-page-id page)))
@@ -232,15 +233,15 @@
                         (member fragment
                                 (hash-ref anchor-index target '())
                                 string=?)))))
-          (content-document-children
+          (ir:content-document-children/raw
             (query-output:prepare-query-output result source
               (lambda (target) (find-page forest target))
               known-anchor?)))
         (list content)))
   (make-content-document
-    (append-map resolve (content-document-children
+    (append-map resolve (ir:content-document-children/raw
                           (site-page-document page)))
-    (content-document-source (site-page-document page))))
+    (ir:content-document-source/raw (site-page-document page))))
 
 (define (validate-query-composition! forest resolved-pages)
   ;; Validate the resolved display graph without adding generated facts to the
@@ -250,7 +251,7 @@
     (lambda (page)
       (append
         (composition:target-ids (composition forest) (site-page-id page))
-        (map (lambda (element) (content-element-property element 'target))
+        (map (lambda (element) (ir:content-element-property/raw element 'target))
              (tree-pass:walk-content (tree-pass:owned-content (site-page-document page))
                            (tree-pass:element-kind? 'query-transclude)))))))
 
@@ -263,7 +264,7 @@
                 tree-display? #:stop? tree-display?))
 
 (define (tree-occurrence-target element)
-  (content-element-property element
+  (ir:content-element-property/raw element
     (if (eq? (content-element-kind element) 'subtree) 'tree-id 'target)))
 
 (define (resolve-forest-queries forest anchor-index)
@@ -274,7 +275,7 @@
                            (not (and (content-element? child)
                                      (eq? (content-element-kind child)
                                           'forest-query))))
-                         (content-document-children
+                         (ir:content-document-children/raw
                            (site-page-document page))))
         (error "Forester query must be a top-level page command"
                (site-page-source page))))
@@ -339,7 +340,7 @@ those trees' frontmatter."
       (and (content-element? node)
            (eq? (content-element-kind node) kind)
            node))
-    (content-document-children (site-page-document page))))
+    (ir:content-document-children/raw (site-page-document page))))
 
 (define (page-taxon page)
   "The page's own taxon element, or #f when it declares none."
@@ -361,16 +362,16 @@ transclusions belong to their own pages and stay out of this set."
       (list (cons "anchor" (string-append "tree-root-" (site-page-id page))))
       (map (lambda (id) (cons "math" id))
            (filter-map
-             (lambda (element) (content-element-property element 'id))
+             (lambda (element) (ir:content-element-property/raw element 'id))
              (tree-pass:math-elements
                (tree-pass:owned-content document))))
       (map (lambda (id) (cons "anchor" id))
            (filter-map
-             (lambda (element) (content-element-property element 'anchor))
+             (lambda (element) (ir:content-element-property/raw element 'anchor))
              (append (tree-pass:subtree-elements document)
                      (tree-pass:transclusion-elements document))))
       (map (lambda (element)
-             (cons "anchor" (content-element-property element 'anchor)))
+             (cons "anchor" (ir:content-element-property/raw element 'anchor)))
            (tree-pass:declared-anchor-elements document)))))
 
 (define (element-tag-name element)
@@ -517,7 +518,7 @@ anchors."
                  (map
                    (lambda (element index)
                      (let* ((target
-                              (content-element-property element 'target))
+                              (ir:content-element-property/raw element 'target))
                             (target-page-id target)
                             (target-page (and (non-empty-string? target-page-id)
                                               (not (string-index target-page-id #\#))
@@ -548,7 +549,7 @@ anchors."
                    (map
                      (lambda (element index)
                        (let* ((target-id
-                                (content-element-property element 'target))
+                                (ir:content-element-property/raw element 'target))
                               (transclusion-id
                                 (format #f "transclude-~a" index))
                               (source-path
@@ -579,7 +580,7 @@ anchors."
                    (filter-map
                      (lambda (element)
                        (let ((anchor
-                               (content-element-property element 'anchor)))
+                               (ir:content-element-property/raw element 'anchor)))
                          (and anchor
                               (string=? "dfn" (element-tag-name element))
                               (list anchor
@@ -615,7 +616,7 @@ anchors."
                  (map (lambda (element)
                         (composition:make-subtree-definition
                           (site-page-id page)
-                          (content-element-property element 'tree-id)))
+                          (ir:content-element-property/raw element 'tree-id)))
                       (tree-pass:direct-subtree-elements
                         (site-page-document page))))
                pages)
@@ -632,11 +633,11 @@ anchors."
                      (filter-map
                        (lambda (element)
                          (let ((term-mark
-                                 (content-element-property element 'term))
+                                 (ir:content-element-property/raw element 'term))
                                (fragment
-                                 (content-element-property element 'fragment))
+                                 (ir:content-element-property/raw element 'fragment))
                                (target-page-id
-                                 (content-element-property element 'target)))
+                                 (ir:content-element-property/raw element 'target)))
                            (cond
                              ;;     A marked mention: resolution goes
                              ;;     through the definition relation -
@@ -671,9 +672,9 @@ anchors."
                   (for-each
                     (lambda (element)
                       (let ((fragment
-                              (content-element-property element 'fragment))
+                              (ir:content-element-property/raw element 'fragment))
                             (target-page-id
-                              (content-element-property element 'target)))
+                              (ir:content-element-property/raw element 'target)))
                         (when (and fragment
                                    (not (member fragment
                                                 (hash-ref anchor-index

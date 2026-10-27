@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math presentation)
+  #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (ice-9 format)
   #:use-module (grove ir)
   #:use-module (grove math derivation)
@@ -30,7 +31,7 @@
   (make-content-element 'math-token (list text) #:properties (cons (cons 'token-kind kind) properties)))
 (define (expression-children term assumptions)
   (let ((layout (math-term->layout term assumptions)))
-    (if (eq? (content-element-kind layout) 'math-row) (content-element-children layout) (list layout))))
+    (if (eq? (content-element-kind layout) 'math-row) (ir:content-element-children/raw layout) (list layout))))
 (define (first-row term assumptions)
   (make-content-element 'math-row
     (list (cell (expression-children term assumptions)) (cell '()) (cell '()))))

@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester private trees)
+  #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove string-fun)
   #:use-module (grove ir)
   #:use-module (grove site)
@@ -31,9 +32,9 @@
            (children
              (cond
                ((and element? (not (stop? node)))
-                (content-element-children node))
+                (ir:content-element-children/raw node))
                ((content-document? node)
-                (content-document-children node))
+                (ir:content-document-children/raw node))
                (else '())))
            (nested (append-map walk children))
            (selected (if (select? node) (list node) '())))
@@ -63,7 +64,7 @@
 
 (define (content-source-paths content)
   (filter-map (lambda (node)
-                (and (content-text? node) (content-text-source node)))
+                (and (content-text? node) (ir:content-text-source/raw node)))
     (walk-content content content-text?)))
 
 (define (transclusion-elements content)
@@ -78,7 +79,7 @@
       (and (content-element? element)
            (not (memq (content-element-kind element)
                       '(subtree transclude forest-query)))
-           (content-element-property element 'anchor)))
+           (ir:content-element-property/raw element 'anchor)))
     #:stop? (element-kind? 'subtree)))
 
 (define (owned-content content)
@@ -88,28 +89,28 @@
          #f
          (make-content-element
            (content-element-kind content)
-           (filter-map owned-content (content-element-children content))
-           (content-element-source content)
-           #:properties (content-element-properties content)
+           (filter-map owned-content (ir:content-element-children/raw content))
+           (ir:content-element-source/raw content)
+           #:properties (ir:content-element-properties/raw content)
            #:style (content-element-style content)
            #:flow-kind (content-element-flow-kind content))))
     ((content-document? content)
      (make-content-document
-       (filter-map owned-content (content-document-children content))
-       (content-document-source content)))
+       (filter-map owned-content (ir:content-document-children/raw content))
+       (ir:content-document-source/raw content)))
     (else content)))
 
 (define (subtree-page element source)
-  (let ((id (content-element-property element 'tree-id))
-        (title (content-element-property element 'title)))
+  (let ((id (ir:content-element-property/raw element 'tree-id))
+        (title (ir:content-element-property/raw element 'title)))
     (unless (and (non-empty-string? id)
                  (non-empty-string? title))
       (error "invalid Forester subtree element" element))
     (document->tree-page
-      id (make-content-document (content-element-children element) source) source
+      id (make-content-document (ir:content-element-children/raw element) source) source
       #:title title
       #:metadata `((inline-subtree . #t)
-                   ,@(let ((location (content-element-property element 'source-location)))
+                   ,@(let ((location (ir:content-element-property/raw element 'source-location)))
                        (if location `((source-location . ,location)) '()))))))
 
 (define (subtree-pages pages)
@@ -129,29 +130,29 @@
         ((content-element? content)
          (let* ((addressable-disclosure?
                   (and (eq? (content-element-kind content) 'disclosure)
-                       (content-element-property content 'addressable?)))
+                       (ir:content-element-property/raw content 'addressable?)))
                 (subtree? (or (eq? (content-element-kind content) 'subtree)
                               addressable-disclosure?))
                 (kind (if addressable-disclosure? 'subtree
                           (content-element-kind content)))
                 (explicit-id
                   (and subtree?
-                       (content-element-property content 'tree-id)))
+                       (ir:content-element-property/raw content 'tree-id)))
                 (id (and subtree?
                          (or explicit-id
                          (begin
                            (let ((id next-id))
                              (set! next-id (1+ next-id))
                              (format #f "unstable-~a" id))))))
-                (children (map transform (content-element-children content)))
+                (children (map transform (ir:content-element-children/raw content)))
                 (properties
                   (filter (lambda (entry)
                             (not (memq (car entry)
                                        '(tree-id addressable?))))
-                          (content-element-properties content))))
+                          (ir:content-element-properties/raw content))))
            (make-content-element
              kind children
-             (content-element-source content)
+             (ir:content-element-source/raw content)
              #:properties (if id
                               (cons (cons 'tree-id id) properties)
                               properties)
@@ -159,8 +160,8 @@
              #:flow-kind (content-element-flow-kind content))))
         ((content-document? content)
          (make-content-document
-           (map transform (content-document-children content))
-           (content-document-source content)))
+           (map transform (ir:content-document-children/raw content))
+           (ir:content-document-source/raw content)))
         (else content)))
     (map (lambda (page)
            (make-site-page
@@ -181,7 +182,7 @@ a tree brought in by another tree's transclusion repeats anchors in the host
 DOM without being counted, the same global-anchor limitation the uniqueness
 check documents."
   (define (occurrence-id element)
-    (content-element-property element
+    (ir:content-element-property/raw element
       (if (eq? (content-element-kind element) 'subtree)
           'tree-id
           'target)))
@@ -189,30 +190,30 @@ check documents."
     (let next ((content document))
       (cond
         ((content-element? content)
-         (let* ((children (map next (content-element-children content)))
+         (let* ((children (map next (ir:content-element-children/raw content)))
                 (kind (content-element-kind content))
                 (id (and (memq kind '(subtree transclude))
                          (occurrence-id content)))
                 (anchor
                   (and id
                        (= 1 (hash-ref counts id 0))
-                       (not (content-element-property content 'anchor))
+                       (not (ir:content-element-property/raw content 'anchor))
                        id))
                 (properties
                   (if anchor
                       (cons (cons 'anchor anchor)
-                            (content-element-properties content))
-                      (content-element-properties content))))
+                            (ir:content-element-properties/raw content))
+                      (ir:content-element-properties/raw content))))
            (make-content-element
              kind children
-             (content-element-source content)
+             (ir:content-element-source/raw content)
              #:properties properties
              #:style (content-element-style content)
              #:flow-kind (content-element-flow-kind content))))
         ((content-document? content)
          (make-content-document
-           (map next (content-document-children content))
-           (content-document-source content)))
+           (map next (ir:content-document-children/raw content))
+           (ir:content-document-source/raw content)))
         (else content))))
   (map
     (lambda (page)
@@ -253,37 +254,37 @@ invented here."
           ((content-document? content)
            (make-content-document
              (map (lambda (child) (next child nested?))
-                  (content-document-children content))
-             (content-document-source content)))
+                  (ir:content-document-children/raw content))
+             (ir:content-document-source/raw content)))
           ((not (content-element? content)) content)
           ;; Equations inside subtrees belong to the subtrees' own pages.
           ((or nested?
                (memq (content-element-kind content) '(subtree forest-query)))
            content)
           ((and (eq? (content-element-kind content) 'math)
-                (content-element-property content 'display?))
+                (ir:content-element-property/raw content 'display?))
            (set! counter (1+ counter))
-           (let* ((id (or (content-element-property content 'id)
+           (let* ((id (or (ir:content-element-property/raw content 'id)
                           (format #f "unstable-eq-~a" counter)))
                   ;;     \tag is a TeX notion; MathML equations always number.
-                  (tagged? (and (content-element-property content 'tex?)
+                  (tagged? (and (ir:content-element-property/raw content 'tex?)
                                 (string-contains
                                   (content-verbatim-string
-                                    (content-element-children content))
+                                    (ir:content-element-children/raw content))
                                   "\\tag")))
                   (properties
                     (cons (cons 'id id)
                           (if tagged?
                               (filter (lambda (entry)
                                         (not (eq? (car entry) 'id)))
-                                      (content-element-properties content))
+                                      (ir:content-element-properties/raw content))
                               (cons (cons 'number (number-string))
                                     (filter (lambda (entry)
                                               (not (eq? (car entry) 'id)))
-                                            (content-element-properties content)))))))
+                                            (ir:content-element-properties/raw content)))))))
              (make-content-element
-               'math (content-element-children content)
-               (content-element-source content)
+               'math (ir:content-element-children/raw content)
+               (ir:content-element-source/raw content)
                #:properties properties
                #:style (content-element-style content)
                #:flow-kind (content-element-flow-kind content))))
@@ -291,9 +292,9 @@ invented here."
            (make-content-element
              (content-element-kind content)
              (map (lambda (child) (next child nested?))
-                  (content-element-children content))
-             (content-element-source content)
-             #:properties (content-element-properties content)
+                  (ir:content-element-children/raw content))
+             (ir:content-element-source/raw content)
+             #:properties (ir:content-element-properties/raw content)
              #:style (content-element-style content)
              #:flow-kind (content-element-flow-kind content)))))))
   (map (lambda (page)

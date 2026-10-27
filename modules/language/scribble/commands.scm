@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (language scribble commands)
+  #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove ir)
   #:use-module (ice-9 optargs)
   #:use-module (language scribble command)
@@ -58,10 +59,10 @@
   (unless (or (string? value) (content-text? value))
     (error "text-paragraphs expects plain text" value))
   (let* ((text (if (content-text? value)
-                   (content-text-value value)
+                   (ir:content-text-value/raw value)
                    value))
          (source (and (content-text? value)
-                      (content-text-source value))))
+                      (ir:content-text-source/raw value))))
     (define (make-paragraph-text lines)
       (make-content-text (string-join (reverse lines) " ") source))
     (let loop ((lines (string-split text #\newline))

@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (language scribble flow)
+  #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove ir)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
@@ -66,15 +67,15 @@
   (cond
     ((string? value) (text-flow-events value #f #f))
     ((content-text? value)
-     (text-flow-events (content-text-value value)
-                       (content-text-source value)
-                       (content-text-location value)))
+     (text-flow-events (ir:content-text-value/raw value)
+                       (ir:content-text-source/raw value)
+                       (ir:content-text-location/raw value)))
     ((content-layout? value)
      (if (eq? (content-layout-kind value) 'newline)
          (list flow-newline)
          (list value)))
     ((content-document? value)
-     (append-map flow-events (content-document-children value)))
+     (append-map flow-events (ir:content-document-children/raw value)))
     ((content-sequence? value)
      (append-map flow-events (flatten-content-sequence value)))
     (else (list value))))
@@ -87,9 +88,9 @@
   (cond
     ((string? value) (string-every char-whitespace? value))
     ((content-text? value)
-     (string-every char-whitespace? (content-text-value value)))
+     (string-every char-whitespace? (ir:content-text-value/raw value)))
     ((content-layout? value)
-     (string-every char-whitespace? (content-layout-raw value)))
+     (string-every char-whitespace? (ir:content-layout-raw/raw value)))
     (else #f)))
 
 (define (decode-flow values)
@@ -109,9 +110,9 @@
                      (location
                        (cond
                          ((content-text? first)
-                          (content-text-location first))
+                          (ir:content-text-location/raw first))
                          ((content-element? first)
-                          (content-element-property first 'source-location))
+                          (ir:content-element-property/raw first 'source-location))
                          (else #f))))
                 (cons (if location
                           (content-with-source-location paragraph location)

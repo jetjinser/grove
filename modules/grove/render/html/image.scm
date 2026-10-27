@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove render html image)
+  #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove ir)
   #:use-module (grove render rules)
   #:use-module (srfi srfi-1)
@@ -65,7 +66,7 @@
                                    sets))
     (error "image-set-rule requires an association list of image sets" sets))
   (lambda (context element children next)
-    (let* ((source (content-element-property element 'source))
+    (let* ((source (ir:content-element-property/raw element 'source))
            (alt (content-verbatim-string children))
            (set (assoc-ref sets source)))
       (if set

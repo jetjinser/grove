@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math layout)
+  #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove ir)
   #:use-module (grove math term)
   #:use-module (grove math operator)
@@ -37,12 +38,12 @@
 (define (math-notation->datum value)
   "Return a readable Scheme datum describing a Notation IR tree."
   (cond
-    ((content-text? value) (content-text-value value))
+    ((content-text? value) (ir:content-text-value/raw value))
     ((content-element? value)
      `(,(content-element-kind value)
-       ,@(if (null? (content-element-properties value)) '()
-             (list (cons 'properties (content-element-properties value))))
-       ,@(map math-notation->datum (content-element-children value))))
+       ,@(if (null? (ir:content-element-properties/raw value)) '()
+             (list (cons 'properties (ir:content-element-properties/raw value))))
+       ,@(map math-notation->datum (ir:content-element-children/raw value))))
     (else (error "expected a Notation IR node" value))))
 
 (define* (math-term->layout term #:optional (types '()) #:key (properties '()))

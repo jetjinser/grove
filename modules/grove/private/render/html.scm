@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove private render html)
+  #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove ir)
   #:use-module (grove style)
   #:use-module (grove style html)
@@ -78,11 +79,11 @@ ID-PREFIX."
   (define (render content)
     (cond
       ((string? content) content)
-      ((content-text? content) (content-text-value content))
-      ((content-layout? content) (content-layout-raw content))
+      ((content-text? content) (ir:content-text-value/raw content))
+      ((content-layout? content) (ir:content-layout-raw/raw content))
       ((content-element? content) (render-element content))
       ((content-document? content)
-       (cons 'article (map render (content-document-children content))))
+       (cons 'article (map render (ir:content-document-children/raw content))))
       (else (error "not a content node" content))))
 
   (define (style-html-tag style)
@@ -133,9 +134,9 @@ ID-PREFIX."
                (append tag-sxml children)))))))
 
   (define (render-code-block element)
-    (let* ((language (content-element-property element 'language))
+    (let* ((language (ir:content-element-property/raw element 'language))
            (highlighter (and language (assq-ref highlighters language)))
-           (source (content-verbatim-string (content-element-children element))))
+           (source (content-verbatim-string (ir:content-element-children/raw element))))
       (when (and language (not highlighter))
         (format (current-error-port)
           "WARNING: no code highlighter configured for ~a; displaying plain text~%" language))
@@ -166,14 +167,14 @@ ID-PREFIX."
       ((summary) (cons 'summary children))
       ((disclosure subtree)
        `(details
-          ,@(if (if (assq 'open? (content-element-properties element))
-                    (content-element-property element 'open?) #t)
+          ,@(if (if (assq 'open? (ir:content-element-properties/raw element))
+                    (ir:content-element-property/raw element 'open?) #t)
                 '((@ (open "open"))) '())
-          (summary ,(content-element-property element 'title))
+          (summary ,(ir:content-element-property/raw element 'title))
           ,@children))
       ((section)
        `(section (@ (class "forest-section"))
-          (h2 ,(content-element-property element 'title))
+          (h2 ,(ir:content-element-property/raw element 'title))
           ,@children))
       ((math-derivation math-diagnostics)
        `(div (@ (class ,(symbol->string (content-element-kind element))))
@@ -205,7 +206,7 @@ ID-PREFIX."
         ((eq? kind 'math)
          (apply-element-style element (render-math element)))
         (else
-         (let* ((children (map render (content-element-children element)))
+         (let* ((children (map render (ir:content-element-children/raw element)))
                 (handler (assq-ref internal-handlers kind))
                 (rule (and rules (render-rules-ref rules kind)))
                 (rendered
@@ -233,16 +234,16 @@ ID-PREFIX."
     (if (not (content-element? child))
         (error "math children must be tokenized" child)
         (let ((kind (content-element-kind child))
-              (children (content-element-children child)))
+              (children (ir:content-element-children/raw child)))
           (case kind
             ((math-token)
-             (let ((tag (content-element-property child 'token-kind)))
+             (let ((tag (ir:content-element-property/raw child 'token-kind)))
                `(,tag
-                 ,@(let ((rule (content-element-property child 'rule))
-                         (path (content-element-property child 'path)))
+                 ,@(let ((rule (ir:content-element-property/raw child 'rule))
+                         (path (ir:content-element-property/raw child 'path)))
                      (let ((attributes
                              (append (if rule `((data-rule ,rule) (data-path ,path)) '())
-                                     (let ((location (content-element-property child 'location)))
+                                     (let ((location (ir:content-element-property/raw child 'location)))
                                        (if location `((data-source ,location) (title ,location)) '()))
                                      (if (and (math-variant) (eq? tag 'mi))
                                          '((mathvariant "normal")) '()))))
@@ -279,19 +280,19 @@ ID-PREFIX."
                                `(mtd (@ (style
                                          ,(if (zero? index)
                                               (if (= (length
-                                                       (content-element-children row))
+                                                       (ir:content-element-children/raw row))
                                                      1)
                                                   "text-align: left"
                                                   "text-align: right")
                                               "text-align: left")))
                                      ,(render-math-row
-                                        (content-element-children cell))))
-                             (content-element-children row)
-                             (iota (length (content-element-children row))))))
+                                        (ir:content-element-children/raw cell))))
+                             (ir:content-element-children/raw row)
+                             (iota (length (ir:content-element-children/raw row))))))
                     children)))
             ((math-row math-cell) (render-math-row children))
             ((math-style)
-             (let ((variant (content-element-property child 'variant)))
+             (let ((variant (ir:content-element-property/raw child 'variant)))
                (parameterize ((math-variant variant))
                  `(mstyle (@ (style ,(case variant
                                        ((normal) "font-weight: normal; font-style: normal")
@@ -304,17 +305,17 @@ ID-PREFIX."
 
   (define (math-attributes element class)
     `(@ (class ,class)
-        ,@(let ((id (content-element-property element 'id)))
+        ,@(let ((id (ir:content-element-property/raw element 'id)))
             (if id `((id ,id)) '()))))
 
   (define (render-math element)
-    (let* ((display? (content-element-property element 'display?))
+    (let* ((display? (ir:content-element-property/raw element 'display?))
            (class (if display? "math-display" "math-inline"))
            (attributes (math-attributes element class))
-           (number (and display? (content-element-property element 'number))))
-      (if (content-element-property element 'tex?)
+           (number (and display? (ir:content-element-property/raw element 'number))))
+      (if (ir:content-element-property/raw element 'tex?)
           (let ((tex (content-verbatim-string
-                       (content-element-children element))))
+                       (ir:content-element-children/raw element))))
             `(,(if display? 'div 'span)
                ,attributes
                ,(string-append
@@ -326,7 +327,7 @@ ID-PREFIX."
                   `(math (@ (xmlns "http://www.w3.org/1998/Math/MathML")
                             ,@(if display? '((display "block")) '()))
                        ,(render-math-row
-                          (content-element-children element)))))
+                          (ir:content-element-children/raw element)))))
             (if number
                 `(div ,attributes
                       (span (@ (class "math-number"))

@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester private query-output)
+  #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove ir)
   #:export (prepare-query-output))
 
@@ -19,8 +20,8 @@ reports whether the page declares that anchor; unknown fragments warn."
         (error (format #f "Invalid query link at ~a to ~s: ~s"
                        source target (cons key args))))))
   (define (validate-query-fragment element)
-    (let ((fragment (content-element-property element 'fragment))
-          (target (content-element-property element 'target)))
+    (let ((fragment (ir:content-element-property/raw element 'fragment))
+          (target (ir:content-element-property/raw element 'target)))
       (when (and known-anchor? fragment (not (known-anchor? target fragment)))
         (format (current-warning-port)
           "warning: query at ~a: fragment ~s does not resolve in page ~a\n"
@@ -39,14 +40,14 @@ reports whether the page declares that anchor; unknown fragments warn."
                         (else kind)))
                 (element
                   (make-content-element
-                    kind (map prepare (content-element-children content))
-                    (content-element-source content)
-                    #:properties (content-element-properties content)
+                    kind (map prepare (ir:content-element-children/raw content))
+                    (ir:content-element-source/raw content)
+                    #:properties (ir:content-element-properties/raw content)
                     #:style (content-element-style content)
                     #:flow-kind (content-element-flow-kind content))))
            (when (memq kind '(query-link query-transclude))
              (validate-query-link
-               (content-element-property element 'target)))
+               (ir:content-element-property/raw element 'target)))
            (when (eq? kind 'query-link)
              (validate-query-fragment element))
            element)))
@@ -56,5 +57,5 @@ reports whether the page declares that anchor; unknown fragments warn."
       "Forester query at ~a must return a content document, got ~s"
       source result)))
   (make-content-document
-    (map prepare (content-document-children result))
-    (content-document-source result)))
+    (map prepare (ir:content-document-children/raw result))
+    (ir:content-document-source/raw result)))

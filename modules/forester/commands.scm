@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester commands)
+  #:use-module ((grove private ir) #:prefix ir:)
   #:replace (link)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
@@ -132,7 +133,7 @@ page and must be a valid anchor ID."
        (define title-text
          (string-trim-both
            (content-verbatim-string
-             (content-element-children title-element))))
+             (ir:content-element-children/raw title-element))))
        (when (string-null? title-text)
          (error "Forester subtree title cannot be empty"))
        (make-content-element
@@ -165,7 +166,7 @@ anchor; use @subtree with #:id when the group must be linked."
        (let ((title-text
                (string-trim-both
                  (content-verbatim-string
-                   (content-element-children title-element)))))
+                   (ir:content-element-children/raw title-element)))))
          (when (string-null? title-text)
            (error "Forester section title cannot be empty"))
          (make-content-element

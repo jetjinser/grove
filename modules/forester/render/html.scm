@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester render html)
+  #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove build)
   #:use-module (grove private build-state)
   #:use-module (grove i18n)
@@ -113,7 +114,7 @@
                      group)))))
 
 (define (link-url routes reference element)
-  (let ((fragment (and element (content-element-property element 'fragment))))
+  (let ((fragment (and element (ir:content-element-property/raw element 'fragment))))
     (string-append (html-page-url routes (reference-target-page-id reference))
                    (if fragment (string-append "#" fragment) ""))))
 
@@ -126,7 +127,7 @@
   "The canonical anchor of a tree occurrence: the author anchor when the
 element declares one (explicitly or through the unique-occurrence pass),
 otherwise the generated position anchor that backs repeated occurrences."
-  (or (content-element-property element 'anchor)
+  (or (ir:content-element-property/raw element 'anchor)
       (format #f "~atree-~a" prefix position)))
 
 (define (term-mention-sxml forest routes element children)
@@ -136,7 +137,7 @@ unprefixed anchor ids - with the definition's display text when the
 author supplies no body.  A term nothing defines is not a dead link:
 the body (or the term id) stays inline under missing-term, and the
 backlog report collects the mention."
-  (let* ((term-id (content-element-property element 'term))
+  (let* ((term-id (ir:content-element-property/raw element 'term))
          (rows (term-definition-rows
                  (term-definition-relation forest) term-id)))
     (if (null? rows)
@@ -157,7 +158,7 @@ backlog report collects the mention."
     `((tag . ,(lambda (_element _children) '()))
       (taxon . ,(lambda (_element _children) '()))
       (image . ,(lambda (element children)
-                 (let* ((source (content-element-property element 'source))
+                 (let* ((source (ir:content-element-property/raw element 'source))
                         (url (if (or (external-url? source)
                                      (string-prefix? "/" source))
                                  source
@@ -165,7 +166,7 @@ backlog report collects the mention."
                         (alt (content-verbatim-string children)))
                    `(img (@ (src ,url) (alt ,alt))))))
       (link . ,(lambda (element children)
-                 (if (content-element-property element 'term)
+                 (if (ir:content-element-property/raw element 'term)
                      (term-mention-sxml forest routes element children)
                      (begin
                        (when (null? references)
@@ -178,13 +179,13 @@ backlog report collects the mention."
                                 (href ,(link-url routes reference element)))
                              ,@children))))))
       (query-link . ,(lambda (element children)
-                       (if (content-element-property element 'term)
+                       (if (ir:content-element-property/raw element 'term)
                            (term-mention-sxml forest routes element children)
                            (let ((fragment
-                                   (content-element-property element 'fragment)))
+                                   (ir:content-element-property/raw element 'fragment)))
                              `(a (@ (href ,(string-append
                                              (html-page-url routes
-                                               (content-element-property element 'target))
+                                               (ir:content-element-property/raw element 'target))
                                              (if fragment
                                                  (string-append "#" fragment)
                                                  ""))))
@@ -227,8 +228,8 @@ backlog report collects the mention."
           #:title-decoration (if title-decoration
                                  (title-decoration forest target)
                                  '())
-          #:open? (if (assq 'open? (content-element-properties element))
-                      (content-element-property element 'open?) #t))))
+          #:open? (if (assq 'open? (ir:content-element-properties/raw element))
+                      (ir:content-element-property/raw element 'open?) #t))))
     (content->sxml/internal
       (site-page-document page)
       #:id-prefix anchor-prefix
@@ -375,7 +376,7 @@ top-level taxon element; pages without one contribute nothing."
         (let ((text (content-index:content->plain-text taxon)))
           (if (string-null? text)
               '()
-              (let ((id (content-element-property taxon 'id)))
+              (let ((id (ir:content-element-property/raw taxon 'id)))
                 `((span (@ (class "taxon")
                             ,@(if id `((data-taxon ,id)) '()))
                         ,text " ")))))
@@ -586,10 +587,10 @@ top-level taxon element; pages without one contribute nothing."
   (cond
     ((content-element? content)
      (or (and (eq? (content-element-kind content) 'math)
-              (content-element-property content 'tex?))
-         (any content-has-tex-math? (content-element-children content))))
+              (ir:content-element-property/raw content 'tex?))
+         (any content-has-tex-math? (ir:content-element-children/raw content))))
     ((content-document? content)
-     (any content-has-tex-math? (content-document-children content)))
+     (any content-has-tex-math? (ir:content-document-children/raw content)))
     (else #f)))
 
 (define (page-description site page)

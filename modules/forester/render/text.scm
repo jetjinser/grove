@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester render text)
+  #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove build)
   #:use-module (forester render artifact)
   #:use-module (forester site)
@@ -39,7 +40,7 @@
       (image . ,(lambda (element body)
                  (if (string-null? (string-trim-both body))
                      (string-append "[image: "
-                                    (content-element-property element 'source)
+                                    (ir:content-element-property/raw element 'source)
                                     "]")
                      body)))
       (link . ,(lambda (element body)
@@ -49,15 +50,15 @@
                         (path (text-relative-path
                                 (text-page-path routes (site-page-id page))
                                 (text-page-path routes (reference-target-page-id reference))))
-                        (fragment (content-element-property element 'fragment))
+                        (fragment (ir:content-element-property/raw element 'fragment))
                         (path (if fragment (string-append path "#" fragment) path)))
                    (set! references (cdr references))
                    (string-append body " [" path "] [#" (reference-source-id reference) "]"))))
       (query-link . ,(lambda (element body)
-                      (let ((fragment (content-element-property element 'fragment)))
+                      (let ((fragment (ir:content-element-property/raw element 'fragment)))
                         (string-append body " ["
                           (text-relative-path (text-page-path routes (site-page-id page))
-                            (text-page-path routes (content-element-property element 'target)))
+                            (text-page-path routes (ir:content-element-property/raw element 'target)))
                           (if fragment (string-append "#" fragment) "")
                           "]")))))))
 
@@ -65,7 +66,7 @@
   "The canonical anchor of a tree occurrence: the author anchor when the
 element declares one, otherwise the generated position anchor. Mirrors the
 HTML renderer so text and HTML address occurrences identically."
-  (or (content-element-property element 'anchor)
+  (or (ir:content-element-property/raw element 'anchor)
       (format #f "~atree-~a" prefix position)))
 
 (define* (subtree-content-text forest routes page #:optional (prefix "") (context #f)

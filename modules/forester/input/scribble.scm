@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester input scribble)
+  #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (ice-9 ftw)
   #:use-module (forester private date)
   #:use-module (grove i18n)
@@ -41,7 +42,7 @@
         (let ((value
                 (string-trim-both
                   (content-verbatim-string
-                    (content-element-children (car matches))))))
+                    (ir:content-element-children/raw (car matches))))))
           (when (string-null? value)
             (error (format #f "Forester page metadata ~a cannot be empty in ~a"
                            kind path)))
@@ -66,10 +67,10 @@
 (define (topic-metadata elements kind path)
   (let ((topics
           (map (lambda (element)
-                 (let* ((id (content-element-property element 'id))
+                 (let* ((id (ir:content-element-property/raw element 'id))
                         (label (string-trim-both
                                  (content-verbatim-string
-                                   (content-element-children element)))))
+                                   (ir:content-element-children/raw element)))))
                    (unless (and (non-empty-string? id)
                                 (non-empty-string? label))
                      (error (format #f "Forester ~a requires an ID and label in ~a"
@@ -98,7 +99,7 @@
                      (let ((value
                              (string-trim-both
                                (content-verbatim-string
-                                 (content-element-children element)))))
+                                 (ir:content-element-children/raw element)))))
                        (unless (non-empty-string? value)
                          (error (format #f
                                   "Forester page describes URI cannot be empty in ~a"
@@ -120,7 +121,7 @@
 
 (define* (document->tree-page id document source #:key title (metadata '()))
   "Extract a tree's direct frontmatter, retaining topic nodes as queryable IR."
-  (let* ((children (content-document-children document))
+  (let* ((children (ir:content-document-children/raw document))
          (metadata-nodes (filter metadata-element? children))
          (tree-title (or title (one-metadata-value metadata-nodes 'title source #t)))
          (summary (one-metadata-value metadata-nodes 'summary source))
@@ -147,7 +148,7 @@
                              '(title summary og-image og-image-alt published updated
                                locale translation describes))))
                 children)
-        (content-document-source document))
+        (ir:content-document-source/raw document))
       source
       #:metadata (append metadata
                          (filter cdr

@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math source)
+  #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove ir)
   #:use-module (grove math syntax)
   #:use-module (grove math diagnostic)
@@ -51,8 +52,8 @@
         (let* ((fragment (car fragments))
                (text (content-verbatim-string (list fragment)))
                (properties (cond ((string? fragment) (source-properties fragment))
-                                 ((content-text? fragment) (source-properties (content-text-value fragment)))
-                                 ((content-layout? fragment) (source-properties (content-layout-raw fragment))))))
+                                 ((content-text? fragment) (source-properties (ir:content-text-value/raw fragment)))
+                                 ((content-layout? fragment) (source-properties (ir:content-layout-raw/raw fragment))))))
           (collect (cdr fragments) (+ offset (string-length text)) (cons text texts)
             (cons (cons offset properties) segments))))))
 

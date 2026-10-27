@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester i18n)
+  #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove i18n)
   #:use-module (grove ir)
   #:use-module (grove style)
@@ -70,10 +71,10 @@ so `en zh en zh' becomes two pairs while `en zh fr' stays one three-lane group."
        (reverse (if (null? group) groups (cons (reverse group) groups))))
       (else
        (let* ((lane (car remaining))
-              (tag (content-element-property lane 'lang))
+              (tag (ir:content-element-property/raw lane 'lang))
               (repeated?
                 (any (lambda (lane)
-                       (equal? tag (content-element-property lane 'lang)))
+                       (equal? tag (ir:content-element-property/raw lane 'lang)))
                      group)))
          (if repeated?
              (loop (cdr remaining) (list lane)
@@ -98,7 +99,7 @@ so `en zh en zh' becomes two pairs while `en zh fr' stays one three-lane group."
   (if (and source-label (not (string-null? source-label)))
       source-label
       (string-join
-        (map (lambda (lane) (content-element-property lane 'lang)) folded)
+        (map (lambda (lane) (ir:content-element-property/raw lane 'lang)) folded)
         " ")))
 
 (define (source-summary folded source-label)
@@ -132,7 +133,7 @@ each group is shown."
                            (filter (lambda (lane)
                                      (locale-matches?
                                        reader-tag
-                                       (content-element-property lane 'lang)))
+                                       (ir:content-element-property/raw lane 'lang)))
                                    group)))
                     (visible
                       (if reader-tag
@@ -142,7 +143,7 @@ each group is shown."
                                 "bilingual reader ~a matches no lane in group ~a"
                                 reader-tag
                                 (map (lambda (lane)
-                                       (content-element-property lane 'lang))
+                                       (ir:content-element-property/raw lane 'lang))
                                      group)))
                             matched)
                           (list (last group))))
@@ -171,9 +172,9 @@ each group is shown."
   (cond
     ((string? item) (string-every char-whitespace? item))
     ((content-text? item)
-     (string-every char-whitespace? (content-text-value item)))
+     (string-every char-whitespace? (ir:content-text-value/raw item)))
     ((content-layout? item)
-     (string-every char-whitespace? (content-layout-raw item)))
+     (string-every char-whitespace? (ir:content-layout-raw/raw item)))
     (else #f)))
 
 (define (bilingual-lanes body)
@@ -236,12 +237,12 @@ hint. Parallel mode shows every lane as before."
         (lambda (_context _element body _next) (string-append body "\n")))
       (cons 'bilingual-lane
         (lambda (_context element body _next)
-          (string-append "[" (content-element-property element 'lang) "] " body)))
+          (string-append "[" (ir:content-element-property/raw element 'lang) "] " body)))
       (cons 'foreign-term (lambda (_context _element _body next) (next)))
       (cons 'details (lambda (_context _element _body next) (next)))
       (cons 'summary
         (lambda (_context element body _next)
-          (if (content-element-property element 'lang)
-              (string-append "[" (content-element-property element 'lang) "] " body)
+          (if (ir:content-element-property/raw element 'lang)
+              (string-append "[" (ir:content-element-property/raw element 'lang) "] " body)
               body)))
       (cons 'bilingual-more (lambda (_context _element _body _next) "")))))

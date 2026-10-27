@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester render gemtext)
+  #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove build)
   #:use-module (grove ir)
   #:use-module (grove output)
@@ -146,7 +147,7 @@
                                            (reference-target-page-id reference)))
                         (url (page-url routes (site-page-id page)
                                        (reference-target-page-id reference)))
-                        (fragment (content-element-property element 'fragment))
+                        (fragment (ir:content-element-property/raw element 'fragment))
                         (url (if fragment (string-append url "#" fragment) url))
                         (label (line-text body))
                         (label (if (string-null? label)
@@ -155,8 +156,8 @@
                    (queue-link url label)
                    label)))
       (query-link . ,(lambda (element body)
-                       (let* ((target-id (content-element-property element 'target))
-                              (fragment (content-element-property element 'fragment))
+                       (let* ((target-id (ir:content-element-property/raw element 'target))
+                              (fragment (ir:content-element-property/raw element 'fragment))
                               (target (find-page forest target-id))
                               (url (page-url routes (site-page-id page) target-id))
                               (url (if fragment (string-append url "#" fragment) url))
@@ -166,7 +167,7 @@
                          (queue-link url label)
                          label)))
       (image . ,(lambda (element body)
-                  (let* ((source (content-element-property element 'source))
+                  (let* ((source (ir:content-element-property/raw element 'source))
                          (url (asset-url routes page source))
                          (label (line-text body))
                          (label (if (string-null? label) "[image]" label)))
@@ -180,7 +181,7 @@
                                 (site-page-id page)))
                        (string-append "\n" (marked-line #\F "```")
                                       (let ((language
-                                              (content-element-property
+                                              (ir:content-element-property/raw
                                                 element 'language)))
                                         (if language
                                             (string-append " " (symbol->string language))

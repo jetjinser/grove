@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math notation)
+  #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove ir)
   #:use-module (ice-9 optargs)
   #:use-module (ice-9 match)
@@ -79,8 +80,8 @@
   (cond
     ((math-value? value) (list (math-value->layout value (math-assumptions '()))))
     ((string? value) (scan-math-text value))
-    ((content-text? value) (scan-math-text (content-text-value value)))
-    ((content-layout? value) (scan-math-text (content-layout-raw value)))
+    ((content-text? value) (scan-math-text (ir:content-text-value/raw value)))
+    ((content-layout? value) (scan-math-text (ir:content-layout-raw/raw value)))
     ((list? value) (decode-math-fragments value))
     ((and (content-element? value)
           (eq? (content-element-kind value) 'math-token))
@@ -88,9 +89,9 @@
     ((math-fragment? value)
      (list (make-content-element
              (content-element-kind value)
-             (decode-math-fragments (content-element-children value))
-             (content-element-source value)
-             #:properties (content-element-properties value)
+             (decode-math-fragments (ir:content-element-children/raw value))
+             (ir:content-element-source/raw value)
+             #:properties (ir:content-element-properties/raw value)
              #:style (content-element-style value)
              #:flow-kind (content-element-flow-kind value))))
     (else (error "unsupported value in math expression" value))))
@@ -133,7 +134,7 @@
     ((or (string? fragment) (content-text? fragment))
       (let loop ((characters
                    (string->list (if (content-text? fragment)
-                                     (content-text-value fragment)
+                                     (ir:content-text-value/raw fragment)
                                      fragment)))
                  (text '()) (events '()))
         (cond

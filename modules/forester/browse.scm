@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester browse)
+  #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove ir)
   #:use-module (grove private render text)
   #:use-module (grove site)
@@ -38,13 +39,13 @@
          (let ((kind (content-element-kind node)))
            (unless (or (memq kind terminal-known-kinds) (memq kind seen))
              (set! seen (cons kind seen)))
-           (for-each walk (content-element-children node))))
+           (for-each walk (ir:content-element-children/raw node))))
         ((content-document? node)
-         (for-each walk (content-document-children node)))))
+         (for-each walk (ir:content-document-children/raw node)))))
     (reverse seen)))
 
 (define (tree-target element)
-  (content-element-property element
+  (ir:content-element-property/raw element
     (if (eq? (content-element-kind element) 'subtree) 'tree-id 'target)))
 
 (define (display-title title output)
@@ -70,7 +71,7 @@
     (math-diagnostics . ,(lambda (_element body) body))
     (image . ,(lambda (element body)
                 (let ((alt (string-trim-both (or body "")))
-                      (source (content-element-property element 'source)))
+                      (source (ir:content-element-property/raw element 'source)))
                   (if (string-null? alt)
                       (format #f "[image: ~a]" source)
                       (format #f "[image: ~a — ~a]" alt source)))))
@@ -84,7 +85,7 @@
     (query-link . ,(lambda (element body)
                      (format #f "[~a] ~a"
                              (add-entry! 'link body
-                                         (content-element-property element 'target))
+                                         (ir:content-element-property/raw element 'target))
                              body)))))
 
 (define (render-content forest page add-entry! expanded)
