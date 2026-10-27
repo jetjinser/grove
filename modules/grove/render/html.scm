@@ -5,13 +5,10 @@
 (define-module (grove render html)
   #:use-module (grove private render html)
   #:use-module (grove render rules)
-  #:use-module (grove render html attributes)
   #:use-module (grove highlight)
   #:use-module (sxml simple)
   #:export (content->sxml
-            sxml->html)
-  #:re-export (content-style-html-attributes
-               merge-html-attributes))
+            sxml->html))
 
 (define* (content->sxml content #:key (id-prefix "")
                         (highlighters (default-highlighters))

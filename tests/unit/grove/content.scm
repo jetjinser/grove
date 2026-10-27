@@ -31,12 +31,13 @@
 
 (test-equal "HTML style attributes preserve renderer attributes and merge classes"
   '((class . "tree note") (id . "tree-1") (data-kind . "note"))
-  (merge-html-attributes
+  (html-attributes:merge-html-attributes
     '((class . "tree") (id . "tree-1"))
     '((class . "note") (data-kind . "note"))))
 
 (test-error "HTML style attributes cannot replace renderer-owned IDs" #t
-  (merge-html-attributes '((id . "tree-1")) '((id . "author-id"))))
+  (html-attributes:merge-html-attributes
+    '((id . "tree-1")) '((id . "author-id"))))
 
 (let* ((text-value (string-copy "hello"))
        (text-source (string-copy "page.plant"))
