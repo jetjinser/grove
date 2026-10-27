@@ -224,7 +224,8 @@ A content style is an ordinary Scheme value: bind it, pass it through
 custom commands, and combine styles with `merge-content-style`, which
 joins names into one class list and keeps every property set (later
 styles win where a renderer reads one property of a kind, such as the
-tag):
+tag). Merging no styles yields the empty style, and every supplied value is
+validated, including a single style:
 
 ```scheme
 (define print-accent

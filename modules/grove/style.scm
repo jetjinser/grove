@@ -38,20 +38,20 @@
                     (if (symbol? b) (symbol->string b) b)))))
 
 (define (merge-content-style . styles)
-  "Combine STYLES left to right into one value.  Names join into a single
-class list, and later properties win where a renderer reads one property
-of a kind, such as the tag.  Styles are values: pass them through custom
-commands, derive new ones, and attach the result anywhere a #:style is
-accepted."
-  (unless (pair? styles)
-    (error "merge-content-style requires at least one style" styles))
+  "Combine STYLES left to right into one value; no styles yields the identity.
+
+Names join into one class list, and later properties win where a renderer
+reads one property of a kind, such as the tag. Styles are values: pass them
+through custom commands, derive new ones, and attach the result anywhere a
+#:style is accepted."
+  (unless (every content-style? styles)
+    (error "merge-content-style combines content styles" styles))
   (fold
-    (lambda (b a)
-      (unless (content-style? b)
-        (error "merge-content-style combines content styles" b))
+    (lambda (style combined)
       (make-content-style
-        (merge-style-name (content-style-name a) (content-style-name b))
-        (append (content-style-properties a)
-                (content-style-properties b))))
-    (car styles)
-    (cdr styles)))
+        (merge-style-name (content-style-name combined)
+                          (content-style-name style))
+        (append (content-style-properties combined)
+                (content-style-properties style))))
+    (make-content-style #f)
+    styles))

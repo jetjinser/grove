@@ -349,7 +349,15 @@
          "Body")
     (content->sxml element))
   (test-error "merging requires style values" #t
-    (merge-content-style base 'not-a-style)))
+    (merge-content-style base 'not-a-style))
+  (test-error "a single invalid style is rejected" #t
+    (merge-content-style 'not-a-style)))
+
+(let ((empty (merge-content-style)))
+  (test-equal "no merged styles produces the identity value"
+    '(#f ())
+    (list (content-style-name empty)
+          (content-style-properties empty))))
 
 (test-equal "the HTML serializer emits declared void elements self-closed"
   "<p>a<wbr/><em>x</em></p>"
