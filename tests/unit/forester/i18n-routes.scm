@@ -49,6 +49,21 @@
   "/%E8%8A%B1.html"
   (html-asset-url (make-html-routes) "花.html"))
 
+(let* ((target-link
+         (make-content-element 'link '("Target")
+           #:properties '((target . "page with space"))))
+       (source-document
+         (make-content-document
+           (list (make-content-element 'paragraph (list target-link)))))
+       (source (make-site-page "source" "Source" source-document))
+       (target
+         (make-site-page "page with space" "Target"
+           (make-content-document '())))
+       (forest (make-forest (make-site (list source target) #:home "source")))
+       (page (assoc-ref (site->html forest) "source")))
+  (test-assert "HTML renderer emits links to encoded page artifact paths"
+    (string-contains page "href=\"/page%20with%20space.html\"")))
+
 (let* ((id (string-copy "guide"))
        (shared-path (string-copy "pages/guide.html"))
        (routes (make-html-routes
