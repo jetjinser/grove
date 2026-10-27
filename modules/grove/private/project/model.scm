@@ -52,7 +52,11 @@
             project-read-source
             project-analyze
             project-pipelines
-            project-create-source-procedure))
+            project-create-source-procedure
+            default-project-source-filter))
+
+(define (default-project-source-filter filename)
+  (not (string-prefix? "." filename)))
 
 (define-record-type <project-input>
   (%make-project-input path value)
@@ -195,8 +199,7 @@ defaults to the project's source directory."
 
 (define* (make-project #:key
                        (source-directory #f)
-                       (source-filter (lambda (filename)
-                                        (not (string-prefix? "." filename))))
+                       (source-filter default-project-source-filter)
                        (collect-sources #f)
                        (prepare (lambda () '()))
                        (extra-sources '())
