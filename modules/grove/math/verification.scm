@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math verification)
+  #:use-module (grove private snapshot)
   #:use-module (grove math derivation)
   #:use-module (grove math diagnostic)
   #:use-module (grove math pass)
@@ -24,10 +25,16 @@
             math-diagnostic-premises math-diagnostic-message math-diagnostic-source))
 
 (define-record-type <math-verification>
-  (make-math-verification derivation diagnostics)
+  (%make-math-verification derivation diagnostics)
   math-verification?
   (derivation math-verification-derivation)
-  (diagnostics math-verification-diagnostics))
+  (diagnostics verification-diagnostics/raw))
+
+(define (make-math-verification derivation diagnostics)
+  (%make-math-verification derivation (snapshot-data diagnostics)))
+
+(define (math-verification-diagnostics verification)
+  (snapshot-data (verification-diagnostics/raw verification)))
 
 (define (math-verification-valid? verification)
   (and (math-verification? verification)

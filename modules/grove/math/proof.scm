@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math proof)
+  #:use-module (grove private snapshot)
   #:use-module (grove math assumption)
   #:use-module (grove math derivation)
   #:use-module (grove math rewrite)
@@ -29,10 +30,13 @@
 ;; Proof nodes record just the inference being justified. They are distinct
 ;; from math-derivation, which records how a search or rewrite pass proceeded.
 (define-record-type <math-proof>
-  (make-math-proof kind fields)
+  (%make-math-proof kind fields)
   math-proof?
   (kind proof-kind)
   (fields proof-fields))
+
+(define (make-math-proof kind fields)
+  (%make-math-proof kind (snapshot-data fields)))
 
 (define (math-proof-premise index)
   (make-math-proof 'premise (list index)))
@@ -53,35 +57,68 @@
   (make-math-proof 'congruence (list from to path proof)))
 
 (define-record-type <math-proof-result>
-  (make-math-proof-result status left right errors)
+  (%make-math-proof-result status left right errors)
   math-proof-result?
   (status math-proof-result-status)
-  (left math-proof-result-left)
-  (right math-proof-result-right)
-  (errors math-proof-result-errors))
+  (left proof-result-left/raw)
+  (right proof-result-right/raw)
+  (errors proof-result-errors/raw))
+
+(define (make-math-proof-result status left right errors)
+  (%make-math-proof-result status (snapshot-data left) (snapshot-data right)
+                           (snapshot-data errors)))
+
+(define (math-proof-result-left result)
+  (snapshot-data (proof-result-left/raw result)))
+
+(define (math-proof-result-right result)
+  (snapshot-data (proof-result-right/raw result)))
+
+(define (math-proof-result-errors result)
+  (snapshot-data (proof-result-errors/raw result)))
 
 (define (math-proof-result-valid? result)
   (and (math-proof-result? result)
        (eq? (math-proof-result-status result) 'checked)))
 
 (define-record-type <math-proof-step-report>
-  (make-math-proof-step-report index rule premises theorem-status status errors proof)
+  (%make-math-proof-step-report index rule premises theorem-status status errors proof)
   math-proof-step-report?
   (index math-proof-step-report-index)
   (rule math-proof-step-report-rule)
-  (premises math-proof-step-report-premises)
+  (premises proof-step-premises/raw)
   (theorem-status math-proof-step-report-theorem-status)
   (status math-proof-step-report-status)
-  (errors math-proof-step-report-errors)
+  (errors proof-step-errors/raw)
   (proof math-proof-step-report-proof))
 
+(define (math-proof-step-report-premises report)
+  (snapshot-data (proof-step-premises/raw report)))
+
+(define (math-proof-step-report-errors report)
+  (snapshot-data (proof-step-errors/raw report)))
+
+(define (make-math-proof-step-report index rule premises theorem-status status errors proof)
+  (%make-math-proof-step-report index rule (snapshot-data premises) theorem-status
+                                status (snapshot-data errors) proof))
+
 (define-record-type <math-proof-derivation-report>
-  (make-math-proof-derivation-report status steps proof errors)
+  (%make-math-proof-derivation-report status steps proof errors)
   math-proof-derivation-report?
   (status math-proof-derivation-report-status)
-  (steps math-proof-derivation-report-steps)
+  (steps proof-derivation-steps/raw)
   (proof math-proof-derivation-report-proof)
-  (errors math-proof-derivation-report-errors))
+  (errors proof-derivation-errors/raw))
+
+(define (math-proof-derivation-report-steps report)
+  (snapshot-data (proof-derivation-steps/raw report)))
+
+(define (math-proof-derivation-report-errors report)
+  (snapshot-data (proof-derivation-errors/raw report)))
+
+(define (make-math-proof-derivation-report status steps proof errors)
+  (%make-math-proof-derivation-report status (snapshot-data steps) proof
+                                      (snapshot-data errors)))
 
 (define (proof-error status message)
   (throw 'math-proof-error status message))

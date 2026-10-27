@@ -240,4 +240,29 @@
     (list (math-proof-derivation-report-status report)
           (math-proof-step-report-index step))))
 
+(let* ((term (list 'var 'x))
+       (proof (math-proof-reflexivity term)))
+  (set-car! term 'invalid)
+  (let* ((checked (math-proof-check proof '()))
+         (left (math-proof-result-left checked)))
+    (test-equal "proof constructors snapshot mutable term input" '(var x)
+      (math-proof-result-left checked))
+    (set-car! left 'changed)
+    (test-equal "proof result accessors return independent terms" '(var x)
+      (math-proof-result-left checked))))
+
+(let* ((source (φ:term "x+0"))
+       (target (φ:term "x"))
+       (derivation (make-math-derivation
+                     (list source target)
+                     (list (make-math-derivation-step source target 'add-zero '(0)))
+                     scalar-x))
+       (report (math-proof-elaborate-derivation derivation))
+       (steps (math-proof-derivation-report-steps report)))
+  (set-car! steps #f)
+  (test-eq "proof derivation reports protect their step collection"
+    'add-zero
+    (math-proof-step-report-rule
+      (car (math-proof-derivation-report-steps report)))))
+
 (test-end "math proof IR and checker")

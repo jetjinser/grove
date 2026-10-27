@@ -109,6 +109,9 @@ diagnostic collections. Diagnostic paths, premises, and messages, along with
 source-location filenames and excerpts, are copied when constructed and when
 read. The records inside these collections retain the contracts of their own
 types; for example, derivations snapshot their terms and steps separately.
+Verification, semantic-check, and proof reports apply the same rule to their
+diagnostics, proof terms, premises, errors, and step collections. This keeps
+the recorded outcome stable when callers inspect or reuse its evidence.
 
 The registered rules are also available as relational data through
 `(grove math catalog)`. Import `(grove relation dsl)` to query rules by group,

@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 (use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math expression)
              (grove math report) (grove math diagnostic)
+             (grove math derivation) (grove math verification)
              ((grove math semantic) #:prefix ◆:) (grove render html) (grove ir)
              (srfi srfi-1) (srfi srfi-64))
 (test-begin "computation result contracts")
@@ -67,4 +68,10 @@
     (set-car! returned 8))
   (test-equal "diagnostic accessors return independent copies" '(1 2)
     (math-diagnostic-path diagnostic)))
+(let* ((verification (math-verify-derivation (make-math-derivation '() '() '())))
+       (diagnostics (math-verification-diagnostics verification)))
+  (test-assert "malformed derivation is rejected" (not (math-verification-valid? verification)))
+  (set-car! diagnostics #f)
+  (test-assert "verification diagnostics cannot be removed through an accessor"
+    (not (math-verification-valid? verification))))
 (test-end "computation result contracts")

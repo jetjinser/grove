@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math semantic-check)
+  #:use-module (grove private snapshot)
   #:use-module (grove math derivation)
   #:use-module (grove math private checker-polynomial)
   #:use-module (grove math number)
@@ -27,11 +28,21 @@
             math-check-derivative-evidence math-check-antiderivative-evidence))
 
 (define-record-type <math-semantic-check>
-  (make-math-semantic-check status subject diagnostics)
+  (%make-math-semantic-check status subject diagnostics)
   math-semantic-check?
   (status math-semantic-check-status)
-  (subject math-semantic-check-subject)
-  (diagnostics math-semantic-check-diagnostics))
+  (subject semantic-check-subject/raw)
+  (diagnostics semantic-check-diagnostics/raw))
+
+(define (math-semantic-check-subject check)
+  (snapshot-data (semantic-check-subject/raw check)))
+
+(define (math-semantic-check-diagnostics check)
+  (snapshot-data (semantic-check-diagnostics/raw check)))
+
+(define (make-math-semantic-check status subject diagnostics)
+  (%make-math-semantic-check status (snapshot-data subject)
+                             (snapshot-data diagnostics)))
 
 (define (math-semantic-check-valid? check)
   (and (math-semantic-check? check)

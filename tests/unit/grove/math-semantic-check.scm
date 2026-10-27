@@ -257,4 +257,22 @@
                        (φ:check-polynomial-rule 'add-zero))))
     "Rule: add-zero"))
 
+(let* ((check (math-polynomial-check-rule 'not-a-rule))
+       (diagnostics (math-semantic-check-diagnostics check)))
+  (test-eq "semantic check starts unsupported for unknown rules"
+    'unsupported (math-semantic-check-status check))
+  (set-car! diagnostics "forged")
+  (test-assert "semantic check diagnostics are isolated from accessor mutation"
+    (not (string=? "forged" (car (math-semantic-check-diagnostics check))))))
+
+(let* ((evidence (list 'sum))
+       (check (math-check-derivative-evidence evidence)))
+  (set-car! evidence 'changed)
+  (test-equal "semantic checks snapshot submitted evidence" '(sum)
+    (math-semantic-check-subject check))
+  (let ((subject (math-semantic-check-subject check)))
+    (set-car! subject 'changed))
+  (test-equal "semantic-check subject accessors return independent data" '(sum)
+    (math-semantic-check-subject check)))
+
 (test-end "independent scalar-polynomial semantic checker")
