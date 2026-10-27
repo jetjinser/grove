@@ -15,11 +15,11 @@
   #:export (run-asset-pipelines
             merge-pipeline-artifacts))
 
-;;     Run declared asset pipelines against the shared store.  Each
-;;     pipeline's identity is its name, version, the project file's
-;;     fingerprint, and its inputs' fingerprints; the outputs of one
-;;     identity are indexed under that key and every output blob is
-;;     content-addressed.  A hit materializes artifacts without
+;;     Run declared asset pipelines against the shared store. Each
+;;     pipeline's identity includes its name, version, project fingerprint,
+;;     and each declared input path and content fingerprint. Outputs are
+;;     indexed under that key, and every output blob is content-addressed.
+;;     A hit materializes artifacts without
 ;;     running the procedure at all; a miss - changed inputs, edited
 ;;     project, corrupted or missing index - runs it. The caller must ensure
 ;;     that identical tracked inputs and version produce identical bytes.
@@ -44,6 +44,7 @@
                    (asset-pipeline-name pipeline)
                    (asset-pipeline-version pipeline)
                    project-key
+                   (map car input-table)
                    (map (lambda (pair) (input-fingerprint (cdr pair)))
                         input-table))
              port)))))

@@ -26,6 +26,7 @@
 (define inputs-directory (string-append root "/inputs"))
 (define input-a (string-append inputs-directory "/a.txt"))
 (define input-b (string-append inputs-directory "/b.txt"))
+(define input-c (string-append inputs-directory "/c.txt"))
 (define runtime-script (string-append inputs-directory "/runtime.scm"))
 (define runs 0)
 (define runtime-runs 0)
@@ -40,6 +41,8 @@
   (lambda (port) (display "alpha" port)))
 (call-with-output-file input-b
   (lambda (port) (display "beta" port)))
+(call-with-output-file input-c
+  (lambda (port) (display "alpha" port)))
 (call-with-output-file runtime-script
   (lambda (port) (display "(set! runtime-marker \"one\")\n" port)))
 
@@ -116,6 +119,25 @@
     #:name "duplicate-input"
     #:inputs (list input-a input-a)
     #:procedure (lambda (_input _emit) #t)))
+
+(let ((runs 0))
+  (define (path-sensitive-pipeline input)
+    (make-asset-pipeline
+      #:name "path-sensitive-input"
+      #:inputs (list input)
+      #:procedure
+      (lambda (in emit)
+        (set! runs (1+ runs))
+        (emit "path-sensitive.txt" (basename (in input))))))
+  (define (run-path-sensitive input)
+    (car (run-asset-pipelines (list (path-sensitive-pipeline input))
+                              "path-sensitive-project")))
+  (test-equal "pipeline output may use the declared input path"
+    "a.txt" (artifact-content (car (run-path-sensitive input-a))))
+  (test-equal "same bytes at a different path do not reuse pipeline output"
+    "c.txt" (artifact-content (car (run-path-sensitive input-c))))
+  (test-equal "different declared input paths have distinct cache identities"
+    2 runs))
 
 (let ((merged
        (merge-pipeline-artifacts
