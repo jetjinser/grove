@@ -62,9 +62,9 @@ Asset pipelines consume declared file inputs and return artifacts independently
 of the analyzed model. A renderer can also invoke an external tool when its
 input is model data, such as source embedded in a page, and the generated asset
 belongs to that content. Use a renderer rule when a custom content node should
-become inline output markup. A pipeline procedure receives an input lookup and
-an input lookup, which resolves each unique declared `#:inputs` path to a
-materialized path, and returns a non-empty list of Grove artifacts. Grove
+become inline output markup. A pipeline procedure receives an input lookup,
+which resolves each unique declared `#:inputs` path to a materialized path,
+and returns a non-empty list of Grove artifacts. Grove
 validates their paths and contents and attaches the pipeline's declared and
 runtime-read dependencies. See the
 [customization guide](customizing.md) for examples.
