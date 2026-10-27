@@ -26,8 +26,10 @@ same semantic operations for text input.
 
 Formula helpers distinguish constructing an expression from calculating it:
 `derivative` constructs a symbolic expression, while `differentiate` returns a
-calculation report; `partial-expression` pairs with `partial`, and
-`antiderivative-expression` pairs with `antiderivative`. Likewise,
+calculation report; `derive` also returns a structured report, while
+`derive->content` adapts that report for Scheme-authored content. Article writers
+use `@derive` for rendered derivations. `partial-expression` pairs with
+`partial`, and `antiderivative-expression` pairs with `antiderivative`. Likewise,
 `poisson-particular` constructs an expression while `solve-poisson` computes a
 particular solution. The corresponding Semantic constructors build values
 directly without parsing text.

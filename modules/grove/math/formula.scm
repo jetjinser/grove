@@ -15,7 +15,7 @@
             sin cos exp log grad divergence curl laplacian group styled
             derivative partial-expression antiderivative-expression poisson-particular
             call components
-            derive rewrite search search-backward simplify calculate normalize expand collect
+            derive derive->content rewrite search search-backward simplify calculate normalize expand collect
             check-chain check-polynomial-rule check-polynomial-derivation
             check-polynomial-step check-polynomial-derivative check-polynomial-antiderivative
             polynomial-check->content antiderivative
@@ -99,14 +99,22 @@
   (lambda* (x y z #:key space)
     (semantic:components (read x) (read y) (read z) #:space space)))
 
+(define (derive-report source assumptions rules max-steps max-term-size)
+  (core:math-derive (read source)
+    #:assumptions (parse-assumptions (list assumptions)) #:rules rules
+    #:max-steps max-steps #:max-term-size max-term-size))
+
 (define-public derive
+  (lambda* (source #:key (assumptions '()) (rules #f) (max-steps 32)
+                   (max-term-size 2048))
+    (derive-report source assumptions rules max-steps max-term-size)))
+
+(define-public derive->content
   (lambda* (source #:key (assumptions '()) (rules #f) (max-steps 32)
                    (max-term-size 2048) (view 'compact) (on-error 'raise))
     (let ((content
             (core:math-completed-report->content
-              (core:math-derive (read source)
-                #:assumptions (parse-assumptions (list assumptions)) #:rules rules
-                #:max-steps max-steps #:max-term-size max-term-size)
+              (derive-report source assumptions rules max-steps max-term-size)
               #:view view #:on-error on-error)))
       (if (null? (cdr content)) (car content)
           (make-content-element 'math-diagnostics content #:flow-kind 'block)))))

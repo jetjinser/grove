@@ -92,8 +92,12 @@
     '("curl(f(x,y,z)*E(x,y,z))"
       "cross(E(x,y,z),grad(f(x,y,z)))+f(x,y,z)*curl(E(x,y,z))") #:assumptions c1))))
 (test-assert "automatic derivation diagnoses missing C1 rather than a generic no-rule"
-  (string-contains (sxml->html (content->sxml (φ:derive "div(f(x,y,z)*E(x,y,z))"
-    #:assumptions (list r3 f e) #:rules '(div-product) #:on-error 'show))) "differentiable"))
+  (string-contains
+    (sxml->html
+      (content->sxml
+        (φ:derive->content "div(f(x,y,z)*E(x,y,z))"
+          #:assumptions (list r3 f e) #:rules '(div-product) #:on-error 'show)))
+    "differentiable"))
 (test-assert "C1 inference propagates through field compositions"
   (math-premise-known? (math-assumptions c1)
     (φ:term "differentiable(f(x^2,y,z)*g(x,y,z))")))

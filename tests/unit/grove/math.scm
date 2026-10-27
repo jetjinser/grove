@@ -114,11 +114,12 @@
   (test-equal "type diagnostics identify the required vector declaration"
     "curl requires a vector operand; add vector(E)"
     (math-type-diagnostic '() '(curl (var E))))
-  (test-error "@derive reports missing type declarations" #t
-    (φ:derive "curl(curl(E))"))
-  (test-error "@derive reports a missing regularity assumption" #t
-    (φ:derive "curl(curl(E))"
-                 #:assumptions '("vector(E)")))
+  (test-equal "Formula derive returns a report for missing type declarations"
+    'type-error (math-report-reason (φ:derive "curl(curl(E))")))
+  (test-equal "Formula derive returns a report for a missing regularity assumption"
+    'missing-premise
+    (math-report-reason (φ:derive "curl(curl(E))"
+                                 #:assumptions '("vector(E)"))))
   (test-equal "symbolic terms lower to the separate layout IR"
     'math-row
     (content-element-kind (math-term->layout '(curl (var E)))))
@@ -243,9 +244,8 @@
                #:assumptions '("vector(E); smooth(E)")
                #:max-depth 1)))))
   (let* ((derivation
-           (φ:derive "curl(curl(E))"
-                                  #:assumptions
-                                  '("vector(E); smooth(E)")))
+           (φ:derive->content "curl(curl(E))"
+             #:assumptions '("vector(E); smooth(E)")))
          (html (sxml->html (content->sxml derivation))))
     (test-assert "lowering creates a display MathML alignment"
       (and (string-contains html "<mtable>")
