@@ -129,12 +129,11 @@
 (defrel (childo relation parent-id child-id)
   (nodeo relation
          (node-id child-id)
-         (parent-id parent-id)))
+         (parent-id parent-id))
+  (=/= parent-id #f))
 
 (defrel (parento relation child-id parent-id)
-  (nodeo relation
-         (node-id child-id)
-         (parent-id parent-id)))
+  (childo relation parent-id child-id))
 
 (defrel (ancestoro relation ancestor-id descendant-id)
   (conde

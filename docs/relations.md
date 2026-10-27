@@ -168,6 +168,10 @@ text and layout leaves are allowed. Thus `plain-text-paragrapho` selects
 paragraphs without nested semantic elements, while `paragrapho` also includes
 paragraphs containing links, math, or other inline elements. `contains-texto`
 performs a case-sensitive substring search over the concatenated text.
+`source-locationo` projects the stored file, line, and column. `childo` binds
+direct parent/child node IDs; `descendanto` and `ancestoro` query the strict
+transitive relation in either direction. `math-nodeo` selects math nodes, and
+`math-containing-paragrapho` finds paragraph nodes with a math descendant.
 
 Page title and metadata are a separate relation because the page reader
 extracts `@title`, `@summary`, `@published`, and `@updated` into the Grove

@@ -3,9 +3,11 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit forester relations)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-64)
   #:use-module (forester composition)
-  #:use-module (forester relations))
+  #:use-module (forester relations)
+  #:use-module (grove relation dsl))
 
 (test-begin "forester relations")
 
@@ -52,6 +54,36 @@
     (make-reference-relation
       '(("self" "ref-1" "self" "Self")))
     "self"))
+
+(define content-nodes
+  (make-content-node-relation
+    '((0 "page" #f paragraph 0 () "outer" 5 5 #f)
+      (1 "page" 0 math 0 () "x" 1 1 #t)
+      (2 "page" 1 text 0 () "x" 1 1 #t))))
+
+(test-equal "childo returns direct children only"
+  '(1)
+  (run* (child-id)
+    (childo content-nodes 0 child-id)))
+(test-equal "root's absent parent is not treated as a content node" '()
+  (run* (child-id)
+    (childo content-nodes #f child-id)))
+
+(test-assert "ancestor and descendant goals enumerate strict transitive paths"
+  (let ((descendants
+          (run* (ancestor-id descendant-id)
+            (descendanto content-nodes ancestor-id descendant-id)))
+        (ancestors
+          (run* (ancestor-id descendant-id)
+            (ancestoro content-nodes ancestor-id descendant-id))))
+    (and (= (length descendants) 3)
+         (member '(0 1) descendants equal?)
+         (member '(1 2) descendants equal?)
+         (member '(0 2) descendants equal?)
+         (= (length ancestors) (length descendants))
+         (every (lambda (pair) (member pair ancestors equal?)) descendants)
+         (not (member '(#f 0) descendants equal?))
+         (not (member '(0 0) descendants equal?)))))
 
 (define composition
   (make-composition
