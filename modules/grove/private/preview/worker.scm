@@ -4,7 +4,7 @@
 (define-module (grove private preview worker)
   #:use-module ((grove private artifact) #:prefix out:)
   #:use-module (grove project)
-  #:use-module (grove private project lifecycle)
+  #:use-module (grove private preview rebuild)
   #:use-module (grove project load)
   #:use-module (grove private cache-dir)
   #:use-module (grove private build-lock)

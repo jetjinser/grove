@@ -18,10 +18,18 @@
          (module-public-interface (resolve-module '(grove build)))
          'cached-renderer?)))
 
-(test-assert "preview model rebuild stays out of the public project API"
-  (not (module-variable
-         (module-public-interface (resolve-module '(grove project)))
-         'rebuild-from-model)))
+(test-assert "preview model rebuild belongs to the preview subsystem"
+  (and (module-variable
+         (module-public-interface
+           (resolve-module '(grove private preview rebuild)))
+         'rebuild-from-model)
+       (not (module-variable
+              (module-public-interface
+                (resolve-module '(grove private project lifecycle)))
+              'rebuild-from-model))
+       (not (module-variable
+              (module-public-interface (resolve-module '(grove project)))
+              'rebuild-from-model))))
 
 (test-error "cached renderers require procedures" #t
   (make-cached-renderer #f))
