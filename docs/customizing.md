@@ -123,12 +123,15 @@ version for state Grove cannot observe, such as an external toolchain version
 or environment variables.
 
 Use a Scheme expression in `.plant` when the tool's result belongs inline in
-that document. Declare file reads with `depend-on!` from `(grove input
-scribble)` and opt out of reader caching when behavior depends on untracked
-external state. Use a pipeline when the tool consumes declared project files
-and returns standalone build artifacts. Both keep the integration code in the
-project. Pipelines use Grove's artifact validation and content-addressed cache;
-declare opaque tool identity with `#:version`.
+that document. Declare files read during evaluation with `depend-on!` from
+`(grove input scribble)`; Grove remembers those reads for the next cache
+lookup. Use the reader's `#:cache-dependencies` option for files that can
+affect every document even when an individual evaluation does not open them.
+Opt out of reader caching when behavior depends on untracked external state.
+Use a pipeline when the tool consumes declared project files and returns
+standalone build artifacts. Both keep the integration code in the project.
+Pipelines use Grove's artifact validation and content-addressed cache; declare
+opaque tool identity with `#:version`.
 
 ## Three renderer entry points
 

@@ -62,10 +62,11 @@ ID selects the tree rendered at `index.html`; Grove does not guess which page
 should represent the site. `make-site-project` remains available when a project
 needs to assemble these pieces itself. A named command vocabulary is optional:
 use `@use-commands` to refer to a reusable manifest. Modules already on Guile's
-load path need no setup; load local `.plant` module articles with
-`make-scribble-module-setup`, or use `make-scribble-module-session` when
-preparation and page reading should share one reader. Direct `@use-modules`
-imports of available modules also need no preparation.
+load path need no setup; preload local `.plant` modules discovered in a
+directory with `make-scribble-module-setup`. Use
+`make-scribble-module-session` when module articles also appear as pages and
+their preparation results should be reused for display. Direct
+`@use-modules` imports of available modules also need no preparation.
 
 `make-forester-project` always includes its standard HTML renderer. Configure it
 with `#:html-options`, and add peer outputs with `#:additional-renderers`:
@@ -306,10 +307,14 @@ Arbitrary Scheme I/O is not intercepted. Declare a file before reading it:
 ```
 
 `depend-on!` and `disable-cache!` are exported by `(grove input scribble)`.
-A reader's `#:cache-dependencies` collector can declare inputs in bulk.
-Time, randomness, network state, and effects that must repeat require opting
-out with `disable-cache!` or disabling reader caching. Imported module
-definitions remain uncached so their bindings exist in every build process.
+Use `depend-on!` for files discovered while evaluating a document: Grove
+records those reads and checks the recorded files before reusing that
+document. A reader's `#:cache-dependencies` collector is for reader-wide files
+that may affect any document even when its evaluation does not open them; it
+runs before each document cache lookup. Time, randomness, network state, and
+effects that must repeat require opting out with `disable-cache!` or disabling
+reader caching. Imported module definitions remain uncached so their bindings
+exist in every build process.
 
 Cached renderers and pipelines are assumed deterministic for their tracked
 inputs and declared configuration. Grove verifies cached bytes against their

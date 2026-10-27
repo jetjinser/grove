@@ -11,7 +11,7 @@ the work; drop lower only when you need to replace part of its behavior.
 
 | Task | Start here | Reach lower when… |
 | --- | --- | --- |
-| Write a Forester page | `(forester commands)` and `(language scribble commands)` in `.plant` | the page needs project-local Scheme modules or a new command vocabulary |
+| Write a Forester page | `(forester commands)` and `(language scribble commands)` in `.plant` | the page needs project-local Scheme modules or a new command vocabulary; load local `.plant` modules with `(grove input scribble)` |
 | Configure the normal Forester site | `(forester project)` → `make-forester-project` | the reader, analysis, or complete renderer set needs replacing |
 | Adapt Scribble documents to Forester tree pages | `(forester input scribble)` → `make-page-reader` | a custom page project needs Forester metadata extraction without the standard project lifecycle |
 | Parse Scribble syntax in a custom reader | `(language scribble parser)` → `scribble-parse`, `scribble-read` | standard pages should use the Grove or Forester reader to convert forms to Content IR |
