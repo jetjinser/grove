@@ -462,6 +462,12 @@
 (test-equal "equal keys keep their input order"
   '("Straße" "STRASSE")
   (sort-strings '("Straße" "STRASSE")))
+(test-error "string sorting requires a list"
+  #t (sort-strings "not a list"))
+(test-error "string sorting rejects non-string elements"
+  #t (sort-strings '("valid" 42)))
+(test-error "string sorting requires a comparator procedure"
+  #t (sort-strings '("a" "b") #:compare 'descending))
 
 ;;; Locale-aware collation
 

@@ -628,6 +628,10 @@ With LOCALE, use the platform's collation data when it is available and
 fall back to folded code-point order otherwise.  COMPARE, a two-argument
 predicate, overrides both.  Two strings with equal keys keep their input
 order."
+  (unless (and (list? strings) (every string? strings))
+    (error "sort-strings requires a list of strings" strings))
+  (unless (or (not compare) (procedure? compare))
+    (error "sort-strings comparator must be a procedure or #f" compare))
   (sort strings
         (or compare
             (and locale (locale-collation-comparator locale))
