@@ -6,7 +6,7 @@
   #:use-module (grove math scalar)
   #:use-module (grove math declaration)
   #:use-module (grove math term)
-  #:use-module (grove math function-derivative)
+  #:use-module (grove math private function-derivative)
   #:use-module ((grove math private exact-polynomial) #:prefix exact:)
   #:use-module (grove math diagnostic)
   #:use-module (srfi srfi-1)

@@ -9,7 +9,7 @@
   #:use-module (grove math term)
   #:use-module (grove math diagnostic)
   #:use-module (grove math declaration)
-  #:use-module (grove math function-derivative)
+  #:use-module (grove math private function-derivative)
   #:use-module (grove math premise)
   #:use-module (grove math rule)
   #:use-module (ice-9 match)

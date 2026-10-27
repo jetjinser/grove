@@ -11,7 +11,7 @@
   #:use-module (grove math term)
   #:use-module (grove math diagnostic)
   #:use-module (grove math declaration)
-  #:use-module (grove math function-derivative)
+  #:use-module (grove math private function-derivative)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:export (math-typeo

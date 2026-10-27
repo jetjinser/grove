@@ -8,7 +8,7 @@
   #:use-module (grove math operator)
   #:use-module (grove math expression)
   #:use-module (grove math declaration)
-  #:use-module (grove math function-derivative)
+  #:use-module (grove math private function-derivative)
   #:use-module ((grove math private notation) #:prefix notation:)
   #:use-module (srfi srfi-1)
   #:export (math-term->layout math-value->layout math-notation->datum))
