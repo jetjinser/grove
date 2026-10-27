@@ -134,6 +134,15 @@
   (test-equal "content cache namespaces isolate keys" #f
     (content-cache-ref (make-content-cache "other-pipeline") "font-key")))
 
+(let* ((namespace (string-copy "snapshot-namespace"))
+       (cache (make-content-cache namespace))
+       (bytes (string->utf8 "stable bytes")))
+  (content-cache-store! cache "key" bytes)
+  (string-set! namespace 0 (integer->char 88))
+  (test-equal "content cache snapshots its namespace"
+    bytes
+    (content-cache-ref cache "key")))
+
 (test-error "content cache rejects empty keys" #t
   (content-cache-ref (make-content-cache "pipeline-test") ""))
 

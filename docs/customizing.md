@@ -90,6 +90,12 @@ tracks declared files and loaded Scheme code. Include tool identity in the
 pipeline's `#:version` when Grove cannot observe it, as the Graphviz adapter
 does.
 
+Pipeline caching assumes that the same project code, declared inputs, and
+version produce the same emitted bytes. Grove verifies stored bytes against
+their content hashes, but cannot verify that an external tool is deterministic.
+Include relevant tool and environment state in `#:version`, or disable project
+caching when that state cannot be represented.
+
 Choose the extension point by the data flow, not by whether the adapter starts
 a process. A pipeline consumes declared project files and emits artifacts
 independently of the analyzed model. A renderer can consume values already in

@@ -5,6 +5,7 @@
 (define-module (grove cache)
   #:use-module ((grove private fingerprint) #:prefix private:)
   #:use-module (grove private artifact-store)
+  #:use-module (grove private snapshot)
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
@@ -24,10 +25,10 @@
 (define file-fingerprint private:file-fingerprint)
 
 (define (make-content-cache namespace)
-  "Create a machine-wide cache namespace for deterministic byte values."
+  "Create a machine-wide cache namespace for values addressed by caller keys."
   (unless (and (string? namespace) (not (string-null? namespace)))
     (error "content cache requires a non-empty namespace" namespace))
-  (%make-content-cache namespace))
+  (%make-content-cache (snapshot-data namespace)))
 
 (define (content-cache-identity cache key)
   (unless (content-cache? cache)
@@ -67,7 +68,8 @@
     (and fingerprint (read-content-blob fingerprint))))
 
 (define (content-cache-store! cache key bytes)
-  "Store deterministic bytevector BYTES for KEY; return #f if the cache is unavailable."
+  "Store bytevector BYTES for KEY; return #f if the cache is unavailable.
+Callers that reuse KEY must ensure its value is stable for the intended lifetime."
   (unless (bytevector? bytes)
     (error "content cache stores bytevectors" bytes))
   (let* ((identity (content-cache-identity cache key))

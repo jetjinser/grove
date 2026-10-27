@@ -21,9 +21,9 @@
 ;;     identity are indexed under that key and every output blob is
 ;;     content-addressed.  A hit materializes artifacts without
 ;;     running the procedure at all; a miss - changed inputs, edited
-;;     project, corrupted or missing index - runs it.  Determinism
-;;     (same inputs, same bytes) is a protocol contract the content
-;;     addressing verifies in passing.
+;;     project, corrupted or missing index - runs it. The caller must ensure
+;;     that identical tracked inputs and version produce identical bytes.
+;;     Content addressing verifies stored-byte integrity, not determinism.
 
 (define (pipeline-input-table pipeline)
   ;;     (declared path -> materialized path), registered so the

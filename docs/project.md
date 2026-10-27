@@ -272,7 +272,11 @@ Time, randomness, network state, and effects that must repeat require opting
 out with `disable-cache!` or disabling reader caching. Imported module
 definitions remain uncached so their bindings exist in every build process.
 
-Plain renderer callbacks are assumed deterministic under tracked inputs.
+Plain renderer callbacks and asset pipelines are assumed deterministic under
+tracked inputs and declared configuration. Grove verifies cached bytes against
+their content hashes; it cannot verify that a callback or external tool will
+repeat the same output. Include hidden state in `#:configuration` or pipeline
+`#:version`, or disable caching when that state cannot be represented.
 `make-cached-renderer` adds `#:inputs` and `#:configuration` (data or a
 model-to-data procedure), or disables caching. Grove cannot infer hidden
 closure state. Built-in factories declare their settings themselves.
