@@ -346,6 +346,22 @@
   "fixed" (artifact-text (car (run-constant-pipeline))))
 (test-equal "a cache hit skips a self-contained pipeline" 1 constant-runs)
 
+(let ((runs 0))
+  (define (run-empty-pipeline)
+    (run-asset-pipelines
+      (list (make-asset-pipeline
+              #:name "empty-output"
+              #:procedure
+              (lambda (_)
+                (set! runs (1+ runs))
+                '())))
+      (current-project-key)))
+  (test-equal "a pipeline may produce no artifacts" '()
+    (car (run-empty-pipeline)))
+  (test-equal "empty pipeline outputs are cached" '()
+    (car (run-empty-pipeline)))
+  (test-equal "a cache hit skips an empty pipeline" 1 runs))
+
 (let* ((result (run-pipelines "v1"))
        (artifacts (car result)))
   (test-equal "an unchanged identity skips the procedure" 1 runs)
@@ -466,18 +482,6 @@
                             (list (make-artifact "ok.txt"
                                     (call-with-input-file (in "/etc/passwd")
                                       get-string-all))))))
-       (current-project-key))
-      #f)
-    (lambda args #t)))
-
-(test-assert "a pipeline must return at least one artifact"
-  (catch #t
-    (lambda ()
-      (run-asset-pipelines
-       (list (make-asset-pipeline
-              #:name "no-outputs"
-              #:inputs (list input-a)
-              #:procedure (lambda (_) '())))
        (current-project-key))
       #f)
     (lambda args #t)))

@@ -131,9 +131,6 @@
                      (trace-inputs trace))
                 (lambda (left right) (string<? (car left) (car right)))))
          (sources (pipeline-artifact-sources inputs dependencies)))
-    (unless (pair? artifact-list)
-      (error "asset pipeline returned no artifacts"
-             (asset-pipeline-name pipeline)))
     (let* ((entries
             (map (lambda (artifact)
                    (let ((content (artifact-content artifact)))
