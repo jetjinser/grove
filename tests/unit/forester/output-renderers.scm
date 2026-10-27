@@ -61,6 +61,16 @@
            (string-contains content
                             "<link>https://example.org/index.html</link>")))))
 
+(let* ((artifacts
+        (render-model forest
+          (list (make-sitemap-renderer #:site-url "HTTPS://example.org")
+                (make-rss-renderer #:site-url "HTTPS://example.org")))))
+  (test-assert "site renderer URL schemes are case-insensitive"
+    (and (string-contains (artifact-content (car artifacts))
+                          "HTTPS://example.org/index.html")
+         (string-contains (artifact-content (cadr artifacts))
+                          "HTTPS://example.org/index.html"))))
+
 (let* ((settings (make-site-settings #:site-url "https://example.org"))
        (routes (make-html-routes
                  #:home-page "guide-zh"

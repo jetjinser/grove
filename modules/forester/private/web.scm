@@ -12,10 +12,10 @@
 
 (define (web-url? url)
   (and (string? url)
-       (or (string-prefix? "https://" url)
-           (string-prefix? "http://" url))
+       (or (string-prefix-ci? "https://" url)
+           (string-prefix-ci? "http://" url))
        (> (string-length url)
-          (if (string-prefix? "https://" url) 8 7))))
+          (if (string-prefix-ci? "https://" url) 8 7))))
 
 (define (web-base-url url)
   (let ((end (string-length url)))
