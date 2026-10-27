@@ -13,6 +13,7 @@ the work; drop lower only when you need to replace part of its behavior.
 | --- | --- | --- |
 | Write a Forester page | `(forester commands)` and `(language scribble commands)` in `.plant` | the page needs project-local Scheme modules or a new command vocabulary; load local `.plant` modules with `(grove input scribble)` |
 | Configure the normal Forester site | `(forester project)` → `make-forester-project` | the reader, analysis, or complete renderer set needs replacing |
+| Apply a reusable style to content | `(grove style)` → `make-content-style`, `merge-content-style`; pass it through `#:style` | the style value is format-neutral; HTML interprets it as classes and HTML attributes, unlike renderer-wide `(grove style html)` stylesheets; see [tree composition](forester-composition.md#element-styles) |
 | Adapt Scribble documents to Forester tree pages | `(forester input scribble)` → `make-page-reader` | a custom page project needs Forester metadata extraction without the standard project lifecycle |
 | Parse Scribble syntax in a custom reader | `(language scribble parser)` → `scribble-parse`, `scribble-read` | standard pages should use the Grove or Forester reader to convert forms to Content IR |
 | Build a site from page documents | `(grove project site)` → `make-site-project` | the input is not a page or the model is project-specific |
