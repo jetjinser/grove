@@ -6,6 +6,7 @@
   #:use-module (grove private renderer)
   #:use-module (grove private snapshot)
   #:use-module (grove private string-fun)
+  #:use-module (grove output)
   #:use-module (srfi srfi-1)
   #:export (render-model
             make-cached-renderer))
@@ -44,11 +45,23 @@ safely."
 (define (render-model model renderers)
   "Apply RENDERERS to MODEL in order and concatenate their artifact lists.
 This invokes rendering only; it does not collect inputs, cache results, or
-write artifacts."
-  (apply append
-    (map (lambda (renderer)
-           ((if (cached-renderer? renderer)
-                (cached-renderer-procedure renderer)
-                renderer)
-            model))
-         renderers)))
+write artifacts. Every renderer must return a list of artifacts."
+  (unless (and (list? renderers)
+               (every (lambda (renderer)
+                        (or (procedure? renderer)
+                            (cached-renderer? renderer)))
+                      renderers))
+    (error "render-model requires a list of renderer procedures or cached renderers"
+           renderers))
+  (append-map
+    (lambda (renderer)
+      (let ((produced
+              ((if (cached-renderer? renderer)
+                   (cached-renderer-procedure renderer)
+                   renderer)
+               model)))
+        (unless (and (list? produced) (every artifact? produced))
+          (error "renderer must return a list of artifacts"
+                 renderer produced))
+        produced))
+    renderers))

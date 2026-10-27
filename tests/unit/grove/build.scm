@@ -18,6 +18,26 @@
          (module-public-interface (resolve-module '(grove build)))
          'cached-renderer?)))
 
+(test-equal "render-model applies ordinary renderers in order"
+  '("first" "second")
+  (map artifact-path
+    (render-model 'model
+      (list (lambda (_) (list (make-artifact "first" "one")))
+            (lambda (_) (list (make-artifact "second" "two")))))))
+
+(test-equal "render-model accepts an empty renderer set"
+  '()
+  (render-model 'model '()))
+
+(test-error "render-model requires a renderer list" #t
+  (render-model 'model #f))
+
+(test-error "render-model requires renderer procedures or cached renderers" #t
+  (render-model 'model (list #f)))
+
+(test-error "render-model requires each renderer to return artifacts" #t
+  (render-model 'model (list (lambda (_) #f))))
+
 (test-assert "preview model rebuild belongs to the preview subsystem"
   (and (module-variable
          (module-public-interface
