@@ -49,5 +49,5 @@ TRANSFORMS compose content changes before Forester analysis."
     (make-forester-source-creator
       #:source-directory source-directory
       #:default-prefix default-prefix
-      #:template (or tree-template #f))
+      #:template tree-template)
     #:output-directory output-directory))
