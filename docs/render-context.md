@@ -62,7 +62,9 @@ renderer can build a context explicitly when it needs the shared Forester
 helpers. Translation groups are an association list from translation key to
 pages; they are derived from the forest by default and can be supplied
 explicitly when a project needs a different index. Locale and
-messages are resolved from the context builder's arguments.
+messages are resolved from the context builder's arguments. Derived groups
+follow the first occurrence of each translation key in site page order, and
+pages within each group keep that same order.
 
 ## Interpreter boundary
 

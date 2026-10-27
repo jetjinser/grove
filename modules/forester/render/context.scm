@@ -17,19 +17,24 @@
 ;; renderers can use the same helper when they need a site render context.
 
 (define (translation-groups pages)
-  (let ((groups (make-hash-table)))
+  (let ((groups (make-hash-table))
+        (keys '()))
     (for-each
       (lambda (page)
         (let ((key (assq-ref (site-page-metadata page) 'translation)))
           (when key
-            (hash-set! groups key
-                       (cons page (or (hash-ref groups key) '()))))))
+            (let ((group (hash-ref groups key #f)))
+              (if group
+                  (hash-set! groups key (cons page group))
+                  (begin
+                    (hash-set! groups key (list page))
+                    (set! keys (cons key keys))))))))
       pages)
     ;; Ordinary Scheme data stays inside render-context's snapshot boundary.
-    (hash-fold (lambda (key group result)
-                 (acons key (reverse group) result))
-               '()
-               groups)))
+    ;; Group and page order follow first occurrence in the site's page list.
+    (map (lambda (key)
+           (cons key (reverse (hash-ref groups key))))
+         (reverse keys))))
 
 (define* (make-site-render-context forest #:key
                                    (routes #f)

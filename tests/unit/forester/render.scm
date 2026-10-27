@@ -7,6 +7,7 @@
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64)
   #:use-module (forester render html)
+  #:use-module (forester render context)
   #:use-module (forester render gemtext)
   #:use-module (forester render rss)
   #:use-module (forester render sitemap)
@@ -33,6 +34,27 @@
   #:use-module (tests unit forester fixtures))
 
 (test-begin "forester renderers")
+
+(let* ((forest
+         (make-forest
+           (make-site
+             (list (make-site-page "guide-en" "Guide EN"
+                                   (make-content-document '())
+                                   #:metadata '((translation . "guide")))
+                   (make-site-page "notes" "Notes"
+                                   (make-content-document '())
+                                   #:metadata '((translation . "notes")))
+                   (make-site-page "guide-zh" "Guide ZH"
+                                   (make-content-document '())
+                                   #:metadata
+                                   `((translation . ,(string-copy "guide"))))))))
+       (groups (translation-groups (pages forest))))
+  (test-equal "translation groups follow first occurrence and site page order"
+    '(("guide" "guide-en" "guide-zh")
+      ("notes" "notes"))
+    (map (lambda (group)
+           (cons (car group) (map site-page-id (cdr group))))
+         groups)))
 
 (define (backmatter-messages backlink-label)
   (make-message-catalog
