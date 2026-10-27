@@ -283,6 +283,8 @@ renderer should declare extra files with `#:inputs` and any output-affecting
 state not represented by the model or tracked project files with
 `#:configuration`. Plain procedures avoid this declaration by running on every
 build. Opaque render rules need a stable `#:rules-id`.
+For the default HTML renderer installed by `make-forester-project`, pass this
+as `#:html-rules-id`; use `#:extra-sources` for files those rules read.
 
 Asset pipelines fingerprint the project file, its load-time inputs, declared
 files, and Scheme files loaded while the pipeline runs. A self-contained

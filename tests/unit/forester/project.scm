@@ -28,6 +28,7 @@
   #:use-module (grove relation dsl)
   #:use-module (grove render html routes)
   #:use-module (grove render html presentation)
+  #:use-module (grove render rules)
   #:use-module (grove site))
 
 (define project-root
@@ -132,6 +133,44 @@
       (string-append source-directory "/unicode-accent.plant")
       "@use-modules[(tests unit forester linked commands)]\n@title{Unicode accent}\n@taxon[\"café\"]\n@paragraph{è̤}"))
   (lambda ()
+    (let* ((dependency (string-append project-root "/html-rule-tool.scm"))
+           (output (string-append project-root "/html-rule-cache"))
+           (calls 0)
+           (rules
+             (make-render-rules
+               (list
+                 (cons 'paragraph
+                       (lambda (context element children next)
+                         (set! calls (+ calls 1))
+                         (next))))))
+           (project
+             (make-forester-project
+               #:home "algebra"
+               #:source-directory source-directory
+               #:prepare (make-scribble-module-setup module-directory)
+               #:extra-sources (list dependency)
+               #:html-options
+               (make-html-options
+                 #:presentation (make-html-presentation #:rules rules))
+               #:html-rules-id 'math-rule-v1
+               #:output-directory output)))
+      (write-test-file dependency "renderer tool version one")
+      (let* ((first (build-project/report project))
+             (first-calls calls)
+             (second (build-project/report project)))
+        (test-assert "Forester HTML rules accept an explicit cache identity"
+          (and (not (build-report-render-cache-hit? first))
+               (> first-calls 0)))
+        (test-assert "Forester HTML rules reuse output when their identity and inputs are stable"
+          (and (build-report-render-cache-hit? second)
+               (= calls first-calls)))
+        (write-test-file dependency "renderer tool version two")
+        (let ((updated (build-project/report project)))
+          (test-assert "tracked HTML rule inputs invalidate cached output"
+            (and (not (build-report-render-cache-hit? updated))
+                 (> calls first-calls)))))
+      (test-error "Forester HTML rule identity is validated by the constructor" #t
+        (make-forester-project #:home "algebra" #:html-rules-id 42)))
     (let* ((project
              (make-site-project
                  #:title "Linked Notes"

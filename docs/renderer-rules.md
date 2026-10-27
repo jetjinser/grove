@@ -213,6 +213,9 @@ its peers. Pass `#:cache? #f` to `make-html-renderer`,
 `make-text-renderer`, or `make-gemtext-renderer` to make that choice explicit.
 These are cache controls, so they live on the cached renderer constructors
 rather than render options.
+`make-forester-project` constructs its standard HTML renderer for you; give
+that renderer's opaque rules identity with `#:html-rules-id`, and list files
+read by the rules in the project's `#:extra-sources`.
 Declarative HTML presentation data is part of the
 presentation and therefore part of its cache identity. This applies to HTML,
 text, and gemtext. Derived artifacts require a `#:configuration` procedure so
