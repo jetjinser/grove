@@ -6,6 +6,7 @@
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove string-fun)
   #:use-module (grove ir)
+  #:use-module (grove render plain-text)
   #:use-module (grove site)
   #:use-module (forester relations)
   #:use-module (srfi srfi-1)

@@ -12,6 +12,7 @@
   #:use-module (grove build)
   #:use-module (grove private renderer)
   #:use-module (grove ir)
+  #:use-module (grove render plain-text)
   #:use-module (grove output)
   #:use-module (grove site)
   #:use-module (grove render rules)

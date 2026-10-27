@@ -9,6 +9,7 @@
   #:use-module (grove output)
   #:use-module (grove render context)
   #:use-module (grove render html routes)
+  #:use-module (grove render plain-text)
   #:use-module (grove render rules)
   #:use-module (grove site)
   #:use-module (ice-9 ftw)

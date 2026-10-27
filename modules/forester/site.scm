@@ -7,6 +7,7 @@
   #:use-module (grove private snapshot)
   #:use-module (grove string-fun)
   #:use-module (grove ir)
+  #:use-module (grove render plain-text)
   #:use-module (grove site)
   #:use-module (grove private relation)
   #:use-module (grove project)

@@ -77,6 +77,11 @@ returned by an accessor does not alter the node. Use `content-with-style` and
 Opaque extension values embedded in properties remain shared and follow their
 own type's contract.
 
+`(grove ir)` defines these content values and their structural operations.
+Text projection is an interpreter: use `(grove render plain-text)` for a
+readable text form, including math-specific notation, and `(grove render text)`
+for formatted text output.
+
 Artifacts use the same ownership rule: `make-artifact` and
 `make-byte-artifact` snapshot their path, content, and source paths. The public
 `artifact-content` accessor returns a fresh string or bytevector.

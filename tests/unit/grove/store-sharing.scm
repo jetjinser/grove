@@ -31,6 +31,7 @@
       "             (grove project site) (grove site) (grove input scribble)\n"
       "             (forester input scribble) (forester site) (forester commands)\n"
       "             (grove ir) (system base language) (language scribble spec)\n"
+      "             (grove render plain-text)\n"
       "             (ice-9 textual-ports))\n"
       "(define environment-factory\n"
       "  (lambda ()\n"
