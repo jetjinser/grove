@@ -140,13 +140,23 @@
                                            settings))))
   (unless (or (not settings) (site-settings? settings))
     (error "sitemap settings must be site settings or #f" settings))
+  (set! site-url (or site-url
+                     (and settings (site-settings-site-url settings))))
+  (unless (web-url? site-url)
+    (error "Forester sitemap renderer requires an absolute HTTP(S) site URL"
+           site-url))
+  (unless (artifact-path? sitemap-path)
+    (error "Sitemap path must be a relative artifact path" sitemap-path))
+  (unless (html-routes? routes)
+    (error "Forester sitemap renderer requires HTML routes" routes))
   (when default-locale
     (unless (string? default-locale)
       (error "Sitemap default locale must be a tag or #f" default-locale))
     (set! default-locale (locale-tag (make-locale default-locale))))
-  (let* ((site-url (or site-url
-                       (and settings (site-settings-site-url settings))))
-         (configuration
+  (set! site-url (string-copy site-url))
+  (set! sitemap-path (string-copy sitemap-path))
+  (set! default-locale (and default-locale (string-copy default-locale)))
+  (let* ((configuration
            (lambda (forest)
              (let ((routes (resolve-site-routes forest routes)))
                (list 'sitemap sitemap-path site-url default-locale

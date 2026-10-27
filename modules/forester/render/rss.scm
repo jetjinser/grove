@@ -170,13 +170,31 @@
                                       (site-settings-default-locale settings))))
   (unless (or (not settings) (site-settings? settings))
     (error "RSS settings must be site settings or #f" settings))
+  (set! site-url (or site-url
+                     (and settings (site-settings-site-url settings))))
+  (unless (web-url? site-url)
+    (error "Forester RSS renderer requires an absolute HTTP(S) site URL"
+           site-url))
+  (unless (artifact-path? feed-path)
+    (error "RSS feed path must be a relative artifact path" feed-path))
+  (unless (html-routes? routes)
+    (error "Forester RSS renderer requires HTML routes" routes))
+  (when (and stylesheet-url (not (rss-stylesheet-url? stylesheet-url)))
+    (error "RSS stylesheet URL must be a non-empty URL without whitespace"
+           stylesheet-url))
+  (unless (rss-stylesheet-url? stylesheet-type)
+    (error "RSS stylesheet type must be a non-empty media type without whitespace"
+           stylesheet-type))
   (when language
     (unless (string? language)
       (error "RSS language must be a tag or #f" language))
     (set! language (locale-tag (make-locale language))))
-  (let* ((site-url (or site-url
-                       (and settings (site-settings-site-url settings))))
-         (configuration
+  (set! site-url (string-copy site-url))
+  (set! feed-path (string-copy feed-path))
+  (set! stylesheet-url (and stylesheet-url (string-copy stylesheet-url)))
+  (set! stylesheet-type (string-copy stylesheet-type))
+  (set! language (and language (string-copy language)))
+  (let* ((configuration
            (lambda (forest)
              (let ((routes (resolve-site-routes forest routes)))
                (list 'rss feed-path site-url stylesheet-url stylesheet-type

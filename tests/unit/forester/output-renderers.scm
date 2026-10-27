@@ -84,5 +84,35 @@
   (make-sitemap-renderer #:settings 'not-site-settings))
 (test-error "RSS renderer rejects invalid settings at construction" #t
   (make-rss-renderer #:settings 'not-site-settings))
+(test-error "sitemap renderer requires a site URL at construction" #t
+  (make-sitemap-renderer))
+(test-error "RSS renderer requires a site URL at construction" #t
+  (make-rss-renderer))
+(test-error "sitemap renderer validates its artifact path at construction" #t
+  (make-sitemap-renderer #:site-url "https://example.org"
+                         #:sitemap-path "../sitemap.xml"))
+(test-error "RSS renderer validates its artifact path at construction" #t
+  (make-rss-renderer #:site-url "https://example.org"
+                     #:feed-path "../feed.xml"))
+(let* ((site-url (string-copy "https://example.org"))
+       (sitemap-path (string-copy "map.xml"))
+       (feed-path (string-copy "feed.xml"))
+       (stylesheet-url (string-copy "https://example.org/feed.xsl"))
+       (sitemap (make-sitemap-renderer
+                  #:site-url site-url #:sitemap-path sitemap-path))
+       (rss (make-rss-renderer
+              #:site-url site-url #:feed-path feed-path
+              #:stylesheet-url stylesheet-url)))
+  (string-set! site-url 0 #\x)
+  (string-set! sitemap-path 0 #\x)
+  (string-set! feed-path 0 #\x)
+  (string-set! stylesheet-url 0 #\x)
+  (let ((artifacts (render-model forest (list sitemap rss))))
+    (test-equal "site renderers snapshot URL and artifact-path options"
+      '("map.xml" "feed.xml")
+      (map artifact-path artifacts))
+    (test-assert "RSS renderer snapshots stylesheet URL options"
+      (string-contains (artifact-content (cadr artifacts))
+                       "https://example.org/feed.xsl"))))
 
 (test-end "Forester output renderers")
