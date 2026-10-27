@@ -21,6 +21,7 @@
   #:use-module (grove output)
   #:use-module (grove private render html)
   #:use-module (grove private snapshot)
+  #:use-module (grove private uri)
   #:use-module (grove render html)
   #:use-module (grove render html attributes)
   #:use-module (grove render rules)
@@ -148,10 +149,9 @@ backlog report collects the mention."
       (taxon . ,(lambda (_element _children) '()))
       (image . ,(lambda (element children)
                  (let* ((source (ir:content-element-property/raw element 'source))
-                        (url (if (or (external-url? source)
-                                     (string-prefix? "/" source))
+                        (url (if (external-url? source)
                                  source
-                                 (html-asset-url routes source)))
+                                 (local-asset-url routes source)))
                         (alt (content-verbatim-string children)))
                    `(img (@ (src ,url) (alt ,alt))))))
       (link . ,(lambda (element children)
@@ -553,6 +553,16 @@ top-level taxon element; pages without one contribute nothing."
        (or (string-prefix-ci? "https://" value)
            (string-prefix-ci? "http://" value)
            (string-prefix? "//" value))))
+
+(define (local-asset-url routes source)
+  (call-with-values
+    (lambda () (split-uri-suffix source))
+    (lambda (path suffix)
+      (string-append
+        (if (string-prefix? "/" path)
+            (uri-encode-path path)
+            (html-asset-url routes path))
+        suffix))))
 
 (define (validate-mathjax-source source)
   (unless (or (not source)

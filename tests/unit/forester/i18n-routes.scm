@@ -67,6 +67,21 @@
   (test-assert "HTML renderer emits links to encoded page artifact paths"
     (string-contains page "href=\"/page%20with%20space.html\"")))
 
+(let* ((image
+         (make-content-element 'image '("Diagram")
+           #:properties
+           '((source . "assets/diagram one.svg?view=full#preview"))))
+       (page
+         (make-site-page "images" "Images"
+           (make-content-document
+             (list (make-content-element 'paragraph (list image))))))
+       (forest (make-forest (make-site (list page) #:home "images")))
+       (html (assoc-ref (site->html forest) "images")))
+  (test-assert "HTML encodes local asset paths and preserves URI suffixes"
+    (string-contains
+      html
+      "src=\"/assets/diagram%20one.svg?view=full#preview\"")))
+
 (let* ((id (string-copy "guide"))
        (shared-path (string-copy "pages/guide.html"))
        (routes (make-html-routes

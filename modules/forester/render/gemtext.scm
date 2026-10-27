@@ -76,15 +76,6 @@
   (or (and (char>=? character #\a) (char<=? character #\z))
       (and (char>=? character #\A) (char<=? character #\Z))))
 
-(define (split-uri-suffix value)
-  (let ((query (string-index value #\?))
-        (fragment (string-index value #\#)))
-    (let ((end (cond ((and query fragment) (min query fragment))
-                     (query query)
-                     (fragment fragment)
-                     (else (string-length value)))))
-      (values (substring value 0 end) (substring value end)))))
-
 (define (route-uri path)
   (uri-encode-path path))
 
