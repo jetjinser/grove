@@ -6,7 +6,7 @@
   #:use-module (grove i18n)
   #:use-module (grove render context)
   #:use-module (grove site)
-  #:use-module (forester render labels)
+  #:use-module (forester private render labels)
   #:use-module (forester render site)
   #:use-module (forester site)
   #:export (translation-groups

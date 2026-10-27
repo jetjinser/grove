@@ -2,7 +2,7 @@
 ;;;
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(define-module (forester render artifact)
+(define-module (forester private render artifact)
   #:use-module ((grove private artifact) #:prefix out:)
   #:use-module (grove output)
   #:use-module (srfi srfi-1)

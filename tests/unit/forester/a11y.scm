@@ -10,7 +10,7 @@
   #:use-module (ice-9 optargs)
   #:use-module (forester backmatter)
   #:use-module (forester input scribble)
-  #:use-module (forester render labels)
+  #:use-module (forester private render labels)
   #:use-module (forester render html)
   #:use-module (forester render text)
   #:use-module (forester site)

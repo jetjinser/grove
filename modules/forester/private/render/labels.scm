@@ -2,7 +2,7 @@
 ;;;
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(define-module (forester render labels)
+(define-module (forester private render labels)
   #:use-module (grove i18n)
   #:use-module (grove render context)
   #:use-module (forester backmatter)
