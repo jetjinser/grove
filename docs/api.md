@@ -23,7 +23,8 @@ the work; drop lower only when you need to replace part of its behavior.
 | Change how content renders | the format's renderer options and `(grove render rules)` | the project needs a new output format or a different build stage |
 | Add a model-derived output | a renderer in `#:additional-renderers` or `#:renderers` | the output depends on declared files or an external tool; use `#:pipelines` |
 | Reuse derived bytes inside an extension | `(grove cache)` → `make-content-cache` | ordinary renderer artifacts and pipeline outputs are already cached by the project |
-| Write or extend math | `(grove math formula)` for text-based writing and calculations; `(grove math semantic)` for typed values; `(grove math notation)` for display layout | code needs to inspect reports, compose passes, or query rule relations |
+| Write or extend math | `(grove math formula)` for text-based writing and calculations; `(grove math semantic)` for typed values; `(grove math notation)` for display layout; see the [Math reference](math.md) | code needs to inspect reports, compose passes, or query rule relations |
+| Query finite relations | `(grove relation)` for relation values and miniKanren goals; `(grove relation dsl)` for named schemas and rules; see the [Relation reference](relations.md) | a domain API should return ordered, domain-specific results |
 | Count user-perceived text units | `grapheme-count` from `(grove unicode)` | the task needs codepoint or UTF-8 byte counts instead |
 | Run a live preview from Scheme | `(grove serve)` → `serve-project` | ordinary local previews can use the `grove serve` command |
 

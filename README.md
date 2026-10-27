@@ -130,6 +130,10 @@ interfaces for meaning (`◆:`), optional formula text (`φ:`), and notation
 Cartesian vector calculus, and limited polynomial integration and Poisson
 solutions; Grove is not a general-purpose computer algebra system.
 
+See the [Math reference](docs/math.md) for the supported calculation APIs and
+the [Relation reference](docs/relations.md) for finite relation values,
+miniKanren goals, and the optional rule DSL.
+
 The repository examples are small, runnable demonstrations:
 
 - [Linked notes](examples/linked-notes/project.scm): trees, composition, queries,
