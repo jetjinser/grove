@@ -168,6 +168,17 @@
           (content-text-location
             (car (content-element-children paragraph))))))
 
+(let* ((location '((file . "computed.plant") (line . 3) (column . 5)))
+       (located (content-with-source-location "computed text" location)))
+  (test-assert "source locations turn raw text into located content"
+    (content-text? located))
+  (test-equal "located raw text records its position and source path"
+    (list "computed text" #f location (list "computed.plant"))
+    (list (content-text-value located)
+          (content-text-source located)
+          (content-text-location located)
+          (content-source-paths located))))
+
 (test-error "content text values are strings" #t
   (make-content-text 42))
 (test-error "content text sources must be non-empty paths" #t

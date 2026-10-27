@@ -341,10 +341,13 @@ values."
 
 (define (content-with-source-location content location)
   "Attach a source start alist with file, one-based line and column fields.
-For a document, attach the location to each top-level content value."
+Raw strings become located text values. For a document, attach the location to
+each top-level content value."
   (unless (valid-source-location? location)
     (error "content source location must be a source-location alist" location))
   (cond
+    ((string? content)
+     (make-content-text content #:location location))
     ((content-text? content)
      (%make-content-text (content-text-value content)
                          (or (content-text-source content)
