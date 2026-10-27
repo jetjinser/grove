@@ -217,21 +217,13 @@
               ;;     The bytes are already in place; make sure the
               ;;     shared store has the blob so other checkouts and
               ;;     deleted build directories can restore it.
-              (publish-artifact-blob! fingerprint
-                (lambda (port)
-                  (if (string? content)
-                      (display content port)
-                      (put-bytevector port content))))
+              (publish-content-blob! content)
               ;;     A store blob under this fingerprint holds exactly
               ;;     the rendered bytes: restore it, hard-linked when
               ;;     possible, and fall back to writing them.
               (unless (restore-artifact-blob! fingerprint path)
                 (write-artifact-bytes! path content)
-                (publish-artifact-blob! fingerprint
-                  (lambda (port)
-                    (if (string? content)
-                        (display content port)
-                        (put-bytevector port content))))))))
+                (publish-content-blob! content)))))
       artifacts)
     (for-each
       (lambda (stale-path)

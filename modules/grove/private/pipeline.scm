@@ -7,7 +7,6 @@
   #:use-module (grove private asset-pipeline)
   #:use-module (grove output)
   #:use-module (grove private artifact-store)
-  #:use-module (grove private content-store)
   #:use-module (grove private fingerprint)
   #:use-module (grove private input dependencies)
   #:use-module (ice-9 binary-ports)
@@ -61,7 +60,7 @@
            (if (null? entries)
                (reverse artifacts)
                (let* ((entry (car entries))
-                      (bytes (restore-content-bytes (cdr entry))))
+                      (bytes (read-content-blob (cdr entry))))
                  (and bytes
                       (loop (cdr entries)
                             (cons (make-byte-artifact
@@ -110,12 +109,7 @@
         (error "asset pipelines emit strings or bytevectors" path content))
       (unless (artifact-path? path)
         (error "asset pipeline emitted an invalid artifact path" path))
-      (let ((fingerprint (content-fingerprint content)))
-        (publish-artifact-blob! fingerprint
-          (lambda (port)
-            (if (string? content)
-                (display content port)
-                (put-bytevector port content))))
+      (let ((fingerprint (publish-content-blob! content)))
         (set! entries (cons (cons path fingerprint) entries))
         (set! artifacts
               (cons ((if (string? content) make-artifact make-byte-artifact)

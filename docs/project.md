@@ -284,11 +284,11 @@ Document entries live in the machine-global content store,
 every project this user builds. Keys are content-derived from the project's
 load-time inputs plus the project-relative document path; tracked paths are
 normalized project-relative, so two checkouts of one project share document
-analyses. Rendered artifacts join the same store under
-`artifacts/`: every build publishes the bytes it rendered under their
-content fingerprint, and builds restore missing output files from the
-store instead of re-rendering them, so deleting a build directory is
-cheap and parallel checkouts share rendering output. The build state
+analyses. Content-addressed blobs join the same store under `artifacts/`:
+rendered outputs, pipeline products, and bytes stored explicitly by extensions
+all use the same verified blob store. Builds restore missing output files from
+it instead of re-rendering them, so deleting a build directory is cheap and
+parallel checkouts share output bytes. The build state
 and artifact manifest live in a per-output directory keyed by the
 output path, so the output directory stays deployable as-is. Every
 build process that targets an output directory — manual builds and

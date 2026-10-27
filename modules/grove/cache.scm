@@ -4,7 +4,7 @@
 
 (define-module (grove cache)
   #:use-module ((grove private fingerprint) #:prefix private:)
-  #:use-module (grove private content-store)
+  #:use-module (grove private artifact-store)
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
@@ -38,17 +38,38 @@
     (string-append "grove-content-cache-v1\0"
                    (content-cache-namespace cache) "\0" key)))
 
+(define (read-cache-index identity)
+  (catch #t
+    (lambda ()
+      (let ((path (artifact-blob-path identity)))
+        (and (artifact-blob-exists? identity)
+             (call-with-input-file path
+               (lambda (port)
+                 (let ((index (read port)))
+                   (and (list? index)
+                        (= (length index) 1)
+                        (pair? (car index))
+                        (string=? (caar index) "value")
+                        (private:fingerprint? (cdar index))
+                        (eof-object? (read port))
+                        (cdar index))))))))
+    (lambda args #f)))
+
+(define (write-cache-index identity fingerprint)
+  (publish-artifact-blob! identity
+    (lambda (port)
+      (write (list (cons "value" fingerprint)) port))))
+
 (define (content-cache-ref cache key)
   "Return the verified bytevector for KEY, or #f when it is not cached."
   (let* ((identity (content-cache-identity cache key))
-         (entries (read-content-index identity))
-         (entry (and entries (assoc "value" entries))))
-    (and entry (restore-content-bytes (cdr entry)))))
+         (fingerprint (read-cache-index identity)))
+    (and fingerprint (read-content-blob fingerprint))))
 
 (define (content-cache-store! cache key bytes)
   "Store deterministic bytevector BYTES for KEY; return #f if the cache is unavailable."
   (unless (bytevector? bytes)
     (error "content cache stores bytevectors" bytes))
   (let* ((identity (content-cache-identity cache key))
-         (fingerprint (publish-content-bytes bytes)))
-    (write-content-index identity (list (cons "value" fingerprint)))))
+         (fingerprint (publish-content-blob! bytes)))
+    (write-cache-index identity fingerprint)))

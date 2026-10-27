@@ -34,6 +34,6 @@ every output directory of every project this user builds.  Keys are
 content-derived, so concurrent writers land on identical objects and
 the write discipline (temp file + rename) makes races no-ops.  Callers
 append their own subtree name: input-cache for document analyses,
-artifacts for rendered output blobs."
+artifacts for build outputs, pipeline products, and extension cache blobs."
   (string-append (or (getenv "GROVE_STORE_DIR")
                      (string-append (cache-base) "/store"))))
