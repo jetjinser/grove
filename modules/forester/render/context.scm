@@ -82,6 +82,8 @@ dynamic locale or message parameters."
   (unless (and (boolean? hreflang?) (boolean? language-switcher?))
     (error "render context language switches must be booleans"
            hreflang? language-switcher?))
+  (when locale
+    (set! locale (if (locale? locale) locale (make-locale locale))))
   (validate-interface-options locale messages)
   (unless (or (not site-url) (web-url? site-url))
     (error "render context site URL must be an absolute HTTP(S) base URL or #f"
@@ -110,6 +112,5 @@ dynamic locale or message parameters."
     #:og-image og-image
     #:og-image-alt og-image-alt
     #:locale (resolve-interface-locale locale messages)
-    #:locale-object (and locale
-                         (if (locale? locale) locale (make-locale locale)))
+    #:locale-object locale
     #:messages (resolve-interface-catalog messages)))
