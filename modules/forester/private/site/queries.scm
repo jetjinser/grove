@@ -1,0 +1,477 @@
+;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
+;;;
+;;; SPDX-License-Identifier: GPL-3.0-or-later
+
+(define-module (forester private site queries)
+  #:use-module ((grove private ir) #:prefix ir:)
+  #:use-module (grove private snapshot)
+  #:use-module (grove private string-fun)
+  #:use-module (grove ir)
+  #:use-module (grove render plain-text)
+  #:use-module (grove site)
+  #:use-module (forester private site model)
+  #:use-module ((forester private trees) #:prefix tree-pass:)
+  #:use-module ((forester composition) #:prefix composition:)
+  #:use-module ((forester relations) #:prefix relations:)
+  #:use-module (forester relations)
+  #:use-module (ice-9 threads)
+  #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-13)
+  #:export (topic-pages
+            related-pages
+            reference-pages
+            find-page
+            require-page
+            content-node
+            page-taxon
+            page-tags
+            tree-occurrences
+            tree-occurrence-target
+            describing-pages
+            subtree-definitions
+            links
+            outgoing-references
+            incoming-references
+            outgoing-transclusions
+            incoming-transclusions
+            transcluding-pages
+            context-pages
+            used-codepoints
+            backlinks
+            common-backlinks
+            reachable-pages
+            term-definitions
+            term-definition-conflicts
+            undefined-term-mentions
+            source-paths
+            module-paths
+            page-source-paths))
+
+(define (id-member-set ids)
+  (let ((table (make-hash-table)))
+    (for-each (lambda (id) (hash-set! table id #t)) ids)
+    table))
+
+(define* (topic-pages forest topic-id #:optional kind)
+  ;;     Backmatter consults this for every rendered page, so the scan
+  ;;     over all pages must run once per topic, not once per page: the
+  ;;     memo key carries the topic and the kind, and the id set turns
+  ;;     the membership test into a hash lookup instead of a repeated
+  ;;     string-list scan.
+  (cached-rows forest `(topic-pages ,topic-id ,kind)
+    (lambda ()
+      (let ((page-ids
+              (id-member-set
+                (topic-page-ids (content-node-relation forest)
+                                topic-id kind))))
+        (filter (lambda (page)
+                  (hash-ref page-ids (site-page-id page)))
+                (pages forest))))))
+
+(define* (related-pages forest page-id
+                        #:optional (reference-taxon-id "reference"))
+  "Return direct link targets except pages in the reference taxon."
+  (let ((reference-ids
+          (id-member-set
+            (map site-page-id
+                 (topic-pages forest reference-taxon-id 'taxon)))))
+    (map (lambda (target-id) (require-page forest target-id))
+         (filter (lambda (target-id)
+                   (not (hash-ref reference-ids target-id)))
+                 (delete-duplicates
+                   (map reference-target-page-id
+                        (outgoing-references forest page-id))
+                   string=?)))))
+
+(define* (reference-pages forest page-id
+                          #:optional (reference-taxon-id "reference"))
+  "Return reference-taxon pages linked from this tree and its composition."
+  (let* ((reference-ids
+          (id-member-set
+            (map site-page-id
+                 (topic-pages forest reference-taxon-id 'taxon))))
+         (seen (make-hash-table)))
+    (filter-map
+      (lambda (target-id)
+        ;; Dedup, the reference-taxon filter, and page resolution fuse
+        ;; here: the appended reference rows can carry thousands of
+        ;; entries per page and a quadratic rescan showed up in builds.
+        (and (not (hash-ref seen target-id))
+             (begin (hash-set! seen target-id #t)
+                    (and (hash-ref reference-ids target-id)
+                         (require-page forest target-id)))))
+      (append-map
+        (lambda (tree-id)
+          (map reference-target-page-id
+               (outgoing-references forest tree-id)))
+        (included-tree-ids forest page-id)))))
+(define (tree-occurrences forest id)
+  "Return direct tree displays in body order, stopping at tree boundaries."
+  (define (tree-display? node)
+    (and (content-element? node)
+         (memq (content-element-kind node) '(subtree transclude query-transclude))))
+  (tree-pass:walk-content (site-page-document (require-page forest id))
+                tree-display? #:stop? tree-display?))
+
+(define (tree-occurrence-target element)
+  (content-element-property element
+    (if (eq? (content-element-kind element) 'subtree) 'tree-id 'target)))
+
+(define (content-node forest id)
+  (let ((index (content-node-index forest)))
+    (if (and (integer? id)
+             (exact? id)
+             (>= id 0)
+             (< id (vector-length index)))
+        (vector-ref index id)
+        (error "unknown content node" id))))
+
+(define (page-topic-elements page kind)
+  "The page's own top-level topic elements of KIND ('taxon or 'tag):
+frontmatter topics declared at the top of the tree.  Topics belonging
+to nested trees or arriving through transclusions stay out - they are
+those trees' frontmatter."
+  (filter-map
+    (lambda (node)
+      (and (content-element? node)
+           (eq? (content-element-kind node) kind)
+           node))
+    (ir:content-document-children/raw (site-page-document page))))
+
+(define (page-taxon page)
+  "The page's own taxon element, or #f when it declares none."
+  (let loop ((nodes (page-topic-elements page 'taxon)))
+    (if (null? nodes) #f (car nodes))))
+
+(define (page-tags page)
+  "The page's own tag elements, in declaration order."
+  (page-topic-elements page 'tag))
+
+(define (find-page forest id)
+  (hash-ref (page-index forest) id))
+
+(define (require-page forest id)
+  "Return the page carrying ID, or raise an error when the ID is unknown."
+  (or (find-page forest id)
+      (error "unknown forest page" id)))
+
+(define (describing-pages forest uri)
+  "Return pages that declare they describe URI, in site order."
+  (let ((ids (id-member-set
+               (described-entity-page-ids
+                 (described-entity-relation forest) uri))))
+    (filter (lambda (page) (hash-ref ids (site-page-id page)))
+            (pages forest))))
+
+(define (subtree-definitions forest)
+  (map (lambda (definition)
+       (list (composition:subtree-definition-parent definition)
+               (composition:subtree-definition-child definition)))
+       (composition:subtree-definitions
+         (composition forest))))
+
+(define (links forest id)
+  (map reference-target-page-id (outgoing-references forest id)))
+
+;; Relation queries solve through miniKanren, so the same rows would be
+;; derived again for every page that renders a backmatter section. A
+;; forest's relations never change once built, so results memoize per
+;; forest for the forest's lifetime. Page rendering reads these caches
+;; from several threads, so writes take the site lock.
+(define %query-cache (make-weak-key-hash-table 0))
+(define %site-lock (make-mutex))
+
+(define (cached-rows forest key thunk)
+  (snapshot-data
+    (with-mutex %site-lock
+      (let ((forest-cache
+              (or (hash-ref %query-cache forest)
+                  (let ((table (make-hash-table)))
+                    (hash-set! %query-cache forest table)
+                    table))))
+        (or (hash-ref forest-cache key)
+            (let ((value (thunk)))
+              (hash-set! forest-cache key value)
+              value))))))
+
+(define (outgoing-references forest id)
+  (require-page forest id)
+  (cached-rows forest `(outgoing-references ,id)
+    (lambda ()
+      (map (lambda (row) (apply make-reference row))
+           (outgoing-reference-rows (reference-relation forest) id)))))
+
+(define (outgoing-transclusions forest id)
+  (require-page forest id)
+  (composition:outgoing-transclusions
+    (composition forest) id))
+
+(define (incoming-transclusions forest id)
+  (require-page forest id)
+  (composition:incoming-transclusions
+    (composition forest) id))
+
+(define (transcluding-pages forest id)
+  (cached-rows forest `(transcluding-pages ,id)
+    (lambda ()
+      (let ((source-ids
+              (id-member-set
+                (delete-duplicates
+                  (map composition:transclusion-source-tree-id
+                       (incoming-transclusions forest id))
+                  equal?))))
+        (filter (lambda (page)
+                  (hash-ref source-ids (site-page-id page)))
+                (pages forest))))))
+
+;; Context = every page in whose displayed content this page appears:
+;; hosts of its transclusions and the page that defines it as a subtree.
+(define (context-pages forest id)
+  (cached-rows forest `(context-pages ,id)
+    (lambda ()
+      (let ((source-ids
+              (id-member-set
+                (delete-duplicates
+                  (append
+                   (map composition:transclusion-source-tree-id
+                        (incoming-transclusions forest id))
+                   (map composition:subtree-definition-parent
+                        (filter (lambda (definition)
+                                  (equal? (composition:subtree-definition-child
+                                            definition)
+                                          id))
+                                (composition:subtree-definitions
+                                  (composition forest)))))
+                  equal?))))
+        (filter (lambda (page)
+                  (hash-ref source-ids (site-page-id page)))
+                (pages forest))))))
+
+(define (used-codepoints forest)
+  "Every codepoint in the site's rendered text — document text and page
+titles, as a sorted character list. This is the universe a text font
+must cover; built-in site interface strings stay the caller's concern. Math is
+counted through its plain-text rendering, a harmless superset since
+MathJax draws it with its own fonts."
+  (cached-rows forest 'used-codepoints
+    (lambda ()
+      (let ((codepoints (make-hash-table)))
+        (for-each
+          (lambda (page)
+            (for-each
+              (lambda (text)
+                (string-for-each
+                  (lambda (char) (hash-set! codepoints char #t))
+                  text))
+                (append (list (site-page-title page)
+                              (content->plain-text
+                                (site-page-document page)))
+                        ;;     Analysis strips link text from the document;
+                        ;;     the label is what rendering puts back. Rows
+                        ;;     come straight from the relation: the cached
+                        ;;     query helper would re-take the site lock.
+                        (map (lambda (row)
+                               (reference-label (apply make-reference row)))
+                             (outgoing-reference-rows
+                               (reference-relation forest)
+                               (site-page-id page))))))
+          (pages forest))
+        (sort (hash-map->list (lambda (char _) char) codepoints)
+              (lambda (a b) (< (char->integer a) (char->integer b))))))))
+
+(define (incoming-references forest id)
+  (require-page forest id)
+  (cached-rows forest `(incoming-references ,id)
+    (lambda ()
+      (map (lambda (row) (apply make-reference row))
+           (incoming-reference-rows (reference-relation forest) id)))))
+
+(define (backlinks forest id)
+  (require-page forest id)
+  (cached-rows forest `(backlink-pages ,id)
+    (lambda ()
+      (let ((source-ids
+              (id-member-set
+                (backlink-page-ids (reference-relation forest) id))))
+        (filter (lambda (page) (hash-ref source-ids (site-page-id page)))
+                (pages forest))))))
+
+(define (common-backlinks forest left-id right-id)
+  (for-each
+    (lambda (id)
+      (require-page forest id))
+    (list left-id right-id))
+  (let ((source-ids
+          (id-member-set
+            (common-backlink-page-ids
+              (reference-relation forest) left-id right-id))))
+    (filter (lambda (page) (hash-ref source-ids (site-page-id page)))
+            (pages forest))))
+
+(define (reachable-pages forest id)
+  (require-page forest id)
+  (let ((reachable-ids
+          (id-member-set
+            (reachable-page-ids (reference-relation forest) id))))
+    (filter (lambda (page)
+              (hash-ref reachable-ids (site-page-id page)))
+            (pages forest))))
+
+;;     Term queries: one term's defining occurrences for glossary
+;;     generation and hover previews; terms whose occurrences disagree;
+;;     and the corpus's definition backlog - fragments pointed at but
+;;     never defined.  The report projections name the host article -
+;;     the root page whose rendered DOM carries each occurrence - next
+;;     to the owning subtree, because an in-paragraph definition's
+;;     owning id (an anonymous unstable-N) is unreadable in a report
+;;     without it.
+
+(define (forest-host-table forest)
+  "Memoized owning-page-id to (host-article-id host-article-title):
+the root page whose rendered DOM carries each page, walking subtree
+definitions up to the roots; transclusion inclusions fill the gaps for
+pages that only exist inside another article's DOM."
+  (cached-rows forest '(term-host-table)
+    (lambda ()
+      (let ((parent-of (make-hash-table)))
+        (for-each
+          (lambda (definition)
+            (unless (hash-ref parent-of
+                              (composition:subtree-definition-child definition))
+              (hash-set! parent-of
+                (composition:subtree-definition-child definition)
+                (composition:subtree-definition-parent definition))))
+          (composition:subtree-definitions (composition forest)))
+        (for-each
+          (lambda (page)
+            (for-each
+              (lambda (transclusion)
+                (unless (hash-ref parent-of
+                                  (composition:transclusion-target-tree-id
+                                    transclusion))
+                  (hash-set! parent-of
+                    (composition:transclusion-target-tree-id transclusion)
+                    (composition:transclusion-source-id transclusion))))
+              (composition:outgoing-transclusions
+                (composition forest) (site-page-id page))))
+          (pages forest))
+        (let ((hosts (make-hash-table)))
+          (define (host-of id)
+            (or (hash-ref hosts id)
+                (let* ((host
+                         (let loop ((current id) (path (list id)))
+                           (let ((parent (hash-ref parent-of current)))
+                             (cond
+                               ((not parent) current)
+                               ((member parent path equal?) current)
+                               (else (loop parent (cons parent path)))))))
+                       (host-page (hash-ref (page-index forest) host)))
+                  (hash-set! hosts id
+                    (list host (if host-page
+                                   (site-page-title host-page)
+                                   host)))
+                  (hash-ref hosts id))))
+          (for-each (lambda (page) (host-of (site-page-id page)))
+                    (pages forest))
+          hosts)))))
+
+(define (term-definitions forest term-id)
+  (relations:term-definition-rows
+    (term-definition-relation forest) term-id))
+
+(define (term-definition-conflicts forest)
+  (let ((hosts (forest-host-table forest)))
+    (map
+      (lambda (entry)
+        (cons (car entry)
+              (map (lambda (occurrence)
+                     (let ((host (hash-ref hosts (car occurrence))))
+                       (list (car host) (cadr host)
+                             (car occurrence) (cadr occurrence)
+                             (caddr occurrence))))
+                   (cdr entry))))
+      (relations:term-definition-conflicts
+        (term-definition-relation forest)))))
+
+(define (undefined-term-mentions forest)
+  (let ((hosts (forest-host-table forest)))
+    (map
+      (lambda (entry)
+        (list (car entry)
+              (map (lambda (page-id)
+                     (let ((host (hash-ref hosts page-id)))
+                       (list (car host) (cadr host) page-id)))
+                   (cadr entry))))
+      (relations:undefined-term-mentions
+        (term-definition-relation forest)
+        (term-mention-relation forest)))))
+
+(define (source-paths forest)
+  (let ((site (site forest)))
+    (delete-duplicates
+      (append (site-sources site)
+              (filter-map site-page-source (site-pages site))
+              (append-map
+                (lambda (page)
+                  (tree-pass:content-source-paths (site-page-document page)))
+                (site-pages site)))
+      string=?)))
+
+(define (module-paths forest)
+  (let* ((site (site forest))
+         (page-paths (filter-map site-page-source (site-pages site))))
+    (filter (lambda (path) (not (member path page-paths string=?)))
+            (site-sources site))))
+
+(define (included-tree-ids forest start-id)
+  (cached-rows forest `(included-tree-ids ,start-id)
+    (lambda ()
+      (let loop ((pending (list start-id)) (seen '()))
+        (if (null? pending)
+            seen
+            (let ((id (car pending)))
+              (if (member id seen equal?)
+                  (loop (cdr pending) seen)
+                  (let ((page (require-page forest id)))
+                    (loop
+                      (append
+                       (map composition:transclusion-target-tree-id
+                            (composition:outgoing-transclusions
+                              (composition forest) id))
+                       (map composition:subtree-definition-child
+                            (filter (lambda (definition)
+                                      (equal? (composition:subtree-definition-parent
+                                                definition)
+                                            id))
+                                    (composition:subtree-definitions
+                                      (composition forest))))
+                       (cdr pending))
+                      (cons id seen))))))))))
+
+(define (page-source-paths forest page)
+  (let ((included (included-tree-ids forest (site-page-id page))))
+    (if (any (lambda (id) (member id (query-page-ids forest) string=?))
+             included)
+        (source-paths forest)
+        (delete-duplicates
+          (append (module-paths forest)
+                  (filter-map
+                    (lambda (id)
+                      (site-page-source (require-page forest id)))
+                    included)
+                  (tree-pass:content-source-paths (site-page-document page))
+                  (filter-map site-page-source
+                              (backlinks forest (site-page-id page)))
+                  (filter-map site-page-source
+                              (transcluding-pages forest
+                                                  (site-page-id page)))
+                  (append-map
+                    (lambda (tree-id)
+                      (filter-map
+                        (lambda (reference)
+                          (site-page-source
+                            (require-page forest
+                              (reference-target-page-id reference))))
+                        (outgoing-references forest tree-id)))
+                    included))
+          string=?))))
