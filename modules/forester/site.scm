@@ -4,6 +4,7 @@
 
 (define-module (forester site)
   #:use-module ((grove private ir) #:prefix ir:)
+  #:use-module (grove private snapshot)
   #:use-module (grove string-fun)
   #:use-module (grove ir)
   #:use-module (grove site)
@@ -101,10 +102,28 @@
 (define-record-type <reference>
   (%make-reference source-page-id source-id target-page-id label)
   reference?
-  (source-page-id reference-source-page-id)
-  (source-id reference-source-id)
-  (target-page-id reference-target-page-id)
-  (label reference-label))
+  (source-page-id reference-source-page-id/raw)
+  (source-id reference-source-id/raw)
+  (target-page-id reference-target-page-id/raw)
+  (label reference-label/raw))
+
+(define (make-reference source-page-id source-id target-page-id label)
+  (%make-reference (snapshot-data source-page-id)
+                   (snapshot-data source-id)
+                   (snapshot-data target-page-id)
+                   (snapshot-data label)))
+
+(define (reference-source-page-id reference)
+  (snapshot-data (reference-source-page-id/raw reference)))
+
+(define (reference-source-id reference)
+  (snapshot-data (reference-source-id/raw reference)))
+
+(define (reference-target-page-id reference)
+  (snapshot-data (reference-target-page-id/raw reference)))
+
+(define (reference-label reference)
+  (snapshot-data (reference-label/raw reference)))
 
 (define-record-type <forest>
   (%make-forest site pages reference-relation
@@ -114,7 +133,7 @@
                 term-mention-relation query-page-ids)
   forest?
   (site site)
-  (pages pages)
+  (pages forest-pages/raw)
   (reference-relation reference-relation)
   (composition composition)
   (page-index page-index)
@@ -125,6 +144,9 @@
   (term-definition-relation term-definition-relation)
   (term-mention-relation term-mention-relation)
   (query-page-ids query-page-ids))
+
+(define (pages forest)
+  (snapshot-data (forest-pages/raw forest)))
 
 (define (id-member-set ids)
   (let ((table (make-hash-table)))
@@ -745,22 +767,23 @@ index instead of scanning the page list per entry."
 (define %site-lock (make-mutex))
 
 (define (cached-rows forest key thunk)
-  (with-mutex %site-lock
-    (let ((forest-cache
-            (or (hash-ref %query-cache forest)
-                (let ((table (make-hash-table)))
-                  (hash-set! %query-cache forest table)
-                  table))))
-      (or (hash-ref forest-cache key)
-          (let ((value (thunk)))
-            (hash-set! forest-cache key value)
-            value)))))
+  (snapshot-data
+    (with-mutex %site-lock
+      (let ((forest-cache
+              (or (hash-ref %query-cache forest)
+                  (let ((table (make-hash-table)))
+                    (hash-set! %query-cache forest table)
+                    table))))
+        (or (hash-ref forest-cache key)
+            (let ((value (thunk)))
+              (hash-set! forest-cache key value)
+              value))))))
 
 (define (outgoing-references forest id)
   (find-page forest id)
   (cached-rows forest `(outgoing-references ,id)
     (lambda ()
-      (map (lambda (row) (apply %make-reference row))
+      (map (lambda (row) (apply make-reference row))
            (outgoing-reference-rows (reference-relation forest) id)))))
 
 (define (outgoing-transclusions forest id)
@@ -833,7 +856,7 @@ MathJax draws it with its own fonts."
                         ;;     come straight from the relation: the cached
                         ;;     query helper would re-take the site lock.
                         (map (lambda (row)
-                               (reference-label (apply %make-reference row)))
+                               (reference-label (apply make-reference row)))
                              (outgoing-reference-rows
                                (reference-relation forest)
                                (site-page-id page))))))
@@ -845,7 +868,7 @@ MathJax draws it with its own fonts."
   (find-page forest id)
   (cached-rows forest `(incoming-references ,id)
     (lambda ()
-      (map (lambda (row) (apply %make-reference row))
+      (map (lambda (row) (apply make-reference row))
            (incoming-reference-rows (reference-relation forest) id)))))
 
 (define (backlinks forest id)

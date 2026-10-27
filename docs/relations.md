@@ -144,6 +144,13 @@ later analysis has no ID stability guarantee. The `position` column is the
 child slot in the original content list, so text and layout leaves can create
 gaps between element positions even though leaves have no rows or IDs.
 
+`(pages forest)` and the page-query helpers return independent page lists;
+editing a returned list does not change the analyzed Forest or a later query.
+Reference queries preserve every authored occurrence and order, while their
+lists and reference string accessors are also independent copies. Forest query
+caching is therefore an implementation detail and cannot be changed through a
+returned result.
+
 The `text` column is the concatenation of descendant text and layout leaves,
 without renderer-specific formatting. `character-count` counts Unicode
 extended grapheme clusters, the default user-perceived text units;

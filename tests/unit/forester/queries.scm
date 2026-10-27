@@ -42,6 +42,26 @@
 
 (test-begin "forester site queries")
 
+(let* ((source (page-with-links "source" '("target")))
+       (target (page-with-links "target" '()))
+       (forest (make-forest (make-site (list source target))))
+       (exposed-pages (pages forest))
+       (exposed-references (outgoing-references forest "source"))
+       (label (reference-label (car exposed-references)))
+       (exposed-backlinks (backlinks forest "target")))
+  (set-car! exposed-pages #f)
+  (set-car! exposed-references #f)
+  (string-set! label 0 #\X)
+  (set-car! exposed-backlinks #f)
+  (test-equal "forest page accessors return independent collections"
+    '("source" "target") (map site-page-id (pages forest)))
+  (test-equal "reference query caches cannot be changed through returned lists"
+    '("target") (map reference-target-page-id (outgoing-references forest "source")))
+  (test-equal "reference records protect labels from accessor mutation"
+    "target" (reference-label (car (outgoing-references forest "source"))))
+  (test-equal "cached backlink queries return independent page lists"
+    '("source") (map site-page-id (backlinks forest "target"))))
+
 (let* ((destination (page-with-links "destination" '()))
        (source (page-with-links "source" '("destination" "destination")))
        (other-source (page-with-links "other-source" '("destination")))
