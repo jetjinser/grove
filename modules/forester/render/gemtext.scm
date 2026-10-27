@@ -14,6 +14,7 @@
   #:use-module (forester render text routes)
   #:use-module (forester backmatter)
   #:use-module (forester private render labels)
+  #:use-module (forester private render-routes)
   #:use-module (forester private entity-uri)
   #:use-module (forester render context)
   #:use-module (grove i18n)
@@ -308,8 +309,7 @@
                      (map (lambda (page)
                             (text-page-path routes (site-page-id page)))
                           (pages forest)))))
-    (unless (= (length paths) (length (delete-duplicates paths string=?)))
-      (error "Gemtext routes produce duplicate output paths" paths))))
+    (validate-unique-render-paths! "Gemtext" paths)))
 
 (define-record-type <gemtext-options>
   (%make-gemtext-options prefix routes backmatter

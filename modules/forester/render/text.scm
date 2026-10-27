@@ -6,6 +6,7 @@
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove build)
   #:use-module (forester private render artifact)
+  #:use-module (forester private render-routes)
   #:use-module (forester site)
   #:use-module (grove ir)
   #:use-module (grove output)
@@ -255,8 +256,7 @@ HTML renderer so text and HTML address occurrences identically."
                       (map (lambda (page)
                              (text-page-path routes (site-page-id page)))
                            (pages forest)))))
-    (unless (= (length paths) (length (delete-duplicates paths string=?)))
-      (error "text routes produce duplicate output paths" paths))))
+    (validate-unique-render-paths! "text" paths)))
 
 (define (output-path prefix name)
   (if prefix

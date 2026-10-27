@@ -154,6 +154,14 @@
   (test-assert "Gemtext artifacts retain Forest source dependencies"
     (equal? (source-paths forest) (artifact-sources (car artifacts)))))
 
+(let* ((forest (make-forest (make-site (list algebra limits))))
+       (routes (make-text-routes
+                 #:page-path (lambda (_id) "same.txt"))))
+  (test-error "text renderer rejects colliding page routes" #t
+    (render-text forest #:options (make-text-options #:routes routes)))
+  (test-error "Gemtext renderer rejects colliding page routes" #t
+    (render-gemtext forest #:options (make-gemtext-options #:routes routes))))
+
 (let* ((source
          (make-site-page
            "source" "Source"
