@@ -1504,4 +1504,18 @@
     (and (string-contains text "https://doi.org/10.1146/annurev.fluid.29.1.123")
          (string-contains gemtext "=> https://doi.org/10.1146/annurev.fluid.29.1.123 doi:10.1146/annurev.fluid.29.1.123"))))
 
+(let* ((page (make-site-page "paper" "A paper"
+               (evaluate-document "@paragraph{A short note.}")
+               #:metadata '((describes . ("https:")))))
+       (forest (make-forest (make-site (list page))))
+       (html (assoc-ref
+               (site->html forest
+                 #:options (make-html-options
+                             #:routes (make-html-routes #:home-page "paper")
+                             #:mathjax-src #f))
+               "paper")))
+  (test-assert "HTML does not link hostless HTTP(S) entity identifiers"
+    (and (string-contains html "<code>https:</code>")
+         (not (string-contains html "href=\"https:\"")))))
+
 (test-end "forester renderers")

@@ -6,11 +6,11 @@
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (ice-9 ftw)
   #:use-module (forester private date)
+  #:use-module (forester private entity-uri)
   #:use-module (grove i18n)
   #:use-module (grove ir)
   #:use-module (grove private string-fun)
   #:use-module (grove site)
-  #:use-module (web uri)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (make-page-reader
@@ -103,15 +103,10 @@
                          (error (format #f
                                   "Forester page describes URI cannot be empty in ~a"
                                   path)))
-                       (catch #t
-                         (lambda ()
-                           (let ((uri (string->uri value)))
-                             (unless (and (uri? uri) (uri-scheme uri))
-                               (error "URI requires a scheme" value))))
-                         (lambda (key . args)
-                           (error (format #f
-                                    "Forester page describes value must be an absolute URI in ~a: ~a"
-                                    path value))))
+                       (unless (absolute-entity-uri? value)
+                         (error (format #f
+                                  "Forester page describes value must be an absolute URI (HTTP(S) requires a host) in ~a: ~a"
+                                  path value)))
                        value))
                    (elements-of-kind elements 'describes))))
     (when (not (= (length uris) (length (delete-duplicates uris string=?))))
