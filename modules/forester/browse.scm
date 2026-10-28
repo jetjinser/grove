@@ -27,7 +27,7 @@
     math-column math-align math-row math-cell
     math-diagnostic math-diagnostics math-semantic-check math-style
     bilingual bilingual-pair bilingual-lane bilingual-more foreign-term
-    details summary
+    details
     link query-link tag taxon image forest-query title))
 
 (define (unknown-content-kinds content)
