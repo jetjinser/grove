@@ -226,11 +226,12 @@ check documents."
 
 (define (assign-equation-numbers pages)
   "Number every display equation in each page's own content, in document
-order. All display equations count, named or not; the number lands on
-equations the author did not tag, and a generated unstable-eq-N ID lands on
-equations the author did not name, joining the anchor registry like any
-other math ID. The chapter prefix is the page's declared chapter, never
-invented here."
+order. Each visited display equation advances that page's counter. TeX
+equations containing `\\tag' keep the authored tag and receive no generated
+number; other display equations receive a number, prefixed by the page's
+declared chapter when present. Equations without an authored ID receive a
+generated `unstable-eq-N' ID, which joins the anchor registry like any other
+math ID."
   (define (rewrite page)
     (let* ((document (site-page-document page))
            (chapter (assq-ref (site-page-metadata page) 'chapter))
