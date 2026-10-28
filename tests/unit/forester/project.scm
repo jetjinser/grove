@@ -1098,7 +1098,15 @@
                      (member "gemini/beta.gmi" affected string=?))))
             (test-assert "Gemtext page removal cleans its published file"
               (not (file-exists?
-                     (string-append output-directory "/gemini/beta.gmi"))))))))
+                     (string-append output-directory "/gemini/beta.gmi"))))
+            (test-assert "Gemtext index no longer links the removed page"
+              (not (string-contains
+                     (read-test-file
+                       (string-append output-directory "/gemini/index.gmi"))
+                     "Beta")))
+            (test-equal "Gemtext removal leaves a stable cache on the next build"
+              '()
+              (build-report-affected-artifacts (build-project/report project)))))))
     (lambda () (system* "rm" "-rf" root))))
 
 (test-end "forester project")
