@@ -133,6 +133,14 @@ real logarithms require a positive argument. The system discharges simple
 facts such as positivity implying nonzero, but does not infer general truths.
 Assumptions are assertions by the article author, not facts proved by Grove.
 
+Scheme code can establish the same kind of dynamic scope with
+`with-math-assumptions` from `(grove math context)`. Nested scopes add unique
+facts and restore the previous scope on exit; per-calculation `#:assumptions`
+are combined with the active scope. Use `call-with-math-assumptions` when a
+procedure value is more convenient, or pass `#:replace? #t` to start from an
+empty scope. `math-assumptions` turns Semantic values and raw fact terms into
+the normalized assumption list used by the calculation APIs.
+
 For relational extensions, `(grove math types)` exposes `math-typeo`, which
 relates an assumption set, a mathematical term, and its inferred type. Compose
 it with other miniKanren goals when writing custom rules. `math-infer-type` is
@@ -174,6 +182,27 @@ and `@check-equation` to check a candidate. The corresponding Formula API is
 available under `φ:`; Semantic constructors are under `◆:`.
 
 ## Derivations and checks
+
+`(grove math derivation)` represents a proposed sequence of terms and rule
+steps. Construction records the proposal; it does not prove the steps.
+`math-verify-derivation` from `(grove math verification)` replays each step
+against its selected registered rule. `(grove math proof)` provides a separate
+proof-tree API: proof nodes can refer to assumptions, apply registered rule
+instances, or compose equalities by reflexivity, symmetry, transitivity, and
+congruence. `math-proof-check` checks a proof tree under an ordered assumption
+list. `math-proof-elaborate-derivation` tries to turn a derivation into such a
+checked proof and returns a report when steps are unsupported or rejected.
+
+For example, reflexivity is a complete proof of an expression being equal to
+itself:
+
+```scheme
+(use-modules (grove math proof))
+
+(math-proof-result-status
+  (math-proof-check (math-proof-reflexivity '(var x)) '()))
+;; => checked
+```
 
 `@derive{expression}` applies available rewrite rules and displays each step.
 Transitions identify their rule and the location within the expression where
