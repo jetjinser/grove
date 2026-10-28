@@ -5,6 +5,7 @@
   #:use-module (grove collect)
   #:use-module (grove private build-state)
   #:use-module (grove private files)
+  #:use-module (grove private module-load)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (runtime-inputs input-fingerprint normalize-input-path
@@ -37,18 +38,13 @@
                (if (string? path) (cons path paths) paths)) '() trace))
 
 (define (call-with-input-trace trace thunk)
-  (let ((old-hook %load-hook))
-    (parameterize ((current-input-trace trace))
-      (dynamic-wind
-        (lambda ()
-          (set! %load-hook
-            (lambda (file)
-              (when old-hook (old-hook file))
-              (when (and (string? file) (file-exists? file)
-                         (not (file-is-directory? file)))
-                (depend-on! file)))))
-        thunk
-        (lambda () (set! %load-hook old-hook))))))
+  (parameterize ((current-input-trace trace))
+    (call-with-module-load-observer
+      (lambda (file)
+        (when (and (string? file) (file-exists? file)
+                   (not (file-is-directory? file)))
+          (depend-on! file)))
+      thunk)))
 
 (define (compiled-inputs filename source)
   (let ((relative

@@ -11,6 +11,7 @@
   #:use-module (grove input scribble)
   #:use-module (grove private input cache)
   #:use-module (grove private input dependencies)
+  #:use-module (grove private module-load)
   #:use-module (grove project)
   #:use-module (grove output)
   #:use-module (grove render html)
@@ -70,6 +71,31 @@
     source))
 
 (test-begin "document result cache")
+(let ((observed '()) (nested '()) (initial-hook %load-hook))
+  (dynamic-wind
+    (lambda () (set! %load-hook #f))
+    (lambda ()
+      (call-with-module-load-observer
+        (lambda (file) (set! observed (cons file observed)))
+        (lambda ()
+          (%load-hook "outer-before")
+          (call-with-module-load-observer
+            (lambda (file) (set! nested (cons file nested)))
+            (lambda () (%load-hook "nested")))
+          (%load-hook "outer-after")))
+      (test-equal "nested module observers preserve the outer observer"
+        '("outer-before" "nested" "outer-after") (reverse observed))
+      (test-equal "inner module observers see only their own scope"
+        '("nested") (reverse nested))
+      (test-equal "module load hook is restored after observation" #f %load-hook)
+      (test-error "module load hook is restored after an observer error" #t
+        (call-with-module-load-observer
+          (lambda (_) #t)
+          (lambda () (error "observer scope probe"))))
+      (test-equal "module load hook is restored after a raised exception"
+        #f %load-hook))
+    (lambda () (set! %load-hook initial-hook))))
+
 (test-equal "disabled input caching has no context"
   #f (make-input-cache-context #f '()))
 (test-error "input cache option must be boolean" #t

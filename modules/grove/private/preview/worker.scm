@@ -14,6 +14,7 @@
   #:use-module (grove private project state)
   #:use-module (grove project diagnostic)
   #:use-module (grove private build-state)
+  #:use-module (grove private module-load)
   #:use-module (grove output)
   #:use-module (grove private preview watch)
   #:use-module (ice-9 ftw)
@@ -134,16 +135,13 @@
     ((request-serial filename output previous-modules previous-roots
                      previous-files debug? profile?)
      (let ((started (cli-seconds))
-           (loaded '()) (loaded-stamps '()) (old-hook %load-hook))
-       (dynamic-wind
-         (lambda ()
-           (set! %load-hook
-             (lambda (path)
-               (when old-hook (old-hook path))
-               (when (and (string? path) (string-suffix? ".scm" path))
-                 (let ((path (absolute-path path)))
-                   (set! loaded (cons path loaded))
-                   (set! loaded-stamps (cons (file-stamp path) loaded-stamps)))))))
+           (loaded '()) (loaded-stamps '()))
+       (call-with-module-load-observer
+         (lambda (path)
+           (when (and (string? path) (string-suffix? ".scm" path))
+             (let ((path (absolute-path path)))
+               (set! loaded (cons path loaded))
+               (set! loaded-stamps (cons (file-stamp path) loaded-stamps)))))
          (lambda ()
            (call-with-loaded-project filename
              (lambda (project)
@@ -241,8 +239,7 @@
                            ;;     analysis, and a post-build snapshot
                            ;;     would silently absorb them.
                            before))))
-             #:output-directory output))
-         (lambda () (set! %load-hook old-hook)))))
+             #:output-directory output)))))
     (unexpected (error "invalid preview worker request" unexpected))))
 
 (define (serve-gone? live-path)
