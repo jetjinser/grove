@@ -9,8 +9,7 @@
                           math-digit-char?))
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
-  #:export (math-token?
-            make-math-token
+  #:export (make-math-token
             math-token-kind
             math-token-value
             math-token-start

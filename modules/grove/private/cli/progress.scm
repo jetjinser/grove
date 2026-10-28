@@ -10,8 +10,7 @@
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-14)
   #:re-export (current-input-cache-timings)
-  #:export (call-with-input-cache-timings
-            report-input-cache-timings
+  #:export (report-input-cache-timings
             peak-rss-mib
             report-profile
             call-with-cli-progress cli-seconds print-cli-status print-cli-summary))
@@ -19,11 +18,6 @@
 ;;     Profile mode: cache-hit cost split and peak RSS.  The build
 ;;     summary answers "what changed"; these lines answer "where did
 ;;     the wall-clock and the memory go".
-
-(define (call-with-input-cache-timings thunk)
-  (parameterize ((current-input-cache-timings (make-hash-table)))
-    (thunk)
-    (current-input-cache-timings)))
 
 (define (report-input-cache-timings port timings)
   (let ((reused (hash-ref timings 'reused 0))
