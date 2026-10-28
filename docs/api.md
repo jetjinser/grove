@@ -148,7 +148,8 @@ kind, source, properties, style, and flow behavior.
 `content-element-has-property?` distinguishes an absent property from a
 property explicitly set to `#f`, matching render-context key semantics.
 `make-content-disclosure` constructs a titled block disclosure with an
-optional initial `open?` state. Its `addressable?` flag is a Forester
+optional initial `open?` state and accepts `#:source` like other content
+elements. Its `addressable?` flag is a Forester
 integration hint: Forester converts it to an unnamed `unstable-N` subtree
 during site analysis, so the subtree can be queried or transcluded but its ID
 is unstable. Other Grove renderers keep the value as a disclosure.

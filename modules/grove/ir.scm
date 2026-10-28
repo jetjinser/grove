@@ -243,7 +243,7 @@ KIND; it defaults to inline and can be set to block for flow normalization."
 
 (define* (make-content-disclosure title children #:key (open? #t)
                                   (addressable? #f) (style #f)
-                                  (location #f))
+                                  (source #f) (location #f))
   "Make a titled block disclosure.
 
 Forester promotes a disclosure with ADDRESSABLE? set to #t to an anonymous
@@ -257,6 +257,7 @@ subtree during site analysis. Other Grove renderers treat it as a disclosure."
   (make-content-element 'disclosure children
     #:properties `((title . ,title) (open? . ,open?)
                    (addressable? . ,addressable?))
+    #:source source
     #:style style
     #:location location
     #:flow-kind 'block))

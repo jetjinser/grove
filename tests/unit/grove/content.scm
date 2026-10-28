@@ -331,6 +331,12 @@
         (make-content-layout 'newline "\n" #:source "layout.plant"))
       #:source "document.plant")))
 
+(test-equal "content disclosures retain explicit source provenance"
+  '("disclosure.plant")
+  (content-source-paths
+    (make-content-disclosure "Steps" '("Body")
+      #:source "disclosure.plant")))
+
 (test-equal "content-source-paths deduplicates repeated paths in order"
   '("page.plant")
   (content-source-paths
