@@ -17,7 +17,6 @@
   #:use-module (grove private project incremental)
   #:use-module (grove private project publication)
   #:use-module (grove private project renderers)
-  #:use-module (grove private project state)
   #:use-module (grove private build-state)
   #:use-module (grove collect)
   #:use-module (grove project diagnostic)
@@ -26,6 +25,7 @@
   #:use-module (srfi srfi-1)
   #:export (collect-project-sources
             build-project/report
+            build-project/report+analysis
             build-project
             check-project
             analyze-project
@@ -291,16 +291,6 @@ The callback receives the model, input port, and output port."
                          artifacts owners previous-artifacts identity
                          previous-identity)))
                    string=?)))))
-    ;;     Expose the analysis model for long-lived preview workers:
-    ;;     a resident worker re-renders from this model when only
-    ;;     load-time assets changed.
-    (publish-project-state!
-      model
-      (let ((context (project-analysis-input-cache-context analysis)))
-        (and context
-             (lset-difference string=?
-                              (input-cache-dependencies context)
-                              (project-extra-sources project)))))
     (validate-project-artifacts artifacts progress)
     (when write?
       (write-project-build!
@@ -308,8 +298,27 @@ The callback receives the model, input port, and output port."
         current-sources artifacts owners identity progress
         #:earlier-sources pre-build-sources
         #:prune (lambda () (prune-input-cache! input-cache-context))))
-    (make-build-report (map build-state-source-path current-sources) artifacts added modified removed affected
-                       cache-hit?)))
+    (let* ((report
+             (make-build-report (map build-state-source-path current-sources)
+                                artifacts added modified removed affected
+                                cache-hit?))
+           (analysis-inputs
+             (let ((context (project-analysis-input-cache-context analysis)))
+               (and context
+                    (lset-difference string=?
+                      (input-cache-dependencies context)
+                      (project-extra-sources project))))))
+      (values report model analysis-inputs))))
+
+(define* (build-project/report+analysis project
+                                        #:key (progress (lambda (stage path) #t)))
+  "Build PROJECT and return its report, analyzed model, and analysis inputs.
+
+This private entry point lets the preview worker retain state explicitly."
+  (require-project project)
+  (require-progress progress)
+  (with-build-lock (project-output-directory project)
+    (lambda () (execute-project project #t progress))))
 
 (define* (build-project/report project #:key (progress (lambda (stage path) #t)))
   "Build PROJECT, notifying PROGRESS with a stage symbol and detail.
@@ -319,8 +328,11 @@ and stale-output cleanup all live in the output directory, so a serve
 watch and a manual build over one project must not run concurrently."
   (require-project project)
   (require-progress progress)
-  (with-build-lock (project-output-directory project)
-    (lambda () (execute-project project #t progress))))
+  (call-with-values
+    (lambda ()
+      (build-project/report+analysis project #:progress progress))
+    (lambda (report _model _analysis-inputs)
+      report)))
 
 (define* (check-project project #:key (progress (lambda (stage path) #t)))
   "Read, analyze, render, and validate PROJECT without accessing output state.
@@ -328,7 +340,10 @@ Return its complete validated artifact list; use BUILD-PROJECT/REPORT when
 source changes or cache status are needed."
   (require-project project)
   (require-progress progress)
-  (build-report-artifacts (execute-project project #f progress)))
+  (call-with-values
+    (lambda () (execute-project project #f progress))
+    (lambda (report _model _analysis-inputs)
+      (build-report-artifacts report))))
 
 (define* (build-project project #:key (progress (lambda (stage path) #t)))
   (build-report-artifacts (build-project/report project #:progress progress)))

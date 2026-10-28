@@ -11,7 +11,6 @@
   #:use-module (grove private build-lock)
   #:use-module (grove private cli progress)
   #:use-module (grove private input cache)
-  #:use-module (grove private project state)
   #:use-module (grove project diagnostic)
   #:use-module (grove private build-state)
   #:use-module (grove private module-load)
@@ -78,7 +77,8 @@
             (else
              (loop (cdr paths) changed removed)))))))
 
-(define (model-reusable? project model retained-state changed removed restart-paths)
+(define (model-reusable? project model retained-state analysis-inputs
+                         changed removed restart-paths)
   ;;     The model is the analysis output, so it survives exactly the
   ;;     changes analysis cannot see: documents (the collector's set,
   ;;     including newly added ones) and anything else analysis read -
@@ -98,7 +98,7 @@
                   (or (false-if-exception (canonicalize-path path)) path)))
               (documents (false-if-exception
                           (collect-project-sources project)))
-              (analysis (last-analysis-inputs))
+              (analysis analysis-inputs)
               (document-spellings (and documents (map canonical documents)))
               (analysis-spellings (and analysis (map canonical analysis))))
          (and documents
@@ -125,12 +125,14 @@
         (newline port)))
     (rename-file temporary result-path)))
 
-(define (build-once request model retained-state known result-path built?)
+(define (build-once request model retained-state known analysis-inputs
+                    result-path built?)
   ;;     Run one build request against the current generation.  The
   ;;     project is loaded fresh - renderers and load-time assets are
   ;;     per-request - but analysis comes from the retained model
-  ;;     whenever nothing analysis-visible changed.  Returns three
-  ;;     values for the next generation: model, build state, stamps.
+  ;;     whenever nothing analysis-visible changed. Returns the model,
+  ;;     build state, file stamps, and analysis inputs for the next
+  ;;     generation.
   (match request
     ((request-serial filename output previous-modules previous-roots
                      previous-files debug? profile?)
@@ -179,7 +181,8 @@
                       ;;     worker for them first - but a model is
                       ;;     never trusted across one anyway.
                       (reuse? (model-reusable? configured model
-                                                 retained-state changed removed
+                                                 retained-state analysis-inputs
+                                                 changed removed
                                                  (cons filename modules))))
                   ;;     Analysis re-evaluates the project's module
                   ;;     documents, and Guile cannot reload a module into
@@ -189,56 +192,65 @@
                   ;;     lost.
                   (when (and built? (not reuse?))
                     (primitive-exit 75))
-                  (let* ((profile-timings (and profile? (make-hash-table)))
-                         (report
-                           (parameterize ((current-input-cache-timings
-                                            profile-timings))
-                             (call-with-cli-progress "Building" filename
-                               (lambda (progress)
-                                 (if reuse?
-                                     (rebuild-from-model configured model
+                  (let ((profile-timings (and profile? (make-hash-table))))
+                    (let-values
+                        (((report next-model next-analysis-inputs)
+                          (parameterize ((current-input-cache-timings
+                                           profile-timings))
+                            (call-with-cli-progress "Building" filename
+                              (lambda (progress)
+                                (if reuse?
+                                    (values
+                                      (rebuild-from-model configured model
                                                           retained-state
                                                           changed removed
                                                           #:progress progress)
-                                     (build-project/report configured
-                                                           #:progress progress))))))
-                         (modules (existing-files (append modules loaded)))
-                         (files (delete-duplicates
-                                  (append (map absolute-path (build-report-sources report)) modules)
-                                  string=?))
-                         (roots (watch-roots filename project files modules)))
-                    ;; This is a private process protocol, not a second artifact API.
-                    (write-result! result-path
-                      (list 'preview request-serial output roots files modules
-                            ;;     Loaded stamps may name grove's own and
-                            ;;     dependency modules under store prefixes;
-                            ;;     the serve side diffs this snapshot
-                            ;;     against its own, so foreign paths must
-                            ;;     stay out or every resolution difference
-                            ;;     turns into a rebuild.
-                            (delete-duplicates
-                              (append before
+                                      model analysis-inputs)
+                                    (build-project/report+analysis
+                                      configured #:progress progress)))))))
+                        (let* ((modules (existing-files (append modules loaded)))
+                               (files (delete-duplicates
+                                        (append (map absolute-path
+                                                     (build-report-sources report))
+                                                modules)
+                                        string=?))
+                               (roots (watch-roots filename project files modules)))
+                          ;; This is a private process protocol, not a second artifact API.
+                          (write-result! result-path
+                            (list 'preview request-serial output roots files modules
+                                  ;;     Loaded stamps may name grove's own and
+                                  ;;     dependency modules under store prefixes;
+                                  ;;     the serve side diffs this snapshot
+                                  ;;     against its own, so foreign paths must
+                                  ;;     stay out or every resolution difference
+                                  ;;     turns into a rebuild.
+                                  (delete-duplicates
+                                    (append before
                                       (filter (lambda (entry)
                                                 (not (unwatched-path? (car entry))))
                                               loaded-stamps))
-                              (lambda (left right) (string=? (car left) (car right))))
-                            (map (lambda (artifact)
-                                   (list (out:artifact-path/raw artifact) (out:artifact-content/raw artifact)))
-                                 (build-report-artifacts report))))
-                   (print-cli-summary report (- (cli-seconds) started) #:output output)
-                   ;;     Profile mode: the cost split lands on stderr
-                   ;;     after the summary; a reuse build shows the
-                   ;;     analysis it skipped by having nothing to split.
-                   (when profile-timings
-                     (report-profile (current-error-port) profile-timings))
-                   (values (if reuse? model (last-build-model))
-                           (read-build-state (worker-state-path output))
-                           ;;     Keep the pre-build snapshot as the
-                           ;;     next diff's baseline: edits that land
-                           ;;     while a build runs were not in its
-                           ;;     analysis, and a post-build snapshot
-                           ;;     would silently absorb them.
-                           before))))
+                                    (lambda (left right)
+                                      (string=? (car left) (car right))))
+                                  (map (lambda (artifact)
+                                         (list (out:artifact-path/raw artifact)
+                                               (out:artifact-content/raw artifact)))
+                                       (build-report-artifacts report))))
+                          (print-cli-summary report (- (cli-seconds) started)
+                                             #:output output)
+                          ;;     Profile mode: the cost split lands on stderr
+                          ;;     after the summary; a reuse build shows the
+                          ;;     analysis it skipped by having nothing to split.
+                          (when profile-timings
+                            (report-profile (current-error-port) profile-timings))
+                          (values next-model
+                                  (read-build-state (worker-state-path output))
+                                  ;;     Keep the pre-build snapshot as the
+                                  ;;     next diff's baseline: edits that land
+                                  ;;     while a build runs were not in its
+                                  ;;     analysis, and a post-build snapshot
+                                  ;;     would silently absorb them.
+                                  before
+                                  next-analysis-inputs))))))
              #:output-directory output)))))
     (unexpected (error "invalid preview worker request" unexpected))))
 
@@ -316,6 +328,7 @@
        (call-with-serve-watch live-path
          (lambda ()
            (let loop ((serial 0) (model #f) (retained-state #f) (known '())
+                      (analysis-inputs #f)
                       (built? #f))
              (let ((request (await-request request-path serial live-path serve-pid)))
                (match request
@@ -325,11 +338,13 @@
                     (lambda ()
                       (call-with-project-stage 'build #f
                         (lambda ()
-                          (let-values (((next-model next-state next-known)
+                          (let-values (((next-model next-state next-known
+                                          next-analysis-inputs)
                                         (build-once request model retained-state
-                                                    known result-path built?)))
+                                                    known analysis-inputs
+                                                    result-path built?)))
                             (loop request-serial next-model next-state
-                                  next-known #t)))))
+                                  next-known next-analysis-inputs #t)))))
                     (lambda (unexpected error)
                       (print-project-error error profile?)
                       1)))
