@@ -497,6 +497,21 @@
     (list (car (project-extra-sources project))
           (length (project-renderers project)))))
 
+(let ((received-destination 'unset))
+  (test-equal "source creator returns its allocated path"
+    "created.plant"
+    (create-project-source
+      (make-project #:source-directory "sources"
+                    #:read-source (lambda (_) #f)
+                    #:output-directory "output"
+                    #:create-source
+                    (lambda (_prefix destination)
+                      (set! received-destination destination)
+                      "created.plant"))
+      #:prefix "note" #:destination #f))
+  (test-equal "source creation preserves an explicit false destination"
+    #f received-destination))
+
 (test-error "source creators must return a non-empty path" #t
   (create-project-source
     (make-project #:collect-sources (lambda () '())

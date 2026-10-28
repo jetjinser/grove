@@ -180,18 +180,16 @@ may run and produce the same artifact without listing it here."
 (define (project-renderers project)
   (append (project-renderers/raw project) '()))
 
-(define source-destination-unspecified (list 'source-destination-unspecified))
-
 (define* (create-project-source project #:key prefix
-                                (destination source-destination-unspecified))
+                                (destination
+                                  (and (project? project)
+                                       (project-source-directory project))))
   "Create a source through PROJECT's configured creator.
 
 PREFIX and DESTINATION are passed to the project-owned procedure. DESTINATION
 defaults to the project's source directory."
   (unless (project? project)
     (error "source creation requires a Grove project" project))
-  (when (eq? destination source-destination-unspecified)
-    (set! destination (project-source-directory project)))
   (let ((creator (project-create-source-procedure project)))
     (unless creator
       (error "this project does not define how to create a source file"))
