@@ -41,17 +41,19 @@
 (define (read-source-with-context path read-source)
   (call-with-project-stage 'read path (lambda () (read-source path))))
 
+(define (snapshot-unique-paths paths who)
+  (unless (and (list? paths) (every non-empty-string? paths))
+    (error "~a must be a list of non-empty paths" who paths))
+  (unless (= (length paths) (length (delete-duplicates paths string=?)))
+    (error "~a contains duplicate paths" who paths))
+  (snapshot-data paths))
+
 (define (renderer-input-paths renderer)
   (let* ((input-spec (cached-renderer-inputs renderer))
          (paths (cond ((not input-spec) '())
                       ((procedure? input-spec) (input-spec))
                       (else input-spec))))
-    (unless (and (list? paths) (every non-empty-string? paths))
-      (error "renderer input collector must return a list of non-empty paths"
-             paths))
-    (unless (= (length paths) (length (delete-duplicates paths string=?)))
-      (error "renderer input collector returned duplicate paths" paths))
-    (snapshot-data paths)))
+    (snapshot-unique-paths paths "renderer inputs")))
 
 (define (collect-project-sources project)
   "Return PROJECT's validated source paths as independent data."
@@ -61,26 +63,12 @@
                (lambda ()
                  (collect-directory (project-source-directory project)
                                     (project-source-filter project)))))))
-    (unless (and (list? paths)
-                 (every (lambda (path)
-                          (non-empty-string? path))
-                        paths))
-      (error "project collector must return a list of source paths" paths))
-    (when (not (= (length paths) (length (delete-duplicates paths string=?))))
-      (error "project collector returned duplicate paths" paths))
-    (snapshot-data paths)))
+    (snapshot-unique-paths paths "project source collector result")))
 
 (define (prepare-project-sources prepare)
   (let ((paths
           (call-with-project-stage 'prepare #f prepare)))
-    (unless (and (list? paths)
-                 (every (lambda (path)
-                          (non-empty-string? path))
-                        paths))
-      (error "project preparation must return source paths" paths))
-    (when (not (= (length paths) (length (delete-duplicates paths string=?))))
-      (error "project preparation returned duplicate paths" paths))
-    (snapshot-data paths)))
+    (snapshot-unique-paths paths "project preparation result")))
 
 (define* (analyze-project/result project write?
                                 #:key (progress (lambda (stage path) #t)))

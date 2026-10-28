@@ -11,7 +11,7 @@
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64))
 
-(define root (format #f "/tmp/grove-cli-test-~a" (getpid)))
+(define root (mkdtemp "/tmp/grove-cli-test-XXXXXX"))
 (define script (string-append root "/entry.scm"))
 (define config (string-append root "/project.scm"))
 (define out (string-append root "/stdout"))
@@ -48,7 +48,6 @@
     ;;     The same cache root the subprocesses receive below, so
     ;;     snapshots computed here read the files they write.
     (setenv "XDG_CACHE_HOME" (string-append root "/cache"))
-    (mkdir root)
     (prepare-subprocess root)
     (mkdir (string-append root "/sources"))
     (write-file (string-append root "/sources/input.txt") "input")
