@@ -18,6 +18,7 @@
   #:use-module (sxml simple)
   #:use-module (srfi srfi-19)
   #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-11)
   #:export (render-rss
             make-rss-renderer))
 
@@ -83,6 +84,31 @@
        (not (string-null? url))
        (not (string-any char-whitespace? url))))
 
+(define (normalize-rss-options settings site-url feed-path routes
+                               stylesheet-url stylesheet-type language)
+  (unless (or (not settings) (site-settings? settings))
+    (error "RSS settings must be site settings or #f" settings))
+  (set! site-url (or site-url
+                     (and settings (site-settings-site-url settings))))
+  (unless (web-origin? site-url)
+    (error "Forester RSS renderer requires an absolute HTTP(S) origin"
+           site-url))
+  (unless (artifact-path? feed-path)
+    (error "RSS feed path must be a relative artifact path" feed-path))
+  (unless (html-routes? routes)
+    (error "Forester RSS renderer requires HTML routes" routes))
+  (when (and stylesheet-url (not (rss-stylesheet-url? stylesheet-url)))
+    (error "RSS stylesheet URL must be a non-empty URL without whitespace"
+           stylesheet-url))
+  (unless (rss-stylesheet-url? stylesheet-type)
+    (error "RSS stylesheet type must be a non-empty media type without whitespace"
+           stylesheet-type))
+  (when language
+    (unless (non-empty-string? language)
+      (error "RSS language must be a non-empty tag or #f" language))
+    (set! language (locale-tag (make-locale language))))
+  (values site-url feed-path routes stylesheet-url stylesheet-type language))
+
 (define (page->rss-item base routes page)
   (let ((url (page-url base routes page))
         (pub-date (page-pub-date page)))
@@ -131,38 +157,22 @@
                                    (site-settings-default-locale settings))))
   (unless (forest? forest)
     (error "Forester RSS renderer requires a forest" forest))
-  (unless (or (not settings) (site-settings? settings))
-    (error "RSS settings must be site settings or #f" settings))
-  (unless (web-origin? site-url)
-    (error "Forester RSS renderer requires an absolute HTTP(S) origin"
-           site-url))
-  (unless (artifact-path? feed-path)
-    (error "RSS feed path must be a relative artifact path" feed-path))
-  (unless (html-routes? routes)
-    (error "Forester RSS renderer requires HTML routes" routes))
-  (set! routes (validate-site-home-route
-                 forest (resolve-site-routes forest routes)))
-  (when (and stylesheet-url (not (rss-stylesheet-url? stylesheet-url)))
-    (error "RSS stylesheet URL must be a non-empty URL without whitespace"
-           stylesheet-url))
-  (unless (or (not language) (non-empty-string? language))
-    (error "RSS language must be a non-empty tag or #f" language))
-  (when language
-    (set! language (locale-tag (make-locale language))))
-  (unless (rss-stylesheet-url? stylesheet-type)
-    (error "RSS stylesheet type must be a non-empty media type without whitespace"
-           stylesheet-type))
-  (let* ((base (web-base-url site-url))
-         (site (site forest))
-         (home-url (web-absolute-route-url base (html-index-url routes)))
-         (items
-           (map (lambda (page) (page->rss-item base routes page))
-                (feed-pages (site-pages site))))
-         (content
-           (serialize-rss
-             (rss-document site home-url items stylesheet-url stylesheet-type
-                           language))))
-    (list (make-artifact feed-path content #:sources (source-paths forest)))))
+  (let-values (((site-url feed-path routes stylesheet-url stylesheet-type language)
+                (normalize-rss-options settings site-url feed-path routes
+                                       stylesheet-url stylesheet-type language)))
+    (set! routes (validate-site-home-route
+                   forest (resolve-site-routes forest routes)))
+    (let* ((base (web-base-url site-url))
+           (site (site forest))
+           (home-url (web-absolute-route-url base (html-index-url routes)))
+           (items
+             (map (lambda (page) (page->rss-item base routes page))
+                  (feed-pages (site-pages site))))
+           (content
+             (serialize-rss
+               (rss-document site home-url items stylesheet-url stylesheet-type
+                             language))))
+      (list (make-artifact feed-path content #:sources (source-paths forest))))))
 
 (define* (make-rss-renderer #:key (settings #f) (site-url #f)
                                (feed-path "feed.xml")
@@ -177,42 +187,24 @@
 Provide SITE-URL directly or through SETTINGS; at least one must contain an
 absolute HTTP(S) origin. Put a deployment path prefix in ROUTES,
 not SITE-URL. SITE-URL overrides the origin in SETTINGS."
-  (unless (or (not settings) (site-settings? settings))
-    (error "RSS settings must be site settings or #f" settings))
-  (set! site-url (or site-url
-                     (and settings (site-settings-site-url settings))))
-  (unless (web-origin? site-url)
-    (error "Forester RSS renderer requires an absolute HTTP(S) origin"
-           site-url))
-  (unless (artifact-path? feed-path)
-    (error "RSS feed path must be a relative artifact path" feed-path))
-  (unless (html-routes? routes)
-    (error "Forester RSS renderer requires HTML routes" routes))
-  (when (and stylesheet-url (not (rss-stylesheet-url? stylesheet-url)))
-    (error "RSS stylesheet URL must be a non-empty URL without whitespace"
-           stylesheet-url))
-  (unless (rss-stylesheet-url? stylesheet-type)
-    (error "RSS stylesheet type must be a non-empty media type without whitespace"
-           stylesheet-type))
-  (when language
-    (unless (non-empty-string? language)
-      (error "RSS language must be a non-empty tag or #f" language))
-    (set! language (locale-tag (make-locale language))))
-  (set! site-url (string-copy site-url))
-  (set! feed-path (string-copy feed-path))
-  (set! stylesheet-url (and stylesheet-url (string-copy stylesheet-url)))
-  (set! stylesheet-type (string-copy stylesheet-type))
-  (set! language (and language (string-copy language)))
-  (let* ((configuration
-           (lambda (forest)
-             (let ((routes (resolve-site-routes forest routes)))
-               (list 'rss feed-path site-url stylesheet-url stylesheet-type
-                     language (html-index-url routes)
-                     (html-route-table routes
-                                       (map site-page-id (pages forest))))))))
-    (make-cached-renderer
-      (lambda (forest)
-        (render-rss forest #:site-url site-url #:feed-path feed-path
-                    #:routes routes #:stylesheet-url stylesheet-url
-                    #:stylesheet-type stylesheet-type #:language language))
-      #:configuration configuration)))
+  (let-values (((site-url feed-path routes stylesheet-url stylesheet-type language)
+                (normalize-rss-options settings site-url feed-path routes
+                                       stylesheet-url stylesheet-type language)))
+    (set! site-url (string-copy site-url))
+    (set! feed-path (string-copy feed-path))
+    (set! stylesheet-url (and stylesheet-url (string-copy stylesheet-url)))
+    (set! stylesheet-type (string-copy stylesheet-type))
+    (set! language (and language (string-copy language)))
+    (let* ((configuration
+             (lambda (forest)
+               (let ((routes (resolve-site-routes forest routes)))
+                 (list 'rss feed-path site-url stylesheet-url stylesheet-type
+                       language (html-index-url routes)
+                       (html-route-table routes
+                                         (map site-page-id (pages forest))))))))
+      (make-cached-renderer
+        (lambda (forest)
+          (render-rss forest #:site-url site-url #:feed-path feed-path
+                      #:routes routes #:stylesheet-url stylesheet-url
+                      #:stylesheet-type stylesheet-type #:language language))
+        #:configuration configuration))))

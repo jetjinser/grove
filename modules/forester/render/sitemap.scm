@@ -17,6 +17,7 @@
   #:use-module (grove site)
   #:use-module (sxml simple)
   #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-11)
   #:export (render-sitemap
             make-sitemap-renderer))
 
@@ -88,55 +89,10 @@
              "\n"))
         port))))
 
-(define* (render-sitemap forest #:key (settings #f)
-                                (site-url
-                                  (and (site-settings? settings)
-                                       (site-settings-site-url settings)))
-                                (sitemap-path "sitemap.xml")
-                                (routes (make-html-routes))
-                                (default-locale
-                                  (and (site-settings? settings)
-                                       (site-settings-default-locale settings))))
-  (unless (forest? forest)
-    (error "Forester sitemap renderer requires a forest" forest))
+(define (normalize-sitemap-options settings site-url sitemap-path routes
+                                   default-locale)
   (unless (or (not settings) (site-settings? settings))
     (error "Sitemap settings must be site settings or #f" settings))
-  (unless (web-origin? site-url)
-    (error "Forester sitemap renderer requires an absolute HTTP(S) origin"
-           site-url))
-  (unless (artifact-path? sitemap-path)
-    (error "Sitemap path must be a relative artifact path" sitemap-path))
-  (unless (html-routes? routes)
-    (error "Forester sitemap renderer requires HTML routes" routes))
-  (when default-locale
-    (unless (non-empty-string? default-locale)
-      (error "Sitemap default locale must be a non-empty tag or #f"
-             default-locale))
-    (set! default-locale (locale-tag (make-locale default-locale))))
-  (set! routes (validate-site-home-route
-                 forest (resolve-site-routes forest routes)))
-  (let* ((base (web-base-url site-url))
-         (route-table
-           (html-route-table routes (map site-page-id (pages forest))))
-         (groups (derive-translation-groups (pages forest)))
-         (content (sitemap-document base routes route-table groups
-                                    default-locale (pages forest))))
-    (list (make-artifact sitemap-path content #:sources (source-paths forest)))))
-
-(define* (make-sitemap-renderer #:key (settings #f) (site-url #f)
-                                  (sitemap-path "sitemap.xml")
-                                  (routes (make-html-routes))
-                                  (default-locale
-                                    (and (site-settings? settings)
-                                         (site-settings-default-locale
-                                           settings))))
-  "Construct a cached sitemap renderer.
-
-Provide SITE-URL directly or through SETTINGS; at least one must contain an
-absolute HTTP(S) origin. Put a deployment path prefix in ROUTES,
-not SITE-URL. SITE-URL overrides the origin in SETTINGS."
-  (unless (or (not settings) (site-settings? settings))
-    (error "sitemap settings must be site settings or #f" settings))
   (set! site-url (or site-url
                      (and settings (site-settings-site-url settings))))
   (unless (web-origin? site-url)
@@ -151,19 +107,60 @@ not SITE-URL. SITE-URL overrides the origin in SETTINGS."
       (error "Sitemap default locale must be a non-empty tag or #f"
              default-locale))
     (set! default-locale (locale-tag (make-locale default-locale))))
-  (set! site-url (string-copy site-url))
-  (set! sitemap-path (string-copy sitemap-path))
-  (set! default-locale (and default-locale (string-copy default-locale)))
-  (let* ((configuration
-           (lambda (forest)
-             (let ((routes (resolve-site-routes forest routes)))
-               (list 'sitemap sitemap-path site-url default-locale
-                     (html-index-url routes)
-                     (html-route-table routes
-                                       (map site-page-id (pages forest))))))))
-    (make-cached-renderer
-      (lambda (forest)
-        (render-sitemap forest #:site-url site-url
-                        #:sitemap-path sitemap-path #:routes routes
-                        #:default-locale default-locale))
-      #:configuration configuration)))
+  (values site-url sitemap-path routes default-locale))
+
+(define* (render-sitemap forest #:key (settings #f)
+                                (site-url
+                                  (and (site-settings? settings)
+                                       (site-settings-site-url settings)))
+                                (sitemap-path "sitemap.xml")
+                                (routes (make-html-routes))
+                                (default-locale
+                                  (and (site-settings? settings)
+                                       (site-settings-default-locale settings))))
+  (unless (forest? forest)
+    (error "Forester sitemap renderer requires a forest" forest))
+  (let-values (((site-url sitemap-path routes default-locale)
+                (normalize-sitemap-options settings site-url sitemap-path
+                                           routes default-locale)))
+    (set! routes (validate-site-home-route
+                   forest (resolve-site-routes forest routes)))
+    (let* ((base (web-base-url site-url))
+           (route-table
+             (html-route-table routes (map site-page-id (pages forest))))
+           (groups (derive-translation-groups (pages forest)))
+           (content (sitemap-document base routes route-table groups
+                                      default-locale (pages forest))))
+      (list (make-artifact sitemap-path content #:sources (source-paths forest))))))
+
+(define* (make-sitemap-renderer #:key (settings #f) (site-url #f)
+                                  (sitemap-path "sitemap.xml")
+                                  (routes (make-html-routes))
+                                  (default-locale
+                                    (and (site-settings? settings)
+                                         (site-settings-default-locale
+                                           settings))))
+  "Construct a cached sitemap renderer.
+
+Provide SITE-URL directly or through SETTINGS; at least one must contain an
+absolute HTTP(S) origin. Put a deployment path prefix in ROUTES,
+not SITE-URL. SITE-URL overrides the origin in SETTINGS."
+  (let-values (((site-url sitemap-path routes default-locale)
+                (normalize-sitemap-options settings site-url sitemap-path
+                                           routes default-locale)))
+    (set! site-url (string-copy site-url))
+    (set! sitemap-path (string-copy sitemap-path))
+    (set! default-locale (and default-locale (string-copy default-locale)))
+    (let* ((configuration
+             (lambda (forest)
+               (let ((routes (resolve-site-routes forest routes)))
+                 (list 'sitemap sitemap-path site-url default-locale
+                       (html-index-url routes)
+                       (html-route-table routes
+                                         (map site-page-id (pages forest))))))))
+      (make-cached-renderer
+        (lambda (forest)
+          (render-sitemap forest #:site-url site-url
+                          #:sitemap-path sitemap-path #:routes routes
+                          #:default-locale default-locale))
+        #:configuration configuration))))

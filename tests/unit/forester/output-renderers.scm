@@ -114,6 +114,12 @@
   (make-sitemap-renderer #:settings 'not-site-settings))
 (test-error "RSS renderer rejects invalid settings at construction" #t
   (make-rss-renderer #:settings 'not-site-settings))
+(test-error "sitemap rendering rejects invalid settings" #t
+  (render-sitemap forest #:settings 'not-site-settings
+                  #:site-url "https://example.org"))
+(test-error "RSS rendering rejects invalid settings" #t
+  (render-rss forest #:settings 'not-site-settings
+              #:site-url "https://example.org"))
 (test-error "sitemap renderer rejects empty default locales at construction" #t
   (make-sitemap-renderer #:site-url "https://example.org"
                          #:default-locale ""))
