@@ -53,7 +53,7 @@
   (let* ((report
            (math-differentiate (φ:read "x^3+2*x") (φ:read "x")
              #:assumptions (φ:assumptions "coordinate(x)")))
-         (notation (math-report-result->notation report)))
+         (notation (math-value->layout (math-report-result report))))
     (test-equal "a completed report lowers directly to inspectable Notation IR"
       '(math-row
          (math-row
@@ -66,6 +66,10 @@
       (math-notation->datum notation))
     (test-error "math report result conversion rejects rendered content"
       #t (math-report-result notation)))
+  (test-assert "report-to-notation helper is not a second public bridge"
+    (not (module-variable
+           (module-public-interface (resolve-module '(grove math pipeline)))
+           'math-report-result->notation)))
   (test-equal "underscore tokenizes as a script marker between identifiers"
     '(identifier subscript identifier eof)
     (map math-token-kind (tokenize-math "E_x")))
