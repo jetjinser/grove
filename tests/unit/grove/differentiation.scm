@@ -19,6 +19,12 @@
          (module-public-interface
            (resolve-module '(grove math differentiation)))
          'polynomial-term?)))
+(test-assert "raw differentiation rule definitions stay internal to the math facade"
+  (let ((interface
+          (module-public-interface
+            (resolve-module '(grove math differentiation)))))
+    (every (lambda (name) (not (module-variable interface name)))
+      '(math-differentiation-rule-definitions make-function-chain-rule))))
 
 ;; Independent oracle: evaluate the original polynomial over dual numbers.
 ;; Compare its tangent with ordinary evaluation of the generated derivative.

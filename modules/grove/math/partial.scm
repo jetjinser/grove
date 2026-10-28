@@ -5,7 +5,7 @@
   #:use-module (grove relation)
   #:use-module ((grove relation dsl) #:select (project))
   #:use-module (grove math rule)
-  #:use-module (grove math differentiation)
+  #:use-module (grove math private differentiation)
   #:use-module (grove math types)
   #:use-module (grove math private number)
   #:use-module (ice-9 match)

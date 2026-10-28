@@ -10,7 +10,7 @@
   #:use-module (grove math vector)
   #:use-module (grove math identities)
   #:use-module (grove math arithmetic)
-  #:use-module (grove math differentiation)
+  #:use-module (grove math private differentiation)
   #:use-module (grove math components)
   #:use-module (grove math spatial)
   #:use-module (grove math integration)
