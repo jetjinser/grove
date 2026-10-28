@@ -158,7 +158,7 @@ strings, layout nodes, and documents; document children carry their own
 locations. Non-content Scheme values pass through `content-with-source-location`
 unchanged, which lets Scribble annotate arbitrary expressions safely. Content
 text, layout, element, and document source arguments are either `#f` or
-non-empty paths.
+non-empty filesystem paths without NUL.
 `content-source-paths` walks an IR value or sequence and returns its unique
 recorded source paths, including location file fields. This is the dependency
 projection used when content-derived artifacts need to track their origins.
