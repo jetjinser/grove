@@ -105,5 +105,5 @@
                 (mixed-partial-rule 'partial-coordinate-symmetry 'partial)
                 (mixed-partial-rule 'partial-argument-symmetry 'darg))))
 (define math-partial-rules
-  (map math-rewrite-rule-name
-    (filter (lambda (rule) (eq? (math-rewrite-rule-group rule) 'partial)) math-partial-rule-definitions)))
+  (filter (lambda (rule) (eq? (math-rewrite-rule-group rule) 'partial))
+          math-partial-rule-definitions))

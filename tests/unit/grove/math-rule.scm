@@ -1,7 +1,10 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(use-modules ((grove math formula) #:prefix φ:) (grove math rule) (grove math rewrite) (grove math pipeline)
+(use-modules ((grove math formula) #:prefix φ:) (grove math rule) (grove math rewrite)
+             (grove math pipeline) (grove math arithmetic)
+             (grove math differentiation) (grove math partial)
+             (grove math integration)
              (grove relation) (srfi srfi-1) (srfi srfi-64))
 
 (test-begin "math rule contracts")
@@ -12,6 +15,15 @@
        (not (module-variable
               (module-public-interface (resolve-module '(grove math integration)))
               'polynomial-calculus-diagnostics))))
+(test-assert "domain rule packs consistently expose rewrite-rule records"
+  (every (lambda (rules) (every math-rewrite-rule? rules))
+    (list math-arithmetic-rules math-differentiation-rules math-partial-rules
+          math-polynomial-rules)))
+(test-equal "a built-in domain pack is directly queryable as rule records"
+  '(differentiate-variable)
+  (run* (name)
+    (math-rules-stepo math-differentiation-rules '((scalar (var x)))
+      '(differentiate (var x) (var x)) '(num "1") name 'check)))
 (for-each
   (lambda (fixture)
     (let ((input (car fixture)) (rule (cadr fixture)) (path (caddr fixture))

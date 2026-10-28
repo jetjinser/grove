@@ -201,4 +201,4 @@
     (make-function-chain-rule 'differentiate)))
 
 (define math-differentiation-rules
-  (map math-rewrite-rule-name math-differentiation-rule-definitions))
+  math-differentiation-rule-definitions)

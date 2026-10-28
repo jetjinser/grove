@@ -155,7 +155,8 @@
   (pair? (math-report-candidates (φ:search "partial(x,x)" "1"
     #:assumptions (list r3) #:rules '(partial-variable) #:max-depth 1))))
 (test-equal "partial rules do not rewrite ordinary derivative terms" '()
-  (math-rewrite-answers (math-assumptions (list r3)) (φ:term "differentiate(x,x)") math-partial-rules #f))
+  (math-rewrite-answers (math-assumptions (list r3)) (φ:term "differentiate(x,x)")
+    (map math-rewrite-rule-name math-partial-rules) #f))
 (test-error "partial rules do not offer inverse integration" #t
   (φ:search "partial(x,x)" "1" #:backward? #t
     #:assumptions (list r3) #:rules '(partial-variable)))

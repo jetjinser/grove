@@ -167,14 +167,17 @@
 (define* (math-differentiate source variable #:key (assumptions '())
                               (max-steps 128) (max-term-size 2048))
   (audit-calculus-report
-    (derivative-report 'differentiate math-differentiation-rules source variable assumptions
+    (derivative-report 'differentiate
+      (map math-rewrite-rule-name math-differentiation-rules)
+      source variable assumptions
       differentiation-input-diagnostics max-steps max-term-size)))
 
 (define* (math-partial source variable #:key (assumptions '())
                       (max-steps 128) (max-term-size 2048))
   "Compute a scalar partial derivative, then simplify in a separate pass.
 Declared unknown function derivatives remain explicit partial terms."
-  (derivative-report 'partial math-partial-rules source variable assumptions
+  (derivative-report 'partial (map math-rewrite-rule-name math-partial-rules)
+    source variable assumptions
     (lambda (expression coordinate facts) '()) max-steps max-term-size))
 
 (define* (math-rewrite source #:key (assumptions '()) (rules #f)
@@ -294,7 +297,8 @@ Declared unknown function derivatives remain explicit partial terms."
              (math-term-paths term))
         '((polynomial-calculus . (integrate-polynomial solve-polynomial-poisson))) '())
     `((components . ,(math-rule-names #:groups '(components spatial)))
-      (partial . ,(append math-simplification-rules math-partial-rules)))))
+      (partial . ,(append math-simplification-rules
+                          (map math-rewrite-rule-name math-partial-rules))))))
 
 (define* (math-compute source #:key (assumptions '()) (max-steps 256) (max-term-size 8192))
   "Lower Cartesian operators and component algebra, compute partials, then simplify.

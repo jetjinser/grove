@@ -184,7 +184,9 @@
     (list (expansion result)
           (simplification result)))
   (test-assert "expansion contains only differentiation provenance"
-    (every (lambda (step) (memq (math-derivation-step-rule step) math-differentiation-rules))
+    (every (lambda (step)
+             (memq (math-derivation-step-rule step)
+                   (map math-rewrite-rule-name math-differentiation-rules)))
            (math-derivation-steps (expansion result))))
   (test-equal "passes share exactly their boundary term"
     (last (math-derivation-terms (expansion result)))

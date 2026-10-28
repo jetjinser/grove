@@ -265,7 +265,9 @@ engine rather than maintaining a separate catalog.
 relational extensions. `math-rule` declares a rule from a pattern, premises,
 and relational goals; `make-math-rewrite-rule` accepts a relation procedure
 for rules that need algorithmic code. Pass an explicit rule list to
-`math-rules-stepo`:
+`math-rules-stepo`. Built-in `math-*-rules` packs are lists of rule records
+and can be passed directly. `math-rewrite-answers` instead selects registered
+rules by name:
 
 ```scheme
 (use-modules (grove math rule) (grove relation))
