@@ -135,7 +135,11 @@ reachability.
 
 ## Forester content and page queries
 
-`(forester site)` exposes three immutable relation snapshots on a Forest.
+`(forester site)` exposes five immutable relation snapshots on a Forest:
+`content-node-relation`, `page-relation`, `described-entity-relation`,
+`term-definition-relation`, and `term-mention-relation`. Authored references
+and tree composition use the typed query procedures from `(forester site)`;
+their internal relation values are not exposed as Forest accessors.
 `(content-node-relation forest)` stores one row for each content element:
 `(node-id page-id parent-id kind position properties text character-count codepoint-count plain-text?)`.
 `(page-relation forest)` stores one row per page:
