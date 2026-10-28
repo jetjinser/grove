@@ -132,6 +132,17 @@
     #:inputs (list input-a input-a)
     #:procedure (lambda (_input) '())))
 
+(test-error "asset pipelines require a non-empty name" #t
+  (make-asset-pipeline
+    #:name ""
+    #:procedure (lambda (_input) '())))
+
+(test-error "asset pipelines require non-empty input paths" #t
+  (make-asset-pipeline
+    #:name "empty-input"
+    #:inputs (list "")
+    #:procedure (lambda (_input) '())))
+
 (let ((runs 0))
   (define (path-sensitive-pipeline input)
     (make-asset-pipeline

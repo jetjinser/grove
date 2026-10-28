@@ -5,8 +5,8 @@
 (define-module (grove pipeline)
   #:use-module (grove private asset-pipeline)
   #:use-module (grove private snapshot)
+  #:use-module (grove private string-fun)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:export (make-asset-pipeline))
 
 ;;     An asset pipeline derives build assets with Scheme code: the
@@ -18,9 +18,6 @@
 ;;     invalidation token for behavior Grove cannot observe, such as changes
 ;;     in the external toolchain, environment, or runtime arguments.
 
-(define (valid-input? input)
-  (and (string? input) (not (string-null? input))))
-
 (define* (make-asset-pipeline #:key name (version "") (inputs '()) procedure)
   "Construct a file-driven build step named NAME.
 
@@ -30,11 +27,11 @@ procedure returns a list of Grove artifacts, which may be empty. Their source
 dependencies are combined with the pipeline's declared inputs and files read
 through the input tracker. VERSION distinguishes behavior depending on state
 Grove cannot track, such as an external toolchain."
-  (unless (and (string? name) (not (string-null? name)))
+  (unless (non-empty-string? name)
     (error "asset pipeline requires a name" name))
   (unless (string? version)
     (error "asset pipeline version must be a string" version))
-  (unless (and (list? inputs) (every valid-input? inputs))
+  (unless (and (list? inputs) (every non-empty-string? inputs))
     (error "asset pipeline inputs must be a list of paths" inputs))
   (unless (= (length inputs) (length (delete-duplicates inputs string=?)))
     (error "asset pipeline inputs must be unique" inputs))
