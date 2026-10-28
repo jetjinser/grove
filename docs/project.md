@@ -196,9 +196,24 @@ modules, but does not import their commands into individual articles.
 
 CLI paths are relative to the invocation directory. Configured paths are
 relative to the project file throughout loading and synchronous execution.
-`(grove project load)` restores the caller's directory and evaluates the
-configuration in a fresh top-level module. Named Guile modules still have
-process-wide lifetime; the working directory is not thread-local.
+Scheme hosts can use `call-with-loaded-project` from `(grove project load)` to
+load the same project file in a fresh top-level module and run an operation
+while relative paths resolve from the project directory:
+
+```scheme
+(use-modules (grove project load)
+             (grove project))
+
+(call-with-loaded-project "site/project.scm"
+  (lambda (project)
+    (build-project/report project)))
+```
+
+The loader tracks the project file and modules loaded during evaluation for
+invalidation, then restores the caller's directory after the callback returns
+or raises. Its `#:output-directory`, when supplied, is relative to the caller's
+directory. Named Guile modules still have process-wide lifetime; the working
+directory is not thread-local.
 
 Without `--project`, commands search the invocation directory and its
 ancestors for `project.scm`, git-style, and stop at a `.git` boundary or

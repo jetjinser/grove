@@ -19,6 +19,7 @@ the work; drop lower only when you need to replace part of its behavior.
 | Build a site from page documents | `(grove project site)` → `make-site-project` | the input is not a page or the model is project-specific |
 | Assemble a page model directly | `(grove site)` → `make-site-page`, `make-site` | the project should collect and read source pages itself |
 | Build an arbitrary file-based model | `(grove project)` → `make-project` | custom collection, reading, analysis, artifacts, or execution options are needed |
+| Load a project file from a Scheme host | `(grove project load)` → `call-with-loaded-project` | the host already owns the project value; construct it with `(grove project)` |
 | Apply renderers directly to an existing model | `(grove build)` → `render-model` | input collection, caching, validation, or output writing is needed; use a project |
 | Create a source for a project | `(grove project)` → `create-project-source`, or the `grove new` command | the project must supply its own `#:create-source` policy |
 | Collect files recursively | `(grove collect)` → `collect-directory` | Forester can accept an ordered `#:collect-sources` callback while retaining its defaults; custom site projects can use the same option |
