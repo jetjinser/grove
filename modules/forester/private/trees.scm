@@ -13,9 +13,6 @@
   #:export (walk-content
             walk-owned-content
             element-kind?
-            link-elements
-            query-link-elements
-            math-elements
             subtree-elements
             direct-subtree-elements
             declared-anchor-elements
@@ -57,15 +54,6 @@
   (lambda (content)
     (and (content-element? content)
          (eq? kind (content-element-kind content)))))
-
-(define (link-elements content)
-  (walk-content content (element-kind? 'link) #:postorder? #t))
-
-(define (query-link-elements content)
-  (walk-content content (element-kind? 'query-link) #:postorder? #t))
-
-(define (math-elements content)
-  (walk-content content (element-kind? 'math) #:postorder? #t))
 
 (define (subtree-elements content)
   (walk-content content (element-kind? 'subtree)))
