@@ -144,6 +144,40 @@
           (content-text-source text)
           (content-layout-raw layout))))
 
+(let* ((buffer (make-string 4096 #\x))
+       (text-value (string-copy "fragment"))
+       (layout-value (string-copy "\n"))
+       (property-value (string-copy "metadata")))
+  (for-each
+    (lambda (value)
+      (set-source-properties!
+        value `((filename . "page.plant") (line . 3) (column . 5)
+                (start-offset . 12) (source-buffer . ,buffer))))
+    (list text-value layout-value property-value))
+  (let* ((text (make-content-text text-value))
+         (layout (make-content-layout 'newline layout-value))
+         (element (make-content-element
+                    'custom '() #:properties `((value . ,property-value))))
+         (located-text (content-with-source-location
+                         text '((file . "page.plant") (line . 3) (column . 5))))
+         (text-properties (source-properties (content-text-value text)))
+         (located-properties
+           (source-properties (content-text-value located-text)))
+         (layout-properties (source-properties (content-layout-raw layout)))
+         (property-properties
+           (source-properties (content-element-property element 'value))))
+    (test-equal "content snapshots retain positions but release reader buffers"
+      '(3 5 12 #f 3 5 #f #f #f)
+      (list (assq-ref text-properties 'line)
+            (assq-ref text-properties 'column)
+            (assq-ref text-properties 'start-offset)
+            (assq-ref text-properties 'source-buffer)
+            (assq-ref layout-properties 'line)
+            (assq-ref layout-properties 'column)
+            (assq-ref layout-properties 'source-buffer)
+            (assq-ref located-properties 'source-buffer)
+            (assq-ref property-properties 'source-buffer)))))
+
 (let* ((child-text (string-copy "child"))
        (children (list child-text))
        (property-value (string-copy "note"))

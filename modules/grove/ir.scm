@@ -55,6 +55,13 @@
   (source content-text-source/raw)
   (location content-text-location/raw))
 
+(define (snapshot-content-string value)
+  ;; Reader strings can carry a reference to their complete input buffer.
+  ;; The reader consumes that buffer before creating Content IR; retaining a
+  ;; copy on every text or layout node would multiply source memory by the
+  ;; number of fragments. Keep source positions, which math provenance uses.
+  (snapshot-data value #:drop-source-buffer? #t))
+
 (define (content-text-value content)
   (snapshot-data (content-text-value/raw content)))
 
@@ -92,7 +99,7 @@
   (check-content-source 'text source)
   (unless (or (not location) (valid-source-location? location))
     (error "content text location must be a source-location alist" location))
-  (%make-content-text (snapshot-data value)
+  (%make-content-text (snapshot-content-string value)
                       (snapshot-data source)
                       (snapshot-data location)))
 
@@ -115,7 +122,8 @@
   (unless (string? raw)
     (error "content layout raw value must be a string" raw))
   (check-content-source 'layout source)
-  (%make-content-layout kind (snapshot-data raw) (snapshot-data source)))
+  (%make-content-layout kind (snapshot-content-string raw)
+                        (snapshot-data source)))
 
 (define-record-type <content-element>
   (%make-content-element kind children properties style source location flow-kind)
@@ -176,7 +184,8 @@ KIND; it defaults to inline and can be set to block for flow normalization."
     (error "content element flow kind must be inline or block" flow-kind))
   (%make-content-element kind
                          (snapshot-data (normalize-children children 'element))
-                         (snapshot-data properties) style
+                         (snapshot-data properties #:drop-source-buffer? #t)
+                         style
                          (snapshot-data source) (snapshot-data location)
                          flow-kind))
 
@@ -234,7 +243,7 @@ KIND; it defaults to inline and can be set to block for flow normalization."
     (error "source-location is reserved; use content-with-source-location"))
   (%make-content-element
     (content-element-kind element) (content-element-children element)
-    (cons (cons key (snapshot-data value))
+    (cons (cons key (snapshot-data value #:drop-source-buffer? #t))
           (filter (lambda (entry) (not (eq? (car entry) key)))
                   (content-element-properties element)))
     (content-element-style element)
@@ -395,7 +404,9 @@ source annotation can wrap arbitrary Scribble expressions."
     ((string? content)
      (make-content-text content #:location location))
     ((content-text? content)
-     (%make-content-text (content-text-value content)
+     (%make-content-text
+                         (snapshot-content-string
+                           (content-text-value/raw content))
                          (or (content-text-source content)
                              (and location (assq-ref location 'file)))
                          (snapshot-data location)))

@@ -4,14 +4,17 @@
 
 (define-module (grove private snapshot)
   #:use-module (rnrs bytevectors)
+  #:use-module (srfi srfi-1)
   #:export (snapshot-data))
 
-(define (snapshot-data value)
+(define* (snapshot-data value #:key (drop-source-buffer? #f))
   "Copy mutable strings, bytevectors, vectors, and pair structure, preserving
 opaque values.
 
 Use at public constructor boundaries for declarative data. Procedures and
-records remain shared values; their own constructors define their semantics."
+records remain shared values; their own constructors define their semantics.
+When DROP-SOURCE-BUFFER? is true, copied strings retain their source
+properties except the whole-input buffer used by readers."
   (let ((seen (make-hash-table)))
     (let copy ((value value))
       (cond
@@ -19,7 +22,13 @@ records remain shared values; their own constructors define their semantics."
         (let ((result (string-copy value))
               (properties (source-properties value)))
           (when properties
-            (set-source-properties! result (copy properties)))
+            (set-source-properties!
+              result
+              (copy (if drop-source-buffer?
+                        (filter (lambda (property)
+                                  (not (eq? (car property) 'source-buffer)))
+                                properties)
+                        properties))))
           result))
        ((bytevector? value)
         (bytevector-copy value))
