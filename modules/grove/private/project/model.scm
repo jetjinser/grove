@@ -234,8 +234,8 @@ each RENDERER receives the analyzed model and returns artifacts. PIPELINES
 derive artifacts from declared files independently of the model. CACHE? controls
 document, renderer, and pipeline cache use. Plain renderer procedures run on
 every build; wrap one with MAKE-CACHED-RENDERER only when its stable cache
-identity is declared. BROWSE, when supplied, is called with the analyzed model
-and #:input and #:output ports by BROWSE-PROJECT."
+identity is declared. BROWSE, when supplied, is called with the analyzed model,
+input port, and output port by BROWSE-PROJECT."
   (unless (or (not source-directory)
               (filesystem-path-string? source-directory))
     (error "project source directory must be a non-empty path or #f"
@@ -277,8 +277,8 @@ and #:input and #:output ports by BROWSE-PROJECT."
     (error "project requires a non-empty output directory" output-directory))
   (unless (boolean? cache?)
     (error "project cache option must be a boolean" cache?))
-  (unless (or (not browse) (procedure-accepts-arguments? browse 1))
-    (error "project browse callback must accept the analyzed model or be #f"
+  (unless (or (not browse) (procedure-accepts-arguments? browse 3))
+    (error "project browse callback must accept the model, input port, and output port, or be #f"
            browse))
   (unless (or (not create-source)
               (procedure-accepts-arguments? create-source 2))

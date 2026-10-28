@@ -82,6 +82,29 @@
                   #:analyze (lambda (model . options) model)
                   #:renderers (list (lambda* (model #:optional (context #f)) '()))
                   #:output-directory (string-append project-root "/flexible-callbacks"))))
+(test-error "project constructors reject browsers with insufficient arity" #t
+  (make-project #:collect-sources (lambda () '())
+                #:read-source (lambda (_) #f)
+                #:browse (lambda (_) #t)
+                #:output-directory (string-append project-root "/bad-browser")))
+(test-assert "project constructors accept browsers with three positional arguments"
+  (project?
+    (make-project #:collect-sources (lambda () '())
+                  #:read-source (lambda (_) #f)
+                  #:browse (lambda (model input output) #t)
+                  #:output-directory (string-append project-root "/browser-positional"))))
+(test-assert "project constructors accept optional browser port arguments"
+  (project?
+    (make-project #:collect-sources (lambda () '())
+                  #:read-source (lambda (_) #f)
+                  #:browse (lambda* (model #:optional (input #f) (output #f)) #t)
+                  #:output-directory (string-append project-root "/browser-optional"))))
+(test-assert "project constructors accept rest-argument browsers"
+  (project?
+    (make-project #:collect-sources (lambda () '())
+                  #:read-source (lambda (_) #f)
+                  #:browse (lambda arguments #t)
+                  #:output-directory (string-append project-root "/browser-rest"))))
 (test-error "site projects reject transforms with the wrong arity" #t
   (make-site-project #:collect-sources (lambda () '())
                      #:read-page (lambda (_) #f)
@@ -126,7 +149,7 @@
                 #:read-source (lambda (_) #f)
                 #:output-directory
                 (string-append project-root "/progress-output")
-                #:browse (lambda* (_ #:key input output) #t)))
+                #:browse (lambda (_ input output) #t)))
 (define (progress-type-error? thunk)
   (catch #t
     (lambda () (thunk) #f)
@@ -1050,7 +1073,7 @@
                        (set! view-events (append view-events '(render)))
                        '()))
                #:browse
-               (lambda* (model #:key input output)
+               (lambda (model input output)
                  (set! view-events (append view-events (list 'browse model)))
                  (format output "browsed ~a\n" (cadr model)))
                #:output-directory view-output-directory)))

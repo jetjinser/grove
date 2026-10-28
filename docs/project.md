@@ -112,17 +112,17 @@ Use `build-project` to publish and return artifacts, `check-project` to
 validate and return artifacts without publishing, and `build-project/report`
 when the host also needs source changes, affected artifacts, or cache status.
 
-Project constructors validate positional callback arity before a build starts.
-A custom collector and `#:prepare` take no arguments; a source filter, reader,
+Project constructors validate callback signatures before a build starts. A
+custom collector and `#:prepare` take no arguments; a source filter, reader,
 analyzer, and renderer each take one; `#:create-source` takes a prefix and
-destination.
-The optional browser receives the analyzed model plus `#:input` and `#:output`
-ports. `make-site-project`'s page reader and analyzer each take one argument,
-and each content transform takes one document. Asset pipeline procedures take
-one input lookup. Optional and variadic procedures are accepted when they can
-receive the required positional arguments. For `make-cached-renderer`, the
-renderer and model-derived `#:configuration` each take one model,
-`#:dependencies` takes no arguments, and `#:render-changed` takes four.
+destination. The optional browser receives the analyzed model, input port, and
+output port as three positional arguments. `make-site-project`'s page reader
+and analyzer each take one argument; its content transforms each take one
+document. Asset pipeline procedures take one input lookup. Optional and
+variadic procedures are accepted when they can receive the required positional
+arguments. For `make-cached-renderer`, the renderer and model-derived
+`#:configuration` each take one model, `#:dependencies` takes no arguments,
+and `#:render-changed` takes four.
 
 `collect-project-sources` runs only the collection stage and returns its
 validated, ordered path list. It is useful for inspecting a custom collector or
@@ -270,9 +270,9 @@ qualify IDs. Named subtrees share that namespace. See
 `analyze-project` returns the analyzed model after collection, preparation,
 reading, and analysis, without rendering or touching published state.
 `browse-project` uses it and calls the
-project's optional `#:browse` callback with the analyzed model and the
-`#:input` and `#:output` ports. The callback can default to the current
-terminal ports or receive explicit ports from a Scheme host. Grove's
+project's optional `#:browse` callback with the analyzed model, input port, and
+output port. The callback can receive the current terminal ports by default or
+explicit ports from a Scheme host. Grove's
 `grove browse` command drives this path; a Forester
 project wires `#:browse (make-forest-browser)` to read the Forest directly in
 the terminal instead of reading rendered HTML or Gemtext.

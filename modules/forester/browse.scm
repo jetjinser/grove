@@ -237,6 +237,6 @@
 
 (define* (make-forest-browser #:key start)
   "Return a project browse callback over a Forest.
-The callback accepts #:input and #:output port keywords."
-  (lambda (forest . arguments)
-    (apply browse-forest forest (append (list #:start start) arguments))))
+The callback accepts a Forest and its input and output ports."
+  (lambda (forest input output)
+    (browse-forest forest #:start start #:input input #:output output)))

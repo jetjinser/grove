@@ -127,7 +127,7 @@ Return the internal analysis record used by the build pipeline."
                          (input (current-input-port))
                          (output (current-output-port)))
   "Analyze PROJECT without rendering and run its browse callback on the model.
-The callback receives #:input and #:output ports."
+The callback receives the model, input port, and output port."
   (require-project project)
   (require-progress progress)
   (unless (input-port? input)
@@ -138,7 +138,7 @@ The callback receives #:input and #:output ports."
     (unless (procedure? browse)
       (error "project does not define a #:browse callback"))
     (let ((model (analyze-project project #:progress progress)))
-      (browse model #:input input #:output output))))
+      (browse model input output))))
 
 (define (execute-project project write? progress)
   (let* (;;     Capture extra-sources fingerprints before anything runs:

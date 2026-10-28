@@ -76,7 +76,7 @@
 
 (let* ((browser (make-forest-browser #:start "limits"))
        (output (open-output-string)))
-  (browser forest #:input (open-input-string "q\n") #:output output)
+  (browser forest (open-input-string "q\n") output)
   (test-assert "make-forest-browser honors an explicit start page"
     (string-contains (get-output-string output) "Limits")))
 
