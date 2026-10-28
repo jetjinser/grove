@@ -631,7 +631,8 @@ paths, not the entire devshell path. Installation tests use an empty environment
 The packaged `(grove highlight languages)` table registers grammar/query paths;
 other packagers can provide the same table. `GROVE_TEST_SCHEME_GRAMMAR` selects
 a different grammar library for tests. The Nix bundle validates the matching
-query against the actual highlighter during packaging.
+query against the actual highlighter during packaging; the Guix package
+performs the same check in its manifest builder.
 
 Document reader `#:timings` callbacks receive `(path phase seconds)` for
 `parse`, `translate`, `evaluate`, and `decode`. `make-forest` callbacks receive

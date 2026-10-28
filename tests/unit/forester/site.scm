@@ -573,8 +573,8 @@
            (evaluate-document
              "@paragraph{One two. @link[\"chars\"]{Ägain}}")))
        (forest (make-forest (make-site (list page)))))
-  (test-equal "used codepoints collect titles and document text"
-    (string->list " .OabceginotwÄ")
+  (test-equal "used codepoints collect site and page titles and document text"
+    (string->list " .OSabceginotwÄ")
     (used-codepoints forest)))
 
 (let* ((page (document->tree-page

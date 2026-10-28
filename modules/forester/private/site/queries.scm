@@ -404,21 +404,22 @@ those trees' frontmatter."
                 (pages forest))))))
 
 (define (used-codepoints forest)
-  "Every codepoint in the site's rendered text — document text and page
-titles, as a sorted character list. This is the universe a text font
-must cover; built-in site interface strings stay the caller's concern. Math is
-counted through its plain-text rendering, a harmless superset since
-MathJax draws it with its own fonts."
+  "Every codepoint in the site's authored rendered text as a sorted character
+list: site and page titles, document text, and reference labels. This is the
+universe a text font must cover; built-in interface strings stay the caller's
+concern. Math is counted through its plain-text rendering, a harmless superset
+since MathJax draws it with its own fonts."
   (cached-rows forest 'used-codepoints
     (lambda ()
       (let ((codepoints (make-hash-table)))
         (for-each
-          (lambda (page)
-            (for-each
-              (lambda (text)
-                (string-for-each
-                  (lambda (char) (hash-set! codepoints char #t))
-                  text))
+          (lambda (text)
+            (string-for-each
+              (lambda (char) (hash-set! codepoints char #t))
+              text))
+          (cons (site-title (site forest))
+            (append-map
+              (lambda (page)
                 (append (list (site-page-title page)
                               (content->plain-text
                                 (site-page-document page)))
@@ -430,8 +431,8 @@ MathJax draws it with its own fonts."
                                (reference-label (apply make-reference row)))
                              (outgoing-reference-rows
                                (reference-relation forest)
-                               (site-page-id page))))))
-          (pages forest))
+                               (site-page-id page)))))
+              (pages forest))))
         (sort (hash-map->list (lambda (char _) char) codepoints)
               (lambda (a b) (< (char->integer a) (char->integer b))))))))
 
