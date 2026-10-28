@@ -17,6 +17,7 @@
   #:use-module (forester relations)
   #:use-module (forester site)
   #:use-module (forester input scribble)
+  #:use-module ((forester private trees) #:prefix tree-pass:)
   #:use-module (grove build)
   #:use-module (grove ir)
   #:use-module (grove render html)
@@ -41,6 +42,29 @@
   (not (module-variable
          (module-public-interface (resolve-module '(forester site)))
          'page-anchor-facts)))
+
+(let* ((link (lambda (target)
+               (make-content-element 'link (list target)
+                 #:properties `((target . ,target)))))
+       (document
+         (make-content-document
+           (list (link "root")
+                 (make-content-element 'subtree
+                   (list (link "subtree")))
+                 (make-content-element 'forest-query
+                   (list (link "query")))
+                 (link "after-boundaries")))))
+  (test-equal "owned-content traversal stops at nested tree and query boundaries"
+    '("root" "after-boundaries")
+    (map (lambda (element) (content-element-property element 'target))
+         (tree-pass:walk-owned-content document
+           (tree-pass:element-kind? 'link))))
+  (test-equal "owned-content traversal excludes the boundary nodes themselves"
+    '()
+    (tree-pass:walk-owned-content document
+      (lambda (node)
+        (and (content-element? node)
+             (memq (content-element-kind node) '(subtree forest-query)))))))
 
 (let* ((definition (make-element #:tag "dfn" #:anchor "term-id"))
        (document

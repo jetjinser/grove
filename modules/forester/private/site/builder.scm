@@ -35,8 +35,8 @@ transclusions belong to their own pages and stay out of this set."
       (map (lambda (id) (cons "math" id))
            (filter-map
              (lambda (element) (ir:content-element-property/raw element 'id))
-             (tree-pass:math-elements
-               (tree-pass:owned-content document))))
+             (tree-pass:walk-owned-content document
+               (tree-pass:element-kind? 'math) #:postorder? #t)))
       (map (lambda (id) (cons "anchor" id))
            (filter-map
              (lambda (element) (ir:content-element-property/raw element 'anchor))
@@ -208,9 +208,9 @@ tree-N position anchors; both are known limitations of global anchors."
              (lambda (source-page)
                (let* ((source-id (site-page-id source-page))
                       (elements
-                        (tree-pass:link-elements
-                          (tree-pass:owned-content
-                            (site-page-document source-page)))))
+                        (tree-pass:walk-owned-content
+                          (site-page-document source-page)
+                          (tree-pass:element-kind? 'link) #:postorder? #t)))
                  (map
                    (lambda (element index)
                      (let* ((target
@@ -237,9 +237,10 @@ tree-N position anchors; both are known limitations of global anchors."
              (lambda (source-tree)
                (let* ((source-id (site-page-id source-tree))
                       (elements
-                        (tree-pass:transclusion-elements
-                          (tree-pass:owned-content
-                            (site-page-document source-tree)))))
+                        (tree-pass:walk-owned-content
+                          (site-page-document source-tree)
+                          (tree-pass:element-kind? 'transclude)
+                          #:postorder? #t)))
                  (cons
                    source-id
                    (map
@@ -353,12 +354,14 @@ tree-N position anchors; both are known limitations of global anchors."
                                                 string=?)))
                               (list fragment source-id #f))
                              (else #f))))
-                       (append (tree-pass:link-elements
-                                 (tree-pass:owned-content
-                                   (site-page-document source-page)))
-                               (tree-pass:query-link-elements
-                                 (tree-pass:owned-content
-                                   (site-page-document source-page)))))))
+                       (append
+                         (tree-pass:walk-owned-content
+                           (site-page-document source-page)
+                           (tree-pass:element-kind? 'link) #:postorder? #t)
+                         (tree-pass:walk-owned-content
+                           (site-page-document source-page)
+                           (tree-pass:element-kind? 'query-link)
+                           #:postorder? #t)))))
                  pages))))
          (_ (for-each
               (lambda (source-page)
@@ -379,9 +382,9 @@ tree-N position anchors; both are known limitations of global anchors."
                           (format (current-warning-port)
                             "warning: fragment ~s does not resolve in page ~a (link authored in ~a at ~a)\n"
                             fragment target-page-id source-id source-path))))
-                    (tree-pass:link-elements
-                      (tree-pass:owned-content
-                        (site-page-document source-page))))))
+                    (tree-pass:walk-owned-content
+                      (site-page-document source-page)
+                      (tree-pass:element-kind? 'link) #:postorder? #t))))
               pages))
          (_ (validate-tree-cycles! pages
               (lambda (page)

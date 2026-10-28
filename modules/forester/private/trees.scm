@@ -11,6 +11,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (walk-content
+            walk-owned-content
             element-kind?
             link-elements
             query-link-elements
@@ -19,7 +20,6 @@
             direct-subtree-elements
             declared-anchor-elements
             transclusion-elements
-            owned-content
             subtree-pages
             assign-subtree-identifiers
             assign-unique-occurrence-anchors
@@ -39,6 +39,19 @@
            (selected (if (select? node) (list node) '())))
       (if postorder? (append nested selected) (append selected nested))))
   (walk content))
+
+(define (owned-content-boundary? content)
+  (and (content-element? content)
+       (memq (content-element-kind content) '(subtree forest-query))))
+
+(define* (walk-owned-content content select? #:key (postorder? #f))
+  "Walk content owned by the current tree, stopping at subtree and query nodes."
+  (walk-content content
+    (lambda (node)
+      (and (not (owned-content-boundary? node))
+           (select? node)))
+    #:postorder? postorder?
+    #:stop? owned-content-boundary?))
 
 (define (element-kind? kind)
   (lambda (content)
@@ -75,20 +88,6 @@
                       '(subtree transclude forest-query)))
            (ir:content-element-property/raw element 'anchor)))
     #:stop? (element-kind? 'subtree)))
-
-(define (owned-content content)
-  (cond
-    ((content-element? content)
-     (if (memq (content-element-kind content) '(subtree forest-query))
-         #f
-         (content-element-with-children
-           content
-           (filter-map owned-content (ir:content-element-children/raw content)))))
-    ((content-document? content)
-     (make-content-document
-       (filter-map owned-content (ir:content-document-children/raw content))
-       (ir:content-document-source/raw content)))
-    (else content)))
 
 (define (subtree-page element source)
   (let ((id (ir:content-element-property/raw element 'tree-id))

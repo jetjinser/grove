@@ -150,8 +150,9 @@
         (composition:composition-target-ids
           (composition forest) (site-page-id page))
         (map (lambda (element) (ir:content-element-property/raw element 'target))
-             (tree-pass:walk-content (tree-pass:owned-content (site-page-document page))
-                           (tree-pass:element-kind? 'query-transclude)))))))
+             (tree-pass:walk-owned-content
+               (site-page-document page)
+               (tree-pass:element-kind? 'query-transclude)))))))
 
 (define (resolve-forest-queries forest anchor-index)
   (for-each
