@@ -191,6 +191,16 @@
     ("ch01" "term-loom" "织机"))
   (term-definition-rows definitions "term-loom"))
 
+(test-equal "term-definitiono composes with other relation goals"
+  '(("glossary" "term-loom" "loom")
+    ("ch01" "term-loom" "织机"))
+  (run* (page-id anchor display-text)
+    (term-definitiono definitions
+      (term-id "term-loom")
+      (page-id page-id)
+      (anchor anchor)
+      (display-text display-text))))
+
 (test-equal "an unqueried term returns no definition rows"
   '() (term-definition-rows definitions "term-ghost"))
 
@@ -209,8 +219,12 @@
   '(("term-ghost" ("ch02" "ch03")))
   (undefined-term-mentions definitions mentions))
 
-(test-equal "mention lookups keep pages with their resolution state"
+(test-equal "term-mentiono composes with other relation goals"
   '(("ch02" #f) ("ch03" #f))
-  (term-mention-rows mentions "term-ghost"))
+  (run* (source-page-id resolved?)
+    (term-mentiono mentions
+      (term-id "term-ghost")
+      (source-page-id source-page-id)
+      (resolved? resolved?))))
 
 (test-end "forester relations")

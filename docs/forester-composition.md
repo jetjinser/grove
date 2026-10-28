@@ -360,6 +360,21 @@ warning reports, collected as data. The relation constructors
 `term-definitiono` / `term-mentiono` goals are exported from
 `(forester relations)` for queries beyond these three.
 
+For example, select a term's mentions and join them to other domain goals:
+
+```scheme
+(use-modules (grove relation dsl)
+             (forester relations)
+             (forester site))
+
+(let ((mentions (term-mention-relation forest)))
+  (run* (page-id resolved?)
+    (term-mentiono mentions
+      (term-id "term-loom")
+      (source-page-id page-id)
+      (resolved? resolved?))))
+```
+
 To mark a mention explicitly - keeping it distinguishable from ordinary
 links even when the term is defined - give a link element a `term`
 property naming the term id:

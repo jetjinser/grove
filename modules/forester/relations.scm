@@ -41,7 +41,6 @@
             term-definition-conflicts
             make-term-mention-relation
             term-mentiono
-            term-mention-rows
             undefined-term-mentions))
 
 ;; Rows are (source-page-id local-reference-id target-page-id label).
@@ -260,10 +259,6 @@
       (filter (lambda (entry) (conflict? (cdr entry)))
               (hash-map->list cons by-term))
       (lambda (left right) (string<? (car left) (car right))))))
-
-;; One term's mentioning pages as (source-page-id resolved?).
-(define (term-mention-rows relation term-id)
-  (map cdr (relation-index-rows relation 0 term-id)))
 
 ;; Term-ids the corpus points at but nothing defines, each with its
 ;; mentioning pages - the definition backlog.  A mention counts as
