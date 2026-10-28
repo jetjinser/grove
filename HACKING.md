@@ -108,6 +108,13 @@ Build before testing CLI changes: subprocess tests load compiled modules.
 The preview tests require permission to bind localhost sockets.
 For installation changes, verify the installed launcher in an empty environment.
 
+When changing an exported record layout or compile-time interface, rebuild
+downstream Guile modules before interpreting ABI-shaped failures. Guile's
+compiled cache does not invalidate a consumer merely because an imported
+module changed; the consumer's `.go` file may still use the old accessor
+layout. Remove or regenerate the affected consumer cache, then rerun the test
+against the same Grove installation being exercised.
+
 Keep repository examples small and focused. Flora is a separate consumer and
 hosts the longer learning material; changes here should not silently rewrite it.
 Update documented behavior when public interfaces change. Prefer logical,
