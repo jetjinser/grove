@@ -209,26 +209,6 @@
             (topic-membero relation topic-id page-id label))))
     equal?))
 
-(defrel (incoming-reference-rowo relation fixed-target-page-id
-                                          source-page-id reference-id
-                                          target-page-id label)
-  (referenceo relation
-              (source-page-id source-page-id)
-              (reference-id reference-id)
-              (target-page-id target-page-id)
-              (label label))
-  (== fixed-target-page-id target-page-id))
-
-(defrel (outgoing-reference-rowo relation fixed-source-page-id
-                                          source-page-id reference-id
-                                          target-page-id label)
-  (referenceo relation
-              (source-page-id source-page-id)
-              (reference-id reference-id)
-              (target-page-id target-page-id)
-              (label label))
-  (== fixed-source-page-id source-page-id))
-
 (define (incoming-reference-rows relation target-page-id)
   (relation-index-rows relation 2 target-page-id))
 
