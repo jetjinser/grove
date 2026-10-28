@@ -40,6 +40,13 @@
     (let loop ((start 0) (count 0))
       (let ((found (string-contains text "Rebuilding" start)))
         (if found (loop (+ found 1) (+ count 1)) count)))))
+(define (watching-count)
+  ;;     Serve reports this only after the current build and its pending
+  ;;     changes have settled, so follow-up edits cannot race that rebuild.
+  (let ((text (read-file (string-append root "/.stderr"))))
+    (let loop ((start 0) (count 0))
+      (let ((found (string-contains text "Watching for changes" start)))
+        (if found (loop (+ found 1) (+ count 1)) count)))))
 (define (touch-rewrite path)
   ;;     Same bytes through a fresh file: identity stamps change,
   ;;     contents do not, so neither caching nor compilation may care.
@@ -297,10 +304,12 @@
         (await-text "asset-2"))
       (test-equal "asset edits skip analysis" 5
         (string-length (read-file (string-append root "/.cache/analyze.count"))))
-      (let ((before (rebuild-count)))
+      (let ((before (rebuild-count))
+            (watching (watching-count)))
         (write-file pipeline-runtime-input "pipeline-2")
         (test-assert "external runtime input of an empty pipeline triggers preview rebuild"
           (wait-for (lambda () (> (rebuild-count) before))))
+        (wait-for (lambda () (> (watching-count) watching)))
         (test-equal "empty-pipeline runtime input rebuild reuses analysis" 5
           (string-length (read-file (string-append root "/.cache/analyze.count")))))
       (let ((before (rebuild-count)))
