@@ -93,6 +93,11 @@
 (test-error "site sources reject empty paths" #t
   (make-site '() #:sources '("")))
 
+(test-equal "site source dependencies keep their first occurrence"
+  '("theme.scm" "locale.scm")
+  (site-sources
+    (make-site '() #:sources '("theme.scm" "locale.scm" "theme.scm"))))
+
 (let* ((first (make-site-page "first" "First" (make-content-document '())))
        (second (make-site-page "second" "Second" (make-content-document '())))
        (site (make-site (list first second) #:home "second")))

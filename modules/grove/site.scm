@@ -108,7 +108,8 @@ project code."
 Each page ID must be unique. HOME is an optional page ID and must identify one
 of PAGES. SOURCES lists site-wide source dependencies that renderers may attach
 to aggregate outputs; it is independent of each page's optional primary source
-path and does not configure project input collection."
+path and does not configure project input collection. Duplicate source paths
+are removed while preserving their first occurrence."
   (unless (and (list? pages) (every site-page? pages))
     (error "site requires pages" pages))
   (unless (non-empty-string? title)
@@ -144,6 +145,6 @@ path and does not configure project input collection."
       (error "site home page was not found" home))
     (%make-site (snapshot-data pages)
                 (snapshot-data title)
-                (snapshot-data sources)
+                (snapshot-data (delete-duplicates sources string=?))
                 (snapshot-data description)
                 (snapshot-data home))))
