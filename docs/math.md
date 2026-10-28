@@ -82,6 +82,12 @@ may omit `*`: `6x`, `6x^2`, `6(x+1)`, `6sin(x)`. Other adjacent identifiers
 remain one name (`xy`), and `f(x)` is a function call. Ambiguous `1/2x` is
 rejected; write `(1/2)*x` or `1/(2x)`.
 
+The Formula facade also adapts Semantic operations that are useful when
+composing expressions in Scheme: `prime` accepts a function name and a text
+operand, while `function-partial` accepts a text application and a one-based
+argument index. These produce the same `math-value` terms as the corresponding
+Semantic constructors.
+
 `φ:read` reads one expression. `φ:read-lines` reads a multiline sequence,
 returning one Semantic value for each nonblank line. `@check-derive` uses this
 form so each authored line is one step in the chain.

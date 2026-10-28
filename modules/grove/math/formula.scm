@@ -12,7 +12,8 @@
   #:use-module (srfi srfi-13)
   #:export (read read-lines assumptions term
             add subtract negate multiply divide power dot cross
-            sin cos exp log grad divergence curl laplacian group styled
+            sin cos exp log prime function-partial
+            grad divergence curl laplacian group styled
             derivative partial-expression antiderivative-expression poisson-particular
             call components
             derive derive->content rewrite search simplify calculate normalize expand collect
@@ -73,6 +74,10 @@
 (define-unary cos semantic:cos)
 (define-unary exp semantic:exp)
 (define-unary log semantic:log)
+(define-public (prime function input)
+  (semantic:prime function (read input)))
+(define-public (function-partial application index)
+  (semantic:function-partial (read application) index))
 (define-unary grad semantic:grad)
 (define-unary divergence semantic:divergence)
 (define-unary curl semantic:curl)

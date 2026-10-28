@@ -30,6 +30,14 @@
   (content->sxml (core:sup (list (core:token 'mi "x"))
                          (list (core:token 'mn "3"))))
   (content->sxml (math-value->layout (φ:power "x" "3"))))
+(test-equal "Formula prime adapts text operands to the Semantic constructor"
+  (math-value-term (semantic:prime 'f (semantic:variable 'x)))
+  (φ:term (φ:prime 'f "x")))
+(test-equal "Formula function-partial adapts an application and preserves its argument index"
+  (math-value-term
+    (semantic:function-partial
+      (semantic:call 'f (semantic:variable 'x) (semantic:variable 'y)) 2))
+  (φ:term (φ:function-partial "f(x,y)" 2)))
 (test-equal "vector assumptions lower through notation accents"
   (content->sxml (notation:vec "E"))
   (content->sxml (math-value->layout (semantic:variable "E") '((vector (var E))))))
