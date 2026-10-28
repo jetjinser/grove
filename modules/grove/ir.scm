@@ -263,10 +263,9 @@ documents do not; a document's children carry their own locations."
      #f)
     (else (error "content-source-location requires a content value" content))))
 
-(define (content-source-location-file element)
-  (let ((location (content-element-property/raw element 'source-location)))
-    (and (valid-source-location? location)
-         (assq-ref location 'file))))
+(define (content-source-location-file content)
+  (let ((location (content-source-location content)))
+    (and location (assq-ref location 'file))))
 
 (define (content-source-paths content)
   "Return unique source paths recorded anywhere in CONTENT, in traversal order.
@@ -281,8 +280,7 @@ values."
       ((content-text? value)
        (filter identity
          (list (content-text-source/raw value)
-               (and (content-text-location/raw value)
-                    (assq-ref (content-text-location/raw value) 'file)))))
+               (content-source-location-file value))))
       ((content-layout? value)
        (filter identity (list (content-layout-source/raw value))))
       ((content-element? value)
