@@ -55,7 +55,7 @@
       (map build-state-artifact-path
            (filter
              (lambda (entry)
-               (let ((renderer (build-state-artifact-renderer entry)))
+               (let ((renderer (build-state-artifact-owner entry)))
                  (and (integer? renderer)
                       (renderer-identity-changed? current-identities
                                                   previous-identities
@@ -74,14 +74,14 @@
          artifacts)))
 ;;     Pipeline outputs that vanished from a pipeline's current set
 ;;     must not resurrect from the previous build's state: previous
-;;     entries a pipeline owns (string renderer marker) whose paths the
+;;     entries a pipeline owns (string pipeline name) whose paths the
 ;;     current run no longer emits are retired.
 (define (retired-pipeline-paths pipeline-artifacts previous-artifacts)
   (let ((current (map out:artifact-path/raw pipeline-artifacts)))
     (filter-map
       (lambda (entry)
         (let ((path (build-state-artifact-path entry))
-              (owner (build-state-artifact-renderer entry)))
+              (owner (build-state-artifact-owner entry)))
           (and (string? owner)
                (not (member path current string=?))
                path)))

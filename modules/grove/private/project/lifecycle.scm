@@ -255,7 +255,7 @@ Return the internal analysis record used by the build pipeline."
               (list cache-ready?
                     (map (lambda (entry)
                            (cons (build-state-artifact-path entry)
-                                 (build-state-artifact-renderer entry)))
+                                 (build-state-artifact-owner entry)))
                          previous-artifacts)
                     '()
                     '()))

@@ -93,7 +93,7 @@
                           (equal? current-identity previous-identity))))
                (old-entries
                  (filter (lambda (entry)
-                           (equal? (build-state-artifact-renderer entry)
+                           (equal? (build-state-artifact-owner entry)
                                    index))
                          previous-entries))
                (old-artifacts
@@ -113,7 +113,7 @@
                               changed-proc
                               (every (lambda (entry)
                                        (integer?
-                                         (build-state-artifact-renderer entry)))
+                                         (build-state-artifact-owner entry)))
                                      old-entries)))
                (reusable?
                  (and identity-valid?

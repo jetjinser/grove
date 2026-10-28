@@ -21,7 +21,7 @@
             build-state-artifact-path
             build-state-artifact-fingerprint
             build-state-artifact-sources
-            build-state-artifact-renderer
+            build-state-artifact-owner
             build-state-artifact-kind
             read-build-state
             write-build-state))
@@ -39,7 +39,7 @@
 (define-inlinable (build-state-artifact-path entry) (list-ref entry 0))
 (define-inlinable (build-state-artifact-fingerprint entry) (list-ref entry 1))
 (define-inlinable (build-state-artifact-sources entry) (list-ref entry 2))
-(define-inlinable (build-state-artifact-renderer entry) (list-ref entry 3))
+(define-inlinable (build-state-artifact-owner entry) (list-ref entry 3))
 (define-inlinable (build-state-artifact-kind entry) (list-ref entry 4))
 
 (define (distinct-paths? entries path-of)
@@ -72,13 +72,12 @@
        (or (not (build-state-artifact-sources entry))
            (and (list? (build-state-artifact-sources entry))
                 (every string? (build-state-artifact-sources entry))))
-       (or (not (build-state-artifact-renderer entry))
-           (and (integer? (build-state-artifact-renderer entry))
-                (>= (build-state-artifact-renderer entry) 0))
-           ;;     Asset pipelines mark their entries with the
-           ;;     pipeline's name instead of a renderer index.
-           (and (string? (build-state-artifact-renderer entry))
-                (not (string-null? (build-state-artifact-renderer entry)))))
+       (or (not (build-state-artifact-owner entry))
+           (and (integer? (build-state-artifact-owner entry))
+                (>= (build-state-artifact-owner entry) 0))
+           ;;     Renderer indices and pipeline names identify artifact owners.
+           (and (string? (build-state-artifact-owner entry))
+                (not (string-null? (build-state-artifact-owner entry)))))
        (memq (build-state-artifact-kind entry) '(text bytes))))
 
 (define (valid-build-state? state)
