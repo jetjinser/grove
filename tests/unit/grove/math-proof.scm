@@ -89,6 +89,9 @@
 (test-equal "proof nodes reject missing premise references"
   'rejected (math-proof-result-status (math-proof-check (math-proof-premise 0) '())))
 (let ((term '(+ (* (var x) (num "2")) (var y))))
+  (test-equal "term paths enumerate root and operands in order"
+    '(() (0) (0 0) (0 1) (1))
+    (math-term-paths term))
   (test-equal "term replacement rebuilds the selected operand path"
     '(+ (* (var x) (num "3")) (var y))
     (math-term-replace-at-path term '(0 1) '(num "3")))
@@ -98,7 +101,11 @@
   (test-equal "term replacement rejects nonexistent paths"
     #f (math-term-replace-at-path term '(2) '(var z)))
   (test-equal "term replacement does not descend into leaf encodings"
-    #f (math-term-replace-at-path term '(0 0 0) '(var z))))
+    #f (math-term-replace-at-path term '(0 0 0) '(var z)))
+  (test-equal "term replacement rejects invalid replacement values"
+    #f (math-term-replace-at-path term '(0) #f)))
+(test-error "term path enumeration rejects invalid terms" #t
+  (math-term-paths #f))
 (test-equal "proof checker rejects contradictory assumptions"
   'rejected
   (math-proof-result-status

@@ -146,6 +146,15 @@ version for callers that already have a raw term and type facts.
 `math-notation->datum` gives a readable Scheme datum for inspecting a Notation
 IR tree while developing an extension.
 
+`(grove math term)` exposes the symbolic term tree as ordinary Scheme lists.
+Use `math-term?`, `math-term->source`, and `math-term-size` to inspect terms;
+`math-term-paths`, `math-term-at-path`, and `math-term-replace-at-path` support
+extensions that traverse or rewrite a subexpression. Paths are zero-based
+operand indexes. Lookup returns `#f` for an invalid term or path, and
+replacement returns `#f` when its path or replacement term is invalid. Path
+enumeration and size reject invalid terms. Normal writing and calculations
+should use Formula or Semantic values instead.
+
 ## Available calculations
 
 | Operation | What it supports |

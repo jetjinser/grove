@@ -45,7 +45,8 @@
                   (walk (list-ref (cdr term) (car path)) (cdr path)))))))
 
 (define (math-term-replace-at-path term path replacement)
-  (and (math-term-at-path term path)
+  (and (math-term? replacement)
+       (math-term-at-path term path)
        (let replace ((term term) (path path))
          (if (null? path)
              replacement
@@ -58,6 +59,7 @@
                       (cdr term) (iota (length (cdr term))))))))))
 
 (define (math-term-paths term)
+  (unless (math-term? term) (error "invalid math term" term))
   (if (memq (car term) '(var num zero))
       '(())
       (cons '()
