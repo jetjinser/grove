@@ -14,7 +14,6 @@
   #:use-module (ice-9 textual-ports)
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-9)
   #:export (artifact?
             artifact-path?
             make-artifact
