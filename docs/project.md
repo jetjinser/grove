@@ -360,7 +360,10 @@ Arbitrary Scheme I/O is not intercepted. Declare a file before reading it:
 and checks the recorded files
 before reusing that document. A reader's `#:cache-dependencies` collector is
 for reader-wide files that may affect any document even when its evaluation
-does not open them; it runs before each document cache lookup. Time,
+does not open them; it runs before each document cache lookup. Use this when a
+reusable reader owns those inputs. Use project `#:extra-sources` when the
+analyzer should also receive them through `project-context-extra-sources`;
+those paths participate in the same build invalidation and watching. Time,
 randomness, network state, and effects that must repeat require opting out
 with `disable-cache!` or disabling reader caching. An opted-out document also
 forces the renderer set to run for that build, because its untracked effects may
