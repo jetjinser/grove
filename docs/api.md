@@ -237,14 +237,16 @@ flow. Project builds perform validation and publication automatically and
 remain the recommended entry point when Grove should also collect sources,
 analyze content, and coordinate renderer and pipeline caches.
 
-The `#:sources` option declares the unique input paths that an artifact
-depends on. Duplicate paths are rejected. Omitting it means
-dependencies are unknown (`#f`), so
-Grove handles the artifact conservatively during invalidation and incremental
-rendering. Pass an explicit empty list when the artifact is known to depend on
-no input files; pass the relevant paths when it depends on only part of the
-project. This declaration is what lets incremental renderers reuse unaffected
-artifacts safely.
+The artifact `#:sources` option maps an artifact to the unique tracked input
+paths that affect it; it does not register those paths as project inputs.
+Register files through the reader input tracker, project `#:extra-sources`, or
+renderer `#:dependencies` as appropriate for the stage that reads them.
+Duplicate dependency paths are rejected. Omitting `#:sources` means its
+dependencies are unknown (`#f`), so Grove handles the artifact conservatively
+during invalidation and incremental rendering. Pass an explicit empty list
+when the artifact is known to depend on no input files; pass the relevant paths
+when it depends on only part of the project. This mapping lets incremental
+renderers reuse unaffected artifacts safely.
 
 HTML presentation, home-link, and navigation-link values apply the same rule
 to their SXML, labels, IDs, and attribute lists. Their accessors return copies

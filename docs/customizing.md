@@ -158,9 +158,14 @@ external tool determinism.
 Renderer `#:dependencies` make those files part of the project's change set
 and invalidate cached renderer output when they change. If the renderer has
 `#:render-changed`, its callback receives those changed paths for selective
-work. To select outputs safely, also pass each artifact's actual dependencies
-with `#:sources` to `make-artifact` or `make-byte-artifact`; Grove
-uses these paths to identify dirty outputs for the callback. Without
+work. Artifact `#:sources` maps each output to the tracked paths that affect
+it; it does not register those paths. Cached renderers can use
+`#:dependencies` for renderer inputs. For a plain renderer, put renderer-only
+inputs in project `#:extra-sources`; use the reader input tracker when the
+reader or analyzer itself reads them. To select outputs safely, also pass each
+artifact's actual dependencies with `#:sources` to `make-artifact` or
+`make-byte-artifact`; Grove uses these paths to identify dirty outputs for the
+callback. Without
 `#:render-changed`, Grove reruns the renderer as a whole when an output is dirty.
 Omitting `#:sources` means an artifact's dependencies are unknown, so it
 cannot be selectively reused after project changes; an explicit empty list

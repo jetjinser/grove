@@ -22,15 +22,17 @@ characters, numbers, symbols, keywords, strings, bytevectors, pairs,
 and vectors; opaque objects and cyclic structures are rejected.
 DEPENDENCIES, when supplied, is a no-argument procedure returning additional
 paths to track, or a list of paths when the dependencies are fixed. These paths
-trigger project-level invalidation. Each artifact's `#:sources` declares which
-inputs affect that output. Together with RENDER-CHANGED, it enables safe
-per-artifact reuse; without that callback Grove reruns the renderer as a whole
-when it needs new output. RENDER-CHANGED, when supplied, receives the model,
-changed source paths, dirty artifact paths, and this renderer's previous
-artifacts. It must return the renderer's complete current artifact list, or #f
-to request a full render. Use this constructor when its stable cache identity
-is known; a plain renderer procedure runs on each build because procedure
-identity cannot be persisted safely."
+trigger project-level invalidation. Each artifact's `#:sources` maps that
+output to the tracked paths that affect it; it does not register those paths.
+Register renderer inputs with DEPENDENCIES, project `#:extra-sources`, or the
+input tracker at the stage that reads them. Together with RENDER-CHANGED,
+artifact source mappings enable safe per-artifact reuse; without that callback
+Grove reruns the renderer as a whole when it needs new output. RENDER-CHANGED,
+when supplied, receives the model, changed source paths, dirty artifact paths,
+and this renderer's previous artifacts. It must return the renderer's complete
+current artifact list, or #f to request a full render. Use this constructor
+when its stable cache identity is known; a plain renderer procedure runs on
+each build because procedure identity cannot be persisted safely."
   (unless (procedure-accepts-arguments? procedure 1)
     (error "cached renderer procedure must accept one model" procedure))
   (unless (or (procedure-accepts-arguments? configuration 1)
