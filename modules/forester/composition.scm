@@ -9,12 +9,10 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
-  #:export (<subtree-definition>
-            subtree-definition?
+  #:export (subtree-definition?
             make-subtree-definition
             subtree-definition-parent
             subtree-definition-child
-            <transclusion>
             transclusion?
             make-transclusion
             transclusion-source-tree-id
