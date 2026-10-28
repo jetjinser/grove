@@ -4,9 +4,12 @@
 (define-module (grove private files)
   #:use-module (ice-9 textual-ports)
   #:use-module (grove private string-fun)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (file-signature
             filesystem-path-string?
+            filesystem-path-list?
+            unique-filesystem-path-list?
             regular-file?
             ensure-directory
             call-with-staging-file!
@@ -15,6 +18,13 @@
 (define-inlinable (filesystem-path-string? value)
   (and (non-empty-string? value)
        (not (string-index value #\nul))))
+
+(define (filesystem-path-list? value)
+  (and (list? value) (every filesystem-path-string? value)))
+
+(define (unique-filesystem-path-list? value)
+  (and (filesystem-path-list? value)
+       (= (length value) (length (delete-duplicates value string=?)))))
 
 (define-syntax include-text
   (lambda (stx)

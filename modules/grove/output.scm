@@ -54,11 +54,10 @@ An empty list means the artifact is known to have no file dependencies."
   (unless (artifact-path? path)
     (error "artifact requires a relative path" path))
   (unless (or (not sources)
-              (and (list? sources) (every filesystem-path-string? sources)))
+              (filesystem-path-list? sources))
     (error "artifact sources must be #f or a list of paths" sources))
   (when (and sources
-             (not (= (length sources)
-                     (length (delete-duplicates sources string=?)))))
+             (not (unique-filesystem-path-list? sources)))
     (error "artifact source paths must be unique" sources))
   (artifact:%make-artifact (snapshot-data path)
                   (if (string? content) (string-copy content)
@@ -145,7 +144,7 @@ Validate ARTIFACTS as one complete set before prefixing it."
   (unless (and (list? artifacts) (every artifact? artifacts))
     (error "expected a list of artifacts" artifacts))
   (let ((paths (map artifact:artifact-path/raw artifacts)))
-    (unless (= (length paths) (length (delete-duplicates paths string=?)))
+    (unless (unique-filesystem-path-list? paths)
       (error "duplicate artifact path" paths))
     (for-each
       (lambda (path)

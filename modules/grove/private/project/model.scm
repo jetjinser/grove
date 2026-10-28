@@ -242,11 +242,9 @@ identity is declared."
            source-filter))
   (unless (procedure? prepare)
     (error "project preparation step must be a procedure" prepare))
-  (unless (and (list? extra-sources)
-               (every filesystem-path-string? extra-sources))
+  (unless (filesystem-path-list? extra-sources)
     (error "project extra sources must be a list of paths" extra-sources))
-  (unless (= (length extra-sources)
-             (length (delete-duplicates extra-sources string=?)))
+  (unless (unique-filesystem-path-list? extra-sources)
     (error "project extra source paths must be unique" extra-sources))
   (unless (procedure? read-source)
     (error "project requires a source reader" read-source))
@@ -289,8 +287,7 @@ identity is declared."
   "Copy PROJECT with execution options and additional tracked source paths."
   (unless (project? project)
     (error "project options require a Grove project" project))
-  (unless (and (list? extra-sources)
-               (every filesystem-path-string? extra-sources))
+  (unless (filesystem-path-list? extra-sources)
     (error "project additional sources must be a list of non-empty paths"
            extra-sources))
   (when (eq? output-directory project-option-unspecified)

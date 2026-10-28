@@ -40,10 +40,10 @@ identity cannot be persisted safely."
     (error "incremental renderer must be a procedure or #f" render-changed))
   (unless (or (not inputs)
               (procedure? inputs)
-              (and (list? inputs) (every filesystem-path-string? inputs)))
+              (filesystem-path-list? inputs))
     (error "renderer inputs must be #f, a list of paths, or a path collector" inputs))
   (when (list? inputs)
-    (unless (= (length inputs) (length (delete-duplicates inputs string=?)))
+    (unless (unique-filesystem-path-list? inputs)
       (error "renderer input paths must be unique" inputs))
     (set! inputs (snapshot-data inputs)))
   (%make-cached-renderer
