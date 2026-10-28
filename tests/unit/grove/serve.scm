@@ -22,6 +22,7 @@
 (define config (string-append root "/project.scm"))
 (define article (string-append root "/sources/one.txt"))
 (define helper (string-append root "/modules/probe/helper.scm"))
+(define pipeline-runtime-input (string-append root "-pipeline-input.txt"))
 (define control (string-append root "/control"))
 (define sources (getenv "GROVE_SRCDIR"))
 (define processes '())
@@ -189,13 +190,15 @@
     (write-file control "fast")
     (write-file (string-append root "/asset.txt") "asset-1")
     (write-file (string-append external "/theme.txt") "css-1")
+    (write-file pipeline-runtime-input "pipeline-1")
     (write-file helper (helper-text "module-1"))
     (write-file (string-append root "/.entry.scm")
       "(use-modules (tests unit grove subprocess))\n(exit (cli-entry (cdr (command-line))))\n")
     (write-file config
       (format #f
         "(add-to-load-path \"modules\")
-(use-modules (grove project) (grove build) (grove output) (probe helper)
+(use-modules (grove project) (grove build) (grove output) (grove pipeline)
+             (grove input) (probe helper)
              (ice-9 ftw) (ice-9 textual-ports) (srfi srfi-13) (rnrs bytevectors))
 (unless (file-exists? \".cache\") (mkdir \".cache\"))
 ;;     Test state lives under the cache directory, outside the watched
@@ -204,6 +207,7 @@
 (call-with-output-file \".cache/worker.pid\" (lambda (p) (write (getpid) p)))
 (define external ~s)
 (define asset ~s)
+(define pipeline-runtime-input ~s)
 (make-project
   #:source-directory \"sources\"
   #:extra-sources (list external \"control\")
@@ -211,6 +215,13 @@
                  (let ((text (call-with-input-file path get-string-all)))
                    (when (string-contains text \"FAIL\") (error \"article failure\"))
                    text))
+  #:pipelines
+  (list (make-asset-pipeline
+          #:name \"empty-runtime-input\"
+          #:procedure
+          (lambda (_input)
+            (call-with-input-file (depend-on! pipeline-runtime-input) get-string-all)
+            '())))
   #:analyze (lambda (context)
              ;;     Analysis counter: the retained-model contract is
              ;;     observable here - asset edits re-render without
@@ -248,7 +259,8 @@
                      (project-context-inputs context)))))))
   #:output-directory \"output\")\n"
         (string-append external "/theme.txt")
-        (string-append root "/asset.txt"))))
+        (string-append root "/asset.txt")
+        pipeline-runtime-input)))
   (lambda ()
     (set! port (free-port))
     (let ((pid (start-server)))
@@ -283,6 +295,12 @@
         (await-text "asset-2"))
       (test-equal "asset edits skip analysis" 5
         (string-length (read-file (string-append root "/.cache/analyze.count"))))
+      (let ((before (rebuild-count)))
+        (write-file pipeline-runtime-input "pipeline-2")
+        (test-assert "external runtime input of an empty pipeline triggers preview rebuild"
+          (wait-for (lambda () (> (rebuild-count) before))))
+        (test-equal "empty-pipeline runtime input rebuild reuses analysis" 5
+          (string-length (read-file (string-append root "/.cache/analyze.count")))))
       (write-file article "three")
       (test-assert "document edits re-analyze" (await-text "three|"))
       (test-equal "document edits re-run analysis" 6
@@ -442,6 +460,8 @@
               (when (running? pid)
                 (catch 'system-error (lambda () (kill (- pid) SIGKILL)) (lambda _ #f)))))))
       '(".cache/worker.pid" ".helper.pid" ".orphan.pid"))
-    (system* "rm" "-rf" root external inputs)))
+    (system* "rm" "-rf" root external inputs)
+    (when (file-exists? pipeline-runtime-input)
+      (delete-file pipeline-runtime-input))))
 (test-subprocess-coverage '("grove/private/preview/worker.scm"))
 (test-end "serve lifecycle")

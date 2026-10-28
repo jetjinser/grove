@@ -14,6 +14,7 @@
   #:use-module (grove private project model)
   #:use-module (grove project diagnostic)
   #:use-module (grove project site)
+  #:use-module (grove input)
   #:use-module (grove pipeline)
   #:use-module (grove site)
   #:use-module (grove private build-state)
@@ -39,6 +40,9 @@
 (define preview-output-directory (string-append project-root "/preview-output"))
 (define preview-render-input (string-append project-root "/preview-render-input"))
 (define preview-irrelevant-input (string-append project-root "/preview-irrelevant-input"))
+(define preview-pipeline-selector (string-append project-root "/preview-pipeline-selector"))
+(define preview-pipeline-a (string-append project-root "/preview-pipeline-a"))
+(define preview-pipeline-b (string-append project-root "/preview-pipeline-b"))
 (define external-source-path (string-append project-root "/theme.css"))
 
 (define (write-test-file path content)
@@ -1012,11 +1016,15 @@
                 "pages/first.txt" "pages/fourth.txt")
               (map artifact-path (build-report-artifacts added-page))))))))
     (let ((render-count 0)
+          (pipeline-count 0)
           (state-path
             (string-append (grove-cache-directory preview-output-directory)
                            "/" build-state-name)))
       (write-test-file preview-render-input "render-1")
       (write-test-file preview-irrelevant-input "unrelated-1")
+      (write-test-file preview-pipeline-selector "a")
+      (write-test-file preview-pipeline-a "pipeline-a")
+      (write-test-file preview-pipeline-b "pipeline-b")
       (let ((project
               (make-project
                 #:collect-sources (lambda () '())
@@ -1024,6 +1032,23 @@
                 (list preview-render-input preview-irrelevant-input)
                 #:read-source (lambda (_) #f)
                 #:analyze (lambda (_) 'retained-model)
+                #:pipelines
+                (list
+                  (make-asset-pipeline
+                    #:name "preview-empty-dynamic-input"
+                    #:procedure
+                    (lambda (_input)
+                      (set! pipeline-count (1+ pipeline-count))
+                      (let* ((selector
+                               (call-with-input-file
+                                 (depend-on! preview-pipeline-selector)
+                                 get-string-all))
+                             (path (depend-on!
+                                     (if (string=? selector "a")
+                                         preview-pipeline-a
+                                         preview-pipeline-b))))
+                        (call-with-input-file path get-string-all))
+                      '())))
                 #:renderers
                 (list
                   (make-cached-renderer
@@ -1036,7 +1061,15 @@
                           #:sources (list preview-render-input))))
                     #:configuration 'stable))
                 #:output-directory preview-output-directory)))
-        (build-project/report project)
+        (let ((report (build-project/report project)))
+          (test-equal "empty pipeline runtime inputs execute on the first build"
+            1 pipeline-count)
+          (test-assert "build state records an empty pipeline's active dependency"
+            (member (canonicalize-path preview-pipeline-a)
+                    (build-report-sources report) string=?))
+          (test-assert "build state omits the empty pipeline's inactive dependency"
+            (not (member (canonicalize-path preview-pipeline-b)
+                         (build-report-sources report) string=?))))
         (let ((state (read-build-state state-path)))
           (write-test-file preview-render-input "render-2")
           (let ((report
@@ -1050,6 +1083,20 @@
               "render-2"
               (artifact-content (car (build-report-artifacts report)))))
           (let ((updated-state (read-build-state state-path)))
+            (write-test-file preview-pipeline-selector "b")
+            (let ((report
+                    (rebuild-from-model project 'retained-model updated-state
+                                        (list preview-pipeline-selector) '()
+                                        #:analysis-inputs '())))
+              (test-equal "model reuse reruns a pipeline whose runtime selector changed"
+                2 pipeline-count)
+              (test-assert "model reuse tracks the newly selected empty-pipeline input"
+                (member (canonicalize-path preview-pipeline-b)
+                        (build-report-sources report) string=?))
+              (test-assert "model reuse removes the pipeline's stale runtime input"
+                (not (member (canonicalize-path preview-pipeline-a)
+                             (build-report-sources report) string=?))))
+            (let ((updated-state (read-build-state state-path)))
             (write-test-file preview-irrelevant-input "unrelated-2")
             (let ((report
                     (rebuild-from-model project 'retained-model updated-state
@@ -1057,7 +1104,7 @@
               (test-equal "model reuse retains renderers independent of the changed input"
                 2 render-count)
               (test-assert "model reuse reports a hit when all renderer outputs are reused"
-                (build-report-render-cache-hit? report)))))))
+                (build-report-render-cache-hit? report))))))))
     (let* ((view-events '())
            (view-output-directory (string-append project-root "/view-output"))
            (view-project
@@ -1151,6 +1198,9 @@
                 (when (file-exists? path)
                   (delete-file path)))
       (list (string-append module-directory "/shared.plant")
+            preview-pipeline-selector
+            preview-pipeline-a
+            preview-pipeline-b
             (string-append source-directory "/first.plant")
             (string-append source-directory "/second.plant")
             (string-append source-directory "/.draft.plant")

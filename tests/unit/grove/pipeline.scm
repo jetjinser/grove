@@ -299,7 +299,7 @@
 
 (let* ((result (run-pipelines "v1"))
        (artifacts (car result))
-       (owners (cdr result)))
+       (owners (cadr result)))
   (test-equal "the first run executes the procedure" 1 runs)
 (test-equal "every returned output becomes an artifact"
     '("fig/one.txt" "fig/two.bin")
@@ -319,6 +319,20 @@
   (test-equal "owners name the pipeline"
     '("figures" "figures")
     (map cdr owners)))
+
+(let* ((result
+         (run-asset-pipelines
+           (list (make-asset-pipeline
+                   #:name "empty-dynamic-dependency"
+                   #:procedure
+                   (lambda (_input)
+                     (call-with-input-file (depend-on! input-c) get-string-all)
+                     '())))
+           "empty-dynamic-dependency-project")))
+  (test-equal "a pipeline may return no artifacts after reading an input"
+    '() (car result))
+  (test-assert "empty pipeline results still report runtime dependencies"
+    (member (canonicalize-path input-c) (caddr result) string=?)))
 
 (define (run-runtime-loaded-pipeline)
   (car (run-asset-pipelines

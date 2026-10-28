@@ -164,7 +164,7 @@ The callback receives the model, input port, and output port."
                                   #:cache? (and write?
                                                 (project-cache? project)))))
          (pipeline-artifacts (car pipeline-result))
-         (pipeline-owners (cdr pipeline-result))
+         (pipeline-owners (cadr pipeline-result))
          (pipeline-declared-sources
            (delete-duplicates
              (append-map
@@ -175,8 +175,7 @@ The callback receives the model, input port, and output port."
          (pipeline-runtime-sources
            (lset-difference
              string=?
-             (delete-duplicates (append-map out:artifact-sources/raw pipeline-artifacts)
-                                string=?)
+             (caddr pipeline-result)
              pipeline-declared-sources))
          (state-directory
            (grove-cache-directory (project-output-directory project)))

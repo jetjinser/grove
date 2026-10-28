@@ -77,7 +77,7 @@
                 (artifacts (restore-index-artifacts (cadr index) sources)))
            (and artifacts
                 (valid-cached-artifact-set? artifacts)
-                artifacts)))))
+                (list artifacts (map car (car index))))))))
 
 (define (valid-pipeline-index? index)
   (and (list? index)
@@ -154,32 +154,38 @@
       (when (and cache?
                  (every (lambda (entry) (cdr entry)) entries))
         (write-pipeline-index identity dependencies entries))
-      outputs)))
+      (list outputs (map car dependencies)))))
 
 (define* (run-asset-pipelines pipelines project-key #:key (cache? #t))
-  "Run every declared asset pipeline; return (artifacts . owners),
+  "Run every declared asset pipeline; return (artifacts owners runtime-inputs),
 where each owner maps the artifact path to the pipeline name for the
-build state's renderer field. CACHE? controls reads and writes to the
-shared content store."
+build state's renderer field, and RUNTIME-INPUTS lists dynamically read
+files, including for pipelines that return no artifacts. CACHE? controls
+reads and writes to the shared content store."
   (unless (boolean? cache?)
     (error "pipeline cache option must be a boolean" cache?))
-  (let loop ((pipelines pipelines) (artifacts '()) (owners '()))
+  (let loop ((pipelines pipelines) (artifacts '()) (owners '())
+             (runtime-inputs '()))
     (if (null? pipelines)
-        (cons (reverse artifacts) (reverse owners))
+        (list (reverse artifacts) (reverse owners)
+              (delete-duplicates (reverse runtime-inputs) string=?))
         (let* ((pipeline (car pipelines))
                (name (asset-pipeline-name pipeline))
                (inputs (pipeline-input-table pipeline))
                (identity (pipeline-identity pipeline project-key inputs))
-               (produced (or (and cache?
-                                  (restore-pipeline-artifacts identity inputs))
-                             (run-pipeline-procedure pipeline identity inputs
-                                                     cache?)))
+               (execution (or (and cache?
+                                   (restore-pipeline-artifacts identity inputs))
+                              (run-pipeline-procedure pipeline identity inputs
+                                                      cache?)))
+               (produced (car execution))
+               (dependencies (cadr execution))
                (markers (map (lambda (artifact)
                                (cons (out:artifact-path/raw artifact) name))
                              produced)))
           (loop (cdr pipelines)
                 (append (reverse produced) artifacts)
-                (append (reverse markers) owners))))))
+                (append (reverse markers) owners)
+                (append (reverse dependencies) runtime-inputs))))))
 
 ;;     Pipeline outputs shadow same-path artifacts from renderers and
 ;;     the previous state, and outputs retired from a pipeline's

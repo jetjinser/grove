@@ -30,10 +30,12 @@
 ;;     incremental.  Cache pruning is skipped here - the retained
 ;;     state carries no selection statuses, and pruning is hygiene.
 (define* (rebuild-from-model project model retained-state changed removed
-                              #:key (progress (lambda (stage path) #t)))
+                              #:key (analysis-inputs '())
+                                    (progress (lambda (stage path) #t)))
   "Render and write using a MODEL built by a previous analysis of PROJECT.
-RETAINED-STATE is that build's on-disk state record; CHANGED names sources
-modified or added since, and REMOVED names deleted sources. Renderers and
+RETAINED-STATE is that build's on-disk state record; ANALYSIS-INPUTS are
+the files used to produce MODEL; CHANGED names sources modified or added
+since, and REMOVED names deleted sources. Renderers and
 project configuration come from the freshly loaded PROJECT, while MODEL
 preserves the prior analysis result."
   (with-build-lock (project-output-directory project)
@@ -52,7 +54,8 @@ preserves the prior analysis result."
                                       (current-project-key)
                                       #:cache? (project-cache? project))))
               (pipeline-artifacts (car pipeline-result))
-              (pipeline-owners (cdr pipeline-result))
+              (pipeline-owners (cadr pipeline-result))
+              (pipeline-runtime-sources (caddr pipeline-result))
               (retired (retired-pipeline-paths pipeline-artifacts
                                                previous-artifacts))
               (identity (renderer-identity (project-cache? project) model
@@ -66,16 +69,29 @@ preserves the prior analysis result."
              ;;     render must not enter the state as if the render had
              ;;     seen it.
              (current-sources
-                (filter-map
-                  (lambda (source)
-                    (let ((digest (false-if-exception
-                                    (file-fingerprint
-                                      (build-state-source-path source)))))
-                      (and digest
-                           (list (build-state-source-path source)
-                                 digest
-                                 (build-state-source-kind source)))))
-                  previous-sources))
+                (let* ((retained
+                         (filter-map
+                           (lambda (source)
+                             (let ((path (build-state-source-path source)))
+                               (and (or (eq? (build-state-source-kind source)
+                                             'source)
+                                        (member path analysis-inputs string=?))
+                                    (let ((digest
+                                            (false-if-exception
+                                              (file-fingerprint path))))
+                                      (and digest
+                                           (list path digest
+                                                 (build-state-source-kind source)))))))
+                           previous-sources))
+                       (known (map car retained)))
+                  (append retained
+                    (filter-map
+                      (lambda (path)
+                        (and (not (member path known string=?))
+                             (let ((digest (false-if-exception
+                                             (file-fingerprint path))))
+                               (and digest (list path digest 'runtime)))))
+                      pipeline-runtime-sources))))
              (render-result
                 (begin
                   (progress 'render #f)

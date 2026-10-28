@@ -6,15 +6,18 @@
   #:use-module (grove private build-state)
   #:use-module (grove output)
   #:use-module (grove private cache-dir)
+  #:use-module (grove private input dependencies)
   #:use-module (grove pipeline)
   #:use-module (grove project)
   #:use-module (grove project diagnostic)
   #:use-module (ice-9 textual-ports)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-64))
 
 (define root (format #f "/tmp/grove-check-test-~a" (getpid)))
 (define output (string-append root "/output"))
 (define source (string-append root "/source.txt"))
+(define pipeline-input (string-append root "/pipeline-input.txt"))
 (define renders 0)
 (define pipeline-runs 0)
 (define broken? #f)
@@ -52,7 +55,9 @@
   (lambda ()
     (setenv "XDG_CACHE_HOME" (string-append root "/.cache"))
     (mkdir root)
-    (call-with-output-file source (lambda (port) (display "source" port))))
+    (call-with-output-file source (lambda (port) (display "source" port)))
+    (call-with-output-file pipeline-input
+      (lambda (port) (display "pipeline input" port))))
   (lambda ()
     (test-assert "check returns the complete validated artifact set"
       (equal? artifacts (check-project project)))
@@ -130,15 +135,20 @@
               #:name pipeline-name
               #:procedure
               (lambda (_)
+                (call-with-input-file (depend-on! pipeline-input) get-string-all)
                 (set! pipeline-runs (+ pipeline-runs 1))
-                (list (make-artifact "derived.txt" "pipeline output")))))
+                '())))
            (pipeline-project
             (make-project
               #:collect-sources (lambda () '())
               #:read-source (lambda (_) #f)
               #:pipelines (list pipeline)
               #:output-directory (string-append root "/pipeline-output"))))
-      (build-project pipeline-project)
+      (let ((report (build-project/report pipeline-project)))
+        (test-assert "empty pipeline runtime inputs enter build state"
+          (any (lambda (path)
+                 (string=? path (canonicalize-path pipeline-input)))
+               (build-report-sources report))))
       (build-project pipeline-project)
       (test-equal "ordinary project builds reuse pipeline output" 1 pipeline-runs)
       (check-project pipeline-project)
@@ -148,12 +158,21 @@
       (build-project pipeline-project)
       (test-equal "checks leave the previous pipeline cache entry intact"
         3 pipeline-runs)
+      (call-with-output-file pipeline-input
+        (lambda (port) (display "changed pipeline input" port)))
+      (let ((report (build-project/report pipeline-project)))
+        (test-equal "changed empty-pipeline runtime inputs invalidate the pipeline"
+          4 pipeline-runs)
+        (test-assert "the changed runtime input is reported as modified"
+          (any (lambda (path)
+                 (string=? path (canonicalize-path pipeline-input)))
+               (build-report-modified-sources report))))
       (let ((uncached-project
               (project-with-options pipeline-project #:cache? #f)))
         (build-project uncached-project)
         (build-project uncached-project)
         (test-equal "disabling project caching also disables pipeline reuse"
-          5 pipeline-runs))))
+          6 pipeline-runs))))
   (lambda ()
     (system* "rm" "-rf" root)))
 (let* ((message (string-append (make-string 900 #\x) "END-OF-DIAGNOSTIC"))

@@ -204,6 +204,8 @@
                                       (rebuild-from-model configured model
                                                           retained-state
                                                           changed removed
+                                                          #:analysis-inputs
+                                                          analysis-inputs
                                                           #:progress progress)
                                       model analysis-inputs)
                                     (build-project/report+analysis
