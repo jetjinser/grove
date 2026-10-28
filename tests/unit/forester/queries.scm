@@ -50,6 +50,26 @@
   (test-equal "tree occurrence target accessors return independent strings"
     "reusable-tree" (tree-occurrence-target element)))
 
+(let* ((host
+         (make-site-page
+           "host" "Host"
+           (make-content-document
+             (map (lambda (target)
+                    (make-content-element 'transclude '()
+                      #:properties `((target . ,target))))
+                  '("first" "second")))))
+       (forest
+         (make-forest
+           (make-site
+             (list host
+                   (make-site-page "first" "First" (make-content-document '()))
+                   (make-site-page "second" "Second" (make-content-document '()))))))
+       (exposed (tree-occurrences forest "host")))
+  (set-car! exposed #f)
+  (test-equal "tree occurrence queries return independent ordered snapshots"
+    '("first" "second")
+    (map tree-occurrence-target (tree-occurrences forest "host"))))
+
 (let* ((source (page-with-links "source" '("target")))
        (target (page-with-links "target" '()))
        (forest (make-forest (make-site (list source target))))

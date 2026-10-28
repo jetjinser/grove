@@ -263,11 +263,16 @@
         (included-tree-ids forest page-id)))))
 (define (tree-occurrences forest id)
   "Return direct tree displays in body order, stopping at tree boundaries."
-  (define (tree-display? node)
-    (and (content-element? node)
-         (memq (content-element-kind node) '(subtree transclude query-transclude))))
-  (tree-pass:walk-content (site-page-document (require-page forest id))
-                tree-display? #:stop? tree-display?))
+  (require-page forest id)
+  (cached-rows forest `(tree-occurrences ,id)
+    (lambda ()
+      (define (tree-display? node)
+        (and (content-element? node)
+             (memq (content-element-kind node)
+                   '(subtree transclude query-transclude))))
+      (tree-pass:walk-content
+        (site-page-document (require-page forest id))
+        tree-display? #:stop? tree-display?))))
 
 (define (tree-occurrence-target element)
   (content-element-property element
