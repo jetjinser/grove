@@ -33,6 +33,8 @@ use `@derive` for rendered derivations. `partial-expression` pairs with
 `poisson-particular` constructs an expression while `solve-poisson` computes a
 particular solution. The corresponding Semantic constructors build values
 directly without parsing text.
+Formula also accepts `zero(vector)` as the vector-valued zero; code constructing
+Semantic values directly can use `vector-zero` from `(grove math semantic)`.
 
 `φ:calculate` is the narrow exact-arithmetic evaluator. `φ:compute` runs the
 broader calculation pipeline, including component and spatial operations,

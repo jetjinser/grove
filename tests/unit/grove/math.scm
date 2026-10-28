@@ -7,6 +7,7 @@
   #:use-module (srfi srfi-64)
   #:use-module (grove math private syntax)
   #:use-module ((grove math formula) #:prefix φ:)
+  #:use-module ((grove math semantic) #:prefix ◆:)
   #:use-module (grove math expression)
   #:use-module (grove math term)
   #:use-module (grove math layout)
@@ -136,6 +137,8 @@
                        '(- (zero vector) (laplacian (var E))))))
   (test-equal "vector zero has an explicit symbolic representation"
     '(zero vector) (φ:term "zero(vector)"))
+  (test-equal "Semantic vector-zero matches the Formula spelling"
+    '(zero vector) (math-value-term (◆:vector-zero)))
   (test-equal "scalar zero cannot be subtracted from a vector"
     #f (math-infer-type '((vector (var E))) '(- (num "0") (var E))))
   (test-equal "vector zero supports vector equations and addition"
