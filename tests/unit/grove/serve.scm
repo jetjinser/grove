@@ -23,6 +23,7 @@
 (define article (string-append root "/sources/one.txt"))
 (define helper (string-append root "/modules/probe/helper.scm"))
 (define pipeline-runtime-input (string-append root "-pipeline-input.txt"))
+(define unrelated-runtime-neighbor (string-append root "-unrelated.txt"))
 (define control (string-append root "/control"))
 (define sources (getenv "GROVE_SRCDIR"))
 (define processes '())
@@ -191,6 +192,7 @@
     (write-file (string-append root "/asset.txt") "asset-1")
     (write-file (string-append external "/theme.txt") "css-1")
     (write-file pipeline-runtime-input "pipeline-1")
+    (write-file unrelated-runtime-neighbor "unrelated-1")
     (write-file helper (helper-text "module-1"))
     (write-file (string-append root "/.entry.scm")
       "(use-modules (tests unit grove subprocess))\n(exit (cli-entry (cdr (command-line))))\n")
@@ -301,6 +303,11 @@
           (wait-for (lambda () (> (rebuild-count) before))))
         (test-equal "empty-pipeline runtime input rebuild reuses analysis" 5
           (string-length (read-file (string-append root "/.cache/analyze.count")))))
+      (let ((before (rebuild-count)))
+        (write-file unrelated-runtime-neighbor "unrelated-2")
+        (usleep 1200000)
+        (test-equal "external runtime inputs do not recursively watch neighboring files"
+          before (rebuild-count)))
       (write-file article "three")
       (test-assert "document edits re-analyze" (await-text "three|"))
       (test-equal "document edits re-run analysis" 6
@@ -462,6 +469,8 @@
       '(".cache/worker.pid" ".helper.pid" ".orphan.pid"))
     (system* "rm" "-rf" root external inputs)
     (when (file-exists? pipeline-runtime-input)
-      (delete-file pipeline-runtime-input))))
+      (delete-file pipeline-runtime-input))
+    (when (file-exists? unrelated-runtime-neighbor)
+      (delete-file unrelated-runtime-neighbor))))
 (test-subprocess-coverage '("grove/private/preview/worker.scm"))
 (test-end "serve lifecycle")
