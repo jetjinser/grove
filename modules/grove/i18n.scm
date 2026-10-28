@@ -34,7 +34,6 @@
             format-number
             plural
             locale-sort-key
-            glibc-locale-name
             locale-collation-comparator
             current-reader-locale
             og-locale-tag

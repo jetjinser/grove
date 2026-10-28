@@ -23,6 +23,11 @@
 
 (test-begin "forester i18n")
 
+(test-assert "system locale names stay behind the i18n API"
+  (not (module-variable
+         (module-public-interface (resolve-module '(grove i18n)))
+         'glibc-locale-name)))
+
 ;;; Locales
 
 (let ((locale (make-locale "zh-Hant")))
@@ -502,14 +507,10 @@
 
 ;;; Locale-aware collation
 
-(test-equal "glibc locale names follow the primary language"
-  "fr_FR.UTF-8" (glibc-locale-name "fr-CA"))
-(test-equal "glibc locale names cover traditional Chinese"
-  "zh_TW.UTF-8" (glibc-locale-name "zh-Hant"))
-(test-equal "glibc locale names cover Chinese"
-  "zh_CN.UTF-8" (glibc-locale-name "zh-Hans"))
-(test-equal "unsupported locales have no glibc name"
-  #f (glibc-locale-name "xx"))
+(test-assert "supported locale data provides a reusable comparator"
+  (procedure? (locale-collation-comparator "fr-CA")))
+(test-equal "unsupported locale data has no platform comparator"
+  #f (locale-collation-comparator "xx"))
 (test-equal "French collation keeps accents with their base letter"
   '("éclair" "Zebra")
   (sort-strings '("Zebra" "éclair") #:locale "fr"))
