@@ -39,7 +39,6 @@
             make-project-input
             make-project-context
             make-build-report
-            project-analysis?
             make-project-analysis
             project-analysis-source-paths
             project-analysis-prepared-sources
