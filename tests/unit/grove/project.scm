@@ -382,6 +382,19 @@
     (lambda (_key _module template arguments _rest)
       (string-prefix? "project options require a Grove project"
                       (apply format #f template arguments)))))
+(let* ((project
+         (make-project #:source-directory "sources"
+                       #:read-source (lambda (_) #f)
+                       #:output-directory "output"
+                       #:cache? #f))
+       (copy (project-with-options project)))
+  (test-equal "project options preserve omitted execution settings"
+    '("output" #f)
+    (list (project-output-directory copy) (project-cache? copy)))
+  (test-assert "project options can explicitly re-enable caching"
+    (project-cache? (project-with-options project #:cache? #t)))
+  (test-error "project options reject an explicit false output directory" #t
+    (project-with-options project #:output-directory #f)))
 (let* ((path (string-copy "selected.plant"))
        (collector-paths (list path))
        (project

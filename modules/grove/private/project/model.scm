@@ -289,23 +289,20 @@ input port, and output port by BROWSE-PROJECT."
                  (snapshot-data output-directory) cache? browse
                  (snapshot-data pipelines) create-source))
 
-(define project-option-unspecified (list 'project-option-unspecified))
-
 (define* (project-with-options project
                                #:key
-                               (output-directory project-option-unspecified)
+                               (output-directory
+                                 (and (project? project)
+                                      (project-output-directory project)))
                                (extra-sources '())
-                               (cache? project-option-unspecified))
+                               (cache? (and (project? project)
+                                            (project-cache? project))))
   "Copy PROJECT with execution options and additional tracked source paths."
   (unless (project? project)
     (error "project options require a Grove project" project))
   (unless (filesystem-path-list? extra-sources)
     (error "project additional sources must be a list of non-empty paths"
            extra-sources))
-  (when (eq? output-directory project-option-unspecified)
-    (set! output-directory (project-output-directory project)))
-  (when (eq? cache? project-option-unspecified)
-    (set! cache? (project-cache? project)))
   (make-project
     #:source-directory (project-source-directory project)
     #:source-filter (project-source-filter project)
