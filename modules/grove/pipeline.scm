@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove pipeline)
+  #:use-module (grove private files)
   #:use-module (grove private asset-pipeline)
   #:use-module (grove private snapshot)
   #:use-module (grove private string-fun)

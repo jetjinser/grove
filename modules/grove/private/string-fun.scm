@@ -5,16 +5,11 @@
 (define-module (grove private string-fun)
   #:use-module (srfi srfi-13)
   #:use-module (ice-9 textual-ports)
-  #:export (non-empty-string? filesystem-path-string?
-            ascii-alpha? ascii-digit? ascii-hex?
+  #:export (non-empty-string? ascii-alpha? ascii-digit? ascii-hex?
             include-text))
 
 (define-inlinable (non-empty-string? value)
   (and (string? value) (not (string-null? value))))
-
-(define-inlinable (filesystem-path-string? value)
-  (and (non-empty-string? value)
-       (not (string-index value #\nul))))
 
 (define-inlinable (ascii-alpha? character)
   (or (and (char>=? character #\a) (char<=? character #\z))

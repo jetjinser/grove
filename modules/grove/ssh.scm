@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove ssh)
+  #:use-module (grove private files)
   #:use-module (grove private string-fun)
   #:use-module (ice-9 format)
   #:use-module (ice-9 optargs)

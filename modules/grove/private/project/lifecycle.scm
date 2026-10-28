@@ -5,6 +5,7 @@
 (define-module (grove private project lifecycle)
   #:use-module ((grove private artifact) #:prefix out:)
   #:use-module (grove private project model)
+  #:use-module (grove private files)
   #:use-module (grove private string-fun)
   #:use-module (grove private cache-dir)
   #:use-module (grove private build-lock)

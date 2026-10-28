@@ -2,10 +2,17 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove private files)
+  #:use-module (srfi srfi-13)
   #:export (file-signature
+            filesystem-path-string?
             regular-file?
             ensure-directory
             call-with-staging-file!))
+
+(define-inlinable (filesystem-path-string? value)
+  (and (string? value)
+       (not (string-null? value))
+       (not (string-index value #\nul))))
 
 (define (file-signature path)
   "Identify PATH's target file, including same-size edits and replacements.
