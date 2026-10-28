@@ -109,6 +109,12 @@ use `build-project/report` when it also needs source changes, affected
 artifacts, or cache status. `check-project` returns the same report shape but
 does not read or write published output state.
 
+`collect-project-sources` runs only the collection stage and returns its
+validated, ordered path list. It is useful for inspecting a custom collector or
+source filter without reading documents or running analysis and renderers.
+`build-report-sources` reports the source set observed by a completed build or
+check, including paths discovered by later stages.
+
 The `#:analyze` callback receives a `project-context`. Its
 `project-context-inputs` are the ordered collected paths paired with the values
 returned by `#:read-source`; inspect them with `project-input-path` and
