@@ -341,9 +341,10 @@ does not have a stable cache identity. Wrap a renderer with
 `make-cached-renderer` to opt into artifact reuse; it always describes a
 cacheable renderer. Set `#:cache? #f` to disable the project caches;
 `project-with-options` applies this to any project, including Forester
-projects. Both `make-site-project` and
-`make-forester-project` accept it directly. Readers accept a path predicate for
-finer control.
+projects. This disables result reuse, not dependency collection:
+`depend-on!` inputs remain in build reports and preview watching. Both
+`make-site-project` and `make-forester-project` accept it directly. Readers
+accept a path predicate for finer control.
 Preparation and whole-project analysis still run. Document hits reuse Content
 IR; renderer hits reuse artifacts. Shared code changes conservatively force
 full rendering. Standalone reader calls evaluate normally; `check` bypasses
