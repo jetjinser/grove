@@ -1044,4 +1044,52 @@
                               string=?)))))))
     (lambda () (system* "rm" "-rf" root))))
 
+(let ((root (mkdtemp "/tmp/forester-gemtext-incremental-test-XXXXXX")))
+  (dynamic-wind
+    (lambda ()
+      (mkdir (string-append root "/plants"))
+      (write-test-file (string-append root "/plants/alpha.plant") "Alpha")
+      (write-test-file (string-append root "/plants/beta.plant") "Beta"))
+    (lambda ()
+      (let* ((source-directory (string-append root "/plants"))
+             (output-directory (string-append root "/output"))
+             (project
+              (make-site-project
+                #:source-directory source-directory
+                #:read-page
+                (lambda (path)
+                  (let* ((filename (basename path))
+                         (id (substring filename 0 (- (string-length filename) 6))))
+                    (make-site-page
+                      id id
+                      (make-content-document
+                        (list (make-content-element 'paragraph
+                                (list (make-content-text
+                                        (read-test-file path)))))
+                        path)
+                      path)))
+                #:analyze make-forest
+                #:renderers
+                (list (make-gemtext-renderer
+                        #:options (make-gemtext-options #:prefix "gemini")))
+                #:output-directory output-directory))
+             (_ (build-project/report project)))
+        (write-test-file (string-append source-directory "/alpha.plant")
+                         "Alpha changed")
+        (let ((updated (build-project/report project)))
+          (test-equal "Gemtext changes rerender the index and affected page only"
+            '("gemini/index.gmi" "gemini/alpha.gmi")
+            (build-report-affected-artifacts updated))
+          (test-assert "Gemtext incremental rendering updates changed bytes"
+            (string-contains
+              (read-test-file (string-append output-directory
+                                             "/gemini/alpha.gmi"))
+              "Alpha changed"))
+          (test-assert "Gemtext incremental rendering retains unaffected pages"
+            (string-contains
+              (read-test-file (string-append output-directory
+                                             "/gemini/beta.gmi"))
+              "Beta")))))
+    (lambda () (system* "rm" "-rf" root))))
+
 (test-end "forester project")

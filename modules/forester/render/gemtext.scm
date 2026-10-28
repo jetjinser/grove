@@ -5,6 +5,7 @@
 (define-module (forester render gemtext)
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove build)
+  #:use-module (forester private render artifact)
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove private snapshot)
@@ -299,6 +300,9 @@
   (messages gemtext-options-messages)
   (rules gemtext-options-rules))
 
+(define (output-path prefix path)
+  (if prefix (string-append prefix "/" path) path))
+
 (define (require-gemtext-options options who)
   (unless (gemtext-options? options)
     (error (string-append who " requires Gemtext options") options))
@@ -324,6 +328,27 @@
       (lambda (page)
         (page->gemtext forest routes page backmatter backmatter-labels
                        reference-taxon-id rules context)))))
+
+(define (render-gemtext-changed forest options changed old-artifacts)
+  (let* ((prefix (gemtext-options-prefix options))
+         (routes (gemtext-options-routes options))
+         (render-page (make-gemtext-page-renderer forest options))
+         (index-artifact
+           (reuse-artifact
+             (output-path prefix (text-index-path routes))
+             (source-paths forest) old-artifacts changed
+             (lambda () (index->gemtext forest routes))))
+         (page-artifacts
+           (map (lambda (page)
+                  (let* ((path
+                           (output-path
+                             prefix
+                             (text-page-path routes (site-page-id page))))
+                         (sources (page-source-paths forest page)))
+                    (reuse-artifact path sources old-artifacts changed
+                      (lambda () (render-page page)))))
+                (pages forest))))
+    (cons index-artifact page-artifacts)))
 
 (define* (make-gemtext-options #:key
                                (prefix #f)
@@ -410,4 +435,7 @@
                     (text-index-path routes)
                     backmatter reference-taxon-id rules-id
                     (site-title (site forest)) (site-description (site forest)))
-              (interface-cache-identity locale messages))))))))
+              (interface-cache-identity locale messages)))
+          #:render-changed
+          (lambda (forest changed _dirty-paths old-artifacts)
+            (render-gemtext-changed forest options changed old-artifacts)))))))
