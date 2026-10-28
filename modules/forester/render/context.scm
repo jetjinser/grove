@@ -90,6 +90,9 @@ dynamic locale or message parameters."
   (unless (or (not og-image-alt) (string? og-image-alt))
     (error "render context Open Graph image alt text must be a string or #f"
            og-image-alt))
+  (unless (or (not default-locale) (non-empty-string? default-locale))
+    (error "render context default locale must be a non-empty tag or #f"
+           default-locale))
   (when (eq? translation-groups derive-translation-groups-later)
     (set! translation-groups (derive-translation-groups (pages forest))))
   (unless (valid-translation-groups? translation-groups)

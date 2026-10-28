@@ -95,6 +95,12 @@
   (test-error "site context validates renderer locale options"
     #t
     (make-site-render-context forest #:locale 'not-a-locale))
+  (test-error "site context validates default locale type"
+    #t
+    (make-site-render-context forest #:default-locale 42))
+  (test-error "site context rejects an empty default locale"
+    #t
+    (make-site-render-context forest #:default-locale ""))
   (test-error "site context validates message catalogs"
     #t
     (make-site-render-context forest #:messages 'not-a-catalog)))
