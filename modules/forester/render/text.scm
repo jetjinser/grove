@@ -16,7 +16,7 @@
   #:use-module (grove render rules)
   #:use-module (grove render context)
   #:use-module (forester render text routes)
-  #:use-module (forester backmatter)
+  #:use-module (forester private backmatter)
   #:use-module (forester private render labels)
   #:use-module (forester private entity-uri)
   #:use-module (forester render context)

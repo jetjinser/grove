@@ -25,6 +25,19 @@
 
 (test-begin "forester accessibility")
 
+(test-assert "backmatter validation stays behind its public defaults"
+  (let ((public
+          (module-public-interface (resolve-module '(forester backmatter))))
+        (private
+          (module-public-interface
+            (resolve-module '(forester private backmatter)))))
+    (and (module-variable public 'default-backmatter-sections)
+         (module-variable public 'default-reference-taxon-id)
+         (not (module-variable public 'validate-backmatter-sections))
+         (not (module-variable public 'check-reference-taxon-id))
+         (module-variable private 'validate-backmatter-sections)
+         (module-variable private 'check-reference-taxon-id))))
+
 (define (a11y-forest)
   (make-forest
     (make-site

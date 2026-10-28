@@ -5,7 +5,7 @@
 (define-module (forester private render labels)
   #:use-module (grove i18n)
   #:use-module (grove render context)
-  #:use-module (forester backmatter)
+  #:use-module (forester private backmatter)
   #:export (resolve-interface-locale
             resolve-interface-catalog
             interface-cache-identity
