@@ -55,10 +55,16 @@
       (let ((value (thunk)))
         (cond (value value)
               ((>= (get-internal-real-time) deadline)
-               (write-file (string-append root "-failure.log")
-                 (string-append (read-file (string-append root "/.stdout"))
-                                (read-file (string-append root "/.stderr"))))
-               (error "preview test timed out"))
+               (let* ((logs
+                       (string-append
+                         (read-file (string-append root "/.stdout"))
+                         (read-file (string-append root "/.stderr"))))
+                      (failure-path (string-append root "-failure.log"))
+                      (tail (substring logs
+                                       (max 0 (- (string-length logs) 4000)))))
+                 (write-file failure-path logs)
+                 (error "preview test timed out; captured logs are in ~a:\n~a"
+                        failure-path tail)))
               (else (usleep 50000) (loop)))))))
 (define (request path)
   (parameterize ((current-http-proxy #f))
