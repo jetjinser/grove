@@ -42,7 +42,7 @@
        (path (list 1 2))
        (premises (list (list 'scalar 'x)))
        (message (string-copy "invalid input"))
-       (diagnostic (make-math-diagnostic 'step 'rule path 'invalid premises message))
+       (diagnostic (make-math-diagnostic 1 'rule path 'invalid premises message))
        (diagnostics (list diagnostic))
        (report (make-math-report 'calculation candidate 'normal-form limits 0
                                  #:diagnostics diagnostics #:passes passes)))
@@ -80,6 +80,14 @@
   (make-math-report 'bad '() 'normal-form '() 0 #:passes '(not-a-report)))
 (test-error "math reports reject negative state counts" #t
   (make-math-report 'bad '() 'normal-form '() -1))
+(test-error "math diagnostics reject non-positive step indexes" #t
+  (make-math-diagnostic 0 #f '() 'invalid '() "invalid"))
+(test-error "math diagnostics reject malformed paths" #t
+  (make-math-diagnostic #f #f '(1 -1) 'invalid '() "invalid"))
+(test-error "math diagnostics reject non-symbol codes" #t
+  (make-math-diagnostic #f #f '() "invalid" '() "invalid"))
+(test-error "math diagnostics reject non-string messages" #t
+  (make-math-diagnostic #f #f '() 'invalid '() #f))
 
 (let* ((verification (math-verify-derivation (make-math-derivation '() '() '())))
        (diagnostics (math-verification-diagnostics verification)))

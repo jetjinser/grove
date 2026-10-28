@@ -41,6 +41,9 @@
 
 (define* (make-math-report name candidates reason limits states
                           #:key (diagnostics '()) (passes '()) (audit #f))
+  "Construct a report from a symbolic NAME and REASON, derivation CANDIDATES,
+LIMITS, and a non-negative STATES count. DIAGNOSTICS and PASSES contain math
+diagnostic and report values; AUDIT is an optional opaque evidence value."
   (unless (symbol? name)
     (error "math report name must be a symbol" name))
   (unless (and (list? candidates) (every math-derivation? candidates))
