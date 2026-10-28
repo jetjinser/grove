@@ -69,7 +69,11 @@ paths, and `#:configuration` for state Grove cannot observe through the model
 and tracked project files.
 `make-render-rules` is narrower: it changes the interpretation of content kinds
 inside an existing renderer. See the [customization guide](customizing.md) for
-how these layers compose.
+how these layers compose. Forester renderers can use `(forester site)`'s
+`tree-occurrences`, `tree-occurrence-target`, `page-source-paths`,
+`source-paths`, and `used-codepoints` projections instead of rebuilding tree
+structure, dependency closure, or character inventories; see
+[tree composition](forester-composition.md#renderer-queries).
 
 ## Site model
 

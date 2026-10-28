@@ -117,6 +117,28 @@ input or returned data therefore cannot change a composition after construction.
 See [linked notes](../examples/linked-notes/project.scm) for an executable
 composition example.
 
+## Renderer queries
+
+`(forester site)` exposes a few projections for custom renderers and reports.
+`tree-occurrences` returns a page's direct subtree and transclusion display
+elements in body order; it stops at each displayed tree boundary. Use
+`tree-occurrence-target` to read the target tree ID consistently across
+subtrees and transclusions.
+
+Use `page-source-paths` for the dependency closure of a page artifact and
+`source-paths` for an aggregate artifact that depends on the whole Forest. The
+page closure includes composed tree sources, page content provenance, linked
+targets and context pages that affect rendered output, plus project modules
+and other site sources. If a page in the closure contains `@forest-query`, the
+closure conservatively expands to all Forest sources because the query may
+depend on any page. Attach these paths to custom artifacts so Grove can
+invalidate and reuse them correctly.
+
+`used-codepoints` returns the sorted set of characters in the site title, page
+titles, authored content, and reference labels. It uses plain-text math as a
+coverage superset and omits built-in interface strings; use it as input to a
+font coverage or subset-generation step, then add any project UI text yourself.
+
 ## Styles
 
 The renderer's `#:style` defaults to `default-html-style` from
