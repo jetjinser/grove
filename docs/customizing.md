@@ -38,6 +38,11 @@ HTML, RSS, and sitemap so their links agree. Set the absolute HTTP(S) site base
 with `#:site-url`; it may include a path prefix but cannot include a query or
 fragment.
 
+HTML, RSS, and sitemap renderers infer the home page from the site when the
+routes omit it. For lower-level integrations that need to derive a routes value
+with an explicit home page while preserving its other settings, use
+`html-routes-with-home-page` from `(grove render html routes)`.
+
 Each renderer has its own artifact-cache identity. A plain procedure, a
 renderer that opts out with `#:cache? #f`, or one with opaque rules and no
 `#:rules-id` reruns on each build; cacheable peers can still reuse their
