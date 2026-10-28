@@ -186,7 +186,8 @@
 
 Provide SITE-URL directly or through SETTINGS; at least one must contain an
 absolute HTTP(S) origin. Put a deployment path prefix in ROUTES,
-not SITE-URL. SITE-URL overrides the origin in SETTINGS."
+not SITE-URL. Explicit SITE-URL and LANGUAGE values override the corresponding
+SETTINGS defaults."
   (let-values (((site-url feed-path routes stylesheet-url stylesheet-type language)
                 (normalize-rss-options settings site-url feed-path routes
                                        stylesheet-url stylesheet-type language)))

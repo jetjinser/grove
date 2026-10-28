@@ -47,13 +47,17 @@ direct `render-*` functions already return the feed or sitemap artifacts.
 The normal Forester project always includes HTML. `#:additional-renderers`
 adds peer formats and projections; a `make-site-project` instead receives the
 complete renderer list through `#:renderers`. A shared `make-site-settings`
-value keeps the HTML, RSS, and sitemap origin and default locale aligned.
+value supplies shared defaults for the HTML, RSS, and sitemap origin and
+default locale. Explicit renderer options override those defaults locally, so
+omit per-renderer overrides when the outputs should stay aligned.
 `#:site-url` is an absolute HTTP(S) origin; put a deployment path prefix in the
 shared HTML routes' `#:url-prefix` so generated HTML links and absolute feed,
 sitemap, and canonical URLs agree. `make-site-settings` may omit the origin
 when only the locale is shared; RSS and sitemap still require an origin,
 supplied through the shared settings or directly to either renderer with
-`#:site-url`.
+`#:site-url`. RSS `#:language` and sitemap `#:default-locale` can likewise
+override their shared default when one output needs a different locale. HTML
+options can override `#:locale`, `#:default-locale`, and `#:site-url` locally.
 
 When routes omit a home page, HTML, RSS, and sitemap renderers infer it from the
 analyzed site's `#:home`. You do not need to repeat the home tree ID in each

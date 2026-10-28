@@ -905,8 +905,10 @@ to the lane, and an in-place numbered marker links to it."
                             (language-switcher? #t))
   "Build a validated HTML-renderer configuration snapshot.
 
-PRESENTATION contains HTML style, element rules, and static site presentation data.
-Entry points take this value with #:options."
+PRESENTATION contains HTML style, element rules, and static site presentation
+data. SETTINGS supplies default locale and site URL values; explicit LOCALE,
+DEFAULT-LOCALE, and SITE-URL keywords override those values. Entry points take
+this value with #:options."
   (let* ((highlighters (snapshot-data highlighters))
          (backmatter (snapshot-data backmatter))
          (reference-taxon-id (snapshot-data reference-taxon-id))

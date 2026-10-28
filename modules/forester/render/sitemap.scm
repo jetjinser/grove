@@ -144,7 +144,8 @@
 
 Provide SITE-URL directly or through SETTINGS; at least one must contain an
 absolute HTTP(S) origin. Put a deployment path prefix in ROUTES,
-not SITE-URL. SITE-URL overrides the origin in SETTINGS."
+not SITE-URL. Explicit SITE-URL and DEFAULT-LOCALE values override the
+corresponding SETTINGS defaults."
   (let-values (((site-url sitemap-path routes default-locale)
                 (normalize-sitemap-options settings site-url sitemap-path
                                            routes default-locale)))
