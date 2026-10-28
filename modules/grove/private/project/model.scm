@@ -217,8 +217,10 @@ OUTPUT-DIRECTORY. When COLLECT-SOURCES is absent, Grove recursively collects
 regular files from SOURCE-DIRECTORY using SOURCE-FILTER on each basename.
 When supplied, COLLECT-SOURCES determines the ordered source path list instead;
 SOURCE-DIRECTORY may still be supplied as the default destination for
-CREATE-PROJECT-SOURCE. PREPARE returns additional tracked paths before reading;
-ANALYZE receives a project context;
+CREATE-PROJECT-SOURCE. PREPARE returns paths tracked before reading; they are
+not passed to READ-SOURCE. EXTRA-SOURCES declares fixed project dependencies;
+they are tracked and exposed in the project context, but are not collected or
+read as content. ANALYZE receives a project context;
 each RENDERER receives the analyzed model and returns artifacts. PIPELINES
 derive artifacts from declared files independently of the model. CACHE? controls
 document, renderer, and pipeline cache use. Plain renderer procedures run on

@@ -40,7 +40,9 @@ standard HTML renderer; HTML-RULES-ID identifies opaque HTML rules for renderer
 caching. ADDITIONAL-RENDERERS adds peer formats and projections; TRANSFORMS
 compose content changes before Forester analysis. COLLECT-SOURCES can replace
 directory traversal while retaining the standard reader and analysis stages.
-EXTRA-SOURCES declares additional project input files."
+PREPARE returns tracked paths such as loaded modules, not tree pages.
+EXTRA-SOURCES declares fixed project dependencies; neither set is read as
+Forester page content."
   (unless (and (string? home) (> (string-length home) 0))
     (error "Forester project requires a non-empty home tree ID" home))
   (make-site-project
