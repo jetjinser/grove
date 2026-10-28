@@ -555,9 +555,10 @@ verbatim, for example `data-syntax="function.builtin"`. Select a category and
 its subcategories with `[data-syntax="function"], [data-syntax^="function."]`.
 The code tag carries `data-language="scheme"`; class remains available for
 author styles. Text output preserves the
-source without highlight markup. The `grove-highlights` Nix package includes
-the grammar, its matching upstream query, and the grammar's license; their
-version is fixed by `nix/flake.lock`.
+source without highlight markup. Both the Nix package and Guix development
+manifest provide `grove-highlights`, including the grammar, its matching
+upstream query, and the grammar's license. Nix gets the grammar revision from
+`flake.lock`; Guix gets it from the channel revision in `channels.scm`.
 
 ## HTML presentation and options
 
