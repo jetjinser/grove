@@ -22,6 +22,7 @@
             make-site
             site-pages
             site-sources
+            site-source-paths
             site-title
             site-description
             site-home))
@@ -88,6 +89,23 @@ project code."
 
 (define (site-sources site)
   (snapshot-data (site-sources/raw site)))
+
+(define (site-source-paths site)
+  "Return the ordered source closure for artifacts derived from SITE.
+
+This combines site-wide dependencies, each page's primary source, and source
+paths recorded in page content. It describes artifact dependencies; it does
+not add paths to a project's tracked input set."
+  (unless (site? site)
+    (error "site-source-paths requires a site" site))
+  (delete-duplicates
+    (append (site-sources site)
+            (filter-map site-page-source (site-pages site))
+            (append-map
+              (lambda (page)
+                (content-source-paths (site-page-document page)))
+              (site-pages site)))
+    string=?))
 
 (define (site-description site)
   (snapshot-data (site-description/raw site)))

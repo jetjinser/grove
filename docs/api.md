@@ -21,6 +21,7 @@ the work; drop lower only when you need to replace part of its behavior.
 | Parse Scribble syntax in a custom reader | `(language scribble parser)` → `scribble-parse`, `scribble-read` | to evaluate a document into Content IR in a supplied Guile module, use `(language scribble spec)` → `scribble-evaluate-document`; standard pages should use the Grove or Forester reader |
 | Build a site from page documents | `(grove project site)` → `make-site-project` | the input is not a page or the model is project-specific |
 | Assemble a page model directly | `(grove site)` → `make-site-page`, `make-site` | the project should collect and read source pages itself |
+| Declare all sources of a site-derived artifact | `(grove site)` → `site-source-paths` | attach the result to an artifact's `#:sources`; declare extra files to the project separately when Grove must track them |
 | Build an arbitrary file-based model | `(grove project)` → `make-project` | custom collection, reading, analysis, artifacts, or execution options are needed |
 | Validate a project without publishing | `(grove project)` → `check-project` | use `build-project` to publish outputs or `build-project/report` to inspect source changes and cache status |
 | Load a project file from a Scheme host | `(grove project load)` → `call-with-loaded-project` | the host already owns the project value; construct it with `(grove project)` |
@@ -101,7 +102,12 @@ page-based model directly. A site page holds an ID, title, Content IR document,
 an optional `#:source` path, and optional `#:metadata`. The site holds the
 ordered pages, descriptive fields, and an optional home page ID. Its `#:sources`
 list declares site-wide dependencies that renderers may attach to aggregate
-outputs; it does not configure project input collection. Page IDs must be
+outputs; it does not configure project input collection. `site-sources` returns
+only those site-wide dependencies. `site-source-paths` combines them with each
+page's primary source and source paths recorded in page content, providing a
+convenient dependency closure for aggregate artifacts. It does not add
+otherwise unknown paths to a project's tracked input set; use `#:extra-sources`,
+renderer `#:dependencies`, or the input tracker for that. Page IDs must be
 unique, and a supplied home ID must name one of the pages. `make-site-project`
 builds these values from collected inputs; use the constructors directly when
 synthesizing pages or composing a custom analysis stage.

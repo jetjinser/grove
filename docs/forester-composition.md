@@ -129,7 +129,9 @@ the same validated value type as `(forester composition)`.
 
 Use `(page-source-paths forest page-id)` for the dependency closure of a page
 artifact and `(source-paths forest)` for an aggregate artifact that depends
-on the whole Forest. The page closure includes composed tree sources, page
+on the whole Forest. The aggregate projection shares Grove's
+`site-source-paths` contract. The page closure additionally includes
+Forester-specific dependencies: composed tree sources, page
 content provenance, linked targets and context pages that affect rendered
 output, plus project modules and other site sources. If a page in the closure
 contains `@forest-query`, the closure conservatively expands to all Forest

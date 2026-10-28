@@ -549,15 +549,7 @@ pages that only exist inside another article's DOM."
         (term-mention-relation forest)))))
 
 (define (source-paths forest)
-  (let ((site (site forest)))
-    (delete-duplicates
-      (append (site-sources site)
-              (filter-map site-page-source (site-pages site))
-              (append-map
-                (lambda (page)
-                  (content-source-paths (site-page-document page)))
-                (site-pages site)))
-      string=?)))
+  (site-source-paths (site forest)))
 
 (define (module-paths forest)
   (let* ((site (site forest))

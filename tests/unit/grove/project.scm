@@ -226,6 +226,21 @@
   (site-sources
     (make-site '() #:sources '("theme.scm" "locale.scm" "theme.scm"))))
 
+(let* ((document
+         (make-content-document
+           (list (make-content-text "Body" #:source "content/body.scm")
+                 (make-content-layout 'newline "\n"
+                                      #:source "content/layout.scm"))
+           #:source "content/document.scm"))
+       (page (make-site-page "home" "Home" document
+                             #:source "pages/home.scm"))
+       (site (make-site (list page)
+                        #:sources '("project/theme.css" "pages/home.scm"))))
+  (test-equal "site source paths combine site, page, and content dependencies"
+    '("project/theme.css" "pages/home.scm" "content/document.scm"
+      "content/body.scm" "content/layout.scm")
+    (site-source-paths site)))
+
 (let* ((first (make-site-page "first" "First" (make-content-document '())))
        (second (make-site-page "second" "Second" (make-content-document '())))
        (site (make-site (list first second) #:home "second")))
