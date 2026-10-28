@@ -18,6 +18,7 @@
   #:use-module (forester render text routes)
   #:use-module (forester private backmatter)
   #:use-module (forester private render labels)
+  #:use-module (forester private render text-options)
   #:use-module (forester private entity-uri)
   #:use-module (forester render context)
   #:use-module (grove i18n)
@@ -318,21 +319,12 @@
                             (messages default-message-catalog)
                             (rules empty-render-rules))
   "Build a validated text-renderer configuration snapshot."
-  (let* ((prefix (snapshot-data prefix))
-         (backmatter (snapshot-data backmatter))
-         (reference-taxon-id (snapshot-data reference-taxon-id))
-         (locale (snapshot-data locale)))
-  (unless (or (not prefix) (artifact-path? prefix))
-    (error "Forester text prefix must be a relative artifact path or #f" prefix))
-  (unless (text-routes? routes)
-    (error "Forester text options require text routes" routes))
-  (validate-backmatter-sections backmatter)
-  (check-reference-taxon-id reference-taxon-id)
-  (set! locale (validate-interface-options locale messages))
-  (unless (render-rules? rules)
-    (error "Forester text options require render rules" rules))
-  (%make-text-options prefix routes backmatter
-                      reference-taxon-id locale messages rules)))
+  (call-with-values
+    (lambda ()
+      (normalize-text-renderer-options
+        "text" prefix routes backmatter reference-taxon-id locale messages
+        rules))
+    %make-text-options))
 
 (define* (site->text forest #:key (options (make-text-options)))
   (let* ((_ (require-text-options options "site->text"))

@@ -509,6 +509,8 @@
   (make-html-options #:routes #f))
 (test-error "text options reject invalid backmatter at construction" #t
   (make-text-options #:backmatter '(context context)))
+(test-error "Gemtext options reject invalid backmatter at construction" #t
+  (make-gemtext-options #:backmatter '(context context)))
 (test-error "Gemtext renderer rejects invalid cache flags at construction" #t
   (make-gemtext-renderer #:cache? 'yes))
 (test-error "HTML renderer rejects invalid cache flags at construction" #t
@@ -517,8 +519,12 @@
   (make-text-renderer #:cache? 'yes))
 (test-error "renderer options reject invalid message catalogs at construction" #t
   (make-text-options #:messages 'not-a-catalog))
+(test-error "Gemtext options reject invalid message catalogs at construction" #t
+  (make-gemtext-options #:messages 'not-a-catalog))
 (test-error "renderer options reject empty locale tags at construction" #t
   (make-text-options #:locale ""))
+(test-error "Gemtext options reject empty locale tags at construction" #t
+  (make-gemtext-options #:locale ""))
 (test-error "HTML options reject malformed root attributes at construction" #t
   (make-html-options #:html-attributes '((lang . 42))))
 (test-error "HTML options reject duplicate root attributes at construction" #t

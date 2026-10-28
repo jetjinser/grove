@@ -17,6 +17,7 @@
   #:use-module (forester render text routes)
   #:use-module (forester private backmatter)
   #:use-module (forester private render labels)
+  #:use-module (forester private render text-options)
   #:use-module (forester private render-routes)
   #:use-module (forester private entity-uri)
   #:use-module (forester render context)
@@ -368,22 +369,12 @@ default. Paths are validated by MAKE-TEXT-ROUTES."
                                (messages default-message-catalog)
                                (rules empty-render-rules))
   "Build a validated Gemtext-renderer configuration snapshot."
-  (let* ((prefix (snapshot-data prefix))
-         (backmatter (snapshot-data backmatter))
-         (reference-taxon-id (snapshot-data reference-taxon-id))
-         (locale (snapshot-data locale)))
-  (unless (or (not prefix) (artifact-path? prefix))
-    (error "Forester Gemtext prefix must be a relative artifact path or #f"
-           prefix))
-  (unless (text-routes? routes)
-    (error "Forester Gemtext options require text routes" routes))
-  (validate-backmatter-sections backmatter)
-  (check-reference-taxon-id reference-taxon-id)
-  (set! locale (validate-interface-options locale messages))
-  (unless (render-rules? rules)
-    (error "Forester Gemtext options require render rules" rules))
-  (%make-gemtext-options prefix routes backmatter
-                         reference-taxon-id locale messages rules)))
+  (call-with-values
+    (lambda ()
+      (normalize-text-renderer-options
+        "Gemtext" prefix routes backmatter reference-taxon-id locale messages
+        rules))
+    %make-gemtext-options))
 
 (define* (site->gemtext forest #:key (options (make-gemtext-options)))
   (let* ((_ (require-gemtext-options options "site->gemtext"))
