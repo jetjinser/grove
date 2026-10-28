@@ -14,7 +14,7 @@
   #:use-module (grove math rule)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
-  #:export (differentiation-input-diagnostics differentiation-stepo
+  #:export (differentiation-input-diagnostics
             math-differentiation-rules math-differentiation-rule-definitions
             make-function-chain-rule))
 
@@ -202,6 +202,3 @@
 
 (define math-differentiation-rules
   (map math-rewrite-rule-name math-differentiation-rule-definitions))
-
-(define (differentiation-stepo assumptions input output name)
-  (math-rules-stepo math-differentiation-rule-definitions assumptions input output name 'check))

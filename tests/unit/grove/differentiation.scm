@@ -2,7 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math term)
-             (grove math differentiation) (grove relation)
+             (grove math differentiation) (grove math rewrite) (grove relation)
              (grove math layout) (grove ir) (grove render html)
              (tests unit grove source-fixtures)
              (ice-9 match) (srfi srfi-1) (srfi srfi-64))
@@ -24,7 +24,8 @@
           (module-public-interface
             (resolve-module '(grove math differentiation)))))
     (every (lambda (name) (not (module-variable interface name)))
-      '(math-differentiation-rule-definitions make-function-chain-rule))))
+      '(differentiation-input-diagnostics differentiation-stepo
+        math-differentiation-rule-definitions make-function-chain-rule))))
 
 ;; Independent oracle: evaluate the original polynomial over dual numbers.
 ;; Compare its tangent with ordinary evaluation of the generated derivative.
@@ -217,10 +218,10 @@
 (test-equal "relation can verify a proposed derivative step"
   '(differentiate-product)
   (run* (rule)
-    (differentiation-stepo '((scalar (var x)))
+    (check-stepo '((scalar (var x)))
       '(differentiate (* (var x) (var x)) (var x))
       '(+ (* (differentiate (var x) (var x)) (var x))
-          (* (var x) (differentiate (var x) (var x)))) rule)))
+          (* (var x) (differentiate (var x) (var x)))) rule '())))
 (test-assert "handwritten differentiation uses the common verifier"
   (math-verification-valid?
     (φ:check-chain '("differentiate(x^3,x)" "3*x^2*differentiate(x,x)"

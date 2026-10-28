@@ -13,7 +13,7 @@
   #:use-module (grove math verification)
   #:use-module (grove math semantic-check)
   #:use-module (grove math audit)
-  #:use-module (grove math differentiation)
+  #:use-module (grove math private differentiation)
   #:use-module (grove math partial)
   #:use-module (grove math integration)
   #:use-module (grove math private polynomial)

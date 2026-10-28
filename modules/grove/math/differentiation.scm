@@ -3,6 +3,4 @@
 
 (define-module (grove math differentiation)
   #:use-module (grove math private differentiation)
-  #:re-export (differentiation-input-diagnostics
-               differentiation-stepo
-               math-differentiation-rules))
+  #:re-export (math-differentiation-rules))
