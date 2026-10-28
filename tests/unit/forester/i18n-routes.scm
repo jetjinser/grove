@@ -53,6 +53,20 @@
   "/my%20notes/%3F/x.html"
   (html-asset-url (make-html-routes #:url-prefix "/my notes/?/") "x.html"))
 
+(let* ((routes
+         (make-html-routes
+           #:page-path (lambda (id) (string-append "pages/" id ".html"))
+           #:index-path "home.html"
+           #:url-prefix "/docs/"))
+       (with-home (html-routes-with-home-page routes "home")))
+  (test-equal "HTML routes can derive an explicit home without losing settings"
+    '(#f "home" "home.html" "pages/guide.html" "/docs/home.html")
+    (list (html-home-page routes)
+          (html-home-page with-home)
+          (html-page-path with-home "home")
+          (html-page-path with-home "guide")
+          (html-page-url with-home "home"))))
+
 (let* ((target-link
          (make-content-element 'link '("Target")
            #:properties '((target . "page with space"))))
