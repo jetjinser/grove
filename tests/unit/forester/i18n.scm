@@ -70,9 +70,38 @@
 (test-equal "common scripts resolve left-to-right"
   "ltr" (locale-dir (make-locale "sr-Latn")))
 
+(test-equal "Unicode locale extensions do not become script subtags"
+  "en-u-nu-latn" (locale-tag (make-locale "en-u-nu-Latn")))
+(test-equal "extensions preserve their position after the language core"
+  "en-Latn-US-u-ca-gregory"
+  (locale-tag (make-locale "en-Latn-US-u-ca-gregory")))
+(test-equal "extension sequences use canonical singleton order"
+  "en-t-foo-u-ca-gregory"
+  (locale-tag (make-locale "en-u-ca-gregory-t-foo")))
+(test-equal "extension scripts do not affect text direction"
+  "ltr" (locale-dir (make-locale "en-u-nu-Arab")))
+(test-equal "private-use subtags are normalized as private use"
+  "en-x-us" (locale-tag (make-locale "en-x-US")))
+(test-equal "private-use-only tags keep one private-use marker"
+  "x-foo" (locale-tag (make-locale "X-Foo")))
+(test-equal "numeric regions are not confused with variants"
+  "es-419" (locale-tag (make-locale "es-419")))
+(test-equal "grandfathered tags are preserved"
+  "i-default" (locale-tag (make-locale "I-DEFAULT")))
+(test-equal "Chinese canonicalization retains extended language subtags"
+  "zh-cmn-Hans" (locale-tag (make-locale "ZH-cmn")))
+
 (test-error "locale tags reject spaces" #t (make-locale "not a tag"))
 (test-error "locale tags reject empty strings" #t (make-locale ""))
 (test-error "locale tags reject non-strings" #t (make-locale 'en))
+(test-error "locale tags reject incomplete extensions" #t
+  (make-locale "en-u"))
+(test-error "locale tags reject duplicate extension singletons" #t
+  (make-locale "en-u-ca-a-foo-u-nu-latn"))
+(test-error "locale tags reject duplicate variants" #t
+  (make-locale "sl-rozaj-rozaj"))
+(test-error "locale tags reject malformed variants" #t
+  (make-locale "en-rozaj-abc"))
 
 ;;; Matching keys
 

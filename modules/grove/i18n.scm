@@ -61,23 +61,113 @@
     "Hani" "Hans" "Hant" "Hira" "Jpan" "Kana" "Khmr" "Knda" "Kore" "Laoo"
     "Latn" "Mlym" "Mong" "Mymr" "Sinh" "Taml" "Telu" "Thai" "Tibt"))
 
-(define (script-subtag subtags)
-  (find (lambda (subtag)
-          (and (= (string-length subtag) 4)
-               (string-every char-set:letter subtag)))
-        subtags))
+(define (ascii-alpha? char)
+  (or (and (char<=? #\a char) (char<=? char #\z))
+      (and (char<=? #\A char) (char<=? char #\Z))))
 
-(define (valid-locale-tag? tag)
+(define (ascii-digit? char)
+  (and (char<=? #\0 char) (char<=? char #\9)))
+
+(define (ascii-alphanumeric? char)
+  (or (ascii-alpha? char) (ascii-digit? char)))
+
+(define (subtag-matches? subtag predicate min-length max-length)
+  (and (<= min-length (string-length subtag) max-length)
+       (string-every predicate subtag)))
+
+(define (language-subtag? subtag)
+  (or (subtag-matches? subtag ascii-alpha? 2 3)
+      (subtag-matches? subtag ascii-alpha? 4 4)
+      (subtag-matches? subtag ascii-alpha? 5 8)))
+
+(define (extlang-subtag? subtag)
+  (subtag-matches? subtag ascii-alpha? 3 3))
+
+(define (script-subtag? subtag)
+  (subtag-matches? subtag ascii-alpha? 4 4))
+
+(define (region-subtag? subtag)
+  (or (subtag-matches? subtag ascii-alpha? 2 2)
+      (subtag-matches? subtag ascii-digit? 3 3)))
+
+(define (variant-subtag? subtag)
+  (or (subtag-matches? subtag ascii-alphanumeric? 5 8)
+      (and (subtag-matches? subtag ascii-alphanumeric? 4 4)
+           (ascii-digit? (string-ref subtag 0)))))
+
+(define grandfathered-tags
+  '("en-gb-oed" "i-ami" "i-bnn" "i-default" "i-enochian" "i-hak"
+    "i-klingon" "i-lux" "i-mingo" "i-navajo" "i-pwn" "i-tao" "i-tay"
+    "i-tsu" "sgn-be-fr" "sgn-be-nl" "sgn-ch-de" "art-lojban"
+    "cel-gaulish" "no-bok" "no-nyn" "zh-guoyu" "zh-hakka" "zh-min"
+    "zh-min-nan" "zh-xiang"))
+
+(define (parse-locale-tag tag)
+  "Parse the structural BCP 47 grammar without consulting the IANA registry.
+Return language, extlangs, script, region, variants, extensions, and private
+use subtags, or #f when TAG is not well-formed."
   (and (non-empty-string? tag)
        (let ((subtags (string-split tag #\-)))
          (and (every (lambda (subtag)
-                       (and (not (string-null? subtag))
-                            (string-every char-set:letter+digit subtag)))
+                       (subtag-matches? subtag ascii-alphanumeric? 1 8))
                      subtags)
-              (let ((primary (car subtags)))
-                (and (<= (string-length primary) 8)
-                     (>= (string-length primary) 1)
-                     (string-every char-set:letter primary)))))))
+              (let ((lower (map string-downcase subtags)))
+                (cond
+                 ((member (string-join lower "-") grandfathered-tags)
+                  (list (car lower) '() #f #f '() '() '()))
+                 ((equal? (car lower) "x")
+                  (and (pair? (cdr lower))
+                       (list "x" '() #f #f '() '() (cdr lower))))
+                 ((not (language-subtag? (car lower))) #f)
+                 (else
+                  (let* ((language (car lower))
+                         (rest (cdr lower))
+                         (extlangs (if (<= (string-length language) 3)
+                                       (take-while extlang-subtag? rest)
+                                       '()))
+                         (rest (drop rest (length extlangs)))
+                         (script (and (pair? rest) (script-subtag? (car rest))
+                                      (car rest)))
+                         (rest (if script (cdr rest) rest))
+                         (region (and (pair? rest) (region-subtag? (car rest))
+                                      (car rest)))
+                         (rest (if region (cdr rest) rest))
+                         (variants (take-while variant-subtag? rest))
+                         (rest (drop rest (length variants))))
+                    (and (= (length variants) (length (delete-duplicates variants)))
+                     (let extension-loop ((rest rest) (seen '()) (extensions '()))
+                      (cond
+                       ((null? rest)
+                        (list language extlangs script region variants
+                              (reverse extensions) '()))
+                       ((and (string=? (car rest) "x") (pair? (cdr rest)))
+                        (list language extlangs script region variants
+                              (reverse extensions) (cdr rest)))
+                       ((and (= (string-length (car rest)) 1)
+                             (not (string=? (car rest) "x")))
+                        (let* ((singleton (car rest))
+                               (tail (cdr rest))
+                               (values (take-while
+                                        (lambda (part)
+                                          (>= (string-length part) 2))
+                                        tail)))
+                          (and (pair? values)
+                               (not (member singleton seen))
+                               (extension-loop
+                                (drop tail (length values))
+                                (cons singleton seen)
+                                (cons (cons singleton values) extensions)))))
+                       (else #f))))))))))))
+
+(define (valid-locale-tag? tag)
+  (and (string? tag) (if (parse-locale-tag tag) #t #f)))
+
+(define (canonical-extensions extensions)
+  (append-map (lambda (extension)
+                (map string-downcase extension))
+              (sort extensions
+                    (lambda (left right)
+                      (string<? (car left) (car right))))))
 
 (define-record-type <locale>
   (%make-locale tag lang dir)
@@ -95,17 +185,16 @@
 (define (locale-dir locale)
   (string-copy (locale-dir/raw locale)))
 
-(define (resolve-direction subtags lang)
+(define (resolve-direction script lang)
   "Derive a text direction from a script subtag, then from the language."
-  (let ((script (script-subtag subtags)))
-    (cond
-      ((and script (member (string-titlecase script) rtl-scripts)) "rtl")
-      ((and script (member (string-titlecase script) ltr-scripts)) "ltr")
-      ((member lang rtl-languages) "rtl")
-      (else "ltr"))))
+  (cond
+   ((and script (member (string-titlecase script) rtl-scripts)) "rtl")
+   ((and script (member (string-titlecase script) ltr-scripts)) "ltr")
+   ((member lang rtl-languages) "rtl")
+   (else "ltr")))
 
 (define (canonical-locale-tag tag)
-  "Return TAG in canonical BCP 47 form.
+  "Return TAG with BCP 47 casing and Grove's Chinese aliases.
 
 Language subtags are lowercased, scripts title-cased, and regions
 uppercased.  Chinese takes a script and drops the redundant region:
@@ -113,30 +202,47 @@ zh-CN/zh-SG/zh-MY and bare zh become zh-Hans, while zh-TW/zh-HK/zh-MO
 become zh-Hant."
   (unless (string? tag)
     (error "locale tag must be a string" tag))
-  (let* ((subtags (string-split (string-trim-both tag) #\-))
-         (lang (string-downcase (car subtags)))
-         (rest (cdr subtags))
-         (script (find (lambda (subtag) (= (string-length subtag) 4)) rest))
-         (region (find (lambda (subtag)
-                         (or (= (string-length subtag) 2)
-                             (string-every char-set:digit subtag)))
-                       rest))
-         (variants (remove (lambda (subtag)
-                             (or (equal? subtag script) (equal? subtag region)))
-                           rest)))
-    (if (string=? lang "zh")
+  (let* ((tag (string-trim-both tag))
+         (subtags (string-split tag #\-))
+         (lower-tag (string-join (map string-downcase subtags) "-"))
+         (parsed (parse-locale-tag tag))
+         (lang (list-ref parsed 0))
+         (extlangs (list-ref parsed 1))
+         (script (list-ref parsed 2))
+         (region (list-ref parsed 3))
+         (variants (list-ref parsed 4))
+         (extensions (list-ref parsed 5))
+         (private-use (list-ref parsed 6)))
+    (cond
+     ((member lower-tag grandfathered-tags) lower-tag)
+     ((string=? lang "x")
+      (string-join (cons "x" private-use) "-"))
+     ((string=? lang "zh")
         (let ((script (or (and script (string-titlecase script))
                           (if (member (and region (string-upcase region))
                                       '("TW" "HK" "MO"))
                               "Hant"
                               "Hans"))))
-          (string-join (append (list lang script) variants) "-"))
-        (string-join
-          (append (list lang)
-                  (if script (list (string-titlecase script)) '())
-                  (if region (list (string-upcase region)) '())
-                  variants)
-          "-"))))
+          (string-join
+           (append (list lang)
+                   (map string-downcase extlangs)
+                   (list script)
+                   (map string-downcase variants)
+                   (canonical-extensions extensions)
+                   (if (pair? private-use) (cons "x" private-use) '()))
+           "-")))
+     (else
+      (string-join
+         (append (list lang)
+                 (map string-downcase extlangs)
+                 (if script (list (string-titlecase script)) '())
+                 (if region (list (if (string-every ascii-digit? region)
+                                      region
+                                      (string-upcase region))) '())
+                 (map string-downcase variants)
+                 (canonical-extensions extensions)
+                 (if (pair? private-use) (cons "x" private-use) '()))
+         "-")))))
 
 (define (make-locale tag)
   "Normalize a BCP 47-style language tag into a locale with a text direction."
@@ -144,11 +250,11 @@ become zh-Hant."
     (error "locale tag must be a string" tag))
   (let ((tag (string-trim-both tag)))
     (unless (valid-locale-tag? tag)
-      (error "locale tag must be a BCP 47-style language tag" tag))
+      (error "locale tag must be a well-formed BCP 47 language tag" tag))
     (let* ((tag (canonical-locale-tag tag))
-           (subtags (string-split tag #\-))
-           (lang (string-downcase (car subtags)))
-           (dir (resolve-direction subtags lang)))
+           (parsed (parse-locale-tag tag))
+           (lang (car parsed))
+           (dir (resolve-direction (list-ref parsed 2) lang)))
       (%make-locale tag lang dir))))
 
 (define (locale-html-attributes locale)
