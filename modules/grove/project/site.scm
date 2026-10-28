@@ -41,8 +41,10 @@ with READ-PAGE and OUTPUT-DIRECTORY. When both source options are supplied,
 COLLECT-SOURCES determines the inputs and SOURCE-DIRECTORY remains available
 as the default source-creation destination. PREPARE returns tracked paths not
 read as pages; EXTRA-SOURCES declares fixed project dependencies, also not
-read as pages. RENDERERS is the complete output set; this general constructor
-installs no format-specific renderer."
+read as pages or added to the site's source list. Include an extra source in
+an artifact's dependencies only when that artifact actually depends on it.
+RENDERERS is the complete output set; this general constructor installs no
+format-specific renderer."
   ;;     These values are captured by the project callbacks below. Copy their
   ;;     declarative containers now, while keeping caller procedures shared.
   (set! title (snapshot-data title))

@@ -676,6 +676,7 @@
         (let* ((render-count 0)
                (reader-count 0)
                (analysis-count 0)
+               (observed-site-sources '())
                (render
                  (lambda (site)
                    (set! render-count (+ render-count 1))
@@ -700,6 +701,7 @@
                    #:analyze
                    (lambda (site)
                      (set! analysis-count (+ analysis-count 1))
+                     (set! observed-site-sources (site-sources site))
                      site)
                    #:renderers (list cached-renderer)
                    #:output-directory cache-output-directory)))
@@ -713,7 +715,15 @@
             (test-assert "extra source files appear in initial source report"
               (member external-source-path
                       (build-report-added-sources first)
-                      string=?)))
+                      string=?))
+            (test-assert "site sources include collected page inputs"
+              (every (lambda (path)
+                       (member path observed-site-sources string=?))
+                     (list (string-append source-directory "/first.plant")
+                           (string-append source-directory "/third.plant"))))
+            (test-assert "extra sources stay outside the site source list"
+              (not (member external-source-path
+                           observed-site-sources string=?))))
           (with-fluids ((%default-port-encoding "ISO-8859-1"))
             (let ((second (build-project/report cached-project)))
               (test-equal "UTF-8 cache reuse is independent of default port encoding"
