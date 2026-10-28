@@ -44,6 +44,8 @@ as the default source-creation destination. PREPARE returns tracked paths not
 read as pages; EXTRA-SOURCES declares fixed project dependencies, also not
 read as pages or added to the site's source list. Include an extra source in
 an artifact's dependencies only when that artifact actually depends on it.
+TRANSFORMS run in list order on each page's Content IR document before
+ANALYZE.
 RENDERERS is the complete output set; this general constructor installs no
 format-specific renderer."
   ;;     These values are captured by the project callbacks below. Copy their

@@ -38,8 +38,9 @@
 HOME is the tree ID rendered at the site index. HTML-OPTIONS configures the
 standard HTML renderer; HTML-RULES-ID identifies opaque HTML rules for renderer
 caching. ADDITIONAL-RENDERERS adds peer formats and projections; TRANSFORMS
-compose content changes before Forester analysis. COLLECT-SOURCES can replace
-directory traversal while retaining the standard reader and analysis stages.
+run in list order on each page before Forester analysis. COLLECT-SOURCES can
+replace directory traversal while retaining the standard reader and analysis
+stages.
 PREPARE returns tracked paths such as loaded modules, not tree pages.
 EXTRA-SOURCES declares fixed project dependencies; neither set is read as
 Forester page content."
