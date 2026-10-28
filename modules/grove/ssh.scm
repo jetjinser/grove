@@ -37,8 +37,8 @@
 
 (define (read-authorized-keys path)
   "Read authorized public keys from PATH as base64 blobs."
-  (unless (non-empty-string? path)
-    (error "authorized keys require a non-empty file path" path))
+  (unless (filesystem-path-string? path)
+    (error "authorized keys require a valid non-empty file path" path))
   (call-with-input-file path
     (lambda (port)
       (let loop ((keys '()))
@@ -169,8 +169,8 @@
 
 TYPE is a key symbol understood by (ssh key), BITS its size where the
 type has one. Refuses to overwrite an existing key unless FORCE is #t."
-  (unless (non-empty-string? path)
-    (error "host key requires a file path" path))
+  (unless (filesystem-path-string? path)
+    (error "host key requires a valid file path" path))
   (unless (and (exact-integer? bits) (> bits 0))
     (error "host key bit count must be a positive integer" bits))
   (unless (symbol? type)

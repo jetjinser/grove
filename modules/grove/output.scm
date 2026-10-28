@@ -44,8 +44,7 @@ An empty list means the artifact is known to have no file dependencies."
   (snapshot-data (artifact:artifact-sources/raw artifact)))
 
 (define (artifact-path? path)
-  (and (non-empty-string? path)
-       (not (string-index path #\nul))
+  (and (filesystem-path-string? path)
        (every (lambda (part)
                 (and (not (string-null? part))
                      (not (member part '("." "..")))))
@@ -55,7 +54,7 @@ An empty list means the artifact is known to have no file dependencies."
   (unless (artifact-path? path)
     (error "artifact requires a relative path" path))
   (unless (or (not sources)
-              (and (list? sources) (every non-empty-string? sources)))
+              (and (list? sources) (every filesystem-path-string? sources)))
     (error "artifact sources must be #f or a list of paths" sources))
   (when (and sources
              (not (= (length sources)

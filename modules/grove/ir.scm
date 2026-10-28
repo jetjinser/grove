@@ -60,7 +60,7 @@
   (snapshot-data (content-text-source/raw content)))
 
 (define (valid-content-source? source)
-  (or (not source) (non-empty-string? source)))
+  (or (not source) (filesystem-path-string? source)))
 
 (define (check-content-source who source)
   (unless (valid-content-source? source)
@@ -78,7 +78,7 @@
        (let ((file (assq 'file location))
              (line (assq 'line location))
              (column (assq 'column location)))
-         (and (or (not file) (non-empty-string? (cdr file)))
+         (and (or (not file) (filesystem-path-string? (cdr file)))
               (or (not line)
                   (and (exact-integer? (cdr line)) (positive? (cdr line))))
               (or (not column)

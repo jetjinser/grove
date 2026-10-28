@@ -46,11 +46,12 @@
                                    #:key (output-directory #f))
   "Load FILENAME and call PROCEDURE with its project in the project directory.
 OUTPUT-DIRECTORY, when supplied, is resolved relative to the caller's directory."
-  (unless (non-empty-string? filename)
+  (unless (filesystem-path-string? filename)
     (error "project filename must be a non-empty string" filename))
   (unless (procedure? procedure)
     (error "project loader requires a procedure" procedure))
-  (unless (or (not output-directory) (non-empty-string? output-directory))
+  (unless (or (not output-directory)
+              (filesystem-path-string? output-directory))
     (error "project output directory must be a non-empty string or #f"
            output-directory))
   (let* ((caller-directory (getcwd))

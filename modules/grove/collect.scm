@@ -39,7 +39,7 @@ symlinks, and special files are skipped."
                string<?)))
   (unless (procedure? include?)
     (error "directory collector predicate must be a procedure" include?))
-  (unless (and (non-empty-string? directory)
+  (unless (and (filesystem-path-string? directory)
                (file-is-directory? directory))
     (error "directory collector requires an existing directory" directory))
   (collect directory))

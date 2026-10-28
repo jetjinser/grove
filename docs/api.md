@@ -146,10 +146,11 @@ Opaque extension values embedded in properties remain shared and follow their
 own type's contract.
 
 Content source locations are association lists with unique symbol keys. The
-`file` value, when present, is a non-empty string; `line` and `column` are
-positive one-based integers. Text constructors validate and snapshot a
-supplied `#:location`; `content-with-source-location` applies the same
-contract when attaching a location to text or an element. Elements also accept
+`file` value, when present, is a non-empty filesystem path string without NUL;
+`line` and `column` are positive one-based integers. Text constructors
+validate and snapshot a supplied `#:location`;
+`content-with-source-location` applies the same contract when attaching a
+location to text or an element. Elements also accept
 `#:location` in `make-content-element`; `source-location` is reserved and
 cannot be stored as an ordinary element property. Use
 `content-source-location` to read either kind uniformly. It returns `#f` for

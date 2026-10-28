@@ -98,7 +98,7 @@
 
 (define (depend-on! path)
   "Register a file input before reading it; return its absolute path."
-  (unless (non-empty-string? path)
+  (unless (filesystem-path-string? path)
     (error "input dependency path must be a non-empty string" path))
   (let* ((requested (if (absolute-file-name? path) path
                         (string-append (getcwd) "/" path)))

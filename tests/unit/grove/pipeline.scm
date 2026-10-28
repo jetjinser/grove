@@ -142,6 +142,11 @@
     #:name "empty-input"
     #:inputs (list "")
     #:procedure (lambda (_input) '())))
+(test-error "asset pipelines reject filesystem NUL characters in inputs" #t
+  (make-asset-pipeline
+    #:name "nul-input"
+    #:inputs (list (string-append "input" (string #\nul)))
+    #:procedure (lambda (_input) '())))
 
 (let ((runs 0))
   (define (path-sensitive-pipeline input)

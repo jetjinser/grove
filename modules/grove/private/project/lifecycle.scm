@@ -42,7 +42,7 @@
   (call-with-project-stage 'read path (lambda () (read-source path))))
 
 (define (snapshot-unique-paths paths who)
-  (unless (and (list? paths) (every non-empty-string? paths))
+  (unless (and (list? paths) (every filesystem-path-string? paths))
     (error "~a must be a list of non-empty paths" who paths))
   (unless (= (length paths) (length (delete-duplicates paths string=?)))
     (error "~a contains duplicate paths" who paths))

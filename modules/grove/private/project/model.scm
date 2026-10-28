@@ -226,10 +226,9 @@ derive artifacts from declared files independently of the model. CACHE? controls
 document, renderer, and pipeline cache use. Plain renderer procedures run on
 every build; wrap one with MAKE-CACHED-RENDERER only when its stable cache
 identity is declared."
-  (unless (or (not source-directory) (string? source-directory))
-    (error "project source directory must be a path or #f" source-directory))
-  (when (and source-directory (not (non-empty-string? source-directory)))
-    (error "project source directory must be a non-empty path"
+  (unless (or (not source-directory)
+              (filesystem-path-string? source-directory))
+    (error "project source directory must be a non-empty path or #f"
            source-directory))
   (unless (or (not collect-sources) (procedure? collect-sources))
     (error "project source collector must be a procedure or #f"
@@ -243,7 +242,7 @@ identity is declared."
   (unless (procedure? prepare)
     (error "project preparation step must be a procedure" prepare))
   (unless (and (list? extra-sources)
-               (every non-empty-string? extra-sources))
+               (every filesystem-path-string? extra-sources))
     (error "project extra sources must be a list of paths" extra-sources))
   (unless (= (length extra-sources)
              (length (delete-duplicates extra-sources string=?)))
@@ -264,7 +263,7 @@ identity is declared."
                (unique-pipeline-names? pipelines))
     (error "project pipelines must be asset pipelines with unique names"
            pipelines))
-  (unless (non-empty-string? output-directory)
+  (unless (filesystem-path-string? output-directory)
     (error "project requires a non-empty output directory" output-directory))
   (unless (boolean? cache?)
     (error "project cache option must be a boolean" cache?))
@@ -290,7 +289,7 @@ identity is declared."
   (unless (project? project)
     (error "project options require a Grove project" project))
   (unless (and (list? extra-sources)
-               (every non-empty-string? extra-sources))
+               (every filesystem-path-string? extra-sources))
     (error "project additional sources must be a list of non-empty paths"
            extra-sources))
   (when (eq? output-directory project-option-unspecified)

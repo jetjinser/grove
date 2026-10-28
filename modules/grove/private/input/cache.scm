@@ -75,7 +75,8 @@
 (define (make-input-cache-context enabled? dependencies)
   (unless (boolean? enabled?)
     (error "input cache option must be a boolean" enabled?))
-  (unless (and (list? dependencies) (every non-empty-string? dependencies))
+  (unless (and (list? dependencies)
+               (every filesystem-path-string? dependencies))
     (error "input cache dependencies must be a list of paths" dependencies))
   (and enabled?
     (let ((globals (make-hash-table)))

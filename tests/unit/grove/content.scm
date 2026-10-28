@@ -236,6 +236,8 @@
   (make-content-text 42))
 (test-error "content text sources must be non-empty paths" #t
   (make-content-text "text" ""))
+(test-error "content text sources reject filesystem NUL characters" #t
+  (make-content-text "text" (string-append "page" (string #\nul))))
 (test-error "content layout kinds are symbols" #t
   (make-content-layout "newline" "\n"))
 (test-error "content layout raw values are strings" #t
@@ -250,6 +252,10 @@
 (test-error "content source locations reject empty filenames" #t
   (content-with-source-location
     (make-content-text "text") '((file . ""))))
+(test-error "content source locations reject filesystem NUL characters" #t
+  (content-with-source-location
+    (make-content-text "text")
+    (list (cons 'file (string-append "page" (string #\nul))))))
 (test-error "content source locations require positive line numbers" #t
   (content-with-source-location
     (make-content-text "text") '((file . "page.plant") (line . 0))))

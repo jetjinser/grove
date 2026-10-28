@@ -28,7 +28,7 @@
 MODULE-DIRECTORY must be non-empty and is copied at construction. MODULE-FILTER
 receives each regular file's basename and defaults to non-hidden `.plant` files.
 The procedure returns loaded paths so Grove can track them as build inputs."
-  (unless (and (non-empty-string? module-directory)
+  (unless (and (filesystem-path-string? module-directory)
                (procedure? module-filter))
     (error "Scribble module setup requires a directory and filter"
            module-directory module-filter))
@@ -48,7 +48,7 @@ evaluates module articles in PATHS order, once per preparation. The reader
 reuses those document results within that preparation and delegates other
 paths. Preparing again resets reuse; this is not a persistent cache."
   (unless (and (list? paths)
-               (every non-empty-string? paths)
+               (every filesystem-path-string? paths)
                (procedure? read-document))
     (error "module session requires source paths and a reader" paths read-document))
   (set! paths (map string-copy paths))
@@ -130,7 +130,7 @@ sources."
     (if (current-input-cache)
         (let ((dependencies (cache-dependencies)))
           (unless (and (list? dependencies)
-                       (every non-empty-string? dependencies))
+                       (every filesystem-path-string? dependencies))
             (error "Scribble cache dependency collector must return paths"
                    dependencies))
           (cached-document path "scribble" dependencies

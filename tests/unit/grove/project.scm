@@ -61,6 +61,13 @@
                   #:read-source (lambda (_) #f)
                   #:output-directory
                   (string-append project-root "/duplicate-source-output"))))
+(test-error "source collectors reject filesystem NUL characters" #t
+  (collect-project-sources
+    (make-project #:collect-sources
+                  (lambda () (list (string-append "source" (string #\nul))))
+                  #:read-source (lambda (_) #f)
+                  #:output-directory
+                  (string-append project-root "/nul-source-output"))))
 (test-error "project preparation rejects duplicate paths" #t
   (check-project
     (make-project #:collect-sources (lambda () '())
@@ -141,6 +148,8 @@
 
 (test-error "site sources reject empty paths" #t
   (make-site '() #:sources '("")))
+(test-error "site sources reject filesystem NUL characters" #t
+  (make-site '() #:sources (list (string-append "source" (string #\nul)))))
 
 (test-equal "site source dependencies keep their first occurrence"
   '("theme.scm" "locale.scm")
@@ -247,6 +256,11 @@
 (test-error "generic projects reject empty extra source paths" #t
   (make-project #:source-directory "sources"
                 #:extra-sources '("")
+                #:read-source (lambda (_) #f)
+                #:output-directory "output"))
+(test-error "generic projects reject filesystem NUL characters in paths" #t
+  (make-project #:source-directory "sources"
+                #:extra-sources (list (string-append "theme" (string #\nul)))
                 #:read-source (lambda (_) #f)
                 #:output-directory "output"))
 (test-error "generic projects reject duplicate extra source paths" #t

@@ -26,6 +26,8 @@
   (collect-directory (string-append test-directory "/missing")))
 (test-error "collection rejects an empty directory path" #t
   (collect-directory ""))
+(test-error "collection rejects filesystem NUL characters in paths" #t
+  (collect-directory (string-append "directory" (string #\nul))))
 
 (dynamic-wind
   (lambda ()

@@ -31,7 +31,7 @@ Grove cannot track, such as an external toolchain."
     (error "asset pipeline requires a name" name))
   (unless (string? version)
     (error "asset pipeline version must be a string" version))
-  (unless (and (list? inputs) (every non-empty-string? inputs))
+  (unless (and (list? inputs) (every filesystem-path-string? inputs))
     (error "asset pipeline inputs must be a list of paths" inputs))
   (unless (= (length inputs) (length (delete-duplicates inputs string=?)))
     (error "asset pipeline inputs must be unique" inputs))

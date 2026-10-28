@@ -152,6 +152,9 @@
           ((ssh-proc 'read-authorized-keys) path)))
       (test-error "authorized keys require a non-empty path" #t
         ((ssh-proc 'read-authorized-keys) ""))
+      (test-error "authorized keys reject filesystem NUL characters in paths" #t
+        ((ssh-proc 'read-authorized-keys)
+         (string-append "keys" (string #\nul))))
 
       ;; Host key generation
       (test-error "host key generation requires positive integer bits" #t

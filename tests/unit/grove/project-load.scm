@@ -68,6 +68,12 @@
 (test-assert "loader validates a filename before resolving it"
   (fails-before-project-load?
     (lambda () (call-with-loaded-project "" check-project))))
+(test-assert "loader rejects filesystem NUL characters in filenames"
+  (fails-before-project-load?
+    (lambda ()
+      (call-with-loaded-project
+        (string-append "project" (string #\nul) ".scm")
+        check-project))))
 (test-assert "loader validates its callback before loading the file"
   (fails-before-project-load?
     (lambda ()
@@ -77,6 +83,12 @@
     (lambda ()
       (call-with-loaded-project "/tmp/missing-grove-project.scm"
         check-project #:output-directory ""))))
+(test-assert "loader rejects filesystem NUL characters in output paths"
+  (fails-before-project-load?
+    (lambda ()
+      (call-with-loaded-project "/tmp/missing-grove-project.scm"
+        check-project
+        #:output-directory (string-append "output" (string #\nul))))))
 (dynamic-wind
   (lambda ()
     (setenv "XDG_CACHE_HOME" (string-append root "/.cache"))
