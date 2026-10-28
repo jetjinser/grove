@@ -111,10 +111,18 @@
     uris))
 
 (define* (document->tree-page id document source #:key title (metadata '()))
-  "Extract a tree's direct frontmatter, retaining topic nodes as queryable IR."
+  "Extract a tree's direct frontmatter, retaining topic nodes as queryable IR.
+
+TITLE, when supplied, is the resulting page title. When omitted, the document
+must contain one @title. Any @title elements in the document are checked for
+uniqueness and non-empty content even when TITLE overrides their value.
+METADATA adds page metadata; it cannot duplicate keys extracted from the
+document."
   (let* ((children (ir:content-document-children/raw document))
          (metadata-nodes (filter metadata-element? children))
-         (tree-title (or title (one-metadata-value metadata-nodes 'title source #t)))
+         (declared-title
+          (one-metadata-value metadata-nodes 'title source (not title)))
+         (tree-title (or title declared-title))
          (summary (one-metadata-value metadata-nodes 'summary source))
          (og-image (one-metadata-value metadata-nodes 'og-image source))
          (og-image-alt (one-metadata-value metadata-nodes 'og-image-alt source))

@@ -610,6 +610,29 @@
             (make-site-page "query-target" "Target"
               (evaluate-document "@transclude[\"query-host\"]"))))))
 
+(test-equal "programmatic tree title can replace absent frontmatter"
+  "Generated title"
+  (site-page-title
+    (document->tree-page "generated" (make-content-document '()) "generated.plant"
+                         #:title "Generated title")))
+
+(test-equal "explicit tree title overrides valid frontmatter"
+  "Generated title"
+  (site-page-title
+    (document->tree-page "generated"
+      (evaluate-document "@title{Source title}") "generated.plant"
+      #:title "Generated title")))
+
+(test-error "title overrides do not hide duplicate frontmatter" #t
+  (document->tree-page "generated"
+    (evaluate-document "@title{First}@title{Second}") "generated.plant"
+    #:title "Generated title"))
+
+(test-error "title overrides do not hide empty frontmatter" #t
+  (document->tree-page "generated"
+    (evaluate-document "@title{}") "generated.plant"
+    #:title "Generated title"))
+
 (test-error "duplicate explicit math IDs in a page are rejected" #t
   (make-forest
     (make-site
