@@ -455,6 +455,12 @@ tracking therefore works without making every article depend on every module.
 Supply module paths in dependency order; automatic sorting, cycle analysis, and
 standalone Guile autoloading of `.plant` modules are not provided.
 
+For a host-owned shared Guile module, pass it as `#:environment` to
+`make-scribble-document-reader`; Grove evaluates each source in that module and
+does not reuse cached document results. Use `#:environment-factory` when each
+read should create its own module environment. The default factory creates the
+standard Scribble environment.
+
 ## Preview and progress
 
 `grove serve` binds localhost and starts only after a successful build. Each

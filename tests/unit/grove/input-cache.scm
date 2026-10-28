@@ -89,7 +89,10 @@
 (test-error "Scribble environment factory is checked at construction" #t
   (make-scribble-document-reader #:environment-factory 'invalid))
 (test-error "Scribble environment is checked at construction" #t
-  (make-scribble-document-reader 'invalid))
+  (make-scribble-document-reader #:environment 'invalid))
+(test-assert "Scribble reader accepts an explicit shared environment"
+  (procedure? (make-scribble-document-reader
+                #:environment (resolve-module '(tests unit grove input-cache)))))
 (dynamic-wind
   (lambda ()
     (setenv "XDG_CACHE_HOME" (string-append root "/.cache"))

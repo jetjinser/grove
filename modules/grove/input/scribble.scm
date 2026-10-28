@@ -79,8 +79,8 @@ paths. Preparing again resets reuse; this is not a persistent cache."
     (values prepare read)))
 
 (define* (make-scribble-document-reader
-           #:optional (environment #f)
-           #:key (timings #f)
+           #:key (environment #f)
+           (timings #f)
            (cache? (lambda (path) #t))
            (cache-dependencies (lambda () '()))
            (environment-factory
