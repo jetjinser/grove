@@ -62,6 +62,7 @@
                     #:location `((file . ,source) (line . 3) (column . 2)))
                   (make-content-layout 'newline "\n" source))
             source #:flow-kind 'block
+            #:location `((file . ,source) (line . 4) (column . 1))
             #:style (make-content-style 'sample
                      (list (make-html-attributes '((class . "extra")))
                            (make-html-tag "aside")))
@@ -229,9 +230,11 @@
                   (content-text-source text) (content-source-location text)))
           (test-equal "cache preserves element identity and arbitrary data properties"
             (list 'paragraph 'block source
+                  `((file . ,source) (line . 4) (column . 1))
                   '((open? . #f) (arbitrary . (text "literal"))))
             (list (content-element-kind element) (content-element-flow-kind element)
-                  (content-element-source element) (content-element-properties element)))
+                  (content-element-source element) (content-source-location element)
+                  (content-element-properties element)))
           (test-equal "cache preserves presentation annotations"
             '(sample ((class . "extra")) "aside")
             (list (content-style-name style)

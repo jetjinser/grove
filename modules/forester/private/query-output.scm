@@ -44,6 +44,7 @@ reports whether the page declares that anchor; unknown fragments warn."
                     (ir:content-element-source/raw content)
                     #:properties (ir:content-element-properties/raw content)
                     #:style (content-element-style content)
+                    #:location (ir:content-element-location/raw content)
                     #:flow-kind (content-element-flow-kind content))))
            (when (memq kind '(query-link query-transclude))
              (validate-query-link

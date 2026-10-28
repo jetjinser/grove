@@ -116,13 +116,14 @@
   (%make-content-layout kind (snapshot-data raw) (snapshot-data source)))
 
 (define-record-type <content-element>
-  (%make-content-element kind children properties style source flow-kind)
+  (%make-content-element kind children properties style source location flow-kind)
   content-element?
   (kind content-element-kind)
   (children content-element-children/raw)
   (properties content-element-properties/raw)
   (style content-element-style)
   (source content-element-source/raw)
+  (location content-element-location/raw)
   (flow-kind content-element-flow-kind))
 
 (define (content-element-children element)
@@ -137,6 +138,7 @@
     (content-element-source/raw element)
     #:properties (content-element-properties/raw element)
     #:style (content-element-style element)
+    #:location (content-element-location/raw element)
     #:flow-kind (content-element-flow-kind element)))
 
 (define (content-element-properties element)
@@ -153,6 +155,7 @@
 (define* (make-content-element kind children #:optional (source #f)
                                #:key (properties '())
                                      (style #f)
+                                     (location #f)
                                      (flow-kind #f))
   (unless (symbol? kind)
     (error "content element kind must be a symbol" kind))
@@ -160,6 +163,8 @@
   (unless (valid-properties? properties)
     (error "content element properties must have unique symbol keys"
            properties))
+  (unless (or (not location) (valid-source-location? location))
+    (error "content element location must be a source-location alist" location))
   (set! style (normalize-style style))
   (let ((flow-kind (or flow-kind 'inline)))
   (unless (memq flow-kind '(inline block))
@@ -167,7 +172,8 @@
   (%make-content-element kind
                          (snapshot-data (normalize-children children 'element))
                          (snapshot-data properties) style
-                         (snapshot-data source) flow-kind)))
+                         (snapshot-data source) (snapshot-data location)
+                         flow-kind)))
 
 (define (normalize-style style)
   (cond
@@ -184,7 +190,9 @@
         (%make-content-element
           (content-element-kind element) (content-element-children element)
           (content-element-properties element) style
-          (content-element-source element) (content-element-flow-kind element)))))
+          (content-element-source element)
+          (content-element-location/raw element)
+          (content-element-flow-kind element)))))
 
 (define (content-element-block? element)
   (eq? (content-element-flow-kind element) 'block))
@@ -194,6 +202,8 @@
     (error "content-element-property requires a content element" element))
   (unless (symbol? key)
     (error "content property key must be a symbol" key))
+  (when (eq? key 'source-location)
+    (error "source-location is a content field; use content-source-location"))
   (snapshot-data (content-element-property/raw element key)))
 
 (define (content-element-property/raw element key)
@@ -206,19 +216,19 @@
   (unless (symbol? key)
     (error "content property key must be a symbol" key))
   (when (eq? key 'source-location)
-    (unless (valid-source-location? value)
-      (error "content element source-location must be a source-location alist"
-             value)))
+    (error "source-location is reserved; use content-with-source-location"))
   (%make-content-element
     (content-element-kind element) (content-element-children element)
     (cons (cons key (snapshot-data value))
           (filter (lambda (entry) (not (eq? (car entry) key)))
                   (content-element-properties element)))
     (content-element-style element)
-    (content-element-source element) (content-element-flow-kind element)))
+    (content-element-source element) (content-element-location/raw element)
+    (content-element-flow-kind element)))
 
 (define* (make-content-disclosure title children #:key (open? #t)
-                                  (addressable? #f) (style #f))
+                                  (addressable? #f) (style #f)
+                                  (location #f))
   "Make a titled block disclosure.
 
 Forester promotes a disclosure with ADDRESSABLE? set to #t to an anonymous
@@ -233,6 +243,7 @@ subtree during site analysis. Other Grove renderers treat it as a disclosure."
     #:properties `((title . ,title) (open? . ,open?)
                    (addressable? . ,addressable?))
     #:style style
+    #:location location
     #:flow-kind 'block))
 
 (define-record-type <content-document>
@@ -256,7 +267,7 @@ documents do not; a document's children carry their own locations."
     ((content-text? content)
      (snapshot-data (content-text-location/raw content)))
     ((content-element? content)
-     (content-element-property content 'source-location))
+     (snapshot-data (content-element-location/raw content)))
     ((or (string? content)
          (content-layout? content)
          (content-document? content))
@@ -271,7 +282,7 @@ documents do not; a document's children carry their own locations."
   "Return unique source paths recorded anywhere in CONTENT, in traversal order.
 
 Text, layout, element, and document sources are included. File fields from
-text locations and element source-location properties are included as well.
+text and element locations are included as well.
 Raw strings have no source; a list may contain any proper sequence of content
 values."
   (define (paths value)
@@ -319,8 +330,7 @@ values."
        (every (lambda (entry)
                 (and (pair? entry)
                      (symbol? (car entry))
-                     (or (not (eq? (car entry) 'source-location))
-                         (valid-source-location? (cdr entry)))))
+                     (not (eq? (car entry) 'source-location))))
               properties)
        (let loop ((entries properties) (keys '()))
          (or (null? entries)
@@ -360,7 +370,14 @@ source annotation can wrap arbitrary Scribble expressions."
                              (and location (assq-ref location 'file)))
                          (snapshot-data location)))
     ((content-element? content)
-     (content-with-property content 'source-location location))
+     (make-content-element
+       (content-element-kind content)
+       (content-element-children/raw content)
+       (content-element-source/raw content)
+       #:properties (content-element-properties/raw content)
+       #:style (content-element-style content)
+       #:location location
+       #:flow-kind (content-element-flow-kind content)))
     ((content-document? content)
      (make-content-document
        (map (lambda (child) (content-with-source-location child location))

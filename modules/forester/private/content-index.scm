@@ -60,6 +60,12 @@
               (let* ((id next-id)
                      (kind (content-element-kind content))
                      (properties (ir:content-element-properties/raw content))
+                     (relation-properties
+                       (let ((location
+                               (ir:content-element-location/raw content)))
+                         (if location
+                             (cons (cons 'source-location location) properties)
+                             properties)))
                      (children (ir:content-element-children/raw content)))
                 (set! next-id (1+ next-id))
                 (set! index (cons (cons id content) index))
@@ -77,7 +83,7 @@
                                    (map cdr child-results)))))
                   (cons (cons
                           (list id (site-page-id page) parent-id kind position
-                                properties text (grapheme-count text)
+                                relation-properties text (grapheme-count text)
                                 (string-length text)
                                 (element-plain-text? content))
                           (append-map car child-results))

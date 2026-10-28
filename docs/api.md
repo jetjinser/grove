@@ -142,7 +142,9 @@ Content source locations are association lists with unique symbol keys. The
 `file` value, when present, is a non-empty string; `line` and `column` are
 positive one-based integers. Text constructors validate and snapshot a
 supplied `#:location`; `content-with-source-location` applies the same
-contract when attaching a location to text or an element. Use
+contract when attaching a location to text or an element. Elements also accept
+`#:location` in `make-content-element`; `source-location` is reserved and
+cannot be stored as an ordinary element property. Use
 `content-source-location` to read either kind uniformly. It returns `#f` for
 strings, layout nodes, and documents; document children carry their own
 locations. Non-content Scheme values pass through `content-with-source-location`

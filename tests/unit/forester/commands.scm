@@ -124,7 +124,7 @@
   (test-equal "styling preserves source location and flow semantics"
     (list "styled.plant" location 'block)
     (list (content-element-source styled)
-          (content-element-property styled 'source-location)
+          (content-source-location styled)
           (content-element-flow-kind styled))))
 
 (let ((element (link "destination" #:style 'reference)))

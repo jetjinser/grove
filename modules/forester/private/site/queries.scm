@@ -102,7 +102,7 @@
     (else #f)))
 
 (define (query-source-label page request)
-  (let ((location (ir:content-element-property/raw request 'source-location)))
+  (let ((location (ir:content-element-location/raw request)))
     (format #f "~a~a"
       (or (and (list? location) (assq-ref location 'file))
           (site-page-source page)

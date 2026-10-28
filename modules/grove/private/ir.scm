@@ -13,6 +13,7 @@
             content-element-properties/raw
             content-element-property/raw
             content-element-source/raw
+            content-element-location/raw
             content-document-children/raw
             content-document-source/raw))
 
@@ -28,5 +29,6 @@
 (define content-element-properties/raw (@@ (grove ir) content-element-properties/raw))
 (define content-element-property/raw (@@ (grove ir) content-element-property/raw))
 (define content-element-source/raw (@@ (grove ir) content-element-source/raw))
+(define content-element-location/raw (@@ (grove ir) content-element-location/raw))
 (define content-document-children/raw (@@ (grove ir) content-document-children/raw))
 (define content-document-source/raw (@@ (grove ir) content-document-source/raw))

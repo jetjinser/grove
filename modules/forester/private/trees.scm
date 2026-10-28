@@ -100,7 +100,7 @@
       id (make-content-document (ir:content-element-children/raw element) source) source
       #:title title
       #:metadata `((inline-subtree . #t)
-                   ,@(let ((location (ir:content-element-property/raw element 'source-location)))
+                   ,@(let ((location (ir:content-element-location/raw element)))
                        (if location `((source-location . ,location)) '()))))))
 
 (define (subtree-pages pages)
@@ -147,6 +147,7 @@
                               (cons (cons 'tree-id id) properties)
                               properties)
              #:style (content-element-style content)
+             #:location (ir:content-element-location/raw content)
              #:flow-kind (content-element-flow-kind content))))
         ((content-document? content)
          (make-content-document
@@ -199,6 +200,7 @@ check documents."
              (ir:content-element-source/raw content)
              #:properties properties
              #:style (content-element-style content)
+             #:location (ir:content-element-location/raw content)
              #:flow-kind (content-element-flow-kind content))))
         ((content-document? content)
          (make-content-document
@@ -278,6 +280,7 @@ math ID."
                (ir:content-element-source/raw content)
                #:properties properties
                #:style (content-element-style content)
+               #:location (ir:content-element-location/raw content)
                #:flow-kind (content-element-flow-kind content))))
           (else
            (content-element-with-children

@@ -158,9 +158,10 @@
     (string-set! new-property 0 #\x)
     (string-set! (cdar new-location) 0 #\x)
     (test-equal "content derivation helpers snapshot new values"
-      '("updated" ((file . "other.plant") (line . 8)))
+      '("updated" ((file . "other.plant") (line . 8)) #f)
       (list (content-element-property updated 'role)
-            (content-element-property located 'source-location)))
+            (content-source-location located)
+            (assq 'source-location (content-element-properties located))))
     (test-equal "replacing element children preserves its other fields"
       '(paragraph "replacement" "page.plant" ((role . "note")) emphasis block)
       (list (content-element-kind replaced-children)
@@ -293,16 +294,22 @@
 (test-error "element property keys are unique" #t
   (make-content-element 'paragraph '()
     #:properties '((role . "status") (role . "note"))))
-(test-error "element source-location properties are validated at construction" #t
+(test-error "source location cannot be stored as an element property" #t
   (make-content-element 'paragraph '()
-    #:properties '((source-location . ((file . ""))))))
-(test-error "content-with-property validates source locations" #t
+    #:properties '((source-location . ((file . "page.plant"))))))
+(test-error "element locations are validated at construction" #t
+  (make-content-element 'paragraph '()
+    #:location '((file . ""))))
+(test-error "source location is not an ordinary element property" #t
   (content-with-property (make-content-element 'paragraph '())
     'source-location '((file . ""))))
 (test-error "content-element-property requires an element" #t
   (content-element-property 'not-an-element 'role))
 (test-error "content-element-property requires a symbol key" #t
   (content-element-property (make-content-element 'paragraph '()) "role"))
+(test-error "source locations use the dedicated accessor" #t
+  (content-element-property (make-content-element 'paragraph '())
+    'source-location))
 (test-error "element flow kinds are constrained" #t
   (make-content-element 'paragraph '() #:flow-kind 'floating))
 (test-error "site construction rejects duplicate page IDs" #t
