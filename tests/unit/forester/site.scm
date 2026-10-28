@@ -349,6 +349,8 @@
   (test-equal "topic-pages answers absent topics with an empty list"
     '()
     (topic-pages forest "nonexistent-topic"))
+  (test-error "topic-pages rejects unsupported content kinds" #t
+    (topic-pages forest "mathematics" 'category))
   (test-equal "find-page returns a page or #f"
     (list "target" #f)
     (list (and (find-page forest "target")

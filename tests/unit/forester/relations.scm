@@ -48,6 +48,9 @@
   '()
   (reachable-page-ids references "isolated"))
 
+(test-error "topic page queries reject unsupported content kinds" #t
+  (topic-page-ids (make-content-node-relation '()) "topic" 'category))
+
 (test-equal "a self-link does not make its page reachable from itself"
   '()
   (reachable-page-ids

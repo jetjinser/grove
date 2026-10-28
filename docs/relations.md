@@ -177,7 +177,9 @@ transitive relation in either direction. `math-nodeo` selects math nodes, and
 Page title and metadata are a separate relation because the page reader
 extracts `@title`, `@summary`, `@published`, and `@updated` into the Grove
 page record. Tags and taxa stay in the content IR and are queried with
-`topic-membero`. Topics have one lowercase value; ground topic selectors are
+`topic-membero`. The `topic-pages` and `topic-page-ids` convenience procedures
+accept only `#f`, `'tag`, or `'taxon` as their optional kind. Topics have one
+lowercase value; ground topic selectors are
 case-insensitive and enumerated values are canonical. Page facts and content
 facts can be joined through their shared page ID:
 

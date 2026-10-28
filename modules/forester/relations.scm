@@ -195,6 +195,8 @@
     (topic-ido relation node-id topic-id)))
 
 (define* (topic-page-ids relation topic-id #:optional kind)
+  (unless (or (not kind) (memq kind '(tag taxon)))
+    (error "topic page kind must be 'tag, 'taxon, or #f" kind))
   (delete-duplicates
     (if kind
         (run* (page-id)
