@@ -278,19 +278,9 @@ The callback receives the model, input port, and output port."
                                                (car render-result) retired))
           (owners (append pipeline-owners (cadr render-result)))
          (affected
-           (if cache-hit?
-               '()
-               (let ((reused
-                       (reused-renderer-artifact-paths
-                         artifacts owners (caddr render-result))))
-                 (delete-duplicates
-                   (filter (lambda (path) (not (member path reused string=?)))
-                     (append
-                       (affected-artifacts artifacts previous-artifacts changed)
-                       (changed-renderer-artifact-paths
-                         artifacts owners previous-artifacts identity
-                         previous-identity)))
-                   string=?)))))
+           (project-affected-artifacts
+             artifacts owners (caddr render-result) previous-artifacts changed
+             identity previous-identity #:cache-hit? cache-hit?)))
     (validate-project-artifacts artifacts progress)
     (when write?
       (write-project-build!

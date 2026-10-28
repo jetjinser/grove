@@ -5,12 +5,14 @@
 (define-module (grove private project incremental)
   #:use-module ((grove private artifact) #:prefix out:)
   #:use-module (grove private build-state)
+  #:use-module (grove private project artifacts)
   #:use-module (srfi srfi-1)
   #:export (renderer-identities-match?
             renderer-cache-available?
             all-renderers-cacheable?
             changed-renderer-artifact-paths
             reused-renderer-artifact-paths
+            project-affected-artifacts
             retired-pipeline-paths))
 
 (define (renderer-identities-match? current previous)
@@ -72,6 +74,25 @@
                   (integer? (cdr owner))
                   (not (member (cdr owner) rendered-indices)))))
          artifacts)))
+
+(define* (project-affected-artifacts artifacts owners rendered-indices
+                                     previous-artifacts changed
+                                     current-identities previous-identities
+                                     #:key (cache-hit? #f))
+  (if cache-hit?
+      '()
+      (let ((reused
+              (reused-renderer-artifact-paths artifacts owners
+                                               rendered-indices)))
+        (delete-duplicates
+          (filter (lambda (path) (not (member path reused string=?)))
+            (append
+              (affected-artifacts artifacts previous-artifacts changed)
+              (changed-renderer-artifact-paths
+                artifacts owners previous-artifacts current-identities
+                previous-identities)))
+          string=?))))
+
 ;;     Pipeline outputs that vanished from a pipeline's current set
 ;;     must not resurrect from the previous build's state: previous
 ;;     entries a pipeline owns (string pipeline name) whose paths the
