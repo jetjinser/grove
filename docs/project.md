@@ -165,6 +165,13 @@ source path; the captured stack remains an opaque diagnostic value.
 renderer result from cache. It does not report whether output files needed to
 be restored or written, and a false value does not imply every renderer ran:
 some renderers may reuse their outputs while others are invalidated.
+`build-report-affected-artifacts` is an output change and invalidation summary,
+not a record of renderer calls or file writes. It includes new or removed
+outputs, outputs whose bytes or source declarations changed, outputs invalidated
+by changed inputs or renderer configuration, and outputs treated conservatively
+because their `#:sources` are unknown. A renderer may run and produce the same
+artifact with `#:sources '()`; that path is not affected. A cache hit may also
+restore a missing output file while reporting no affected artifacts.
 
 Scheme hosts can catch the `grove-project-error` key and inspect the resulting
 `project-error` with accessors from `(grove project diagnostic)`. The original

@@ -448,16 +448,25 @@
     (let* ((renders 0)
            (render (lambda (_)
                      (set! renders (+ renders 1))
-                     (list (make-artifact "plain.txt" "constant"))))
+                     (list (make-artifact "plain.txt" "constant"
+                                          #:sources '()))))
            (plain (make-project
                     #:collect-sources (lambda () (list source))
                     #:read-source (lambda (path) (call-with-input-file path get-string-all))
                     #:renderers (list render)
                     #:output-directory (string-append root "/plain"))))
-      (build-project plain)
-      (build-project plain)
-      (test-equal "plain project renderers rerun without a cache declaration"
-        2 renders)
+      (let ((first (build-project/report plain)))
+        (test-equal "plain project renderers rerun without a cache declaration"
+          1 renders)
+        (test-equal "a plain renderer's first output is affected"
+          '("plain.txt") (build-report-affected-artifacts first)))
+      (let ((second (build-project/report plain)))
+        (test-equal "plain project renderers rerun without a cache declaration"
+          2 renders)
+        (test-assert "a rerender is not a complete renderer cache hit"
+          (not (build-report-render-cache-hit? second)))
+        (test-equal "identical declared-independent output is not affected"
+          '() (build-report-affected-artifacts second)))
       (let* ((replacement-renders 0)
              (replacement
               (make-project

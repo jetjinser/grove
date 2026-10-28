@@ -824,7 +824,9 @@
               "平方：2"
               (call-with-input-file cache-output-path get-string-all))
             (test-assert "restored artifacts preserve the renderer cache hit"
-              (build-report-render-cache-hit? missing-output)))
+              (build-report-render-cache-hit? missing-output))
+            (test-equal "restoring a missing file does not affect artifact output"
+              '() (build-report-affected-artifacts missing-output)))
           (write-test-file cache-output-path "tampered")
           (let ((tampered-output (build-project/report cached-project)))
             (test-equal "modified cached outputs are rendered again"

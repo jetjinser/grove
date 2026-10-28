@@ -131,6 +131,10 @@
   (snapshot-data (build-report-removed-sources/raw report)))
 
 (define (build-report-affected-artifacts report)
+  "Return output paths Grove considers changed, invalidated, or removed.
+
+This is not a record of renderer calls or files written. An uncached renderer
+may run and produce the same artifact without listing it here."
   (snapshot-data (build-report-affected-artifacts/raw report)))
 
 (define-record-type <project-analysis>
