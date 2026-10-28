@@ -126,9 +126,9 @@ should not need them.
 ## Content values
 
 Content text, layout, element, document, and style records are values. Their
-constructors copy mutable strings, bytevectors, and pair structure, and their
-public accessors return independent copies of mutable data. Changing a string
-or list returned by an accessor does not alter the node. Use
+constructors copy mutable strings, bytevectors, vectors, and pair structure,
+and their public accessors return independent copies of mutable data. Changing
+a string or list returned by an accessor does not alter the node. Use
 `content-with-style` and `content-with-property` to derive an element with an
 intentional change;
 `content-element-with-children` replaces its children while preserving its

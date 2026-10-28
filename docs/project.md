@@ -131,13 +131,13 @@ additional tracked inputs, or a cache setting; the original project is unchanged
 Its `#:extra-sources` paths append to the project's existing declarations,
 with duplicates removed while preserving their first occurrence.
 Project constructors snapshot declared path strings and list containers.
-Project inputs and callback contexts copy mutable strings, bytevectors, and
-pair/list structure when exposed. Other values, including mutable vectors,
-records, and procedures, are passed through and may remain shared; projects and
-extension types own their mutation semantics. Grove keeps the reader, analyzer,
-renderer, collector, and preparation procedures as the project author's
-callbacks. Paths returned by collector and preparation callbacks are copied
-before Grove reads them or includes them in analysis.
+Project inputs and callback contexts copy mutable strings, bytevectors, vectors,
+and pair/list structure when exposed. Records and procedures are passed through
+and may remain shared; projects and extension types own their mutation
+semantics. Grove keeps the reader, analyzer, renderer, collector, and
+preparation procedures as the project author's callbacks. Paths returned by
+collector and preparation callbacks are copied before Grove reads them or
+includes them in analysis.
 
 Build reports snapshot their source, artifact, and change lists. Their list
 accessors return independent copies, so a caller can annotate or filter a

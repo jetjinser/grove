@@ -42,9 +42,10 @@ into global state for unrelated lifecycles.
   key to inherit it; use `render-context-without` to remove a key.
 - Context keys are open-ended. Grove supplies no domain-specific keys or
   defaults; renderers and projects define the values they need.
-- Constructors and `render-context-ref` copy mutable strings, bytevectors, and
-  pair structure. Opaque values such as records, procedures, and hash tables
-  remain shared; treat those values as read-only for the render pass. Built-in
+- Constructors and `render-context-ref` copy mutable strings, bytevectors,
+  vectors, and pair structure. Opaque values such as records, procedures, and
+  hash tables remain shared; treat those values as read-only for the render
+  pass. Built-in
   translation groups use an association list so their structure is copied as
   ordinary context data.
 - The context is shared with rules and custom renderers for the duration of a

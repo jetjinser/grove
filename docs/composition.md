@@ -45,9 +45,11 @@ they should not wrap a procedure or list without adding meaning.
 
 ## Shared values and mutation
 
-Grove Content, Site, Relation, project-context, HTML-presentation, and Forester
-composition values snapshot mutable strings, bytevectors, and pair structure
-at construction; their accessors return independent copies. This keeps records
+Grove Content, Site, project-context, HTML-presentation, and Forester
+composition values snapshot mutable strings, bytevectors, vectors, and pair
+structure at construction; their accessors return independent copies. Relation
+facts also snapshot their pair data, while relation terms intentionally reject
+vectors because miniKanren uses them for logic variables. This keeps records
 stable while allowing callers to use ordinary Scheme lists and strings. Opaque
 records, procedures, and other extension values remain shared and follow their
 own type's contract.
