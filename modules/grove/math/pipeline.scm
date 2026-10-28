@@ -15,7 +15,7 @@
   #:use-module (grove math audit)
   #:use-module (grove math private differentiation)
   #:use-module (grove math partial)
-  #:use-module (grove math integration)
+  #:use-module (grove math private integration)
   #:use-module (grove math private polynomial)
   #:use-module (grove math private declaration)
   #:use-module (grove math private pass)

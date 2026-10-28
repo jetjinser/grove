@@ -5,6 +5,13 @@
              (grove relation) (srfi srfi-1) (srfi srfi-64))
 
 (test-begin "math rule contracts")
+(test-assert "math rule-pack modules expose rules, not implementation definitions"
+  (and (not (module-variable
+              (module-public-interface (resolve-module '(grove math partial)))
+              'math-partial-rule-definitions))
+       (not (module-variable
+              (module-public-interface (resolve-module '(grove math integration)))
+              'polynomial-calculus-diagnostics))))
 (for-each
   (lambda (fixture)
     (let ((input (car fixture)) (rule (cadr fixture)) (path (caddr fixture))

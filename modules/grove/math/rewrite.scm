@@ -13,8 +13,8 @@
   #:use-module (grove math private differentiation)
   #:use-module (grove math components)
   #:use-module (grove math spatial)
-  #:use-module (grove math integration)
-  #:use-module (grove math partial)
+  #:use-module (grove math private integration)
+  #:use-module (grove math private partial)
   #:use-module (grove math normalization)
   #:use-module (srfi srfi-1)
   #:export (rewriteo rewrite-stepo check-stepo unrewrite-rooto unrewrite-stepo
