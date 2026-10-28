@@ -1065,16 +1065,6 @@ to the lane, and an in-place numbered marker links to it."
                       (pages forest))))
           (append style-artifacts page-artifacts)))))
 
-(define (snapshot-html-presentation presentation)
-  (make-html-presentation
-    #:style (compose-html-styles (html-presentation-style presentation))
-    #:rules (html-presentation-rules presentation)
-    #:head (html-presentation-head presentation)
-    #:home-link (html-presentation-home-link presentation)
-    #:site-nav (html-presentation-site-nav presentation)
-    #:title-decorations (html-presentation-title-decorations presentation)
-    #:metadata-items (html-presentation-metadata-item-map presentation)))
-
 (define* (make-html-options #:key
                             (highlighters (default-highlighters))
                             (routes (make-html-routes))
@@ -1163,7 +1153,7 @@ Entry points take this value with #:options."
     (%make-html-options highlighters routes mathjax-src backmatter
                         reference-taxon-id
                         article? backmatter-details? html-attributes
-                        side-lane (snapshot-html-presentation presentation)
+                        side-lane presentation
                         locale messages
                         default-locale site-url og-image og-image-alt hreflang?
                         language-switcher?)))
