@@ -43,6 +43,12 @@
     (delta alpha))
   (relation-facts links))
 
+(test-error "relation arity must be an exact positive integer" #t
+  (make-relation '() #:arity 2.0))
+
+(test-error "relation arity must be positive" #t
+  (make-relation '() #:arity 0))
+
 (let* ((source (string-copy "source"))
        (target (string-copy "target"))
        (row (list source (list 'tag target)))

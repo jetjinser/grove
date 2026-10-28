@@ -83,7 +83,7 @@
            (else #t)))))))
 
 (define* (make-relation facts #:key (arity 2))
-  (unless (and (integer? arity) (positive? arity))
+  (unless (and (exact-integer? arity) (positive? arity))
     (error "relation arity must be a positive integer" arity))
   (unless (and (list? facts)
                (every (lambda (fact)
