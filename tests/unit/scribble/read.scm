@@ -487,6 +487,18 @@
       (module-ref env 'evaluation-order))))
 
 (let ((env (default-environment scribble)))
+  (test-error "Scribble evaluation rejects a non-port input" #t
+    (scribble-evaluate-document "@bold{text}" env))
+  (test-error "Scribble evaluation rejects a non-module environment" #t
+    (scribble-evaluate-document (open-input-string "@bold{text}") '()))
+  (test-error "Scribble evaluation rejects a non-string source name" #t
+    (scribble-evaluate-document (open-input-string "@bold{text}") env 42))
+  (test-error "Scribble evaluation rejects an invalid timing callback" #t
+    (scribble-evaluate-document (open-input-string "@bold{text}") env
+      #:timings #t))
+  (test-error "Scribble evaluation rejects an invalid module callback" #t
+    (scribble-evaluate-document (open-input-string "@bold{text}") env
+      #:module-changed #t))
   (test-assert "syntax errors report source file and line/column"
     (exception-contains?
       (lambda ()

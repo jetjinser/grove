@@ -15,7 +15,7 @@ the work; drop lower only when you need to replace part of its behavior.
 | Configure the normal Forester site | `(forester project)` → `make-forester-project` | the reader, analysis, or complete renderer set needs replacing |
 | Apply a reusable style to content | `(grove style)` → `make-content-style`, `merge-content-style`; pass it through `#:style` | the style value is format-neutral; HTML interprets it as classes and HTML attributes, unlike renderer-wide `(grove style html)` stylesheets; see [tree composition](forester-composition.md#element-styles) |
 | Adapt Scribble documents to Forester tree pages | `(forester input scribble)` → `make-page-reader`; use `document->tree-page` when the document is already read | the project needs a different page model or metadata policy |
-| Parse Scribble syntax in a custom reader | `(language scribble parser)` → `scribble-parse`, `scribble-read` | standard pages should use the Grove or Forester reader to convert forms to Content IR |
+| Parse Scribble syntax in a custom reader | `(language scribble parser)` → `scribble-parse`, `scribble-read` | to evaluate a document into Content IR in a supplied Guile module, use `(language scribble spec)` → `scribble-evaluate-document`; standard pages should use the Grove or Forester reader |
 | Build a site from page documents | `(grove project site)` → `make-site-project` | the input is not a page or the model is project-specific |
 | Assemble a page model directly | `(grove site)` → `make-site-page`, `make-site` | the project should collect and read source pages itself |
 | Build an arbitrary file-based model | `(grove project)` → `make-project` | custom collection, reading, analysis, artifacts, or execution options are needed |

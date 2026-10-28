@@ -99,7 +99,11 @@
 
 (define* (scribble-evaluate-document port environment #:optional (source #f)
                                      #:key (timings #f) (module-changed #f))
-  "Evaluate a document; TIMINGS optionally receives each reading phase and seconds."
+  "Evaluate a Scribble document in ENVIRONMENT and return Content IR.
+PORT must be an input port and ENVIRONMENT a Guile module. SOURCE, when
+provided, names the source for diagnostics. TIMINGS, when provided, receives
+each reading phase and its elapsed seconds. MODULE-CHANGED, when provided, is
+called with a module selected by a top-level define-module form."
   (define elapsed (make-hash-table))
   (define (measure phase thunk)
     (if timings
@@ -109,6 +113,17 @@
                (/ (- (get-internal-real-time) start) internal-time-units-per-second)))
           value)
         (thunk)))
+  (unless (input-port? port)
+    (error "Scribble evaluation requires an input port" port))
+  (unless (module? environment)
+    (error "Scribble evaluation requires a module environment" environment))
+  (unless (or (not source) (string? source))
+    (error "Scribble source name must be a string or #f" source))
+  (unless (or (not timings) (procedure? timings))
+    (error "Scribble timings callback must be a procedure or #f" timings))
+  (unless (or (not module-changed) (procedure? module-changed))
+    (error "Scribble module-changed callback must be a procedure or #f"
+           module-changed))
   (when source (set-port-filename! port source))
   (save-module-excursion
     (lambda ()
