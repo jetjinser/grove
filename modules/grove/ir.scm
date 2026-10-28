@@ -80,9 +80,9 @@
              (column (assq 'column location)))
          (and (or (not file) (non-empty-string? (cdr file)))
               (or (not line)
-                  (and (integer? (cdr line)) (positive? (cdr line))))
+                  (and (exact-integer? (cdr line)) (positive? (cdr line))))
               (or (not column)
-                  (and (integer? (cdr column)) (positive? (cdr column))))))))
+                  (and (exact-integer? (cdr column)) (positive? (cdr column))))))))
 
 (define* (make-content-text value #:optional (source #f)
                             #:key (location #f))
