@@ -33,7 +33,6 @@
             format-date
             format-number
             plural
-            locale-sort-key
             locale-collation-comparator
             current-reader-locale
             og-locale-tag
@@ -641,14 +640,6 @@ integer. The caller formats the chosen string."
         (assq-ref forms 'one)
         "")))
 
-(define (locale-sort-key text)
-  "Return TEXT's collation key: its canonical caseless form.
-
-The key is locale-independent, so ordering is deterministic across
-machines.  It is not a UCA collation key: accented letters sort by code
-point rather than by language-tailored rules."
-  (match-key text))
-
 ;; glibc locale names for the languages whose collation Grove opts into.
 ;; Regional variants fall back to the primary language's locale.
 (define glibc-locale-names
@@ -713,13 +704,13 @@ fall back to folded code-point order."
                       (else #f)))))))))
 
 (define (folded-order a b)
-  (let ((ka (locale-sort-key a))
-        (kb (locale-sort-key b)))
+  (let ((ka (match-key a))
+        (kb (match-key b)))
     (and (not (string=? ka kb))
          (string<? ka kb))))
 
 (define* (sort-strings strings #:key (locale #f) (compare #f))
-  "Stably sort STRINGS by locale-sort-key.
+  "Stably sort STRINGS by their canonical caseless match keys.
 
 With LOCALE, use the platform's collation data when it is available and
 fall back to folded code-point order otherwise.  COMPARE, a two-argument

@@ -512,8 +512,10 @@
 
 ;;; Sorting
 
-(test-equal "sort keys fold case and accents"
-  "strasse" (locale-sort-key "Straße"))
+(test-assert "i18n exposes one canonical caseless key"
+  (let ((public (module-public-interface (resolve-module '(grove i18n)))))
+    (and (module-variable public 'match-key)
+         (not (module-variable public 'locale-sort-key)))))
 (test-equal "strings sort by their folded keys"
   '("apple" "Straße" "Zebra" "éclair")
   (sort-strings '("Straße" "apple" "Zebra" "éclair")))
