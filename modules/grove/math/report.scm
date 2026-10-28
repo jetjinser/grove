@@ -4,6 +4,7 @@
 (define-module (grove math report)
   #:use-module (grove private snapshot)
   #:use-module (grove math derivation)
+  #:use-module (grove math diagnostic)
   #:use-module (grove math term)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
@@ -40,6 +41,20 @@
 
 (define* (make-math-report name candidates reason limits states
                           #:key (diagnostics '()) (passes '()) (audit #f))
+  (unless (symbol? name)
+    (error "math report name must be a symbol" name))
+  (unless (and (list? candidates) (every math-derivation? candidates))
+    (error "math report candidates must be derivations" candidates))
+  (unless (symbol? reason)
+    (error "math report reason must be a symbol" reason))
+  (unless (list? limits)
+    (error "math report limits must be a list" limits))
+  (unless (and (exact-integer? states) (>= states 0))
+    (error "math report state count must be a non-negative integer" states))
+  (unless (and (list? diagnostics) (every math-diagnostic? diagnostics))
+    (error "math report diagnostics must be diagnostic records" diagnostics))
+  (unless (and (list? passes) (every math-report? passes))
+    (error "math report passes must be reports" passes))
   (%make-math-report name (snapshot-data candidates) reason
                      (snapshot-data limits) states
                      (snapshot-data diagnostics)
