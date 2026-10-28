@@ -345,6 +345,10 @@ run, since renderers receive the same analyzed model.
 Project files, imported modules, loader dependencies, framework source/data,
 compiled files, and effective renderer settings are fingerprinted automatically.
 Module search paths and absent preferred compiled files are also tracked.
+When `project.scm` reads a file to construct its callbacks or options, call
+`depend-on!` at top level; the project loader records that path as a project
+dependency. Use `#:extra-sources` when the analyzer also needs the declared
+paths through `project-context-extra-sources`.
 Built-in factories include their settings in cache identity. A custom cached
 renderer should declare extra files with `#:dependencies` (a fixed path list
 or a zero-argument collector); each returned path must be unique. These paths

@@ -12,6 +12,9 @@
 
 (define root (format #f "/tmp/grove-load-test-~a" (getpid)))
 (define config (string-append root "/project.scm"))
+(define load-config (string-append root "/load-input-project.scm"))
+(define load-dependency (string-append root "/load-input.txt"))
+(define load-output (string-append root "/load-output/result.txt"))
 (define pipeline-config (string-append root "/pipeline-project.scm"))
 (define pipeline-adapter (string-append root "/adapter.scm"))
 (define pipeline-output (string-append root "/pipeline-output/generated.txt"))
@@ -59,6 +62,20 @@
                                  (module-ref pipeline-environment 'pipeline-output))))))
   #:output-directory \"pipeline-output\")\n"))
 
+(define (write-load-input-project)
+  (write-file load-config
+    "(use-modules (grove input) (grove project) (grove build) (grove output) (ice-9 textual-ports))
+(define configured-value
+  (call-with-input-file (depend-on! \"load-input.txt\") get-string-all))
+(make-project
+  #:collect-sources (lambda () '())
+  #:read-source (lambda (_) #f)
+  #:analyze (lambda (_) configured-value)
+  #:renderers (list (make-cached-renderer
+                      (lambda (value)
+                        (list (make-artifact \"result.txt\" value)))))
+  #:output-directory \"load-output\")\n"))
+
 (define (error-stage thunk)
   (catch 'grove-project-error thunk
     (lambda (_ error) (project-error-stage error))))
@@ -101,6 +118,8 @@
     (mkdir (string-append root "/sources"))
     (write-file (string-append root "/sources/input.txt") "input")
     (write-project "one")
+    (write-file load-dependency "before")
+    (write-load-input-project)
     (mkdir (string-append root "/pipeline-sources"))
     (write-file (string-append root "/pipeline-sources/input.txt") "pipeline input")
     (write-file pipeline-adapter
@@ -116,6 +135,21 @@
     (test-assert "loader restores caller module" (eq? environment (current-module)))
     (test-assert "project definitions do not leak into caller"
       (not (module-defined? environment 'private-project-binding)))
+    (let ((initial
+            (call-with-loaded-project load-config
+              (lambda (project) (build-project/report project)))))
+      (test-assert "project load depend-on! inputs enter build provenance"
+        (member (canonicalize-path load-dependency)
+                (build-report-sources initial)))
+      (write-file load-dependency "after")
+      (call-with-loaded-project load-config
+        (lambda (project)
+          (let ((updated (build-project/report project)))
+            (test-equal "project load dependencies report content changes"
+              (list (canonicalize-path load-dependency))
+              (build-report-modified-sources updated)))))
+      (test-equal "project load dependencies refresh captured configuration"
+        "after" (call-with-input-file load-output get-string-all)))
     (call-with-loaded-project config
       (lambda (project)
         (test-assert "unchanged loaded projects reuse render cache"
