@@ -614,6 +614,11 @@
     (evaluate-document "@title{Bad}@describes{https://example.test/资料}")
     "bad.plant"))
 
+(test-error "describes requires an ASCII IDNA hostname" #t
+  (document->tree-page "bad"
+    (evaluate-document "@title{Bad}@describes{https://例え.テスト/}")
+    "bad.plant"))
+
 (test-error "describes rejects URI spaces" #t
   (document->tree-page "bad"
     (evaluate-document "@title{Bad}@describes{https://example.test/a b}")
