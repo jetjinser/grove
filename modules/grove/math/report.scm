@@ -4,7 +4,6 @@
 (define-module (grove math report)
   #:use-module (grove private snapshot)
   #:use-module (grove math derivation)
-  #:use-module (grove math audit)
   #:use-module (grove math term)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
@@ -13,7 +12,7 @@
             math-report-states math-report-diagnostics math-report-passes
             math-report-complete? math-report-status math-report-unresolved
             math-report-derivation math-report-final
-            math-report-audit math-report-with-audit))
+            math-report-audit))
 
 (define-record-type <math-report>
 (%make-math-report name candidates reason limits states diagnostics passes audit)
@@ -45,14 +44,6 @@
                      (snapshot-data limits) states
                      (snapshot-data diagnostics)
                      (snapshot-data passes) audit))
-
-(define (math-report-with-audit report audit)
-  (unless (math-report? report) (error "expected a math report" report))
-  (unless (or (not audit) (math-calculation-audit? audit))
-    (error "expected a calculation audit" audit))
-  (%make-math-report (math-report-name report) (math-report-candidates report)
-    (math-report-reason report) (math-report-limits report) (math-report-states report)
-    (math-report-diagnostics report) (math-report-passes report) audit))
 
 (define (math-report-complete? report)
   (and (null? (math-report-diagnostics report))

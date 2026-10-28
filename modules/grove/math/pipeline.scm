@@ -142,7 +142,15 @@
 (define (audit-calculus-report report)
   (let ((certificate (math-report-derivation report)))
     (if certificate
-        (math-report-with-audit report (math-audit-calculation certificate))
+        (make-math-report
+          (math-report-name report)
+          (math-report-candidates report)
+          (math-report-reason report)
+          (math-report-limits report)
+          (math-report-states report)
+          #:diagnostics (math-report-diagnostics report)
+          #:passes (math-report-passes report)
+          #:audit (math-audit-calculation certificate))
         report)))
 
 (define (derivative-report name rules source variable assumptions validate max-steps max-term-size)
