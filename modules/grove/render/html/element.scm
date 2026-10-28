@@ -4,6 +4,7 @@
 
 (define-module (grove render html element)
   #:use-module (grove private anchor)
+  #:use-module (grove private html-style)
   #:use-module (grove ir)
   #:use-module (grove style)
   #:use-module (grove style html)

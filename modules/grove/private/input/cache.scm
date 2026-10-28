@@ -8,6 +8,7 @@
   #:use-module (grove private files)
   #:use-module (grove private fingerprint)
   #:use-module (grove private input dependencies)
+  #:use-module (grove private html-style)
   #:use-module (grove private string-fun)
   #:use-module (grove style)
   #:use-module (grove style html)

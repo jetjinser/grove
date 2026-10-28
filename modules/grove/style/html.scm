@@ -16,8 +16,7 @@
             html-style-stylesheets
             html-style-artifacts
             make-html-attributes html-attributes? html-attributes-assoc
-            make-html-tag html-tag? html-tag-name
-            make-html-void html-void?))
+            make-html-tag html-tag? html-tag-name))
 
 (define-record-type <html-style>
   (%make-html-style stylesheets assets)
@@ -107,16 +106,3 @@ Use it in content styles and HTML presentation values."
     (unless (html-tag-name? name)
       (error "invalid HTML tag name" name))
     (%make-html-tag (snapshot-data name))))
-
-(define-record-type <html-void>
-  (%make-html-void marker)
-  html-void?
-  (marker html-void-marker))
-
-(define (make-html-void)
-  "Mark a styled content element as empty and reject content.
-
-The HTML renderer emits a self-closing tag. Use this only for an element
-that HTML defines as void: browsers ignore the self-closing slash on other
-HTML elements. Grove leaves that tag-semantic choice to the vocabulary."
-  (%make-html-void 'void))

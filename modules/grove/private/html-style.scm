@@ -6,8 +6,18 @@
   #:use-module (grove style)
   #:use-module (grove style html)
   #:use-module (srfi srfi-1)
+  #:use-module (srfi srfi-9)
   #:export (content-style-html-tag-name
-            content-style-html-void?))
+            content-style-html-void?
+            make-html-void
+            html-void?))
+
+(define-record-type <html-void>
+  (%make-html-void)
+  html-void?)
+
+(define (make-html-void)
+  (%make-html-void))
 
 (define (content-style-html-tag-name style)
   "Return the rightmost HTML tag marker in STYLE, or #f."

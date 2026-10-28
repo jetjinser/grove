@@ -29,6 +29,17 @@
          (module-public-interface (resolve-module '(grove private anchor)))
          'checked-anchor-id)))
 
+(test-assert "HTML void markers stay behind the custom element API"
+  (and (not (module-variable
+              (module-public-interface (resolve-module '(grove style html)))
+              'make-html-void))
+       (not (module-variable
+              (module-public-interface (resolve-module '(grove style html)))
+              'html-void?))
+       (module-variable
+         (module-public-interface (resolve-module '(grove render html element)))
+         'make-element)))
+
 (test-equal "content styles expose scoped HTML attributes"
   '((class . "note") (id . "page-term") (href . "#page-term"))
   (html-attributes:content-style-html-attributes

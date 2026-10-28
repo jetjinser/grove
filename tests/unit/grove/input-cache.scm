@@ -5,6 +5,7 @@
   #:use-module (grove ir)
   #:use-module (grove build)
   #:use-module (grove private build-state)
+  #:use-module (grove private html-style)
   #:use-module (grove style)
   #:use-module (grove style html)
   #:use-module (grove input scribble)
