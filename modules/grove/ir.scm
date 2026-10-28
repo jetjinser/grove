@@ -30,6 +30,7 @@
             content-element-with-children
             content-element-properties
             content-element-property
+            content-element-has-property?
             content-element-style
             content-with-style
             content-with-property
@@ -205,6 +206,16 @@
   (when (eq? key 'source-location)
     (error "source-location is a content field; use content-source-location"))
   (snapshot-data (content-element-property/raw element key)))
+
+(define (content-element-has-property? element key)
+  "Return #t when KEY is present, including when its value is #f."
+  (unless (content-element? element)
+    (error "content-element-has-property? requires a content element" element))
+  (unless (symbol? key)
+    (error "content property key must be a symbol" key))
+  (when (eq? key 'source-location)
+    (error "source-location is a content field; use content-source-location"))
+  (and (assq key (content-element-properties/raw element)) #t))
 
 (define (content-element-property/raw element key)
   (assq-ref (content-element-properties/raw element) key))

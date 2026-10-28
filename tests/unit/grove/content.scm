@@ -321,6 +321,17 @@
   (content-element-property 'not-an-element 'role))
 (test-error "content-element-property requires a symbol key" #t
   (content-element-property (make-content-element 'paragraph '()) "role"))
+(let ((without (make-content-element 'custom '()))
+      (with-false (make-content-element 'custom '()
+                   #:properties '((enabled? . #f)))))
+  (test-assert "content property presence distinguishes absence from #f"
+    (and (not (content-element-has-property? without 'enabled?))
+         (content-element-has-property? with-false 'enabled?)
+         (not (content-element-property with-false 'enabled?)))))
+(test-error "content property presence requires an element" #t
+  (content-element-has-property? 'not-an-element 'role))
+(test-error "content property presence requires a symbol key" #t
+  (content-element-has-property? (make-content-element 'paragraph '()) "role"))
 (test-error "source locations use the dedicated accessor" #t
   (content-element-property (make-content-element 'paragraph '())
     'source-location))

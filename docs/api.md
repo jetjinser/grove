@@ -133,6 +133,8 @@ a string or list returned by an accessor does not alter the node. Use
 intentional change;
 `content-element-with-children` replaces its children while preserving its
 kind, source, properties, style, and flow behavior.
+`content-element-has-property?` distinguishes an absent property from a
+property explicitly set to `#f`, matching render-context key semantics.
 `make-content-disclosure` constructs a titled block disclosure with an
 optional initial `open?` state. Its `addressable?` flag is a Forester
 integration hint: Forester converts it to an unnamed `unstable-N` subtree
