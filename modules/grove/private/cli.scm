@@ -388,8 +388,7 @@ keyed by command."
                            #:handler
                            (lambda (input output)
                              ((project-browse project)
-                              model
-                               #:input input #:output output)))
+                              model input output)))
                           0)))
                      (begin (browse-project project) 0))))))))
       (else

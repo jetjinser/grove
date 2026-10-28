@@ -12,6 +12,7 @@
   #:use-module (srfi srfi-64))
 
 (define root (mkdtemp "/tmp/grove-cli-test-XXXXXX"))
+(define test-module-directory (string-append root "/modules"))
 (define script (string-append root "/entry.scm"))
 (define config (string-append root "/project.scm"))
 (define out (string-append root "/stdout"))
@@ -33,10 +34,12 @@
           (apply system* "sh" "-c"
             "out=$1; err=$2; shift 2; exec \"$@\" >\"$out\" 2>\"$err\""
             "grove-test" out err "env"
-            (string-append "XDG_CACHE_HOME=" root "/cache") "guile" "--no-auto-compile"
-            "-L" (dirname sources) "-L" sources
+            (string-append "XDG_CACHE_HOME=" root "/cache")
+            "guile" "--no-auto-compile"
+            "-L" test-module-directory "-L" (dirname sources) "-L" sources
             "-C" (string-append (dirname sources) "/build")
             "-C" root
+            "-C" test-module-directory
             script arguments)))
     (list (status:exit-val status)
           (call-with-input-file out get-string-all)
@@ -49,6 +52,17 @@
     ;;     snapshots computed here read the files they write.
     (setenv "XDG_CACHE_HOME" (string-append root "/cache"))
     (prepare-subprocess root)
+    (mkdir test-module-directory)
+    (mkdir (string-append test-module-directory "/grove"))
+    (let ((mock-ssh (string-append test-module-directory "/grove/ssh.scm")))
+      (write-file mock-ssh
+        "(define-module (grove ssh) #:export (generate-host-key read-authorized-keys serve-ssh))\n(define* (generate-host-key path #:key force) #t)\n(define (read-authorized-keys path) '())\n(define* (serve-ssh #:key handler #:allow-other-keys) (handler (open-input-string \"ssh input\\n\") (current-output-port)) 0)\n")
+      (unless (zero? (system* "guild" "compile"
+                              "-L" test-module-directory
+                              "-o" (string-append test-module-directory
+                                                   "/grove/ssh.go")
+                              mock-ssh))
+        (error "could not compile the CLI SSH test module")))
     (mkdir (string-append root "/sources"))
     (write-file (string-append root "/sources/input.txt") "input")
     (write-file script "(use-modules (tests unit grove subprocess))\n(exit (cli-entry (cdr (command-line))))\n")
@@ -97,6 +111,16 @@
         ("build" "--ssh-workers" "2")
         ("store" "size" "--dry-run")
         ("store" "size" "--older-than" "5")))
+    (write-file config
+      "(use-modules (grove project) (ice-9 rdelim))\n(make-project #:collect-sources (lambda () '()) #:read-source (lambda (_) #f) #:analyze (lambda (_) \"model\") #:browse (lambda (model input output) (display (read-line input) output) (display \":\" output) (display model output) (newline output)) #:output-directory \"output\")\n")
+    (let ((result (run "browse" "--project" config "--ssh" "2222"
+                       "--host-key" "host_rsa"
+                       "--authorized-keys" "authorized_keys")))
+      (test-equal "SSH browsing invokes the project callback positionally" 0
+        (car result))
+      (test-assert "SSH browsing passes the analyzed model and session ports"
+        (string-contains (cadr result) "ssh input:model")))
+    (write-file config original-config)
     (let ((result (run "store" "gc" "--dry-run" "--older-than=30")))
       (test-equal "store gc accepts its scoped cleanup options" 0 (car result))
       (test-assert "store gc dry run reports without deleting entries"
