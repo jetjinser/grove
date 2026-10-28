@@ -12,6 +12,7 @@
   #:use-module (language scheme spec)
   #:use-module (language scribble parser)
   #:use-module (language scribble source)
+  #:use-module (language scribble flow)
   #:use-module (grove private input dependencies)
   #:use-module (ice-9 textual-ports)
   #:use-module ((language scribble spec)
@@ -33,6 +34,13 @@
     (lambda () (thunk) #f)
     (lambda (key . args)
       (string-contains (format #f "~s" (cons key args)) text))))
+
+(test-equal "content sequences flatten recursively in document order"
+  '("first" "second" "third")
+  (flatten-content-sequence '("first" ("second" ("third")))))
+
+(test-error "content sequence flattening rejects non-content values" #t
+  (flatten-content-sequence '("valid" 42)))
 
 (define (substring-count text substring)
   (let loop ((start 0) (count 0))

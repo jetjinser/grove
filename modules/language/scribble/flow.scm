@@ -26,12 +26,15 @@
               value)))
 
 (define (flatten-content-sequence values)
-  "Flatten nested content sequences while preserving document order."
-  (append-map (lambda (value)
-                (if (content-sequence? value)
-                    (flatten-content-sequence value)
-                    (list value)))
-              values))
+  "Flatten a nested content sequence while preserving document order."
+  (unless (content-sequence? values)
+    (error "not a content sequence" values))
+  (let flatten ((sequence values))
+    (append-map (lambda (value)
+                  (if (list? value)
+                      (flatten value)
+                      (list value)))
+                sequence)))
 
 (define flow-newline (list 'flow-newline))
 
