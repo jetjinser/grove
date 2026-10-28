@@ -12,6 +12,7 @@ the work; drop lower only when you need to replace part of its behavior.
 | Task | Start here | Reach lower when… |
 | --- | --- | --- |
 | Write a Forester page | `(forester commands)` in `.plant`; core Scribble commands are imported automatically | the page needs project-local Scheme modules or a new command vocabulary; load local `.plant` modules with `(grove input scribble)` |
+| Write bilingual Forester content | `(forester i18n)` → `lang`, `bilingual`, `term`; import it in the page's command manifest or with `@use-modules`; see the [localization guide](i18n.md#bilingual-content) | custom presentation belongs in Content IR styles and render rules |
 | Configure the normal Forester site | `(forester project)` → `make-forester-project` | the reader, analysis, or complete renderer set needs replacing |
 | Apply a reusable style to content | `(grove style)` → `make-content-style`, `merge-content-style`; pass it through `#:style`; use `(grove style html element)` for HTML attributes and tag markers | the style value is format-neutral; HTML interprets it as classes and element properties, unlike renderer-wide `(grove style html)` stylesheets; see [tree composition](forester-composition.md#element-styles) |
 | Adapt Scribble documents to Forester tree pages | `(forester input scribble)` → `make-page-reader`; use `document->tree-page` when the document is already read | the project needs a different page model or metadata policy |
@@ -35,6 +36,7 @@ the work; drop lower only when you need to replace part of its behavior.
 | Localize interface text and formatting | `(grove i18n)` plus renderer `#:locale` and `#:messages`; see the [localization guide](i18n.md) | project-specific content should be translated; keep that data in the content model |
 | Pass explicit state through a render pass | `(grove render context)` → `make-render-context`, `render-context-with`; Forester renderers can use `(forester render context)` → `make-site-render-context` | renderer options configure a renderer; context carries values to rules and custom rendering code |
 | Add an output derived from the analyzed model | a renderer in `#:additional-renderers` or `#:renderers` | the output depends only on declared project files, independently of the model; use `#:pipelines` |
+| Generate artifacts from declared files and tools | `(grove pipeline)` → `make-asset-pipeline`, then pass it through project `#:pipelines`; see [tool integration](customizing.md#integrate-an-external-tool) | output depends on the analyzed model; use a renderer instead |
 | Construct a renderer's output artifacts | `(grove output)` → `make-artifact`, `make-byte-artifact` | output comes from declared files independently of the model; use an asset pipeline |
 | Publish artifacts outside a project build | `(grove output)` → `write-artifacts`; use `validate-artifacts` to check a complete set before writing | a normal Grove project already validates and publishes its artifacts |
 | Copy a static asset directory into the build | `(grove render static)` → `make-static-assets-renderer` | files are generated from declared inputs or a tool; use an asset pipeline |
@@ -53,6 +55,7 @@ the work; drop lower only when you need to replace part of its behavior.
 | Convert a math value to renderable content | `(grove math layout)` → `math-value->layout`; use `math-notation->datum` to inspect the resulting notation tree | use `(grove math notation)` to author display-only layout |
 | Query finite relations | `(grove relation)` for relation values and miniKanren goals; `(grove relation dsl)` for named schemas and rules; see the [Relation reference](relations.md) | a domain API should return ordered, domain-specific results |
 | Query Forester pages, content, references, and terms | `(forester relations)` for finite relation goals and row queries | use `(forester site)` when results should be page/content records in site order; see the [Relation reference](relations.md) |
+| Represent tree composition facts | `(forester composition)` → `make-subtree-definition`, `make-transclusion`, `make-composition`; see [tree composition](forester-composition.md#composition-api) | query a built Forest in page order with `(forester site)` |
 | Count user-perceived text units | `grapheme-count` from `(grove unicode)` | the task needs codepoint or UTF-8 byte counts instead |
 | Match text independent of Unicode case and canonical spelling | `canonical-caseless-key` from `(grove unicode)` | sorting or locale-aware collation is also needed; use `(grove i18n)` → `sort-strings` |
 | Run a live preview from Scheme | `(grove serve)` → `serve-project` | ordinary local previews can use the `grove serve` command |
