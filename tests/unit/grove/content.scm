@@ -48,6 +48,9 @@
               '((id . "term") (href . "#term")))))
     "page-"))
 
+(test-error "content style names cannot be empty" #t
+  (make-content-style ""))
+
 (test-equal "HTML style attributes preserve renderer attributes and merge classes"
   '((class . "tree note") (id . "tree-1") (data-kind . "note"))
   (html-attributes:merge-html-attributes
