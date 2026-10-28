@@ -160,7 +160,7 @@ declares that it depends on no files.
 | --- | --- | --- |
 | `site->html` / `site->text` / `site->gemtext` | alist of page ID string → rendered string; text and gemtext use the symbol `'index` for the aggregate index | tests, inspection, small tools |
 | `render-html` / `render-text` / `render-gemtext` | complete list of build artifacts, including shared assets and indexes | custom build steps that need artifacts directly |
-| `make-html-renderer` / `make-text-renderer` / `make-gemtext-renderer` | cached renderer value | `make-site-project #:renderers` |
+| `make-html-renderer` / `make-text-renderer` / `make-gemtext-renderer` | cached renderer when caching is enabled and either no custom rules are supplied or they have a stable `#:rules-id`; otherwise a plain procedure | `make-site-project #:renderers` |
 
 All of them take one options value:
 
