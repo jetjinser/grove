@@ -1070,9 +1070,19 @@ Entry points take this value with #:options."
                                  (highlighter-configuration (cdr entry))))
                          highlighters)
                     (map (lambda (artifact)
-                           (list (out:artifact-path/raw artifact)
-                                 (content-fingerprint
-                                   (out:artifact-content/raw artifact))))
+                           (let ((sources
+                                   (or (out:artifact-sources/raw artifact) '())))
+                             ;;     Declared sources invalidate this output through
+                             ;;     artifact dirtiness, where the incremental
+                             ;;     callback can refresh it without discarding
+                             ;;     every page. Inline artifacts have no such
+                             ;;     dependency signal, so their bytes remain part
+                             ;;     of renderer identity.
+                             (list (out:artifact-path/raw artifact)
+                                   sources
+                                   (and (null? sources)
+                                        (content-fingerprint
+                                          (out:artifact-content/raw artifact))))))
                          (html-style-artifacts style)))))
           #:dependencies (lambda ()
                      (append

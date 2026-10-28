@@ -460,6 +460,30 @@
                      #:title-decorations
                      '(("algebra" . ((span "Algebra")))))))))
 
+(let* ((forest (make-forest (make-site (list algebra limits))))
+       (renderer-configuration-for
+        (lambda (content sources)
+          (let* ((style
+                   (compose-html-styles
+                     default-html-style
+                     (make-html-style
+                       #:stylesheets
+                       (list (make-artifact "custom.css" content
+                                            #:sources sources)))))
+                 (renderer
+                   (make-html-renderer
+                     #:options
+                     (make-html-options
+                       #:presentation
+                       (make-html-presentation #:style style)))))
+            (renderer-configurations forest (list renderer))))))
+  (test-equal "source-backed HTML style changes keep renderer identity stable"
+    (renderer-configuration-for "body { color: red; }" '("/tmp/custom.css"))
+    (renderer-configuration-for "body { color: blue; }" '("/tmp/custom.css")))
+  (test-assert "inline HTML style content participates in renderer identity"
+    (not (equal? (renderer-configuration-for "body { color: red; }" '())
+                 (renderer-configuration-for "body { color: blue; }" '())))))
+
 (let* ((forest (make-forest (make-site (list algebra limits)
                                        #:home "algebra")))
        (renderer-configurations-for
