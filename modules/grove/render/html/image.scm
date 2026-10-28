@@ -5,6 +5,7 @@
 (define-module (grove render html image)
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove private snapshot)
+  #:use-module (grove private string-fun)
   #:use-module (grove ir)
   #:use-module (grove render rules)
   #:use-module (srfi srfi-1)
@@ -39,9 +40,9 @@
 
 (define (make-image-variant type url)
   "Construct an image source variant from its MIME TYPE and URL."
-  (unless (and (string? type) (not (string-null? type)))
+  (unless (non-empty-string? type)
     (error "image variant type must be a non-empty MIME type" type))
-  (unless (and (string? url) (not (string-null? url)))
+  (unless (non-empty-string? url)
     (error "image variant URL must be a non-empty string" url))
   (%make-image-variant (snapshot-data type) (snapshot-data url)))
 
@@ -64,11 +65,11 @@
 (define* (make-image-set source #:key (variants '()) fallback)
   "Describe an image source, its alternate VARIANTS, and required FALLBACK URL.
 SOURCE selects the set; FALLBACK is used by the final @code{<img>} element."
-  (unless (and (string? source) (not (string-null? source)))
+  (unless (non-empty-string? source)
     (error "image set source must be a non-empty string" source))
   (unless (and (list? variants) (every image-variant? variants))
     (error "image set variants must be image variants" variants))
-  (unless (and (string? fallback) (not (string-null? fallback)))
+  (unless (non-empty-string? fallback)
     (error "image set fallback must be a non-empty string" fallback))
   (%make-image-set (snapshot-data source)
                    (snapshot-data variants)

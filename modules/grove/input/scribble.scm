@@ -4,6 +4,7 @@
 
 (define-module (grove input scribble)
   #:use-module (grove collect)
+  #:use-module (grove private string-fun)
   #:use-module (grove private input cache)
   #:use-module (grove private input dependencies)
   #:use-module (system base language)
@@ -26,8 +27,7 @@
 MODULE-DIRECTORY must be non-empty and is copied at construction. MODULE-FILTER
 receives each regular file's basename and defaults to `.plant` files. The
 procedure returns loaded paths so Grove can track them as build inputs."
-  (unless (and (string? module-directory)
-               (not (string-null? module-directory))
+  (unless (and (non-empty-string? module-directory)
                (procedure? module-filter))
     (error "Scribble module setup requires a directory and filter"
            module-directory module-filter))
@@ -47,9 +47,7 @@ evaluates module articles in PATHS order, once per preparation. The reader
 reuses those document results within that preparation and delegates other
 paths. Preparing again resets reuse; this is not a persistent cache."
   (unless (and (list? paths)
-               (every (lambda (path)
-                        (and (string? path) (not (string-null? path))))
-                      paths)
+               (every non-empty-string? paths)
                (procedure? read-document))
     (error "module session requires source paths and a reader" paths read-document))
   (set! paths (map string-copy paths))
@@ -131,10 +129,7 @@ sources."
     (if (current-input-cache)
         (let ((dependencies (cache-dependencies)))
           (unless (and (list? dependencies)
-                       (every (lambda (path)
-                                (and (string? path)
-                                     (not (string-null? path))))
-                              dependencies))
+                       (every non-empty-string? dependencies))
             (error "Scribble cache dependency collector must return paths"
                    dependencies))
           (cached-document path "scribble" dependencies

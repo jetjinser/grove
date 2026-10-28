@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove ssh)
+  #:use-module (grove private string-fun)
   #:use-module (ice-9 format)
   #:use-module (ice-9 optargs)
   #:use-module (ice-9 rdelim)
@@ -166,7 +167,7 @@
 
 TYPE is a key symbol understood by (ssh key), BITS its size where the
 type has one.  Refuses to overwrite an existing key unless FORCE is #t."
-  (unless (and (string? path) (not (string-null? path)))
+  (unless (non-empty-string? path)
     (error "host key requires a file path" path))
   (when (and (file-exists? path) (not force))
     (error "host key already exists; pass --force to overwrite" path))

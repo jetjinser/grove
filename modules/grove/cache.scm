@@ -6,9 +6,9 @@
   #:use-module ((grove private fingerprint) #:prefix private:)
   #:use-module (grove private artifact-store)
   #:use-module (grove private snapshot)
+  #:use-module (grove private string-fun)
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-9)
-  #:use-module (srfi srfi-13)
   #:export (make-content-cache
             content-cache?
             content-cache-ref
@@ -26,14 +26,14 @@
 
 (define (make-content-cache namespace)
   "Create a per-user shared cache namespace addressed by caller keys."
-  (unless (and (string? namespace) (not (string-null? namespace)))
+  (unless (non-empty-string? namespace)
     (error "content cache requires a non-empty namespace" namespace))
   (%make-content-cache (snapshot-data namespace)))
 
 (define (content-cache-identity cache key)
   (unless (content-cache? cache)
     (error "content cache operation requires a cache" cache))
-  (unless (and (string? key) (not (string-null? key)))
+  (unless (non-empty-string? key)
     (error "content cache key must be a non-empty string" key))
   (private:content-fingerprint
     (string-append "grove-content-cache-v1\0"

@@ -4,6 +4,7 @@
 
 (define-module (grove collect)
   #:use-module (grove private files)
+  #:use-module (grove private string-fun)
   #:use-module (ice-9 ftw)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
@@ -38,8 +39,7 @@ symlinks, and special files are skipped."
                string<?)))
   (unless (procedure? include?)
     (error "directory collector predicate must be a procedure" include?))
-  (unless (and (string? directory)
-               (not (string-null? directory))
+  (unless (and (non-empty-string? directory)
                (file-is-directory? directory))
     (error "directory collector requires an existing directory" directory))
   (collect directory))
