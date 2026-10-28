@@ -8,6 +8,7 @@
   #:use-module (grove ir)
   #:use-module (grove style)
   #:use-module (grove style html)
+  #:use-module (grove style html element)
   #:use-module (grove render html)
   #:use-module ((grove render html attributes) #:prefix html-attributes:)
   #:use-module (grove render html routes)
@@ -44,6 +45,17 @@
        (module-variable
          (module-public-interface (resolve-module '(grove render html element)))
          'make-element)))
+
+(test-assert "HTML output styles and element styles have separate APIs"
+  (let ((site-html (module-public-interface
+                     (resolve-module '(grove style html))))
+        (element-html (module-public-interface
+                        (resolve-module '(grove style html element)))))
+    (and (module-variable site-html 'make-html-style)
+         (not (module-variable site-html 'make-html-attributes))
+         (not (module-variable site-html 'make-html-tag))
+         (module-variable element-html 'make-html-attributes)
+         (module-variable element-html 'make-html-tag))))
 
 (test-equal "content styles expose scoped HTML attributes"
   '((class . "note") (id . "page-term") (href . "#page-term"))

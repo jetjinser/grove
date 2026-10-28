@@ -20,6 +20,7 @@
   #:use-module (grove relation dsl)
   #:use-module (grove site)
   #:use-module (grove style html)
+  #:use-module (grove style html element)
   #:use-module (tests unit forester fixtures))
 
 (test-begin "forester composition")
@@ -544,7 +545,7 @@
 
 (let* ((target (make-site-page "styled-target" "Styled target"
                  (evaluate-document
-                   "@use-modules[(grove style) (grove style html)]
+                   "@use-modules[(grove style) (grove style html element)]
 @(define intro-style (make-content-style 'notice (list (make-html-attributes '((id . \"intro\"))))))
 @paragraph[#:style intro-style]{A styled paragraph.}")))
        (host (make-site-page "styled-host" "Styled host"
@@ -568,7 +569,7 @@
   (let ((forest (make-forest
                  (make-site (list (make-site-page "reserved" "Reserved"
                    (evaluate-document
-                     "@use-modules[(grove style) (grove style html)]
+                     "@use-modules[(grove style) (grove style html element)]
 @subtree[#:style (make-content-style #f (list (make-html-attributes '((id . \"override\")))))]{@title{Child}Text.}")))))))
     (render-test-html forest)))
 

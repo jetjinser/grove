@@ -26,6 +26,7 @@
   #:use-module (grove render html routes)
   #:use-module (grove style)
   #:use-module (grove style html)
+  #:use-module (grove style html element)
   #:use-module (grove output)
   #:use-module (grove i18n)
   #:use-module (grove site)

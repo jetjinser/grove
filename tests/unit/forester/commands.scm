@@ -13,6 +13,7 @@
   #:use-module (grove render html)
   #:use-module (grove render text)
   #:use-module (grove style html)
+  #:use-module (grove style html element)
   #:use-module (grove private input dependencies)
   #:use-module (language scribble spec)
   #:use-module (system base language)

@@ -187,10 +187,11 @@ style; HTML maps its name to a class:
 @◇:math{@◇:frac[#:style 'ratio]{x}{y}}
 ```
 
-For HTML-specific attributes, use the existing style property API:
+For HTML-specific attributes and tag overrides, import
+`(grove style html element)` and use the existing style property API:
 
 ```scheme
-@use-modules[(grove style) (grove style html)]
+@use-modules[(grove style) (grove style html element)]
 @(define note-style
   (make-content-style 'notice
     (list (make-html-attributes
@@ -255,6 +256,8 @@ tag). Merging no styles yields the empty style, and every supplied value is
 validated, including a single style:
 
 ```scheme
+(use-modules (grove style html element))
+
 (define print-accent
   (merge-content-style accent
     (make-content-style #f

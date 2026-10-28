@@ -7,6 +7,7 @@
   #:use-module (grove private files)
   #:use-module (grove style)
   #:use-module (grove style html)
+  #:use-module (grove style html element)
   #:use-module (ice-9 optargs)
   #:export (bilingual-container-style
             bilingual-fold-container-style

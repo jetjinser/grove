@@ -7,7 +7,7 @@
   #:use-module (grove private html-style)
   #:use-module (grove ir)
   #:use-module (grove style)
-  #:use-module (grove style html)
+  #:use-module (grove style html element)
   #:export (make-element))
 
 (define (element-command tag style void? flow-kind kind anchor)

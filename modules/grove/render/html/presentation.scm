@@ -4,6 +4,7 @@
 
 (define-module (grove render html presentation)
   #:use-module (grove style html)
+  #:use-module (grove style html element)
   #:use-module (grove render rules)
   #:use-module (grove private snapshot)
   #:use-module (grove private string-fun)

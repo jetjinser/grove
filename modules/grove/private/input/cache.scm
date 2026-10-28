@@ -10,7 +10,7 @@
   #:use-module (grove private input dependencies)
   #:use-module (grove private html-style)
   #:use-module (grove style)
-  #:use-module (grove style html)
+  #:use-module (grove style html element)
   #:use-module (grove private build-state)
   #:use-module (ice-9 match)
   #:use-module (ice-9 ftw)

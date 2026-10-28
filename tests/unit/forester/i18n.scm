@@ -15,6 +15,7 @@
   #:use-module (grove site)
   #:use-module (grove style)
   #:use-module (grove style html)
+  #:use-module (grove style html element)
   #:use-module (forester i18n)
   #:use-module (forester commands)
   #:use-module (forester render gemtext)

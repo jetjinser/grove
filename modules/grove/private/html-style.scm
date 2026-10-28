@@ -4,7 +4,7 @@
 
 (define-module (grove private html-style)
   #:use-module (grove style)
-  #:use-module (grove style html)
+  #:use-module (grove style html element)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:export (content-style-html-tag-name

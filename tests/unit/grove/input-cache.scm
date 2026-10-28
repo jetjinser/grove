@@ -8,6 +8,7 @@
   #:use-module (grove private html-style)
   #:use-module (grove style)
   #:use-module (grove style html)
+  #:use-module (grove style html element)
   #:use-module (grove input scribble)
   #:use-module (grove private input cache)
   #:use-module (grove private input dependencies)

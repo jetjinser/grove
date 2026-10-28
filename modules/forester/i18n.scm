@@ -7,7 +7,7 @@
   #:use-module (grove i18n)
   #:use-module (grove ir)
   #:use-module (grove style)
-  #:use-module (grove style html)
+  #:use-module (grove style html element)
   #:use-module (grove render rules)
   #:use-module (forester private style i18n)
   #:use-module (language scribble command)

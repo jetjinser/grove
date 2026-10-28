@@ -5,7 +5,7 @@
 (define-module (grove render html attributes)
   #:use-module (grove private html-attributes)
   #:use-module (grove style)
-  #:use-module (grove style html)
+  #:use-module (grove style html element)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (content-style-html-attributes
