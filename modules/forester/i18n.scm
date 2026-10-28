@@ -32,7 +32,8 @@
 ;;
 ;; Text direction and HTML presentation are expressed through the existing
 ;; properties and style APIs, so no renderer change is required. The default
-;; HTML renderer emits side-by-side lanes; text output stacks them through an
+;; HTML renderer keeps the reader lane visible and folds the other lanes into
+;; a disclosure; parallel lanes are opt-in. Text output stacks them through an
 ;; ordinary render-rule value that composes with project rules.
 
 (define (check-direction dir)
