@@ -316,6 +316,13 @@
       (content->sxml styled)))
   (test-error "HTML attributes require unique string-valued pairs" #t
     (make-html-attributes '((id . "one") (id . "two"))))
+  (test-error "HTML attributes reject markup delimiters in names" #t
+    (make-html-attributes (list (cons (string->symbol "x\" onload=\"bad")
+                                     "value"))))
+  (test-error "HTML attributes reject spaces in names" #t
+    (make-html-attributes (list (cons (string->symbol "bad name") "value"))))
+  (test-error "HTML attributes reject empty names" #t
+    (make-html-attributes (list (cons (string->symbol "") "value"))))
   (let* ((name (string-copy "notice"))
          (property-value (string-copy "callout"))
          (attributes (list (cons 'data-kind property-value)))

@@ -74,11 +74,11 @@ With no arguments, return an empty HTML style."
   (snapshot-data (html-attributes-assoc/raw attributes)))
 
 (define (make-html-attributes assoc)
-  "Construct a validated HTML-attributes value from symbol/string pairs.
+  "Construct a validated HTML-attributes value from HTML-name/string pairs.
 
 Use it in content styles and HTML presentation values."
   (unless (valid-html-attribute-list? assoc)
-    (error "HTML attributes must be unique symbol/string pairs" assoc))
+    (error "HTML attributes must have unique valid names and string values" assoc))
   (%make-html-attributes (snapshot-data assoc)))
 
 (define-record-type <html-tag>
