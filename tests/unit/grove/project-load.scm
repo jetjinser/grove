@@ -58,7 +58,25 @@
   (catch 'grove-project-error thunk
     (lambda (_ error) (project-error-stage error))))
 
+(define (fails-before-project-load? thunk)
+  (catch #t
+    (lambda () (thunk) #f)
+    (lambda (key . _arguments)
+      (not (eq? key 'grove-project-error)))))
+
 (test-begin "project loading")
+(test-assert "loader validates a filename before resolving it"
+  (fails-before-project-load?
+    (lambda () (call-with-loaded-project "" check-project))))
+(test-assert "loader validates its callback before loading the file"
+  (fails-before-project-load?
+    (lambda ()
+      (call-with-loaded-project "/tmp/missing-grove-project.scm" #f))))
+(test-assert "loader validates output overrides before loading the file"
+  (fails-before-project-load?
+    (lambda ()
+      (call-with-loaded-project "/tmp/missing-grove-project.scm"
+        check-project #:output-directory ""))))
 (dynamic-wind
   (lambda ()
     (setenv "XDG_CACHE_HOME" (string-append root "/.cache"))
