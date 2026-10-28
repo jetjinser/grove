@@ -269,7 +269,7 @@
     ;; Exercise generated source through the real document/page reader.
     (mkdir (string-append root "/template-sources"))
     (write-file config
-      "(use-modules (forester project))\n(make-forester-project #:source-directory \"template-sources\" #:default-prefix \"tutorial\" #:tree-template (lambda (id date) (string-append \"@use-modules[(forester commands) (language scribble commands)]\\n@title{教程：\" id \"}\\n@published{\" date \"}\\nHello.\\n\")) #:output-directory \"output\" #:home \"tutorial-0001\")\n")
+      "(use-modules (forester project))\n(make-forester-project #:source-directory \"template-sources\" #:default-prefix \"tutorial\" #:template (lambda (id date) (string-append \"@use-modules[(forester commands) (language scribble commands)]\\n@title{教程：\" id \"}\\n@published{\" date \"}\\nHello.\\n\")) #:output-directory \"output\" #:home \"tutorial-0001\")\n")
       (test-equal "Forester projects preserve custom templates through CLI loading" 0
       (car (run "new" "--project" config)))
     (test-assert "custom templates receive the allocated ID and preserve Unicode"
@@ -293,7 +293,7 @@
         (lambda (template)
           (write-file config
             (string-replace-substring valid-config "#:default-prefix \"plain\""
-              (string-append "#:tree-template " template
+              (string-append "#:template " template
                              " #:default-prefix \"plain\"")))
           (test-equal "invalid templates fail before creating a file" 1
             (car (run "new" "--project" config)))

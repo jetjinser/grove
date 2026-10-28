@@ -33,7 +33,7 @@
           (pipelines '())
           (cache? #t)
           (default-prefix #f)
-          (tree-template #f))
+          (template #f))
   "Build a Forester project with standard HTML and optional peer renderers.
 HOME is the tree ID rendered at the site index. HTML-OPTIONS configures the
 standard HTML renderer; HTML-RULES-ID identifies opaque HTML rules for renderer
@@ -68,5 +68,5 @@ Forester page content."
     (make-forester-source-creator
       #:source-directory source-directory
       #:default-prefix default-prefix
-      #:template tree-template)
+      #:template template)
     #:output-directory output-directory))

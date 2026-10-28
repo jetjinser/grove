@@ -95,6 +95,10 @@ destination for creating new trees. Use `#:extra-sources` for additional files
 that should participate in project invalidation and preview watching.
 `#:cache?` defaults to `#t`; set it to `#f` to disable document, renderer, and
 pipeline caches for this project.
+Use `#:default-prefix` to configure the prefix for `grove new`; `#:template`
+customizes the generated `.plant` source. The template receives the allocated
+tree ID and local date and returns source text. See
+[tree creation](#tree-creation) for its default and a complete example.
 
 Use `make-site-project` when the project needs a different reader or analyzer,
 or otherwise needs to compose the complete site lifecycle.
