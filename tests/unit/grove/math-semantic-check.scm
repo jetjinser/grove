@@ -7,7 +7,6 @@
              (grove math rewrite)
              (grove math rule)
              (grove math semantic-check)
-             (grove math private polynomial-contract)
              (grove math derivation)
              (ice-9 match)
              (grove ir)

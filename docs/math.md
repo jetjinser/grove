@@ -267,7 +267,11 @@ For a deliberately smaller domain, the independent semantic checker verifies
 polynomial equations using its own exact sparse-polynomial normalizer. The
 checker can validate the registered scalar laws, check an individual rewrite
 step and its recorded path, or compare a computed polynomial derivative with an
-independently computed derivative. For example:
+independently computed derivative. Import `(grove math semantic-check)` for
+these checks and their typed evidence values; the pipeline module re-exports
+them as a convenience. Evidence constructors and accessors belong to the
+semantic-check module, so extensions inspecting or validating a checker result
+do not need to import an internal module. For example:
 
 ```scheme
 @(φ:polynomial-check->content (φ:check-polynomial-rule 'add-commutative))

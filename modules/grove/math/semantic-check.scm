@@ -17,7 +17,17 @@
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
-  #:re-export (math-polynomial-normal-form math-polynomial-equivalent?)
+  #:re-export (math-polynomial-normal-form math-polynomial-equivalent?
+               math-derivative-evidence? make-math-derivative-evidence
+               math-derivative-evidence-case math-derivative-evidence-expression
+               math-derivative-evidence-coordinate math-derivative-evidence-result
+               math-derivative-evidence-children
+               math-integral-monomial-evidence? make-math-integral-monomial-evidence
+               math-integral-monomial-evidence-input math-integral-monomial-evidence-output
+               math-antiderivative-evidence? make-math-antiderivative-evidence
+               math-antiderivative-evidence-expression math-antiderivative-evidence-coordinate
+               math-antiderivative-evidence-input math-antiderivative-evidence-result
+               math-antiderivative-evidence-monomials math-antiderivative-evidence-derivative)
   #:export (math-semantic-check? math-semantic-check-status
             math-semantic-check-valid? math-semantic-check-subject
             math-semantic-check-diagnostics
