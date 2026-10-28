@@ -7,7 +7,7 @@
   #:use-module (grove math derivation)
   #:use-module (grove math private checker-polynomial)
   #:use-module (grove math private number)
-  #:use-module (grove math premise)
+  #:use-module (grove math private premise)
   #:use-module (grove math rule)
   #:use-module (grove math rewrite)
   #:use-module (grove math verification)

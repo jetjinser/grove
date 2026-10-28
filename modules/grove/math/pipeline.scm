@@ -26,7 +26,7 @@
   #:use-module (grove math private provenance)
   #:use-module (grove math private presentation)
   #:use-module (grove math layout)
-  #:use-module (grove math premise)
+  #:use-module (grove math private premise)
   #:use-module (grove math private assumption)
   #:use-module (srfi srfi-1)
   #:export (math-derive

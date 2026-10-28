@@ -5,7 +5,7 @@
   #:use-module (grove private snapshot)
   #:use-module (grove relation)
   #:use-module ((grove relation dsl) #:select (project))
-  #:use-module (grove math premise)
+  #:use-module (grove math private premise)
   #:use-module (grove math private rule-spec)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-1)

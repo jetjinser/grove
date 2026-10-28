@@ -1,6 +1,6 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
-(use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math expression) (grove math premise) (grove math context)
+(use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math expression) (grove math private premise) (grove math context)
              ((grove math semantic) #:prefix ◆:) (tests unit grove polynomial-oracle)
              (srfi srfi-1) (srfi srfi-64))
 (test-begin "primitive rational parameter coefficients")

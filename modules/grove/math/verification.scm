@@ -7,7 +7,7 @@
   #:use-module (grove math diagnostic)
   #:use-module (grove math private pass)
   #:use-module (grove math private assumption)
-  #:use-module (grove math premise)
+  #:use-module (grove math private premise)
   #:use-module (grove math term)
   #:use-module (grove math rewrite)
   #:use-module (grove math types)

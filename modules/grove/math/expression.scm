@@ -5,7 +5,7 @@
   #:use-module (grove private snapshot)
   #:use-module (grove math term)
   #:use-module (grove math private source)
-  #:use-module (grove math premise)
+  #:use-module (grove math private premise)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-1)
   #:export (make-math-value math-value? math-value-term math-value-origin

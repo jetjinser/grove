@@ -10,7 +10,7 @@
   #:use-module (grove math diagnostic)
   #:use-module (grove math private declaration)
   #:use-module (grove math private function-derivative)
-  #:use-module (grove math premise)
+  #:use-module (grove math private premise)
   #:use-module (grove math rule)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)

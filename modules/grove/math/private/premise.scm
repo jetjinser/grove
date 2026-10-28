@@ -1,7 +1,7 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(define-module (grove math premise)
+(define-module (grove math private premise)
   #:use-module (grove math private number)
   #:use-module (grove math private scalar)
   #:use-module (grove math private declaration)

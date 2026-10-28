@@ -127,6 +127,19 @@ real logarithms require a positive argument. The system discharges simple
 facts such as positivity implying nonzero, but does not infer general truths.
 Assumptions are assertions by the article author, not facts proved by Grove.
 
+For relational extensions, `(grove math types)` exposes `math-typeo`, which
+relates an assumption set, a mathematical term, and its inferred type. Compose
+it with other miniKanren goals when writing custom rules. `math-infer-type` is
+the direct convenience for a ground term; built-in calculations already check
+types, so ordinary Formula and Semantic code does not need to call either.
+
+`(grove math layout)` bridges values and content: `math-value->layout` turns a
+Semantic value into ordinary Grove Content IR that custom commands or
+renderers can place in a document. `math-term->layout` is the lower-level
+version for callers that already have a raw term and type facts.
+`math-notation->datum` gives a readable Scheme datum for inspecting a Notation
+IR tree while developing an extension.
+
 ## Available calculations
 
 | Operation | What it supports |

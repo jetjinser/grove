@@ -9,7 +9,7 @@
   #:use-module (grove math types)
   #:use-module (grove math private assumption)
   #:use-module (grove math private domain)
-  #:use-module (grove math premise)
+  #:use-module (grove math private premise)
   #:use-module (grove math rewrite)
   #:use-module (srfi srfi-1)
   #:export (run-math-pass run-math-passes math-execution-diagnostics
