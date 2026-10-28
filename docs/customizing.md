@@ -29,6 +29,13 @@ This is the shortest path from “I want to change X” to the right Grove API.
 | cache behavior for any project kind | project options | `make-site-project` / `make-forester-project #:cache?`, or `project-with-options #:cache?` |
 | control caching for HTML/text/Gemtext | built-in renderer factories | These accept `#:cache?` and return plain procedures when caching is disabled; custom rules need `#:rules-id`. On Forester's standard HTML renderer, pass it as `make-forester-project #:html-rules-id`. Project options control caching globally. |
 
+`make-static-assets-renderer` copies regular files below its source directory,
+preserving their relative paths and optionally adding `#:prefix`. It follows
+`collect-directory`: hidden directories, directory symlinks, and special files
+are skipped; hidden files and symlinks to regular files are included. Grove
+tracks each copied file as both a project input and an artifact dependency, so
+changed files are reread and removed files disappear from the output set.
+
 HTML routes distinguish output paths from URLs. `#:page-path` and
 `#:index-path` choose artifact paths relative to the project's output
 directory. `#:url-prefix` is added to links emitted by the renderers; it does
