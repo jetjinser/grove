@@ -304,6 +304,11 @@
                      #:read-page (lambda (_) #f)
                      #:output-directory "output"
                      #:transforms '(not-a-procedure)))
+(test-error "site projects require a transform list" #t
+  (make-site-project #:source-directory "sources"
+                     #:read-page (lambda (_) #f)
+                     #:output-directory "output"
+                     #:transforms 'not-a-list))
 (test-error "site projects reject empty extra source paths at construction" #t
   (make-site-project #:source-directory "sources"
                      #:read-page (lambda (_) #f)
