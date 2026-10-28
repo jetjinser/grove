@@ -42,14 +42,18 @@
 (define* (make-html-style #:key (stylesheets '()) (assets '()))
   "Describe stylesheet and extra asset artifacts contributed by an HTML style.
 
-Both arguments are artifact lists; the constructor snapshots their contents."
+Both arguments are artifact lists; the constructor snapshots their contents.
+Paths across both lists must be unique and must not conflict as files and
+directories."
   (unless (and (list? stylesheets)
                (list? assets)
                (every artifact? stylesheets)
                (every artifact? assets))
     (error "HTML style requires artifact lists" stylesheets assets))
-  (%make-html-style (map snapshot-artifact (snapshot-data stylesheets))
-                    (map snapshot-artifact (snapshot-data assets))))
+  (let ((stylesheets (map snapshot-artifact (snapshot-data stylesheets)))
+        (assets (map snapshot-artifact (snapshot-data assets))))
+    (validate-artifacts (append stylesheets assets))
+    (%make-html-style stylesheets assets)))
 
 (define (compose-html-styles . styles)
   "Combine STYLES in order, appending their stylesheets and extra assets.

@@ -329,6 +329,17 @@
 (test-error "navigation links reject empty page IDs" #t
   (make-html-nav-link "" "Home"))
 
+(test-error "HTML styles reject duplicate artifact paths at construction" #t
+  (make-html-style
+    #:stylesheets (list (make-artifact "site.css" "first"))
+    #:assets (list (make-artifact "site.css" "second"))))
+
+(test-error "composed HTML styles reject conflicting artifact paths" #t
+  (compose-html-styles
+    (make-html-style #:assets (list (make-artifact "assets" "file")))
+    (make-html-style #:assets
+      (list (make-artifact "assets/logo.svg" "image")))))
+
 (let* ((content (string-copy "body { color: red; }"))
        (artifact (make-artifact "site.css" content))
        (stylesheets (list artifact))
