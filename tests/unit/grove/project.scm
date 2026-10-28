@@ -920,6 +920,14 @@
         (test-equal "analyze-project invokes no renderer" '() view-events)
         (test-assert "analyze-project writes no output directory"
           (not (file-exists? view-output-directory))))
+      (test-error "browse-project requires an input port" #t
+        (browse-project view-project #:input #f))
+      (test-equal "invalid browser input is rejected before project analysis"
+        '() view-events)
+      (test-error "browse-project requires an output port" #t
+        (browse-project view-project #:output #f))
+      (test-equal "invalid browser output is rejected before project analysis"
+        '() view-events)
       (let ((output (open-output-string)))
         (browse-project view-project
           #:input (open-input-string "")
