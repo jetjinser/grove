@@ -22,7 +22,6 @@
             make-content-translation
             make-content-bilingual
             bilingual-lane?
-            pair-translations
             bilingual-text-rules))
 
 ;; Bilingual authoring lowers to ordinary, cacheable Content IR:

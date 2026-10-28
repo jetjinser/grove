@@ -24,6 +24,11 @@
 
 (test-begin "forester i18n")
 
+(test-assert "bilingual lane grouping stays behind the authoring API"
+  (not (module-variable
+         (module-public-interface (resolve-module '(forester i18n)))
+         'pair-translations)))
+
 (test-assert "system locale names stay behind the i18n API"
   (not (module-variable
          (module-public-interface (resolve-module '(grove i18n)))
