@@ -121,9 +121,20 @@ for page in "$@"; do
     copy=$temporary/page-$index.html
     dom=$temporary/page-$index.dom
     cat "$page" "$temporary/inject.html" > "$copy"
-    "$chromium" --headless=new --no-sandbox --disable-gpu \
+    chromium_log=$temporary/chromium-$index.log
+    if "$chromium" --headless=new --no-sandbox --disable-gpu \
         --allow-file-access-from-files --virtual-time-budget=15000 \
-        --dump-dom "file://$copy" > "$dom" 2>/dev/null || true
+        --dump-dom "file://$copy" > "$dom" 2> "$chromium_log"; then
+        :
+    else
+        chromium_status=$?
+        echo "a11y-audit: Chromium failed for $page (status $chromium_status)" >&2
+        if [ -s "$chromium_log" ]; then
+            sed 's/^/  /' "$chromium_log" >&2
+        fi
+        status=1
+        continue
+    fi
     if ! grep -q 'id="axe-results"' "$dom"; then
         echo "a11y-audit: no axe result for $page" >&2
         status=1
