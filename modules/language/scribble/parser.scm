@@ -19,8 +19,7 @@
   #:use-module (ice-9 rdelim)
   #:use-module (ice-9 textual-ports)
   #:export (scribble-read
-            scribble-parse
-            scribble-reader))
+            scribble-parse))
 
 ;; All ranges share one immutable input buffer. Slices are made only when a
 ;; consumer asks for source-text, rather than copying every nested expression.
@@ -411,7 +410,3 @@
          (tok (cons c str) res punc depth)])))
   ;; begin
   (tok '() '() init-punc 0))
-
-
-(define (scribble-reader port env)
-  (scribble-parse port))
