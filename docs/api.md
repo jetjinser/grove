@@ -11,7 +11,8 @@ the work; drop lower only when you need to replace part of its behavior.
 
 | Task | Start here | Reach lower when… |
 | --- | --- | --- |
-| Write a Forester page | `(forester commands)` in `.plant`; core Scribble commands are imported automatically | the page needs project-local Scheme modules or a new command vocabulary; load local `.plant` modules with `(grove input scribble)` |
+| Write a Forester page | `@use-modules[(forester commands)]` for Forester metadata and tree commands; core Scribble syntax comes from the language | a page needs project-local `.plant` modules; load them with `(grove input scribble)` |
+| Reuse a named page command vocabulary | `@use-commands{manifest}`; the manifest exports `command-modules`; see [command sets](authoring.md#command-sets) | use `@use-modules` for raw imports or one-off modules |
 | Write bilingual Forester content | `(forester i18n)` → `lang`, `bilingual`, `term`; import it in the page's command manifest or with `@use-modules`; see the [localization guide](i18n.md#bilingual-content) | compose `(forester style i18n)` → `default-bilingual-style` into site-wide HTML styles; use Content IR styles for element-level changes |
 | Configure the normal Forester site | `(forester project)` → `make-forester-project` | the reader, analysis, or complete renderer set needs replacing |
 | Apply a reusable style to content | `(grove style)` → `make-content-style`, `merge-content-style`; pass it through `#:style`; use `(grove style html element)` for HTML attributes and tag markers | the style value is format-neutral; HTML interprets it as classes and element properties, unlike renderer-wide `(grove style html)` stylesheets; see [tree composition](forester-composition.md#element-styles) |
