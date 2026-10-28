@@ -121,7 +121,7 @@ endomorphism on content documents:
     merge-adjacent-paragraphs
     enrich-image-variants))
 
-(transform-document normalize document)
+(normalize document)
 ```
 
 Transforms rewrite the content algebra; rules interpret it.  Keeping them

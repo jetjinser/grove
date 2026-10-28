@@ -5,8 +5,7 @@
 (define-module (grove content transform)
   #:use-module (grove ir)
   #:use-module (srfi srfi-1)
-  #:export (compose-content-transforms
-            transform-document))
+  #:export (compose-content-transforms))
 
 ;; A content transform is an ordinary endomorphism on content documents.
 ;; Procedures are already composable Scheme values; this module supplies the
@@ -32,8 +31,3 @@
     (check-content-document "content transform requires a content document"
                             document)
     (fold apply-content-transform document transforms)))
-
-(define (transform-document transform document)
-  (unless (procedure? transform)
-    (error "content transform must be a procedure" transform))
-  (apply-content-transform transform document))

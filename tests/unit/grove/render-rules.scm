@@ -370,49 +370,44 @@
        (document (make-content-document '()))
        (composed (compose-content-transforms add-a add-b)))
   (test-equal "identity is a valid content transform"
-    0 (length (content-document-children
-                (transform-document identity document))))
+    0 (length (content-document-children (identity document))))
   (test-equal "empty transform composition is the identity"
     (content-document-children document)
     (content-document-children
-      (transform-document (compose-content-transforms) document)))
+      ((compose-content-transforms) document)))
   (test-equal "content transforms compose in order"
     '("a" "b")
     (map content-text-value
-      (content-document-children (transform-document composed document))))
+      (content-document-children (composed document)))
   (test-equal "content transform composition is associative"
     '("a" "b" "c")
     (map content-text-value (content-document-children
-      (transform-document
-        (compose-content-transforms add-a
-                                    (compose-content-transforms add-b add-c))
-        document))))
+      ((compose-content-transforms add-a
+                                   (compose-content-transforms add-b add-c))
+       document))))
   (test-equal "left- and right-associated transforms agree"
     (content-document-children
-      (transform-document
-        (compose-content-transforms add-a
-          (compose-content-transforms add-b add-c))
-        document))
+      ((compose-content-transforms add-a
+         (compose-content-transforms add-b add-c))
+       document))
     (content-document-children
-      (transform-document
-        (compose-content-transforms
-          (compose-content-transforms add-a add-b)
-          add-c)
-        document))))
+      ((compose-content-transforms
+         (compose-content-transforms add-a add-b)
+         add-c)
+       document))))
 
 (test-error "content transforms must be procedures" #t
   (compose-content-transforms 'not-a-procedure))
 
 (test-error "content transforms must return a content document" #t
-  (transform-document (lambda (document) 'not-a-document)
-                      (make-content-document '())))
+  ((compose-content-transforms (lambda (document) 'not-a-document))
+   (make-content-document '())))
 
 (test-error "content transform composition validates each intermediate result" #t
-  (transform-document
-    (compose-content-transforms
-      (lambda (document) 'not-a-document)
-      (lambda (document) (make-content-document '())))
-    (make-content-document '())))
+  ((compose-content-transforms
+     (lambda (document) 'not-a-document)
+     (lambda (document) (make-content-document '())))
+   (make-content-document '())))
 
 (test-error "empty content transform composition still validates its input" #t
   ((compose-content-transforms) 'not-a-document))

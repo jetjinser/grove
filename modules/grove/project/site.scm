@@ -89,7 +89,7 @@ format-specific renderer."
                 (make-site-page
                   (site-page-id page)
                   (site-page-title page)
-                  (transform-document transform (site-page-document page))
+                  (transform (site-page-document page))
                   (site-page-source page)
                   #:metadata (site-page-metadata page))))))
       #:analyze
