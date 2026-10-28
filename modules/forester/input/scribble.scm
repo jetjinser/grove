@@ -104,7 +104,7 @@
                                   path)))
                        (unless (absolute-entity-uri? value)
                          (error (format #f
-                                  "Forester page describes value must be an ASCII absolute URI (HTTP(S) requires a host) in ~a: ~a"
+                                  "Forester page describes value must be an ASCII absolute URI without credentials (HTTP(S) requires a host) in ~a: ~a"
                                   path value)))
                        value))
                    (elements-of-kind elements 'describes))))

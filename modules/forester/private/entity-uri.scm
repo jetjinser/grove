@@ -57,12 +57,7 @@
     (lambda ()
       (let ((uri (and (string? value) (string->uri value))))
         (and uri
-             (valid-component?
-               (uri-userinfo uri)
-               (lambda (character)
-                 (or (unreserved? character)
-                     (sub-delimiter? character)
-                     (char=? character #\:))))
+             (not (uri-userinfo uri))
              (valid-component?
                (uri-path uri)
                (lambda (character)

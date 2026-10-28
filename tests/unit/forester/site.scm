@@ -628,6 +628,12 @@
   (document->tree-page "bad"
     (evaluate-document "@title{Bad}@describes{https:}") "bad.plant"))
 
+(test-error "describes rejects credentials in entity URIs" #t
+  (document->tree-page "bad"
+    (evaluate-document
+      "@title{Bad}@describes{https://writer:secret@example.test/entity}")
+    "bad.plant"))
+
 (test-error "describes rejects duplicate URI declarations on one page" #t
   (document->tree-page "bad"
     (evaluate-document
