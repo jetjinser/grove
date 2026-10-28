@@ -26,9 +26,10 @@ their own type's contract.
 
 Base facts have set semantics: structurally equal rows occur once. The
 constructor retains the first occurrence order, and `relation-facts` exposes
-that order. Relation arity is part of the relation value and is checked when a
-goal runs. An empty relation defaults to arity two for convenience; pass
-`#:arity` to `make-relation` to construct an empty relation with another arity.
+that order. Relation arity is an exact positive integer, is part of the
+relation value, and is checked when a goal runs. An empty relation defaults to
+arity two for convenience; pass `#:arity` to `make-relation` to construct an
+empty relation with another arity.
 
 Construct and query finite facts with:
 
