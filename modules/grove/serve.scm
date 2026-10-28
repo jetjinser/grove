@@ -80,6 +80,25 @@
                                  (string-prefix? "GUILE_LOAD_COMPILED_PATH=" entry))))
                       (environ)))))
 
+(define (validate-serve-options filename output-directory port
+                                watch? debug? profile?)
+  (unless (and (string? filename) (> (string-length filename) 0))
+    (error "serve project file must be a non-empty string" filename))
+  (unless (or (not output-directory)
+              (and (string? output-directory)
+                   (> (string-length output-directory) 0)))
+    (error "serve output directory must be a non-empty string or #f"
+           output-directory))
+  (unless (and (exact-integer? port) (<= 1 port 65535))
+    (error "serve port must be an integer from 1 to 65535" port))
+  (for-each
+    (lambda (entry)
+      (unless (boolean? (cdr entry))
+        (error (car entry) "must be a boolean" (cdr entry))))
+    (list (cons "serve watch?" watch?)
+          (cons "serve debug?" debug?)
+          (cons "serve profile?" profile?))))
+
 (define* (serve-project filename #:key (output-directory #f)
                                       (port 8080) (watch? #t) (debug? #f)
                                       (profile? #f))
@@ -90,6 +109,8 @@ in the workspace, numbered so both sides can tell stale from current.
 Only an edit to a Scheme module or the project file restarts the
 worker - its loaded modules and model are only safe in the process
 that loaded them."
+  (validate-serve-options filename output-directory port
+                          watch? debug? profile?)
   (let* ((filename (call-with-project-stage 'load filename
                      (lambda () (canonicalize-path filename))))
          (override (and output-directory (absolute-path output-directory)))

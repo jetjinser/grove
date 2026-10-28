@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit grove serve)
+  #:use-module (grove serve)
   #:use-module (ice-9 binary-ports)
   #:use-module (ice-9 ftw)
   #:use-module (ice-9 textual-ports)
@@ -158,6 +159,22 @@
          (not (string-contains (read-file path) ") Z ")))))
 
 (test-begin "serve lifecycle")
+(test-error "serve project file must be a non-empty string" #t
+  (serve-project ""))
+(test-error "serve output directory must be a non-empty string or #f" #t
+  (serve-project "unused.scm" #:output-directory ""))
+(test-error "serve port must be an integer from 1 to 65535" #t
+  (serve-project "unused.scm" #:port 65536))
+(test-error "serve port must be an integer from 1 to 65535" #t
+  (serve-project "unused.scm" #:port "8080"))
+(test-error "serve port must be an integer from 1 to 65535" #t
+  (serve-project "unused.scm" #:port 8080.0))
+(test-error "serve watch? must be a boolean" #t
+  (serve-project "unused.scm" #:watch? 'yes))
+(test-error "serve debug? must be a boolean" #t
+  (serve-project "unused.scm" #:debug? 'yes))
+(test-error "serve profile? must be a boolean" #t
+  (serve-project "unused.scm" #:profile? 'yes))
 (dynamic-wind
   (lambda ()
     (mkdir root)
