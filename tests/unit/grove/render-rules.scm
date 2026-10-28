@@ -312,6 +312,12 @@
     #:metadata-items '(("page" . ((li "first")))
                        ("page" . ((li "second"))))))
 
+(test-error "presentation rejects empty title-decoration page IDs" #t
+  (make-html-presentation #:title-decorations '(("" . ((span "unused"))))))
+
+(test-error "presentation rejects empty metadata page IDs" #t
+  (make-html-presentation #:metadata-items '(("" . ((li "unused"))))))
+
 (test-error "home-link attributes cannot repeat names" #t
   (make-html-home-link '("Home")
     #:attributes '((class . "brand") (class . "logo"))))

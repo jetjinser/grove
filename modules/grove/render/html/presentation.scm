@@ -142,7 +142,7 @@ is a list of symbol/string pairs."
 (define (valid-page-sxml-map? entries)
   (and (list? entries)
        (every (lambda (entry)
-                (and (pair? entry) (string? (car entry))
+                (and (pair? entry) (non-empty-string? (car entry))
                      (static-sxml-list? (cdr entry))))
               entries)
        (= (length entries)
@@ -179,7 +179,7 @@ is a list of symbol/string pairs."
   "Build a declarative HTML presentation.
 
 HEAD and SITE-NAV are static SXML child lists. TITLE-DECORATIONS and
-METADATA-ITEMS map page IDs to static SXML child lists."
+METADATA-ITEMS map non-empty page IDs to static SXML child lists."
   (unless (html-style? style)
     (error "presentation style must be an HTML style" style))
   (unless (render-rules? rules)
