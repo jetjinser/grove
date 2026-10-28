@@ -47,16 +47,18 @@
            rules))
   (when (duplicate-kind? rules)
     (error "render rules cannot contain duplicate kinds" rules))
-  (%make-render-rules (snapshot-data rules)))
+  (if (null? rules)
+      empty-render-rules
+      (%make-render-rules (snapshot-data rules))))
 
 (define empty-render-rules
-  (make-render-rules '()))
+  (%make-render-rules '()))
 
 (define (compose-render-rules-pair base overlay)
   (unless (and (render-rules? base) (render-rules? overlay))
     (error "render rules can only be composed from render rules" base overlay))
   (let ((overlay-rules (render-rules-map overlay)))
-    (%make-render-rules
+    (make-render-rules
       (append
         (map (lambda (entry)
                (cons (car entry)

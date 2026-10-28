@@ -417,6 +417,19 @@
   (test-assert "Gemtext renderer can disable its cache explicitly"
     (procedure? (make-gemtext-renderer #:cache? #f))))
 
+(let ((rules (make-render-rules '())))
+  (test-assert "explicit empty rules keep all stock renderers cacheable"
+    (and (cached-renderer?
+           (make-html-renderer
+             #:options
+             (make-html-options
+               #:presentation (make-html-presentation #:rules rules))))
+         (cached-renderer?
+           (make-text-renderer #:options (make-text-options #:rules rules)))
+         (cached-renderer?
+           (make-gemtext-renderer
+             #:options (make-gemtext-options #:rules rules))))))
+
 (let* ((forest (make-forest (make-site (list algebra limits))))
        (rules-id (string-copy "rules-v1"))
        (renderers

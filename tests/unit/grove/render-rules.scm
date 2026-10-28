@@ -68,6 +68,14 @@
   #f
   (render-rules-ref (compose-render-rules) 'image))
 
+(test-eq "an explicitly constructed empty rule set is canonical"
+  empty-render-rules
+  (make-render-rules '()))
+
+(test-eq "composing empty rule sets preserves the canonical empty value"
+  empty-render-rules
+  (compose-render-rules empty-render-rules empty-render-rules))
+
 (test-assert "overlay wins"
   (pair? (memq 'picture (render-with (compose-render-rules base overlay)))))
 
