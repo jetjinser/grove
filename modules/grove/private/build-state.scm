@@ -8,7 +8,6 @@
   #:use-module (grove private files)
   #:use-module (grove private fingerprint)
   #:re-export (content-fingerprint file-fingerprint)
-  #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
   #:export (build-state-name
             build-state-temp-name
@@ -49,29 +48,19 @@
 (define (valid-source-entry? entry)
   (and (list? entry)
        (= (length entry) 3)
-       (string? (build-state-source-path entry))
+       (filesystem-path-string? (build-state-source-path entry))
        (or (not (build-state-source-fingerprint entry))
-           (valid-fingerprint? (build-state-source-fingerprint entry)))
+           (fingerprint? (build-state-source-fingerprint entry)))
        (memq (build-state-source-kind entry) '(source runtime))))
-
-(define (valid-fingerprint? value)
-  (and (string? value)
-       (= (string-length value) 64)
-       (every (lambda (character)
-                (or (and (char>=? character #\0)
-                         (char<=? character #\9))
-                    (and (char>=? character #\a)
-                         (char<=? character #\f))))
-              (string->list value))))
 
 (define (valid-output-entry? entry)
   (and (list? entry)
        (= (length entry) 5)
        (artifact-path? (build-state-artifact-path entry))
-       (valid-fingerprint? (build-state-artifact-fingerprint entry))
+       (fingerprint? (build-state-artifact-fingerprint entry))
        (or (not (build-state-artifact-sources entry))
-           (and (list? (build-state-artifact-sources entry))
-                (every string? (build-state-artifact-sources entry))))
+           (unique-filesystem-path-list?
+             (build-state-artifact-sources entry)))
        (or (not (build-state-artifact-owner entry))
            (and (integer? (build-state-artifact-owner entry))
                 (>= (build-state-artifact-owner entry) 0))
@@ -94,25 +83,23 @@
                         build-state-artifact-path)
        (let ((identity (build-state-identity state)))
          (or (not identity)
-             ;; Earlier states stored one renderer-set fingerprint. Keep
-             ;; reading it so its artifacts can be retired; it will not
-             ;; match the current per-renderer identity list.
-             (string? identity)
              (and (list? identity)
                   (every (lambda (item)
-                           (or (not item) (valid-fingerprint? item)))
+                           (or (not item) (fingerprint? item)))
                          identity))))))
 
 (define (read-build-state path)
-  (if (not (regular-file? path #:follow-links? #f))
-      #f
-      (call-with-input-file path
-        (lambda (port)
-          (set-port-encoding! port "UTF-8")
-          (let ((state (read port)))
-            (and (valid-build-state? state)
-                 (eof-object? (read port))
-                 state))))))
+  (catch #t
+    (lambda ()
+      (and (regular-file? path #:follow-links? #f)
+           (call-with-input-file path
+             (lambda (port)
+               (set-port-encoding! port "UTF-8")
+               (let ((state (read port)))
+                 (and (valid-build-state? state)
+                      (eof-object? (read port))
+                      state))))))
+    (lambda args #f)))
 
 (define (write-build-state path temp-path sources artifacts owners identity)
   (let ((state

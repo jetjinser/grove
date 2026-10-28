@@ -31,7 +31,6 @@
   #:use-module (grove highlight)
   #:use-module (grove render html routes)
   #:use-module (grove site)
-  #:use-module (forester private content-index)
   #:use-module (forester private backmatter)
   #:use-module (forester private entity-uri)
   #:use-module (forester private render-routes)
@@ -41,7 +40,6 @@
   #:use-module (forester style html)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
-  #:use-module (srfi srfi-13)
   #:export (site->html
             render-html
             make-html-options
@@ -59,13 +57,6 @@
     ("da" . "DK") ("nb" . "NO") ("fi" . "FI") ("pl" . "PL")
     ("cs" . "CZ") ("tr" . "TR") ("ru" . "RU") ("el" . "GR")
     ("ja" . "JP") ("ko" . "KR") ("zh" . "CN")))
-
-(define (ascii-alpha? character)
-  (or (char<=? #\A character #\Z)
-      (char<=? #\a character #\z)))
-
-(define (ascii-digit? character)
-  (char<=? #\0 character #\9))
 
 (define (og-region? part)
   (or (and (= (string-length part) 2)
@@ -1246,7 +1237,7 @@ Entry points take this value with #:options."
                (make-artifact
                  (cdr (assoc (site-page-id page) route-table))
                  (render-page page #f)
-                 (page-source-paths forest page)))
+                 #:sources (page-source-paths forest page)))
              forest-pages
              (iota total 1))))))
 (define* (make-html-renderer #:key (options (make-html-options))
@@ -1313,7 +1304,7 @@ Entry points take this value with #:options."
                                  (content-fingerprint
                                    (out:artifact-content/raw artifact))))
                          (html-style-artifacts style)))))
-          #:inputs (lambda ()
+          #:dependencies (lambda ()
                      (append
                        (append-map (lambda (entry) (highlighter-inputs (cdr entry))) highlighters)
                        (append-map (lambda (artifact) (or (out:artifact-sources/raw artifact) '()))

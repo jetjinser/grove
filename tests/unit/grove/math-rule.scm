@@ -8,6 +8,18 @@
              (grove relation) (srfi srfi-1) (srfi srfi-64))
 
 (test-begin "math rule contracts")
+(test-error "math rule relations must accept assumptions and two terms" #t
+  (make-math-rewrite-rule 'bad-relation "x = x" "always" 'custom
+    (lambda (_) #t) #:matcher (lambda (_) #f)))
+(test-error "math rule matchers must accept one term" #t
+  (make-math-rewrite-rule 'bad-matcher "x = x" "always" 'custom
+    (lambda (_assumptions _input _output) #t)
+    #:matcher (lambda () #f)))
+(test-error "backward math relations must accept assumptions and two terms" #t
+  (make-math-rewrite-rule 'bad-backward "x = x" "always" 'custom
+    (lambda (_assumptions _input _output) #t)
+    #:matcher (lambda (_) #f)
+    #:backward (lambda (_) #f)))
 (test-assert "math rule-pack modules expose rules, not implementation definitions"
   (and (not (module-variable
               (module-public-interface (resolve-module '(grove math partial)))

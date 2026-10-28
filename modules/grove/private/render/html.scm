@@ -11,7 +11,6 @@
   #:use-module (grove highlight)
   #:use-module (ice-9 format)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:export (content->sxml/internal))
 (define* (content->sxml/internal content #:key (internal-handlers '())
                                  (internal-lazy-handlers '()) (id-prefix "")
@@ -147,19 +146,19 @@
                      default)))
            (apply-element-style element rendered)))
         (else
-         (let* ((children (map render (ir:content-element-children/raw element)))
+         (let* ((payload (map render (ir:content-element-children/raw element)))
                 (handler (assq-ref internal-handlers kind))
                 (rule (and rules (render-rules-ref rules kind)))
                 (rendered
                  (if rule
-                     (rule context element children
+                     (rule context element payload
                            (lambda ()
                              (if handler
-                                 (handler element children)
-                                 (default-element-sxml element children))))
+                                 (handler element payload)
+                                 (default-element-sxml element payload))))
                      (if handler
-                         (handler element children)
-                         (default-element-sxml element children)))))
+                         (handler element payload)
+                         (default-element-sxml element payload)))))
            (apply-element-style element rendered))))))
 
   (define (render-math-children children)

@@ -3,6 +3,7 @@
 
 @use-commands{math-derivations}
 @use-modules[((grove math formula) #:prefix φ:) (grove math pipeline)
+             (grove math presentation)
              ((grove math semantic) #:prefix ◆:)]
 @title{Scalar normalization}
 @summary{Stable ordering, combined factors, explicit expansion and retained domains.}

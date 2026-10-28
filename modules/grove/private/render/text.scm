@@ -7,7 +7,6 @@
   #:use-module (grove ir)
   #:use-module (grove render rules)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:export (content->text/internal))
 
 (define* (content->text/internal content #:key (internal-handlers '())
@@ -105,15 +104,23 @@
           (let* ((body (string-concatenate
                          (map render (ir:content-element-children/raw element))))
                  (handler (assq-ref internal-handlers kind))
-                 (rule (and rules (render-rules-ref rules kind))))
-            (if rule
-                (rule context element body
-                      (lambda ()
+                 (rule (and rules (render-rules-ref rules kind)))
+                 (math? (eq? kind 'math))
+                 (math-rendering
+                   (and math?
                         (if handler
                             (handler element body)
                             (default-element-text element body))))
-                (if handler
-                    (handler element body)
-                    (default-element-text element body)))))))
+                 (payload (if math? math-rendering body))
+                 (next
+                   (lambda ()
+                     (if math?
+                         math-rendering
+                         (if handler
+                             (handler element body)
+                             (default-element-text element body))))))
+            (if rule
+                (rule context element payload next)
+                (next))))))
 
   (render content))

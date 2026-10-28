@@ -51,7 +51,7 @@ constructed, before a build starts:
 
 ```scribble
 @; plants/hello.plant
-@use-modules[(forester commands) (language scribble commands)]
+@use-modules[(forester commands)]
 
 @title{Hello, Grove}
 
@@ -111,6 +111,18 @@ calling its analyzer. All renderers receive the same model and return artifacts.
 Use `build-project` to publish and return artifacts, `check-project` to
 validate and return artifacts without publishing, and `build-project/report`
 when the host also needs source changes, affected artifacts, or cache status.
+
+Project constructors validate positional callback arity before a build starts.
+A custom collector and `#:prepare` take no arguments; a source filter, reader,
+analyzer, and renderer each take one; `#:create-source` takes a prefix and
+destination.
+The optional browser receives the analyzed model plus `#:input` and `#:output`
+ports. `make-site-project`'s page reader and analyzer each take one argument,
+and each content transform takes one document. Asset pipeline procedures take
+one input lookup. Optional and variadic procedures are accepted when they can
+receive the required positional arguments. For `make-cached-renderer`, the
+renderer and model-derived `#:configuration` each take one model,
+`#:dependencies` takes no arguments, and `#:render-changed` takes four.
 
 `collect-project-sources` runs only the collection stage and returns its
 validated, ordered path list. It is useful for inspecting a custom collector or
@@ -222,11 +234,11 @@ Without `--project`, commands search the invocation directory and its
 ancestors for `project.scm`, git-style, and stop at a `.git` boundary or
 the filesystem root; `--project` always wins when given.
 
-`--profile` (build, check, serve) reports where a build's wall-clock and
-memory go: the input-cache cost split (reused vs fresh document reads,
-with seconds), the project file's own evaluation time, and the process's
-peak resident set (VmHWM). Serve passes the flag to its workers, so the
-lines land on the serve terminal.
+Progress output reports project-load, analysis, renderer, validation, and
+write timings. `--profile` (build, check, serve) adds the document-cache cost
+split (reused vs fresh reads, with seconds) and the process's peak resident
+set (VmHWM). Serve passes the flag to its workers, so profile lines land on
+the serve terminal.
 
 `check-project` fully evaluates, analyzes, renders, and validates without
 accessing published output state, returning the complete validated artifact
@@ -258,8 +270,10 @@ qualify IDs. Named subtrees share that namespace. See
 `analyze-project` returns the analyzed model after collection, preparation,
 reading, and analysis, without rendering or touching published state.
 `browse-project` uses it and calls the
-project's optional `#:browse` callback with the analyzed model, input, and
-output ports. Grove's `grove browse` command drives this path; a Forester
+project's optional `#:browse` callback with the analyzed model and the
+`#:input` and `#:output` ports. The callback can default to the current
+terminal ports or receive explicit ports from a Scheme host. Grove's
+`grove browse` command drives this path; a Forester
 project wires `#:browse (make-forest-browser)` to read the Forest directly in
 the terminal instead of reading rendered HTML or Gemtext.
 
@@ -332,19 +346,19 @@ Project files, imported modules, loader dependencies, framework source/data,
 compiled files, and effective renderer settings are fingerprinted automatically.
 Module search paths and absent preferred compiled files are also tracked.
 Built-in factories include their settings in cache identity. A custom cached
-renderer should declare extra files with `#:inputs` (a fixed path list or a
-zero-argument collector); each returned path must be unique. Declare any
-output-affecting state not represented by the model or tracked project files
-with `#:configuration`. Plain procedures avoid this declaration by running on
-every build. Opaque render rules need a stable
+renderer should declare extra files with `#:dependencies` (a fixed path list
+or a zero-argument collector); each returned path must be unique. These paths
+are tracked for invalidation, but are not materialized or passed to the
+renderer. Declare any output-affecting state not represented by the model or
+tracked project files with `#:configuration`. Plain procedures avoid this
+declaration by running on every build. Opaque render rules need a stable
 `#:rules-id`.
 For the default HTML renderer installed by `make-forester-project`, pass this
 as `#:html-rules-id`; use `#:extra-sources` for files those rules read.
 
-The same `#:inputs` keyword has a different role on asset pipelines: there it
-is a fixed set of files made available through the pipeline's input lookup.
-Renderer inputs declare files to watch and invalidate on; pipeline inputs also
-define which paths the pipeline procedure may materialize.
+Asset pipelines use `#:inputs` for declared files made available through the
+pipeline's input lookup. This differs from renderer `#:dependencies`, which
+only declares files to watch and invalidate on.
 
 Asset pipelines fingerprint the project file, its load-time inputs, declared
 files, and Scheme files loaded while the pipeline runs. A self-contained
@@ -353,6 +367,9 @@ external toolchain state, environment variables, or runtime arguments Grove
 cannot inspect. Pipeline artifacts and build reports retain the file inputs
 and loaded Scheme dependencies, so cache invalidation and affected-artifact
 reporting use the same dependency set.
+Each value in a project's `#:pipelines` list runs independently: a pipeline
+cannot read another pipeline's output. Put a multi-step conversion in one
+pipeline procedure when later steps consume earlier results.
 
 Arbitrary Scheme I/O is not intercepted. Declare a file before reading it:
 
@@ -543,7 +560,7 @@ install it directly:
   #:template
   (lambda (id date)
     (string-append
-      "@use-modules[(forester commands) (language scribble commands)]\n\n"
+      "@use-modules[(forester commands)]\n\n"
       "@title{}\n"
       "@published{" date "}\n")))
 ```

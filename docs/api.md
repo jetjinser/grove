@@ -11,7 +11,7 @@ the work; drop lower only when you need to replace part of its behavior.
 
 | Task | Start here | Reach lower when… |
 | --- | --- | --- |
-| Write a Forester page | `(forester commands)` and `(language scribble commands)` in `.plant` | the page needs project-local Scheme modules or a new command vocabulary; load local `.plant` modules with `(grove input scribble)` |
+| Write a Forester page | `(forester commands)` in `.plant`; core Scribble commands are imported automatically | the page needs project-local Scheme modules or a new command vocabulary; load local `.plant` modules with `(grove input scribble)` |
 | Configure the normal Forester site | `(forester project)` → `make-forester-project` | the reader, analysis, or complete renderer set needs replacing |
 | Apply a reusable style to content | `(grove style)` → `make-content-style`, `merge-content-style`; pass it through `#:style`; use `(grove style html element)` for HTML attributes and tag markers | the style value is format-neutral; HTML interprets it as classes and element properties, unlike renderer-wide `(grove style html)` stylesheets; see [tree composition](forester-composition.md#element-styles) |
 | Adapt Scribble documents to Forester tree pages | `(forester input scribble)` → `make-page-reader`; use `document->tree-page` when the document is already read | the project needs a different page model or metadata policy |
@@ -43,6 +43,9 @@ the work; drop lower only when you need to replace part of its behavior.
 | Run a tool while reading a page | Scheme in `.plant`; use `depend-on!` from `(grove input)` for files discovered by one evaluation, or `(grove input scribble)` → `make-scribble-document-reader #:cache-dependencies` for fixed reader-wide files; use `disable-cache!` from `(grove input)` for effects that must repeat | use project `#:extra-sources` when the analyzer also needs those paths in `project-context-extra-sources`; use an asset pipeline for standalone artifacts |
 | Reuse derived bytes inside an extension | `(grove cache)` → `make-content-cache` | cache-aware renderer artifacts and pipeline outputs are cached by the project |
 | Write or extend math | `(grove math formula)` for text-based writing and calculations; `(grove math semantic)` for typed values; `(grove math notation)` for display layout; see the [Math reference](math.md) | inspect results with `(grove math report)` and `(grove math diagnostic)`; verify or audit derivations with `(grove math verification)` and `(grove math audit)`; compose passes with `(grove math pass)` or query rule relations |
+| Independently check exact polynomial claims | `(grove math semantic-check)` → `math-polynomial-check-derivation`, `math-polynomial-check-derivative` | use `(grove math verification)` to replay registered rewrite steps; the polynomial checker covers a separate, smaller semantic domain |
+| Present math reports as Grove content | `(grove math presentation)` → `math-completed-report->content`, `math-verification->content`, `math-derivation->content` | Formula's `derive->content` is the short path when text input and its default presentation are sufficient |
+| Inspect mathematical source positions and derivation origins | `(grove math provenance)` → `math-origin-location`, `math-origin-locations`, `math-location-file/line/column` | diagnostics and derivation records retain provenance; this module interprets it without requiring the calculation Pipeline |
 | Scope mathematical assumptions in Scheme | `(grove math context)` → `with-math-assumptions`, `math-assumptions` | article commands use `@with-assumptions`; individual calculations accept `#:assumptions` |
 | Inspect or transform symbolic math terms | `(grove math term)` → `math-term?`, `math-term->source`, `math-term-size`, and operand-path operations; see the [Math reference](math.md) | ordinary writing and calculations should stay with Formula or Semantic values |
 | Construct and check proof evidence | `(grove math derivation)` for candidate chains; `(grove math verification)` to replay them; `(grove math proof)` for explicit proof trees | combine replay, contract checks, and proof elaboration with `(grove math audit)` |
@@ -71,11 +74,12 @@ require Grove's Content IR. See the
 
 For renderer extensions, a plain procedure from model to artifact list is the
 default and runs on each build. Wrap it with `make-cached-renderer` to reuse
-artifacts; provide fixed unique `#:inputs` paths or a collector returning unique
-paths, and `#:configuration` for state Grove cannot observe through the model
-and tracked project files. Configuration must be acyclic Scheme data composed
-of booleans, characters, numbers, symbols, keywords, strings, bytevectors,
-pairs, and vectors; a model-to-data procedure may compute it dynamically.
+artifacts; provide fixed unique `#:dependencies` paths or a collector
+returning unique paths, and `#:configuration` for state Grove cannot observe
+through the model and tracked project files. Configuration must be acyclic
+Scheme data composed of booleans, characters, numbers, symbols, keywords,
+strings, bytevectors, pairs, and vectors; a model-to-data procedure may compute
+it dynamically.
 Opaque objects and cyclic structures cannot provide stable cache identity.
 `make-render-rules` is narrower: it changes the interpretation of content kinds
 inside an existing renderer. See the [customization guide](customizing.md) for
@@ -89,13 +93,13 @@ structure, dependency closure, or character inventories; see
 
 `(grove site)` provides `make-site-page` and `make-site` for code assembling a
 page-based model directly. A site page holds an ID, title, Content IR document,
-an optional primary source path, and metadata. The site holds the ordered pages,
-descriptive fields, an optional home page ID, and a separate list of site-wide
-source dependencies that renderers can attach to aggregate outputs. This list
-does not configure project input collection. Page IDs must be unique, and a
-supplied home ID must name one of the pages. `make-site-project` builds these
-values from collected inputs; use the constructors directly when synthesizing
-pages or composing a custom analysis stage.
+an optional `#:source` path, and optional `#:metadata`. The site holds the
+ordered pages, descriptive fields, and an optional home page ID. Its `#:sources`
+list declares site-wide dependencies that renderers may attach to aggregate
+outputs; it does not configure project input collection. Page IDs must be
+unique, and a supplied home ID must name one of the pages. `make-site-project`
+builds these values from collected inputs; use the constructors directly when
+synthesizing pages or composing a custom analysis stage.
 
 ## API layers
 
@@ -124,9 +128,10 @@ dispatch details for tree traversal and format-specific behavior.
 For math, Formula is the writing-oriented facade and Semantic constructors
 are the typed extension surface. `(grove math pipeline)` is the procedural
 calculation facade: it also re-exports the report, diagnostic, derivation,
-verification, audit, and source-provenance accessors used to inspect its
-results. Import `(grove math report)`, `(grove math diagnostic)`, or another
-focused module when code needs only that layer. The rule, proof, and audit
+verification, and audit accessors used to inspect its results. Import
+`(grove math provenance)` for source locations and derivation origins; import
+`(grove math report)`, `(grove math diagnostic)`, or another focused module
+when code needs only that layer. The rule, proof, and audit
 modules expose lower-level calculation machinery; ordinary article authors
 should not need them.
 
@@ -155,18 +160,23 @@ Content source locations are association lists with unique symbol keys. The
 `line` and `column` are positive one-based integers. Text constructors
 validate and snapshot a supplied `#:location`;
 `content-with-source-location` applies the same contract when attaching a
-location to text or an element. Elements also accept
-`#:location` in `make-content-element`; `source-location` is reserved and
-cannot be stored as an ordinary element property. Use
+location to text or an element. Given a document or nested content sequence,
+it recursively annotates each contained content value while preserving the
+sequence shape. Documents have no location field of their own. Elements also
+accept `#:location` in `make-content-element`; `source-location` is reserved
+and cannot be stored as an ordinary element property. Use
 `content-source-location` to read either kind uniformly. It returns `#f` for
-strings, layout nodes, and documents; document children carry their own
-locations. Non-content Scheme values pass through `content-with-source-location`
-unchanged, which lets Scribble annotate arbitrary expressions safely. Content
-text, layout, element, and document source arguments are either `#f` or
-non-empty filesystem paths without NUL.
-`content-source-paths` walks an IR value or sequence and returns its unique
-recorded source paths, including location file fields. This is the dependency
-projection used when content-derived artifacts need to track their origins.
+strings, layout nodes, and documents. Non-content Scheme values pass through
+`content-with-source-location` unchanged, which lets Scribble annotate
+arbitrary expressions safely. Constructors for content text, layout, elements,
+and documents accept an optional `#:source` path for provenance and dependency
+tracking. It must be `#f` or a non-empty filesystem path without NUL. This is
+separate from `#:location`, which records a diagnostic position and may name a
+different file.
+`content-source-paths` walks an IR value or nested sequence of content values,
+including documents, and returns unique paths from both provenance and
+location file fields in traversal order. Use it when content-derived artifacts
+need to track their origins.
 
 `(grove ir)` defines these content values and their structural operations.
 Text has two intentionally different projections. Use
@@ -180,14 +190,16 @@ Forester's text and Gemtext outputs. Choose it when output behavior or custom
 content kinds matter.
 
 Scribble forms may return content values or recursively nested lists of them;
-the reader flattens those sequences and decodes prose into paragraphs. Authors
-building custom block commands can use `(language scribble flow)`:
-`decode-flow` turns command bodies into paragraphs around blank lines and
-keeps block elements outside paragraphs, while `content-value?`,
-`content-sequence?`, and `flatten-content-sequence` expose the same value and
-sequence rules used by the reader. Variadic command procedures can use
-`command-body` from `(language scribble command)` to remove keyword/value
-options while preserving body order.
+the reader flattens those sequences and decodes prose into paragraphs. The
+`content-value?` and `content-sequence?` predicates in `(grove ir)` define
+those shared IR contracts; `(language scribble flow)` re-exports them and adds
+`flatten-content-sequence`. Authors building custom block commands can use
+`decode-flow` there to turn command bodies into paragraphs around blank lines
+while keeping block elements outside paragraphs. Variadic command procedures
+can use `command-body` from `(language scribble command)` to remove
+keyword/value options while preserving body order. `make-content-element`
+defaults its independent `#:flow-kind` to `inline`; set it to `block` when a
+custom element should flush the current paragraph during `decode-flow`.
 
 `content->sxml` applies a content element's HTML style automatically when a
 render rule returns one root element. A custom HTML renderer assembling its
@@ -201,8 +213,8 @@ result: it applies HTML void-element and raw-text rules that a generic XML
 serializer does not.
 
 Artifacts use the same ownership rule: `make-artifact` and
-`make-byte-artifact` snapshot their path, content, and source paths. The public
-`artifact-content` accessor returns a fresh string or bytevector.
+`make-byte-artifact` snapshot their path, content, and optional `#:sources`
+paths. The `artifact-content` accessor returns a fresh string or bytevector.
 `prefix-artifacts` places a validated artifact set under a relative output
 directory while preserving each artifact's content and source dependencies.
 Artifact paths reject absolute paths, empty or traversal components, and NUL.
@@ -213,8 +225,8 @@ flow. Project builds perform validation and publication automatically and
 remain the recommended entry point when Grove should also collect sources,
 analyze content, and coordinate renderer and pipeline caches.
 
-The optional third constructor argument declares the unique input paths that an
-artifact depends on. Duplicate paths are rejected. Omitting it means
+The `#:sources` option declares the unique input paths that an artifact
+depends on. Duplicate paths are rejected. Omitting it means
 dependencies are unknown (`#f`), so
 Grove handles the artifact conservatively during invalidation and incremental
 rendering. Pass an explicit empty list when the artifact is known to depend on

@@ -4,6 +4,7 @@
 
 (define-module (grove content transform)
   #:use-module (grove ir)
+  #:use-module (grove private procedure)
   #:use-module (srfi srfi-1)
   #:export (compose-content-transforms))
 
@@ -24,8 +25,10 @@
                             result)))
 
 (define (compose-content-transforms . transforms)
-  (unless (every procedure? transforms)
-    (error "content transforms must be procedures"
+  (unless (every (lambda (transform)
+                   (procedure-accepts-arguments? transform 1))
+                 transforms)
+    (error "content transforms must accept one document"
            transforms))
   (lambda (document)
     (check-content-document "content transform requires a content document"

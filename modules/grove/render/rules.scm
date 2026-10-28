@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove render rules)
+  #:use-module (grove private procedure)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (grove private snapshot)
@@ -12,16 +13,17 @@
             compose-render-rules
             render-rules-ref))
 
-;; A renderer rule is a value, not a callback registration.  A rule maps a
-;; content kind to an interpretation:
+;; A renderer rule is a value, not a callback registration. A rule maps a
+;; content kind to a backend interpretation:
 ;;
-;;   (context element children next) -> value
+;;   (context element payload next) -> value
 ;;
-;; The value is whatever the target renderer expects: sxml for HTML, a string
-;; for text and gemtext.  NEXT is a thunk that invokes the next interpretation
-;; for the same kind.  Rule sets compose by explicit layers; the overlay wins
-;; and the base remains the fallback.  No global registry, no implicit
-;; invocation order.
+;; PAYLOAD is rendered children for ordinary elements and the complete fallback
+;; rendering for math. The value is whatever the target renderer expects: SXML
+;; for HTML, a string for text and gemtext. NEXT is a thunk that invokes the
+;; next interpretation for the same kind. Rule sets compose by explicit layers;
+;; the overlay wins and the base remains the fallback. No global registry, no
+;; implicit invocation order.
 
 (define-record-type <render-rules>
   (%make-render-rules rules)
@@ -31,7 +33,7 @@
 (define (valid-rule? entry)
   (and (pair? entry)
        (symbol? (car entry))
-       (procedure? (cdr entry))))
+       (procedure-accepts-arguments? (cdr entry) 4)))
 
 (define (duplicate-kind? rules)
   (let loop ((remaining rules) (seen '()))
@@ -42,7 +44,7 @@
 (define (make-render-rules rules)
   "Build a rule set from an association list of kind -> interpreter."
   (unless (and (list? rules) (every valid-rule? rules))
-    (error "render rules must be an association list of kind/procedure pairs"
+    (error "render rules must map kinds to procedures accepting four arguments"
            rules))
   (when (duplicate-kind? rules)
     (error "render rules cannot contain duplicate kinds" rules))
@@ -62,13 +64,13 @@
         (map (lambda (entry)
                (cons (car entry)
                      (let ((rule (cdr entry)))
-                       (lambda (context element children next)
-                         (rule context element children
+                       (lambda (context element payload next)
+                         (rule context element payload
                                (lambda ()
                                  (let ((fallback
                                          (render-rules-ref base (car entry))))
                                    (if fallback
-                                       (fallback context element children next)
+                                       (fallback context element payload next)
                                        (next)))))))))
              overlay-rules)
         (remove (lambda (entry)

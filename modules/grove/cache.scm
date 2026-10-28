@@ -43,26 +43,19 @@
                    (number->string (string-length key)) ":" key)))
 
 (define (read-cache-index identity)
-  (catch #t
-    (lambda ()
-      (let ((path (artifact-blob-path identity)))
-        (and (artifact-blob-exists? identity)
-             (call-with-input-file path
-               (lambda (port)
-                 (let ((index (read port)))
-                   (and (list? index)
-                        (= (length index) 1)
-                        (pair? (car index))
-                        (string=? (caar index) "value")
-                        (private:fingerprint? (cdar index))
-                        (eof-object? (read port))
-                        (cdar index))))))))
-    (lambda args #f)))
+  (let ((index
+          (read-artifact-index
+            identity
+            (lambda (index)
+              (and (list? index)
+                   (= (length index) 1)
+                   (pair? (car index))
+                   (string=? (caar index) "value")
+                   (private:fingerprint? (cdar index)))))))
+    (and index (cdar index))))
 
 (define (write-cache-index identity fingerprint)
-  (publish-artifact-blob! identity
-    (lambda (port)
-      (write (list (cons "value" fingerprint)) port))))
+  (write-artifact-index! identity (list (cons "value" fingerprint))))
 
 (define (content-cache-ref cache key)
   "Return the verified bytevector for KEY, or #f when it is not cached."

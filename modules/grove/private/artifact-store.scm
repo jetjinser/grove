@@ -17,6 +17,8 @@
   #:export (artifact-blob-path
             artifact-blob-exists?
             publish-artifact-blob!
+            read-artifact-index
+            write-artifact-index!
             store-content-blob!
             read-content-blob
             restore-artifact-blob!))
@@ -39,6 +41,29 @@
          (string-append root "/" fingerprint) write!)
         #t))
     (lambda args #f)))
+
+(define (read-artifact-index fingerprint valid?)
+  "Read one validated Scheme datum from the store, or return #f on a miss.
+
+VALID? checks the index's domain-specific shape. Trailing data and read errors
+make the index unusable, just like a missing or corrupt content blob."
+  (catch #t
+    (lambda ()
+      (and (artifact-blob-exists? fingerprint)
+           (call-with-input-file (artifact-blob-path fingerprint)
+             (lambda (port)
+               (let ((index (read port)))
+                 (and (valid? index)
+                      (eof-object? (read port))
+                      index))))))
+    (lambda args #f)))
+
+(define (write-artifact-index! fingerprint index)
+  "Publish INDEX as one Scheme datum; return #f if the store is unavailable."
+  (publish-artifact-blob! fingerprint
+    (lambda (port)
+      (write index port)
+      (newline port))))
 
 (define (store-content-blob! content)
   "Store text or bytes and return the fingerprint only when its blob is available."

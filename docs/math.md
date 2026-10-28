@@ -49,17 +49,41 @@ results, diagnostics, derivations, and audit evidence; its checkers return
 structured verification results. Formula is the convenient text-reading and
 article-writing facade; use the pipeline when code needs to inspect or compose
 those results. The pipeline module re-exports the report, diagnostic,
-derivation, verification, audit, and source-provenance accessors used to
-inspect those results. Import focused modules such as `(grove math report)`
+derivation, verification, and audit accessors used to inspect those results.
+Use `(grove math provenance)` to inspect source locations and the origins
+attached to derivation steps and diagnostics. For direct presentation, import
+`(grove math presentation)` to turn reports, derivations, and verification
+results into Content IR. Import focused modules such as `(grove math report)`
 when code needs only one layer. Keep the Formula prefix: its `read` helper
 would otherwise shadow Scheme's ordinary reader procedure in the importing
 module.
 
+`math-completed-report->content` presents a completed derivation when one
+exists. A complete search with no path has no derivation, so the same helper
+falls back to the report summary (including its zero-candidate result). For an
+incomplete report, it raises by default; pass `#:on-error 'show` to render its
+diagnostics instead.
+
 Scheme code can inspect those values through `(grove math report)` and
-`(grove math diagnostic)`. `math-report-result` from `(grove math pipeline)`
+`(grove math diagnostic)`. `math-report-result` from `(grove math report)`
 returns a reusable Semantic value only for a complete calculation;
 `math-report-final` exposes the final term of a partial derivation for
-inspection. Use `math-verify-derivation` from `(grove math verification)` to
+inspection. `math-report-complete?` means the calculation or search finished
+without diagnostics; it does not promise that a derivation was found.
+`math-report-status` classifies the outcome independently of the detailed
+`math-report-reason`:
+
+| Status | Meaning |
+| --- | --- |
+| `'complete` | The computation finished with a derivation and no unresolved symbolic derivatives. |
+| `'symbolic` | The computation finished, but its reusable result still contains symbolic derivatives. |
+| `'no-result` | The search finished without finding a derivation. |
+| `'cutoff` | A resource limit stopped the computation; the available prefix is not an exhaustive result. |
+| `'unproven` | An equation check could not establish the requested identity. |
+| `'error` | The report contains a diagnostic or another unsuccessful outcome. |
+
+Use
+`math-verify-derivation` from `(grove math verification)` to
 replay a certificate, or `math-audit-calculation` from `(grove math audit)` to
 combine replay, the independent polynomial contract check, and proof evidence.
 
@@ -281,6 +305,12 @@ rules by name:
     '(double (var x)) output name 'forward))
 ```
 
+Each `math-rule` declaration also carries a `math-rule-spec`. Inspect its
+left side, right side, premises, and guards with the `math-rule-spec-*`
+accessors from `(grove math rule)`. `math-rule-spec-guard-kinds` identifies
+guards Grove understands; `math-rule-spec-opaque-guards` returns the remaining
+forms for custom tooling to interpret.
+
 This is a lower-level relational interface. The high-level `math-*` operations,
 Formula helpers, and derivation verifiers select rule names from Grove's
 registered rule set; a locally constructed rule is not added to that registry
@@ -316,10 +346,10 @@ polynomial equations using its own exact sparse-polynomial normalizer. The
 checker can validate the registered scalar laws, check an individual rewrite
 step and its recorded path, or compare a computed polynomial derivative with an
 independently computed derivative. Import `(grove math semantic-check)` for
-these checks and their typed evidence values; the pipeline module re-exports
-them as a convenience. Evidence constructors and accessors belong to the
-semantic-check module, so extensions inspecting or validating a checker result
-do not need to import an internal module. For example:
+these checks and their typed evidence values. Evidence constructors and
+accessors belong to this module, so extensions inspecting or validating a
+checker result have one explicit import. The calculation Pipeline does not
+mix this independent checker API into its exports. For example:
 
 ```scheme
 @(φ:polynomial-check->content (φ:check-polynomial-rule 'add-commutative))
@@ -349,6 +379,19 @@ the ordinary verifier replays those steps, then the independent checker
 compares the final term with its own exact derivative. This checks a specific
 certificate, not the derivative program for all inputs. Assumptions remain
 author-supplied inputs.
+
+These checks answer different questions, so read their results separately.
+`math-verification-valid?` means every recorded transition passed replay under
+the selected rules and assumptions. A semantic-check status of
+`semantically-checked` means the checker established the contract within its
+supported domain; `rejected` means it found a counterexample or malformed
+evidence; `unsupported` means the evidence was outside that checker's domain or
+capabilities and makes no claim either way. Proof elaboration reports use the
+parallel statuses `checked`, `rejected`, and `unsupported`. A calculation audit
+keeps replay, contract, and proof results side by side rather than collapsing
+them into one boolean: callers can choose which evidence their application
+requires, and an unsupported result does not contradict positive evidence from
+another layer.
 
 ## Display notation
 

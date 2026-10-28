@@ -7,10 +7,10 @@
   #:use-module (grove build)
   #:use-module (grove output)
   #:use-module (grove private build-state)
+  #:use-module (grove private fingerprint)
   #:use-module (grove private project artifacts)
   #:use-module (grove private renderer)
   #:use-module (grove project diagnostic)
-  #:use-module (ice-9 i18n)
   #:use-module (srfi srfi-1)
   #:export (renderer-identity
             render-all
@@ -21,11 +21,8 @@
        (map
          (lambda (renderer configuration)
            (and (cached-renderer? renderer)
-                (content-fingerprint
-                  (call-with-output-string
-                    (lambda (port)
-                      (write (list (version) (setlocale LC_CTYPE) configuration)
-                             port))))))
+                (scheme-datum-fingerprint
+                  (list (version) (setlocale LC_CTYPE) configuration))))
          renderers
          (renderer-configurations model renderers))))
 

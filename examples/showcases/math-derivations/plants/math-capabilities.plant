@@ -3,6 +3,7 @@
 
 @use-commands{math-derivations}
 @use-modules[(grove math pipeline)
+             (grove math presentation)
              ((grove math semantic) #:prefix ◆:)
              ((grove math formula) #:prefix φ:)
              ((grove math notation) #:prefix ◇:)]

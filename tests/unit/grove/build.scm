@@ -53,6 +53,11 @@
 
 (test-error "cached renderers require procedures" #t
   (make-cached-renderer #f))
+(test-error "cached renderers reject procedures that cannot receive a model" #t
+  (make-cached-renderer (lambda () '())))
+(test-error "model-derived configurations reject procedures with the wrong arity" #t
+  (make-cached-renderer (lambda (_) '())
+    #:configuration (lambda () 'stable)))
 
 (test-error "cached renderer configuration rejects opaque values" #t
   (make-cached-renderer (lambda (_) '())
@@ -79,25 +84,31 @@
 (test-error "incremental callbacks must be procedures" #t
   (make-cached-renderer (lambda (site) '())
     #:render-changed #t))
+(test-error "incremental callbacks must accept four arguments" #t
+  (make-cached-renderer (lambda (_) '())
+    #:render-changed (lambda (_) #f)))
 
-(test-error "renderer input collectors must be procedures or paths" #t
+(test-error "renderer dependency collectors must be procedures or paths" #t
   (make-cached-renderer (lambda (site) '())
-    #:inputs '(42)))
-(test-error "renderer input paths must be non-empty strings" #t
+    #:dependencies '(42)))
+(test-error "renderer dependency collectors must take no arguments" #t
+  (make-cached-renderer (lambda (_) '())
+    #:dependencies (lambda (_) '())))
+(test-error "renderer dependency paths must be non-empty strings" #t
   (make-cached-renderer (lambda (site) '())
-    #:inputs '("")))
-(test-error "fixed renderer input paths must be unique" #t
+    #:dependencies '("")))
+(test-error "fixed renderer dependency paths must be unique" #t
   (make-cached-renderer (lambda (site) '())
-    #:inputs '("theme.css" "theme.css")))
-(test-assert "fixed renderer input paths are snapshotted"
+    #:dependencies '("theme.css" "theme.css")))
+(test-assert "fixed renderer dependency paths are snapshotted"
   (let* ((path (string-copy "theme.css"))
          (paths (list path))
-         (renderer (make-cached-renderer (lambda (_) '()) #:inputs paths)))
+         (renderer (make-cached-renderer (lambda (_) '()) #:dependencies paths)))
     (string-set! path 0 #\X)
     (set-car! paths "changed.css")
     (equal? '("theme.css")
-      (let ((inputs (cached-renderer-inputs renderer)))
-        (if (procedure? inputs) (inputs) inputs)))))
+      (let ((dependencies (cached-renderer-dependencies renderer)))
+        (if (procedure? dependencies) (dependencies) dependencies)))))
 
 (let* ((configuration (list (cons 'theme (string-copy "light"))))
        (renderer
@@ -127,8 +138,8 @@
   ;;     A renderer without an incremental callback: render-with-cache
   ;;     can only keep its whole previous output or re-render it all.
   (set! render-calls (+ render-calls 1))
-  (list (make-artifact "a.html" (string-append "page:" model) '("one.plant"))
-        (make-artifact "shared.txt" "fresh-shared" '("theme.css"))))
+  (list (make-artifact "a.html" (string-append "page:" model) #:sources '("one.plant"))
+        (make-artifact "shared.txt" "fresh-shared" #:sources '("theme.css"))))
 
 (define previous-entries
   (list (list "a.html" (content-fingerprint "page:old") '("one.plant") 0 'text)
@@ -136,8 +147,8 @@
               '("theme.css") 0 'text)))
 
 (define cached-artifacts
-  (list (make-artifact "a.html" "page:old" '("one.plant"))
-        (make-artifact "shared.txt" "fresh-shared" '("theme.css"))))
+  (list (make-artifact "a.html" "page:old" #:sources '("one.plant"))
+        (make-artifact "shared.txt" "fresh-shared" #:sources '("theme.css"))))
 
 (define previous-sources
   (list (list "one.plant" (content-fingerprint "one"))

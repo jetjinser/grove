@@ -24,4 +24,4 @@
   (let ((previous (find-artifact-by-path previous-artifacts path)))
     (if (artifact-reusable? sources previous changed)
         previous
-        (make-artifact path (render) sources))))
+        (make-artifact path (render) #:sources sources))))

@@ -33,8 +33,9 @@
 (define* (make-math-diagnostic step rule path code premises message
                               #:key (source #f) (origin #f))
   "Construct a diagnostic with an optional one-based STEP, RULE, PATH, CODE,
-PREMISES, and MESSAGE. PATH contains non-negative child indexes; SOURCE and
-ORIGIN are optional opaque location values."
+PREMISES, and MESSAGE. PATH contains non-negative child indexes; SOURCE is a
+math source location and ORIGIN is its provenance. Inspect these through
+(grove math provenance)."
   (unless (or (not step) (and (exact-integer? step) (> step 0)))
     (error "math diagnostic step must be a positive integer or #f" step))
   (unless (or (not rule) (symbol? rule))

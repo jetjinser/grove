@@ -3,6 +3,7 @@
 
 (use-modules ((grove math semantic) #:prefix semantic:)
              ((grove math formula) #:prefix φ:)
+             (grove math provenance)
              (grove math expression) (grove math private source)
              (grove math private syntax) (grove math term) (srfi srfi-64))
 

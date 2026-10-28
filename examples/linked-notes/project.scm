@@ -2,8 +2,7 @@
 ;;;
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(use-modules (ice-9 ftw)
-             (ice-9 textual-ports)
+(use-modules (ice-9 textual-ports)
              (forester browse)
              (forester render graph)
              (forester render gemtext)
@@ -35,7 +34,7 @@
   (make-html-style
     #:stylesheets
     (list
-      (make-artifact "style.css" notes-css (list notes-css-path)))))
+      (make-artifact "style.css" notes-css #:sources (list notes-css-path)))))
 
 (define notes-routes
   (make-html-routes))

@@ -31,6 +31,9 @@
 
 (test-begin "forester commands")
 
+(test-error "Forester queries must accept a forest and page ID" #t
+  (forest-query (lambda (_) '())))
+
 (let ((element (link "destination")))
   (test-equal "unlabeled links use their target as the label"
     "destination"
@@ -119,7 +122,8 @@
 
 (let* ((location '((file . "styled.plant") (line . 4) (column . 2)))
        (original (content-with-source-location
-                   (make-content-element 'paragraph '("Source") "styled.plant"
+                   (make-content-element 'paragraph '("Source")
+                     #:source "styled.plant"
                      #:flow-kind 'block) location))
        (styled (content-with-style original 'notice)))
   (test-equal "styling preserves source location and flow semantics"
@@ -247,6 +251,12 @@
 
 (test-error "use-commands rejects a module without a manifest" #t
   (evaluate-document "@use-commands{plain}@title{Root}"))
+
+(test-error "use-commands rejects a manifest with a non-list command-modules value" #t
+  (evaluate-document "@use-commands{invalid-commands}@title{Root}"))
+
+(test-error "use-commands rejects malformed command module names" #t
+  (evaluate-document "@use-commands{invalid-command-entry}@title{Root}"))
 
 (let* ((environment (default-environment scribble))
        (trace (make-hash-table)))

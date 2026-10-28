@@ -16,7 +16,6 @@
   #:use-module (forester relations)
   #:use-module (ice-9 threads)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:export (topic-pages
             resolve-forest-queries
             validate-tree-cycles!
@@ -138,7 +137,7 @@
   (make-content-document
     (append-map resolve (ir:content-document-children/raw
                           (site-page-document page)))
-    (ir:content-document-source/raw (site-page-document page))))
+    #:source (ir:content-document-source/raw (site-page-document page))))
 
 (define (validate-query-composition! forest resolved-pages)
   ;; Validate the resolved display graph without adding generated facts to the
@@ -182,7 +181,7 @@
                               (site-page-id page)
                               (site-page-title page)
                               (resolve-page-queries forest anchor-index page)
-                              (site-page-source page)
+                              #:source (site-page-source page)
                               #:metadata (site-page-metadata page))
                             page))
                       (pages forest)))

@@ -2,8 +2,8 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit grove input-cache)
-  #:use-module (grove ir)
   #:use-module (grove build)
+  #:use-module (grove ir)
   #:use-module (grove private build-state)
   #:use-module (grove private html-style)
   #:use-module (grove style)
@@ -20,7 +20,6 @@
   #:use-module (ice-9 ftw)
   #:use-module (ice-9 textual-ports)
   #:use-module (system base compile)
-  #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64))
 
 (define root (format #f "/tmp/grove-input-cache-~a" (getpid)))
@@ -50,7 +49,8 @@
     #:renderers
     (let ((render (lambda (document)
                     (list (make-artifact "page.html"
-                            (sxml->html (content->sxml document)) (list source))))))
+                            (sxml->html (content->sxml document))
+                            #:sources (list source))))))
       (list (make-cached-renderer render #:configuration 'html
               #:render-changed
               (lambda (document changed dirty old)
@@ -60,18 +60,22 @@
 (define rich-document
   (make-content-document
     (list (make-content-element 'paragraph
-            (list (make-content-text "λ" source
+            (list (make-content-text "λ" #:source source
                     #:location `((file . ,source) (line . 3) (column . 2)))
-                  (make-content-layout 'newline "\n" source))
-            source #:flow-kind 'block
+                  (make-content-layout 'newline "\n" #:source source))
+            #:source source #:flow-kind 'block
             #:location `((file . ,source) (line . 4) (column . 1))
             #:style (make-content-style 'sample
                      (list (make-html-attributes '((class . "extra")))
                            (make-html-tag "aside")))
             #:properties '((open? . #f) (arbitrary . (text "literal")))))
-    source))
+    #:source source))
 
 (test-begin "document result cache")
+(test-error "module observers must accept a loaded file path" #t
+  (call-with-module-load-observer (lambda () #t) (lambda () #t)))
+(test-error "module observation requires a zero-argument thunk" #t
+  (call-with-module-load-observer (lambda (_) #t) (lambda (_) #t)))
 (let ((observed '()) (nested '()) (initial-hook %load-hook))
   (dynamic-wind
     (lambda () (set! %load-hook #f))
@@ -109,12 +113,20 @@
   (depend-on! #f))
 (test-error "Scribble reader cache option is checked at construction" #t
   (make-scribble-document-reader #:cache? 'enabled))
+(test-error "Scribble cache predicates must accept a source path" #t
+  (make-scribble-document-reader #:cache? (lambda () #t)))
 (test-error "Scribble dependency collector is checked at construction" #t
   (make-scribble-document-reader #:cache-dependencies 'invalid))
+(test-error "Scribble dependency collectors must accept no arguments" #t
+  (make-scribble-document-reader #:cache-dependencies (lambda (_) '())))
 (test-error "Scribble timing callback is checked at construction" #t
   (make-scribble-document-reader #:timings 'invalid))
+(test-error "Scribble timing callbacks must accept three arguments" #t
+  (make-scribble-document-reader #:timings (lambda (_) #t)))
 (test-error "Scribble environment factory is checked at construction" #t
   (make-scribble-document-reader #:environment-factory 'invalid))
+(test-error "Scribble environment factories must accept no arguments" #t
+  (make-scribble-document-reader #:environment-factory (lambda (_) #f)))
 (test-error "Scribble environment is checked at construction" #t
   (make-scribble-document-reader #:environment 'invalid))
 (test-assert "Scribble reader accepts an explicit shared environment"
@@ -192,23 +204,23 @@
                       (make-artifact "external.txt"
                         (call-with-input-file dependency get-string-all))))
                   #:configuration 'external
-                  #:inputs (list dependency)))
+                  #:dependencies (list dependency)))
               #:output-directory (string-append root "/renderer-inputs"))))
       (build-project external-project)
       (build-project external-project)
-      (test-equal "fixed renderer inputs participate in cache identity" 1 renders)
+      (test-equal "fixed renderer dependencies participate in cache identity" 1 renders)
       (put dependency "three")
       (build-project external-project)
-      (test-equal "changing a fixed renderer input reruns its renderer" 2 renders)
+      (test-equal "changing a fixed renderer dependency reruns its renderer" 2 renders)
       (put dependency "one"))
-    (test-error "renderer input collectors reject duplicate paths" #t
+    (test-error "renderer dependency collectors reject duplicate paths" #t
       (build-project
         (make-project
           #:collect-sources (lambda () (list source))
           #:read-source (lambda (_) 'model)
           #:renderers
           (list (make-cached-renderer (lambda (_) '())
-                  #:inputs (lambda () (list dependency dependency))))
+                  #:dependencies (lambda () (list dependency dependency))))
           #:output-directory (string-append root "/duplicate-renderer-inputs"))))
     (put source "Second")
     (build-project (project #t))

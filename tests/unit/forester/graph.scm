@@ -3,13 +3,12 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit forester graph)
-  #:use-module (grove build)
   #:use-module (forester render graph)
   #:use-module (forester site)
+  #:use-module (grove build)
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove site)
-  #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64))
 
 (define target
@@ -17,7 +16,7 @@
     "target" "Target"
     (make-content-document
       '())
-    "/notes/target.plant"))
+    #:source "/notes/target.plant"))
 
 (define source
   (make-site-page
@@ -28,7 +27,7 @@
               (list (make-content-element
                       'link '("the overview")
                       #:properties '((target . "target")))))))
-    "/notes/source.plant"))
+    #:source "/notes/source.plant"))
 
 (define forest
   (make-forest

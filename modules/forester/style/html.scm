@@ -13,8 +13,8 @@
   (make-artifact
     "forester.css"
     (include-text "forester/style/default.css")
-    (list "modules/forester/style/html.scm"
-          "modules/forester/style/default.css")))
+    #:sources (list "modules/forester/style/html.scm"
+                    "modules/forester/style/default.css")))
 
 (define default-html-style
   (compose-html-styles

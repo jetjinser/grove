@@ -14,21 +14,21 @@
   #:use-module (grove style html)
   #:use-module (grove content transform)
   #:use-module (grove render html image)
-  #:use-module (grove render text)
-  #:use-module (forester commands))
+  #:use-module (grove render text))
 
-(test-begin "grove html rules")
+(test-begin "grove renderer rules")
 
 (define (image-element)
-  (image "forest.jpg" "A forest"))
+  (make-content-element 'image '("A forest")
+    #:properties '((source . "forest.jpg"))))
 
-(define (img-rule context element children next)
+(define (img-rule context element payload next)
   `(img (@ (src ,(content-element-property element 'source))
-           (alt ,(content-verbatim-string children)))))
+           (alt ,(content-verbatim-string payload)))))
 
-(define (picture-rule context element children next)
+(define (picture-rule context element payload next)
   (let ((source (content-element-property element 'source))
-        (alt (content-verbatim-string children)))
+        (alt (content-verbatim-string payload)))
     (if (string=? source "forest.jpg")
         `(picture
            (source (@ (type "image/avif")
@@ -81,14 +81,23 @@
 (test-assert "overlay wins"
   (pair? (memq 'picture (render-with (compose-render-rules base overlay)))))
 
-(test-assert "composition is associative"
-  (let* ((a (make-render-rules (list (cons 'image img-rule))))
-         (b (make-render-rules
-              (list (cons 'link (lambda (context element children next)
-                                  '(a))))))
-         (c (make-render-rules (list (cons 'image picture-rule)))))
-    (equal? (render-with (compose-render-rules a (compose-render-rules b c)))
-            (render-with (compose-render-rules (compose-render-rules a b) c)))))
+(test-assert "composition is associative across overlapping delegating rules"
+  (let ((events '()))
+    (define (layer name)
+      (make-render-rules
+        (list (cons 'image
+                    (lambda (_context _element _payload next)
+                      (set! events (cons name events))
+                      (next))))))
+    (define (observe rules)
+      (set! events '())
+      (let ((output (render-with rules)))
+        (list output (reverse events))))
+    (let* ((a (layer 'a))
+           (b (layer 'b))
+           (c (layer 'c)))
+      (equal? (observe (compose-render-rules a (compose-render-rules b c)))
+              (observe (compose-render-rules (compose-render-rules a b) c))))))
 
 (test-assert "reapplying this terminal override preserves this output"
   (let* ((rules (compose-render-rules base overlay))
@@ -97,7 +106,8 @@
 
 (test-assert "an overlay can delegate to the base rule"
   (let ((sxml (content->sxml
-                (image "missing.jpg" "A missing forest")
+                (make-content-element 'image '("A missing forest")
+                  #:properties '((source . "missing.jpg")))
                 #:rules (compose-render-rules base overlay))))
     (and (pair? (memq 'img sxml))
          (not (memq 'picture sxml)))))
@@ -105,7 +115,7 @@
 (let ((contextual
         (make-render-rules
           (list (cons 'image
-                      (lambda (context element children next)
+                      (lambda (context element _payload next)
                         `(p ,(render-context-ref context 'page))))))))
   (test-assert "rules receive an explicit context"
     (let ((sxml (content->sxml
@@ -114,6 +124,45 @@
                   #:context (make-render-context #:page "ctx"))))
       (and (pair? (memq 'p sxml))
            (string=? "ctx" (cadr (memq 'p sxml)))))))
+
+(let ((rules
+        (make-render-rules
+          (list (cons 'image
+                      (lambda (context _element _payload _next)
+                        (if (and (render-context? context)
+                                 (not (render-context-has? context 'page)))
+                            '(empty-context)
+                            '(unexpected-context))))))))
+  (test-equal "HTML rules receive an empty typed context by default"
+    '(empty-context)
+    (content->sxml (image-element) #:rules rules)))
+
+(let ((rules
+        (make-render-rules
+          (list (cons 'paragraph
+                      (lambda (context _element _payload _next)
+                        (if (and (render-context? context)
+                                 (not (render-context-has? context 'page)))
+                            "empty-context"
+                            "unexpected-context")))))))
+  (test-equal "text rules receive an empty typed context by default"
+    "empty-context"
+    (content->text (make-content-element 'paragraph '("body"))
+      #:rules rules)))
+
+(test-error "HTML rendering rejects a non-context value immediately" #t
+  (content->sxml (image-element) #:context #f))
+(test-error "text rendering rejects a non-context value immediately" #t
+  (content->text "body" #:context #f))
+
+(test-error "text rendering validates rules for an empty document" #t
+  (content->text (make-content-document '()) #:rules '()))
+
+(test-error "HTML rendering validates rules for an empty document" #t
+  (content->sxml (make-content-document '()) #:rules '()))
+
+(test-error "HTML rendering validates its ID prefix for an empty document" #t
+  (content->sxml (make-content-document '()) #:id-prefix #f))
 
 (test-assert "content->sxml accepts a rule set directly"
   (let ((sxml (render-with (compose-render-rules base overlay))))
@@ -132,7 +181,7 @@
        (document (make-content-document (list math)))
        (rules (make-render-rules
                 (list (cons 'math
-                            (lambda (_context _element _children _next)
+                            (lambda (_context _element _payload _next)
                               '(custom-math "custom")))))))
   (test-equal "HTML rules can replace math rendering"
     '(article (custom-math "custom"))
@@ -143,12 +192,29 @@
       #:rules
       (make-render-rules
         (list (cons 'math
-                    (lambda (_context _element _children next)
+                    (lambda (_context _element _payload next)
                       (next))))))))
+
+(let* ((math (make-content-element 'math '("x")
+                                   #:properties '((tex? . #t))))
+       (document (make-content-document (list math)))
+       (rules (make-render-rules
+                (list (cons 'math
+                            (lambda (_context _element payload _next)
+                              (string-append "math:" payload)))))))
+  (test-equal "text math rules receive the complete backend payload"
+    "math:$x$"
+    (content->text document #:rules rules)))
 
 (test-error "duplicate kinds are rejected" #t
   (make-render-rules (list (cons 'image img-rule)
                          (cons 'image picture-rule))))
+(test-error "rules reject interpreters that cannot accept four arguments" #t
+  (make-render-rules (list (cons 'image (lambda (_context) #f)))))
+(test-assert "rules accept variadic interpreters that can receive four arguments"
+  (render-rules?
+    (make-render-rules
+      (list (cons 'image (lambda (_context _element _payload . _next) #f))))))
 
 (let* ((style-a (make-html-style
                  #:stylesheets (list (make-artifact "base.css" "base"))))
@@ -369,6 +435,8 @@
        (add-c (append-content-text "c"))
        (document (make-content-document '()))
        (composed (compose-content-transforms add-a add-b)))
+  (test-error "content transforms reject procedures that cannot accept a document" #t
+    (compose-content-transforms (lambda () document)))
   (test-equal "identity is a valid content transform"
     0 (length (content-document-children (identity document))))
   (test-equal "empty transform composition is the identity"
@@ -486,7 +554,7 @@
 
 (let ((rules (make-render-rules
                (list (cons 'image
-                           (lambda (context element children next)
+                           (lambda (context element _payload next)
                              "PICTURE"))))))
   (test-equal "text renderer accepts renderer rules"
     "PICTURE"
@@ -494,7 +562,7 @@
 
 (let ((rules (make-render-rules
                (list (cons 'paragraph
-                           (lambda (context element children next)
+                           (lambda (context element _payload next)
                              (next)))))))
   (test-equal "next reaches the built-in HTML interpretation"
     '(p "Hello")
@@ -503,11 +571,11 @@
 
 (let* ((base (make-render-rules
                (list (cons 'paragraph
-                           (lambda (context element children next)
+                           (lambda (context element _payload next)
                              (next))))))
        (overlay (make-render-rules
                   (list (cons 'paragraph
-                              (lambda (context element children next)
+                              (lambda (context element _payload next)
                                 (next))))))
        (rules (compose-render-rules base overlay)))
   (test-equal "next reaches the base rule then the built-in interpretation"
@@ -517,7 +585,7 @@
 
 (let ((rules (make-render-rules
                (list (cons 'paragraph
-                           (lambda (context element children next)
+                           (lambda (context element _payload next)
                              (next)))))))
   (test-equal "next reaches the built-in text interpretation"
     "Hello\n"
@@ -530,4 +598,4 @@
 (test-error "public content->text does not accept stock renderer handlers" #t
   (content->text (image-element) #:internal-lazy-handlers '()))
 
-(test-end "grove html rules")
+(test-end "grove renderer rules")

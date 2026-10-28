@@ -3,9 +3,9 @@
 
 (define-module (grove project diagnostic)
   #:use-module (grove private files)
+  #:use-module (grove private procedure)
   #:use-module (grove private snapshot)
   #:use-module (srfi srfi-9)
-  #:use-module (srfi srfi-13)
   #:export (print-project-error
             call-with-project-stage
             project-error? project-error-stage project-error-path
@@ -41,8 +41,8 @@ procedure. Invalid context is rejected before THUNK runs."
     (error "project stage must be a symbol" stage))
   (unless (or (not path) (filesystem-path-string? path))
     (error "project stage path must be a non-empty string or #f" path))
-  (unless (procedure? thunk)
-    (error "project stage requires a thunk" thunk))
+  (unless (procedure-accepts-arguments? thunk 0)
+    (error "project stage requires a zero-argument thunk" thunk))
   (let ((stack #f))
     (catch #t thunk
       (lambda (key . arguments)

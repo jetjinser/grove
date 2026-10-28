@@ -246,7 +246,7 @@
            "reusable" "Reusable note"
            (evaluate-document
              "@paragraph{Included content} @paragraph{Shared content. @link[\"destination\"]{Follow destination.}}")
-           "plants/reusable.plant"))
+           #:source "plants/reusable.plant"))
        (destination
          (make-site-page
            "destination" "Destination"
@@ -256,7 +256,7 @@
            "host" "Host"
            (evaluate-document
              "Before. @transclude[\"reusable\"] After.")
-           "plants/host.plant"))
+           #:source "plants/host.plant"))
        (forest (make-forest (make-site (list host target destination))))
        (html (render-test-html forest #:mathjax-src #f))
        (text (site->text forest))
@@ -352,7 +352,7 @@
              (string-append
                "@subtree[#:id \"piece\"]{@title{Piece}@paragraph{Owned text.}}"
                " @transclude[\"piece\"]"))
-           "plants/root.plant"))
+           #:source "plants/root.plant"))
        (host
          (make-site-page
            "host" "Host"
@@ -360,7 +360,7 @@
              (string-append
                "@taxon[\"host-tax\"]"
                " Before. @transclude[\"piece\"] After."))
-           "plants/host.plant"))
+           #:source "plants/host.plant"))
        (forest (make-forest (make-site (list root host))))
        (html (render-test-html forest #:mathjax-src #f)))
   (test-equal "context unions the defining page with transcluding pages"
@@ -376,21 +376,21 @@
 (let* ((citation
          (make-site-page "citation" "A citation"
            (evaluate-document "@taxon[\"ReFeReNcE\"]")
-           "plants/citation.plant"))
+           #:source "plants/citation.plant"))
        (idea
          (make-site-page "idea" "A related idea"
            (evaluate-document "@paragraph{An idea.}")
-           "plants/idea.plant"))
+           #:source "plants/idea.plant"))
        (support
          (make-site-page "support" "Supporting note"
            (evaluate-document
              "@paragraph{See @link[\"citation\"]{the citation}.}")
-           "plants/support.plant"))
+           #:source "plants/support.plant"))
        (source
          (make-site-page "source" "Source"
            (evaluate-document
              "@paragraph{@link[\"idea\"]{the idea}.} @transclude[\"support\"]")
-           "plants/source.plant"))
+           #:source "plants/source.plant"))
        (forest (make-forest (make-site (list source support citation idea))))
        (html (render-test-html forest #:mathjax-src #f))
        (text (site->text forest)))
@@ -438,12 +438,12 @@
          (make-site-page
            "source" "Source"
            (evaluate-document "@subtree{@title{Inline section}}")
-           "plants/source.plant"))
+           #:source "plants/source.plant"))
        (host
          (make-site-page
            "host" "Host"
            (evaluate-document "@transclude[\"unstable-0\"]")
-           "plants/host.plant"))
+           #:source "plants/host.plant"))
        (forest (make-forest (make-site (list source host))))
        (host-html (assoc-ref (render-test-html forest #:mathjax-src #f) "host")))
   (test-assert "transclusions display generated IDs in local-ID form"
@@ -484,7 +484,7 @@
                         "cycle-root" "Cycle root"
                         (evaluate-document
                           "@subtree{@title{Child} @transclude[\"cycle-root\"]}")
-                        "notes/cycle.plant"))))
+                        #:source "notes/cycle.plant"))))
             #f)
           (lambda (key . args) (format #f "~s" (cons key args))))))
   (test-assert "cycle diagnostic reports the full tree path and source"
@@ -500,7 +500,7 @@
                 (list (make-site-page
                         "host" "Host"
                         (evaluate-document "@transclude[\"missing\"]")
-                        "notes/host.plant"))))
+                        #:source "notes/host.plant"))))
             #f)
           (lambda (key . args) (format #f "~s" (cons key args))))))
   (test-assert "unresolved transclusion diagnostic identifies tree, source, occurrence, target"

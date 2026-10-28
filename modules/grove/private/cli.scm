@@ -4,7 +4,6 @@
 (define-module (grove private cli)
   #:use-module (grove private project model)
   #:use-module (grove private project lifecycle)
-  #:use-module (grove build)
   #:use-module (grove serve)
   #:use-module (grove private cache-dir)
   #:use-module (grove private store-gc)
@@ -16,7 +15,6 @@
   #:use-module (ice-9 format)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:export (main))
 
 ;; Reported by `grove --version'. The build system may substitute a real value
@@ -112,7 +110,7 @@ keyed by command."
                  #:commands '(build serve)
                  #:help "  --output PATH   Override the output directory (build and serve).\n")
     (option-spec "--profile" #:key 'profile #:commands '(build check serve)
-                 #:help "  --profile       Report cache-hit cost split, phase timings, and peak RSS.\n")
+                 #:help "  --profile       Report input-cache timings and peak RSS.\n")
     (option-spec "--port" #:key 'port #:arity 'value #:parse 'integer
                  #:check port-check #:commands '(serve)
                  #:help "  --port NUMBER   Listen on this port (serve only; default: 8080).\n")

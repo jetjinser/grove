@@ -15,7 +15,8 @@
   #:use-module (web response))
 
 (define root
-  (format #f "~a/grove-serve-test-~a" (or (getenv "TMPDIR") "/tmp") (getpid)))
+  (mkdtemp (string-append (or (getenv "TMPDIR") "/tmp")
+                          "/grove-serve-test-XXXXXX")))
 (define external (string-append root "-external"))
 (define inputs (string-append root "-inputs"))
 (define config (string-append root "/project.scm"))
@@ -177,7 +178,6 @@
   (serve-project "unused.scm" #:profile? 'yes))
 (dynamic-wind
   (lambda ()
-    (mkdir root)
     (prepare-subprocess root)
     (mkdir external)
     (mkdir inputs)

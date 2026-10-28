@@ -191,6 +191,16 @@
 
 (test-error "Typst nodes reject empty source" #t
   (typst-math ""))
+(test-error "math asset renderers reject a compiler with the wrong arity" #t
+  (make-math-asset-renderer #:compiler (lambda (_source) "<svg/>")))
+(test-error "SMathML HTML rules reject a compiler with the wrong arity" #t
+  (make-smathml-html-rules #:compile (lambda () "<math/>")))
+(test-assert "math asset compilers may accept optional trailing arguments"
+  (make-math-asset-renderer
+    #:compiler (lambda* (language source #:optional (mode #f)) "<svg/>")))
+(test-assert "SMathML compilers may accept rest arguments"
+  (make-smathml-html-rules
+    #:compile (lambda (source . options) "<math/>")))
 
 (test-end "hackable source math")
 (if old-path

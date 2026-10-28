@@ -6,10 +6,11 @@
   #:use-module ((grove math private formula-reader) #:prefix reader:)
   #:use-module ((grove math semantic) #:prefix semantic:)
   #:use-module ((grove math pipeline) #:prefix core:)
+  #:use-module ((grove math semantic-check) #:prefix check:)
+  #:use-module ((grove math presentation) #:prefix presentation:)
   #:use-module (grove math expression)
   #:use-module (grove math private assumption)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:export (read read-lines assumptions term
             add subtract negate multiply divide power dot cross
             sin cos exp log prime function-partial
@@ -118,7 +119,7 @@
   (lambda* (source #:key (assumptions '()) (rules #f) (max-steps 32)
                    (max-term-size 2048) (view 'compact) (on-error 'raise))
     (let ((content
-            (core:math-completed-report->content
+            (presentation:math-completed-report->content
               (derive-report source assumptions rules max-steps max-term-size)
               #:view view #:on-error on-error)))
       (if (null? (cdr content)) (car content)
@@ -183,17 +184,17 @@
       #:assumptions (parse-assumptions (list assumptions)) #:steps steps #:rules rules)))
 
 (define-public (check-polynomial-rule name)
-  (core:math-polynomial-check-rule name))
+  (check:math-polynomial-check-rule name))
 
 (define-public (check-polynomial-derivation derivation)
-  (core:math-polynomial-check-derivation derivation))
+  (check:math-polynomial-check-derivation derivation))
 
 (define-public (polynomial-check->content check)
-  (core:math-semantic-check->content check))
+  (presentation:math-semantic-check->content check))
 
 (define-public check-polynomial-step
   (lambda* (from to rule path #:key (assumptions '()))
-    (core:math-polynomial-check-step
+    (check:math-polynomial-check-step
       (parse-assumptions (list assumptions))
       (math-value-term (read from)) (math-value-term (read to)) rule path)))
 
@@ -204,7 +205,7 @@
                        (and (pair? coordinate-term)
                             (eq? (car coordinate-term) 'var)
                             (cadr coordinate-term)))))
-    (core:math-polynomial-check-derivative
+    (check:math-polynomial-check-derivative
       (math-value-term (read expression)) variable
       (math-value-term (read result)))))
 
@@ -215,7 +216,7 @@
                        (and (pair? coordinate-term)
                             (eq? (car coordinate-term) 'var)
                             (cadr coordinate-term)))))
-    (core:math-polynomial-check-antiderivative
+    (check:math-polynomial-check-antiderivative
       (math-value-term (read expression)) variable
       (math-value-term (read result)))))
 

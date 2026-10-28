@@ -80,8 +80,8 @@
   (make-artifact
     "i18n.css"
     (include-text "forester/style/i18n.css")
-    (list "modules/forester/private/style/i18n.scm"
-          "modules/forester/style/i18n.css")))
+    #:sources (list "modules/forester/private/style/i18n.scm"
+                    "modules/forester/style/i18n.css")))
 
 (define default-bilingual-style
   (make-html-style #:stylesheets (list bilingual-stylesheet)))

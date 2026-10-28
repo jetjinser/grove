@@ -6,10 +6,10 @@
   #:use-module (grove private files)
   #:use-module (grove private asset-pipeline)
   #:use-module (grove private renderer)
+  #:use-module (grove private procedure)
   #:use-module (grove private snapshot)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
-  #:use-module (srfi srfi-13)
   #:export (project?
             make-project
             project-source-directory
@@ -234,36 +234,39 @@ each RENDERER receives the analyzed model and returns artifacts. PIPELINES
 derive artifacts from declared files independently of the model. CACHE? controls
 document, renderer, and pipeline cache use. Plain renderer procedures run on
 every build; wrap one with MAKE-CACHED-RENDERER only when its stable cache
-identity is declared."
+identity is declared. BROWSE, when supplied, is called with the analyzed model
+and #:input and #:output ports by BROWSE-PROJECT."
   (unless (or (not source-directory)
               (filesystem-path-string? source-directory))
     (error "project source directory must be a non-empty path or #f"
            source-directory))
-  (unless (or (not collect-sources) (procedure? collect-sources))
-    (error "project source collector must be a procedure or #f"
+  (unless (or (not collect-sources)
+              (procedure-accepts-arguments? collect-sources 0))
+    (error "project source collector must accept zero arguments or be #f"
            collect-sources))
   (unless (or source-directory collect-sources)
     (error "project requires a source directory or collector"
            source-directory collect-sources))
-  (unless (or collect-sources (procedure? source-filter))
-    (error "project source filter must be a procedure when using directory collection"
+  (unless (or collect-sources
+              (procedure-accepts-arguments? source-filter 1))
+    (error "project source filter must accept one basename when using directory collection"
            source-filter))
-  (unless (procedure? prepare)
-    (error "project preparation step must be a procedure" prepare))
+  (unless (procedure-accepts-arguments? prepare 0)
+    (error "project preparation step must accept zero arguments" prepare))
   (unless (filesystem-path-list? extra-sources)
     (error "project extra sources must be a list of paths" extra-sources))
   (unless (unique-filesystem-path-list? extra-sources)
     (error "project extra source paths must be unique" extra-sources))
-  (unless (procedure? read-source)
-    (error "project requires a source reader" read-source))
-  (unless (procedure? analyze)
-    (error "project analyzer must be a procedure" analyze))
+  (unless (procedure-accepts-arguments? read-source 1)
+    (error "project source reader must accept one argument" read-source))
+  (unless (procedure-accepts-arguments? analyze 1)
+    (error "project analyzer must accept one argument" analyze))
   (unless (and (list? renderers)
                (every (lambda (renderer)
-                        (or (procedure? renderer)
+                        (or (procedure-accepts-arguments? renderer 1)
                             (cached-renderer? renderer)))
                       renderers))
-    (error "project renderers must be procedures or cached renderers"
+    (error "project renderers must accept one argument or be cached renderers"
            renderers))
   (unless (and (list? pipelines)
                (every asset-pipeline? pipelines)
@@ -274,10 +277,13 @@ identity is declared."
     (error "project requires a non-empty output directory" output-directory))
   (unless (boolean? cache?)
     (error "project cache option must be a boolean" cache?))
-  (unless (or (not browse) (procedure? browse))
-    (error "project browse callback must be a procedure" browse))
-  (unless (or (not create-source) (procedure? create-source))
-    (error "project source creator must be a procedure or #f" create-source))
+  (unless (or (not browse) (procedure-accepts-arguments? browse 1))
+    (error "project browse callback must accept the analyzed model or be #f"
+           browse))
+  (unless (or (not create-source)
+              (procedure-accepts-arguments? create-source 2))
+    (error "project source creator must accept a prefix and destination or be #f"
+           create-source))
   (%make-project (snapshot-data source-directory)
                  source-filter collect-sources prepare
                  (snapshot-data extra-sources) read-source analyze

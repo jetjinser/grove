@@ -4,15 +4,15 @@
 
 (define-module (grove collect)
   #:use-module (grove private files)
+  #:use-module (grove private procedure)
   #:use-module (ice-9 ftw)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:export (collect-directory))
 
 (define* (collect-directory directory #:optional (include? (lambda (_) #t)))
 "Recursively collect regular files below DIRECTORY that satisfy INCLUDE?.
-DIRECTORY must name an existing directory.
-INCLUDE? receives each regular file's basename; returned paths retain their
+DIRECTORY must name an existing directory. INCLUDE? receives one regular file
+basename; returned paths retain their
 full directory structure. A trailing slash in DIRECTORY is not duplicated.
 Symlinks to regular files are included. Hidden directories, directory
 symlinks, and special files are skipped."
@@ -36,8 +36,9 @@ symlinks, and special files are skipped."
                (lambda (filename)
                  (not (member filename '("." ".."))))
                string<?)))
-  (unless (procedure? include?)
-    (error "directory collector predicate must be a procedure" include?))
+  (unless (procedure-accepts-arguments? include? 1)
+    (error "directory collector predicate must accept a file basename"
+           include?))
   (unless (and (filesystem-path-string? directory)
                (file-is-directory? directory))
     (error "directory collector requires an existing directory" directory))

@@ -1,6 +1,8 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
-(use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math expression)
+(use-modules ((grove math formula) #:prefix φ:)
+             ((grove math presentation) #:prefix presentation:)
+             (grove math expression)
              (grove math report) (grove math diagnostic)
              (grove math derivation) (grove math verification)
              ((grove math semantic) #:prefix ◆:) (grove render html) (grove ir)
@@ -9,7 +11,7 @@
 (define facts (list (◆:space 'x 'y 'z) "scalar(u); c2(u)"))
 (test-assert "math-derive returns a computation report"
   (math-report?
-    (math-derive (φ:read "x+0") #:assumptions (φ:assumptions "scalar(x)"))))
+    (φ:derive (φ:read "x+0") #:assumptions (φ:assumptions "scalar(x)"))))
 (let ((report (φ:compute "x^2+x*0" #:assumptions facts)))
   (test-equal "concrete result is complete" 'complete (math-report-status report))
   (test-equal "concrete result has no unresolved derivatives" '() (math-report-unresolved report))
@@ -23,7 +25,8 @@
   (test-assert "even result-only rendering labels a symbolic result"
     (string-contains
       (string-concatenate (map (lambda (content) (sxml->html (content->sxml content)))
-                              (math-completed-report->content report #:view 'result))) "Symbolic result")))
+                              (presentation:math-completed-report->content
+                                report #:view 'result))) "Symbolic result")))
 (let ((report (φ:compute "x+0" #:assumptions facts #:max-steps 0)))
   (test-equal "resource cutoff is explicit" 'cutoff (math-report-status report))
   (test-equal "partial computation cannot be reused as a completed result" #f (math-report-result report))

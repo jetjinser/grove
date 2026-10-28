@@ -27,9 +27,9 @@
         (sources (out:artifact-sources/raw artifact)))
     (if (string? content)
         (make-artifact path (snapshot-data content)
-                       (snapshot-data sources))
+                       #:sources (snapshot-data sources))
         (make-byte-artifact path (bytevector-copy content)
-                            (snapshot-data sources)))))
+                            #:sources (snapshot-data sources)))))
 
 (define (html-style-stylesheets style)
   "Return STYLE's stylesheet artifacts as independent copies."

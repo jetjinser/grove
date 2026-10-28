@@ -5,7 +5,6 @@
   #:use-module (grove output)
   #:use-module (grove private preview http)
   #:use-module (grove private preview watch)
-  #:use-module (ice-9 ftw)
   #:use-module (ice-9 binary-ports)
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-64)
@@ -55,7 +54,9 @@
 (test-equal "artifacts removed from the new snapshot vanish" 404
   (response-code (car (request "/image.png"))))
 
-(define root (format #f "/tmp/grove-watch-test-~a" (getpid)))
+(define root
+  (mkdtemp (string-append (or (getenv "TMPDIR") "/tmp")
+                          "/grove-watch-test-XXXXXX")))
 (define output (string-append root "/build"))
 (define source (string-append root "/article.plant"))
 (define external (string-append root "-external.css"))
@@ -65,7 +66,6 @@
 (define (snapshot) (watch-snapshot (list root) (list external) output))
 (dynamic-wind
   (lambda ()
-    (mkdir root)
     (mkdir output)
     (mkdir (string-append root "/.git"))
     (write-file source "one")

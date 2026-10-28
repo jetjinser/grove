@@ -2,11 +2,9 @@
 ;;;
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(use-modules (ice-9 ftw)
-             (ice-9 textual-ports)
+(use-modules (ice-9 textual-ports)
              (srfi srfi-1)
              (srfi srfi-9)
-             (srfi srfi-13)
              (grove collect)
              (grove ir)
              (grove output)
@@ -73,7 +71,7 @@
     (list (make-artifact
             "catalog.css"
             (call-with-input-file catalog-css-path get-string-all)
-            (list catalog-css-path)))))
+            #:sources (list catalog-css-path)))))
 
 (define (render-catalog-html catalog)
   (append
@@ -87,12 +85,12 @@
                (title "Quote catalog")
                (link (@ (rel "stylesheet") (href "/catalog.css"))))
              (body ,(content->sxml (catalog-document catalog)))))
-        (catalog-sources catalog)))))
+        #:sources (catalog-sources catalog)))))
 
 (define (render-catalog-text catalog)
   (list (make-artifact "catalog.txt"
                        (content->text (catalog-document catalog))
-                       (catalog-sources catalog))))
+                       #:sources (catalog-sources catalog))))
 
 (define catalog-project
   (make-project

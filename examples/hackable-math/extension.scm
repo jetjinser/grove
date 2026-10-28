@@ -12,12 +12,11 @@
   #:use-module (grove render plain-text)
   #:use-module (grove render rules)
   #:use-module (grove site)
-  #:use-module (ice-9 ftw)
   #:use-module (ice-9 optargs)
+  #:use-module (ice-9 ftw)
   #:use-module (ice-9 popen)
   #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:use-module (rnrs bytevectors)
   #:use-module (language scribble command)
   #:use-module (sxml simple)
@@ -28,6 +27,17 @@
             make-math-asset-renderer
             make-smathml-html-rules
             math-html-rules))
+
+(define (accepts-positional-arguments? procedure count)
+  (and (procedure? procedure)
+       (let ((arity (catch #t
+                      (lambda () (procedure-minimum-arity procedure))
+                      (lambda _ #f))))
+         (and (list? arity)
+              (= (length arity) 3)
+              (<= (car arity) count)
+              (or (caddr arity)
+                  (<= count (+ (car arity) (cadr arity))))))))
 
 (define (source-string source who)
   (let ((source (content-verbatim-string (command-body source))))
@@ -191,8 +201,9 @@ COMPILER maps a language symbol and source string to SVG text. Override
 COMPILER-ID when external tool versions or options can change independently
 of the project configuration. DEPENDENCIES lists additional files read by
 the compiler, such as macro packages or font configuration."
-  (unless (procedure? compiler)
-    (error "math asset renderer requires a compiler procedure" compiler))
+  (unless (accepts-positional-arguments? compiler 2)
+    (error "math asset renderer compiler must accept a language and source"
+           compiler))
   (unless (and (string? compiler-id) (not (string-null? compiler-id)))
     (error "math asset renderer compiler ID must be a non-empty string"
            compiler-id))
@@ -226,7 +237,7 @@ the compiler, such as macro packages or font configuration."
                 (map (lambda (artifact)
                        (if (eq? artifact existing)
                            (make-artifact path (artifact-content existing)
-                                          sources)
+                                          #:sources sources)
                            artifact))
                      artifacts)
                 (let ((svg (compiler
@@ -235,12 +246,12 @@ the compiler, such as macro packages or font configuration."
                   (unless (string? svg)
                     (error "math compiler must return SVG text" svg))
                   (cons (make-artifact path svg
-                                       (and (pair? sources) sources))
+                                       #:sources (and (pair? sources) sources))
                         artifacts)))))
         '()
         (site-math forest)))
     #:configuration (lambda (forest) (math-configuration compiler-id forest))
-    #:inputs (lambda () dependencies)))
+    #:dependencies (lambda () dependencies)))
 
 (define* (make-smathml-html-rules #:key compile)
   "Interpret @smathml nodes using COMPILE, which maps Racket source to XML.
@@ -272,12 +283,12 @@ remains replaceable."
             (cons `(@ (,(if qualified? 'xmlns:m 'xmlns) ,mathml-uri)
                     ,@(or attributes '()))
                   children))))
-  (unless (procedure? compile)
-    (error "SMathML HTML rules require a compiler procedure" compile))
+  (unless (accepts-positional-arguments? compile 1)
+    (error "SMathML HTML compiler must accept one source string" compile))
   (make-render-rules
     (list
       (cons 'smathml
-        (lambda (_context element _children next)
+        (lambda (_context element _payload next)
           (let* ((xml (compile (content->plain-text element)))
                  (tree (and (string? xml)
                             (xml->sxml
@@ -297,7 +308,7 @@ remains replaceable."
   (make-render-rules
     (list
       (cons 'compiled-math
-        (lambda (context element _children next)
+        (lambda (context element _payload next)
           (let ((routes (render-context-ref context 'routes))
                 (path (content-element-property element 'asset-path))
                 (alt (content-element-property element 'alt)))

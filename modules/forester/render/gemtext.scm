@@ -26,7 +26,6 @@
   #:use-module (grove site)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
-  #:use-module (srfi srfi-13)
   #:export (site->gemtext
             render-gemtext
             make-gemtext-routes
@@ -403,12 +402,12 @@ default. Paths are validated by MAKE-TEXT-ROUTES."
     (let ((artifacts
             (cons (make-artifact (text-index-path routes)
                                  (index->gemtext forest routes)
-                                 (source-paths forest))
+                                 #:sources (source-paths forest))
                   (map (lambda (page)
                          (make-artifact
                            (text-page-path routes (site-page-id page))
                            (render-page page)
-                           (page-source-paths forest page)))
+                           #:sources (page-source-paths forest page)))
                        (pages forest)))))
       (if prefix (prefix-artifacts prefix artifacts) artifacts))))
 

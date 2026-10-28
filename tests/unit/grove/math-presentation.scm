@@ -1,7 +1,9 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math private source)
+(use-modules ((grove math formula) #:prefix φ:) (grove math pipeline)
+             (grove math presentation) (grove math provenance)
+             (grove math private source)
              (grove ir)
              (grove render html) (grove render text)
              (language scribble spec) (system base language)
@@ -63,6 +65,26 @@
 (test-error "invalid view fails explicitly" #t (display-report 'other))
 (test-error "invalid diagnostic mode fails explicitly" #t
   (math-completed-report->content report #:on-error 'other))
+(test-assert "report presentation rejects non-report values at the API boundary"
+  (string-contains
+    (error-text (lambda () (math-report->content 'not-a-report)))
+    "expected a math report"))
+(test-assert "completed report presentation rejects non-report values at the API boundary"
+  (string-contains
+    (error-text (lambda () (math-completed-report->content 'not-a-report)))
+    "expected a math report"))
+(let* ((no-path (φ:search "x" "y" #:assumptions '("scalar(x); scalar(y)")))
+       (text (string-join
+               (map content->text (math-completed-report->content no-path))
+               "\n")))
+  (test-assert "an exhausted search without a path is still presentable"
+    (and (math-report-complete? no-path)
+         (not (math-report-derivation no-path))
+         (string-contains text "0 derivations found"))))
+(test-equal "an exhausted search without a path has no-result status"
+  'no-result
+  (math-report-status
+    (φ:search "x" "y" #:assumptions '("scalar(x); scalar(y)"))))
 
 (let ((shown (html (document "@with-assumptions[\"scalar(x)\"]{\n@check-derive[#:on-error 'show]{\n  differentiate(x,x)\n\n  2\n}}"))))
   (test-assert "authored target diagnostics retain line and indentation through a scope"

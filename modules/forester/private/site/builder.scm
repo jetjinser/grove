@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester private site builder)
+  #:use-module (grove private procedure)
   #:use-module (grove i18n)
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove private html-style)
@@ -20,7 +21,6 @@
   #:use-module (forester relations)
   #:use-module (grove relation dsl)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:export (make-forest))
 
 (define (page-anchor-facts page)
@@ -51,6 +51,7 @@ transclusions belong to their own pages and stay out of this set."
  marker - dfn for a defining occurrence, say. Later markers override earlier
  ones, matching Grove's HTML renderer and MERGE-CONTENT-STYLE."
   (content-style-html-tag-name (content-element-style element)))
+
 
 (define (dom-anchor-index pages composition transclusion-index)
   "Build a page-id → rendered-anchor-ids table.  A page's set is its own
@@ -149,7 +150,7 @@ tree-N position anchors; both are known limitations of global anchors."
                 (site-page-id page)
                 (site-page-title page)
                 (site-page-document page)
-                (site-page-source page)
+                #:source (site-page-source page)
                 #:metadata
                 (map (lambda (entry)
                        (if (eq? (car entry) 'locale)
@@ -175,8 +176,9 @@ tree-N position anchors; both are known limitations of global anchors."
     (report-phase phase (lambda () expression)))
   (unless (site? site)
     (error "forest requires a Grove site" site))
-  (unless (or (not timings) (procedure? timings))
-    (error "forest timings must be a procedure" timings))
+  (unless (or (not timings) (procedure-accepts-arguments? timings 2))
+    (error "forest timings callback must accept a phase and duration or be #f"
+           timings))
   (set! site
     (make-site (map normalize-page-locale (site-pages site))
       #:title (site-title site)

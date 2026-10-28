@@ -5,6 +5,7 @@
 (define-module (tests unit grove pipeline)
   #:declarative? #f
   #:use-module (grove cache)
+  #:use-module (grove input)
   #:use-module (grove output)
   #:use-module (grove pipeline)
   #:use-module (grove private input cache)
@@ -79,6 +80,10 @@
                        (current-project-key)))
 
 (test-begin "grove asset pipelines")
+
+(test-error "asset pipeline constructors reject callbacks with the wrong arity" #t
+  (make-asset-pipeline #:name "bad-callback"
+                       #:procedure (lambda () '())))
 
 (let* ((declared-inputs (list (string-copy input-a)))
        (pipeline
@@ -471,6 +476,79 @@
     (test-equal "a corrupted index re-runs the procedure" 5 runs)
     (test-assert "the re-run rewrites a valid index"
       (pair? (index-blobs)))))
+
+(let ((before (index-blobs))
+      (runs 0))
+  (define pipeline
+    (make-asset-pipeline
+      #:name "semantic-index-validation"
+      #:inputs (list input-a)
+      #:procedure
+      (lambda (_input)
+        (call-with-input-file (depend-on! input-a) get-string-all)
+        (set! runs (1+ runs))
+        (list (make-artifact "semantic-index.txt" "valid")))))
+  (define (run)
+    (run-asset-pipelines (list pipeline) (current-project-key)))
+  (run)
+  (let* ((new-indexes (lset-difference string=? (index-blobs) before))
+         (name (car new-indexes))
+         (path (string-append store "/artifacts/" name))
+         (index (call-with-input-file path read))
+         (entries (cadddr index)))
+    (test-equal "the semantic-corruption fixture creates one pipeline index"
+      1 (length new-indexes))
+    (overwrite-blob
+      name
+      (call-with-output-string
+        (lambda (port)
+          (write (list (car index) (cadr index) (caddr index)
+                       (append entries (list (car entries))))
+                 port))))
+    (run)
+    (test-equal "a semantically invalid index re-runs the pipeline" 2 runs)
+    (let ((valid-index (call-with-input-file path read)))
+      (overwrite-blob
+        name
+        (call-with-output-string
+          (lambda (port)
+            (write valid-index port)
+            (newline port)
+            (write 'trailing-datum port)))))
+    (run)
+    (test-equal "a pipeline index with trailing data is a cache miss" 3 runs)
+    (let* ((valid-index (call-with-input-file path read))
+           (dependencies (caddr valid-index)))
+      (test-assert "the pipeline index records runtime dependencies"
+        (pair? dependencies))
+      (let* ((dependency (car dependencies))
+             (invalid-dependencies
+               (cons (list (string-append "bad-path" (string #\nul))
+                           (cadr dependency))
+                     (cdr dependencies))))
+        (overwrite-blob
+          name
+          (call-with-output-string
+            (lambda (port)
+              (write (list (car valid-index) (cadr valid-index)
+                           invalid-dependencies (cadddr valid-index))
+                     port))))
+        (run)
+        (test-equal "a pipeline index with an invalid dependency path is a cache miss"
+          4 runs))
+      (let* ((valid-index (call-with-input-file path read))
+             (dependencies (caddr valid-index)))
+        (overwrite-blob
+          name
+          (call-with-output-string
+            (lambda (port)
+              (write (list (car valid-index) (cadr valid-index)
+                           (append dependencies (list (car dependencies)))
+                           (cadddr valid-index))
+                     port))))
+        (run)
+        (test-equal "a pipeline index with duplicate dependencies is a cache miss"
+          5 runs)))))
 
 (let ((contents (content-blobs)))
   (test-assert "content blobs exist" (pair? contents))

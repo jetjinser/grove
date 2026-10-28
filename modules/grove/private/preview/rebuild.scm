@@ -117,4 +117,4 @@ preserves the prior analysis result."
             changed
             report-removed
             affected
-            #t)))))
+            (null? (caddr render-result)))))))

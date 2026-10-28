@@ -18,17 +18,20 @@ Scheme-datum graph. Import the constructors from the format modules:
              (forester render rss)
              (forester render sitemap)
              (forester render graph)
-             (forester render site))
+             (forester render site)
+             (grove render html routes))
 
 (define settings
   (make-site-settings #:site-url "https://example.org"))
+(define routes
+  (make-html-routes #:url-prefix "/notes/"))
 
 (make-forester-project
   #:home "hello"
-  #:html-options (make-html-options #:settings settings)
+  #:html-options (make-html-options #:settings settings #:routes routes)
   #:additional-renderers
-  (list (make-rss-renderer #:settings settings)
-        (make-sitemap-renderer #:settings settings)
+  (list (make-rss-renderer #:settings settings #:routes routes)
+        (make-sitemap-renderer #:settings settings #:routes routes)
         (make-graph-renderer)))
 ```
 

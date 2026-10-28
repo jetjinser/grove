@@ -22,6 +22,11 @@
 (define (write-file path text)
   (call-with-output-file path (lambda (port) (display text port))))
 
+(test-error "loaded-project callbacks must accept the project" #t
+  (call-with-loaded-project "missing-project.scm" (lambda () #t)))
+(test-error "project stage actions must be zero-argument thunks" #t
+  (call-with-project-stage 'read #f (lambda (_) #t)))
+
 (define (write-project result)
   (write-file config
     (format #f "(use-modules (grove project) (grove build) (grove output) (ice-9 textual-ports))

@@ -15,10 +15,7 @@
   #:use-module (grove render text)
   #:use-module (grove render plain-text)
   #:use-module (grove render rules)
-  #:use-module (grove build)
-  #:use-module (grove site)
-  #:use-module (forester render html)
-  #:use-module (forester site))
+  #:use-module (grove site))
 
 (test-begin "grove content")
 
@@ -26,6 +23,18 @@
   (let ((public (module-public-interface (resolve-module '(grove ir)))))
     (and (module-variable public 'content-source-location)
          (not (module-variable public 'content-text-location)))))
+
+(test-assert "content value and sequence predicates live with the IR"
+  (let ((public (module-public-interface (resolve-module '(grove ir)))))
+    (and (module-variable public 'content-value?)
+         (module-variable public 'content-sequence?))))
+
+(test-equal "the IR defines recursive content sequence membership"
+  '(#t #t #f #f)
+  (list (content-value? "text")
+        (content-sequence? '("text" (("more"))))
+        (content-value? 'scheme-data)
+        (content-sequence? '("text" scheme-data))))
 
 (test-assert "anchor validation is an internal shared helper"
   (and (not (module-variable
@@ -105,10 +114,11 @@
        (text-source (string-copy "page.plant"))
        (location-file (string-copy "page.plant"))
        (location (list (cons 'file location-file) (cons 'line 2)))
-       (text (make-content-text text-value text-source #:location location))
+       (text (make-content-text text-value #:source text-source
+                                #:location location))
        (layout-raw (string-copy "\n  "))
        (layout-source (string-copy "page.plant"))
-       (layout (make-content-layout 'space layout-raw layout-source)))
+       (layout (make-content-layout 'space layout-raw #:source layout-source)))
   (string-set! text-value 0 #\x)
   (string-set! text-source 0 #\x)
   (string-set! location-file 0 #\x)
@@ -139,13 +149,13 @@
        (property-value (string-copy "note"))
        (properties (list (cons 'role property-value)))
        (element-source (string-copy "page.plant"))
-       (element (make-content-element 'paragraph children element-source
+       (element (make-content-element 'paragraph children #:source element-source
                    #:properties properties
                    #:style (make-content-style 'emphasis)
                    #:flow-kind 'block))
        (document-source (string-copy "page.plant"))
        (document-children (list element))
-       (document (make-content-document document-children document-source)))
+       (document (make-content-document document-children #:source document-source)))
   (string-set! child-text 0 #\x)
   (set-car! children "changed")
   (string-set! property-value 0 #\x)
@@ -203,8 +213,8 @@
                    (list (make-content-text "top-level")
                          (make-content-element
                            'paragraph (list "returned document")
-                           "paragraph.plant"))
-                   "origin.plant"))
+                           #:source "paragraph.plant"))
+                   #:source "origin.plant"))
        (located (content-with-source-location original location))
        (children (content-document-children located))
        (text (car children))
@@ -233,6 +243,12 @@
   (content-with-source-location
     'project-setting '((file . "project.scm") (line . 3))))
 
+(let ((value (list (make-content-text "nested") 'scheme-data)))
+  (test-eq "source annotation leaves mixed Scheme lists untouched"
+    value
+    (content-with-source-location
+      value '((file . "project.scm") (line . 3)))))
+
 (let* ((location '((file . "computed.plant") (line . 3) (column . 5)))
        (located (content-with-source-location "computed text" location)))
   (test-assert "source locations turn raw text into located content"
@@ -247,15 +263,19 @@
 (test-error "content text values are strings" #t
   (make-content-text 42))
 (test-error "content text sources must be non-empty paths" #t
-  (make-content-text "text" ""))
+  (make-content-text "text" #:source ""))
 (test-error "content text sources reject filesystem NUL characters" #t
-  (make-content-text "text" (string-append "page" (string #\nul))))
+  (make-content-text "text" #:source (string-append "page" (string #\nul))))
+(test-error "content text source is an explicit keyword" #t
+  (make-content-text "text" "page.plant"))
 (test-error "content layout kinds are symbols" #t
   (make-content-layout "newline" "\n"))
 (test-error "content layout raw values are strings" #t
   (make-content-layout 'newline 10))
 (test-error "content layout sources must be non-empty paths" #t
-  (make-content-layout 'newline "\n" ""))
+  (make-content-layout 'newline "\n" #:source ""))
+(test-error "content layout source is an explicit keyword" #t
+  (make-content-layout 'newline "\n" "page.plant"))
 (test-error "content text locations must be source-location alists" #t
   (make-content-text "text" #:location '(file "page.plant")))
 (test-error "content source locations require string filenames" #t
@@ -284,13 +304,17 @@
 (test-error "element kinds are symbols" #t
   (make-content-element "paragraph" '()))
 (test-error "content element sources must be non-empty paths" #t
-  (make-content-element 'paragraph '() ""))
+  (make-content-element 'paragraph '() #:source ""))
+(test-error "content element source is an explicit keyword" #t
+  (make-content-element 'paragraph '() "page.plant"))
 (test-error "content elements reject non-content children" #t
   (make-content-element 'paragraph '(42)))
 (test-error "content documents reject non-content children" #t
   (make-content-document '(42)))
 (test-error "content document sources must be non-empty paths" #t
-  (make-content-document '() ""))
+  (make-content-document '() #:source ""))
+(test-error "content document source is an explicit keyword" #t
+  (make-content-document '() "page.plant"))
 
 (test-equal "content-source-paths gathers node and location provenance"
   '("document.plant" "element.plant" "element-location.plant"
@@ -300,21 +324,58 @@
       (list
         (content-with-source-location
           (make-content-element 'paragraph
-            (list (make-content-text "body" "text.plant" #:location
+            (list (make-content-text "body" #:source "text.plant" #:location
                     '((file . "text-location.plant") (line . 2))))
-            "element.plant")
+            #:source "element.plant")
           '((file . "element-location.plant") (line . 1)))
-        (make-content-layout 'newline "\n" "layout.plant"))
-      "document.plant")))
+        (make-content-layout 'newline "\n" #:source "layout.plant"))
+      #:source "document.plant")))
 
 (test-equal "content-source-paths deduplicates repeated paths in order"
   '("page.plant")
   (content-source-paths
     (make-content-document
-      (list (make-content-text "a" "page.plant")
+      (list (make-content-text "a" #:source "page.plant")
             (make-content-element 'paragraph
-              (list (make-content-text "b" "page.plant"))))
-      "page.plant")))
+              (list (make-content-text "b" #:source "page.plant"))))
+      #:source "page.plant")))
+
+(test-equal "content-source-paths accepts a sequence of documents"
+  '("first.plant" "second.plant")
+  (content-source-paths
+    (list (make-content-document '("first") #:source "first.plant")
+          (make-content-document '("second") #:source "second.plant"))))
+
+(test-equal "content-source-paths walks nested content sequences"
+  '("first.plant" "second.plant")
+  (content-source-paths
+    (list (list (make-content-text "first" #:source "first.plant"))
+          (list (make-content-document
+                  (list (make-content-text "second" #:source "second.plant")))))))
+
+(let* ((location '((file . "nested.plant") (line . 7) (column . 2)))
+       (sequence
+        (list (list "raw text"
+                    (make-content-document
+                      (list (make-content-text "document text"))))
+              (make-content-text "sibling")))
+       (located (content-with-source-location sequence location)))
+  (test-assert "source locations recurse through nested content sequences"
+    (equal? (content-source-location (caar located)) location))
+  (test-equal "nested source annotation preserves sequence shape"
+    '(2 2 1)
+    (list (length located)
+          (length (car located))
+          (length (content-document-children (cadar located)))))
+  (test-equal "nested source annotation reaches document descendants"
+    (list location location location)
+    (list (content-source-location (caar located))
+          (content-source-location
+            (car (content-document-children (cadar located))))
+          (content-source-location (cadr located))))
+  (test-equal "nested source annotation records the location path"
+    '("nested.plant")
+    (content-source-paths located)))
 
 (test-equal "plain-text projection preserves math structure"
   "x^(2)"
@@ -366,12 +427,17 @@
     'source-location))
 (test-error "element flow kinds are constrained" #t
   (make-content-element 'paragraph '() #:flow-kind 'floating))
+(test-error "explicit false is not a content element flow kind" #t
+  (make-content-element 'paragraph '() #:flow-kind #f))
+(test-eq "content elements default to inline flow"
+  'inline
+  (content-element-flow-kind (make-content-element 'paragraph '())))
 (test-error "site construction rejects duplicate page IDs" #t
   (make-site
     (list (make-site-page "same" "First" (make-content-document '())
-            "first.plant")
+            #:source "first.plant")
           (make-site-page "same" "Second" (make-content-document '())
-            "second.plant"))))
+            #:source "second.plant"))))
 
 (let* ((notice
          (make-content-element 'notice '("Hello")
@@ -533,6 +599,15 @@
   (test-error "invalid anchor IDs fail at definition" #t
     (make-element #:tag "dfn" #:anchor "term id")))
 
+(let* ((notice (make-element #:tag "aside" #:class "callout"
+                             #:attributes '((class . "notice")
+                                            (data-kind . "message"))))
+       (document (make-content-document (list (notice "Text")))))
+  (test-equal "custom element classes compose through the public API"
+    '(article
+      (aside (@ (class "notice callout") (data-kind "message")) "Text"))
+    (content->sxml document)))
+
 (let* ((base (make-content-style 'base (list (make-html-attributes '((role . "region"))))))
        (tagged (make-content-style #f (list (make-html-tag 'aside))))
        (accent (make-content-style 'accent
@@ -590,22 +665,5 @@
   (test-equal "make-element renders the anchor as the tag's id"
     "<dfn id=\"term-id\">a term</dfn>"
     (sxml->html (content->sxml element))))
-
-(let* ((definition (make-element #:tag "dfn" #:anchor "term-id"))
-       (page (make-site-page "glossary" "Glossary"
-               (make-content-document
-                 (list (make-content-element
-                         'paragraph
-                         (list (definition "a term")))))))
-       (forest (make-forest (make-site (list page)))))
-  (test-assert "the anchored element renders on its page"
-    (string-contains
-      (assoc-ref (site->html forest
-                             #:options
-                             (make-html-options
-                               #:routes (make-html-routes
-                                          #:home-page "glossary")))
-                 "glossary")
-      "<dfn id=\"term-id\">a term</dfn>")))
 
 (test-end "grove content")

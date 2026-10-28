@@ -2,13 +2,10 @@
 ;;;
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(use-modules (ice-9 ftw)
-             (ice-9 match)
+(use-modules (ice-9 match)
              (ice-9 rdelim)
-             (ice-9 textual-ports)
              (srfi srfi-1)
              (srfi srfi-9)
-             (srfi srfi-13)
              (grove project)
              (grove output))
 
@@ -94,7 +91,7 @@
               (format port "~a,~a\n" category
                       (category-count inventory category)))
             (inventory-categories inventory))))
-      (inventory-source-paths inventory))))
+      #:sources (inventory-source-paths inventory))))
 
 (define (render-scheme-data inventory)
   (list
@@ -112,7 +109,7 @@
                        (inventory-products inventory)))
             port)
           (newline port)))
-      (inventory-source-paths inventory))))
+      #:sources (inventory-source-paths inventory))))
 
 (define project
   (make-project

@@ -2,7 +2,6 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math pipeline)
-  #:use-module (grove ir)
   #:use-module ((grove math semantic) #:prefix semantic:)
   #:use-module (grove math expression)
   #:use-module (grove math term)
@@ -11,7 +10,6 @@
   #:use-module (grove math derivation)
   #:use-module (grove math private strategy)
   #:use-module (grove math verification)
-  #:use-module (grove math semantic-check)
   #:use-module (grove math audit)
   #:use-module (grove math private differentiation)
   #:use-module (grove math partial)
@@ -23,19 +21,14 @@
   #:use-module (grove math diagnostic)
   #:use-module (grove math private source)
   #:use-module (grove math private provenance)
-  #:use-module (grove math private presentation)
-  #:use-module (grove math layout)
   #:use-module (grove math private premise)
   #:use-module (grove math private assumption)
   #:use-module (srfi srfi-1)
   #:export (math-derive
             math-search math-search-backward math-simplify math-calculate math-collect
             math-check-chain
-            math-check-equation math-antiderivative math-solve-poisson math-compute math-differentiate math-partial math-rewrite math-report-result math-normalize math-expand)
-  #:re-export (math-derivation->content math-verification->content
-               math-report->content math-completed-report->content
-               math-semantic-check->content current-math-assumptions call-with-math-assumptions with-math-assumptions
-               math-audit-calculation math-calculation-audit? math-calculation-audit-replay
+            math-check-equation math-antiderivative math-solve-poisson math-compute math-differentiate math-partial math-rewrite math-normalize math-expand)
+  #:re-export (math-audit-calculation math-calculation-audit? math-calculation-audit-replay
                math-calculation-audit-replay-valid? math-calculation-audit-replay-errors
                math-calculation-audit-contract math-calculation-audit-contract-status
                math-calculation-audit-contract-diagnostics math-calculation-audit-proof
@@ -46,38 +39,17 @@
                math-verification-derivation math-diagnostic?
                math-diagnostic-step math-diagnostic-rule math-diagnostic-path
                math-diagnostic-code math-diagnostic-premises math-diagnostic-message
-               math-diagnostic-source math-diagnostic-origin math-origin? math-origin-location
-               math-origin-locations math-origin-generated? math-origin-rule
-               math-location? math-location-file math-location-line
-               math-location-column math-location-excerpt
+               math-diagnostic-source math-diagnostic-origin
                math-derivation-step? math-derivation-step-from
                math-derivation-step-to math-derivation-step-rule
                math-derivation-step-path math-derivation?
                math-derivation-terms math-derivation-steps
                math-derivation-assumptions math-derivation-sources math-derivation-requirements
-               math-semantic-check? math-semantic-check-status
-               math-semantic-check-valid? math-semantic-check-subject
-               math-semantic-check-diagnostics
-               math-polynomial-normal-form math-polynomial-equivalent?
-               math-polynomial-check-rule math-polynomial-check-step
-               math-polynomial-check-derivation math-polynomial-check-derivative
-               math-polynomial-check-antiderivative
-               math-check-derivative-evidence math-check-antiderivative-evidence
-               math-derivative-evidence? make-math-derivative-evidence
-               math-derivative-evidence-case math-derivative-evidence-expression
-               math-derivative-evidence-coordinate math-derivative-evidence-result
-               math-derivative-evidence-children
-               math-integral-monomial-evidence? make-math-integral-monomial-evidence
-               math-integral-monomial-evidence-input math-integral-monomial-evidence-output
-               math-antiderivative-evidence? make-math-antiderivative-evidence
-               math-antiderivative-evidence-expression math-antiderivative-evidence-coordinate
-               math-antiderivative-evidence-input math-antiderivative-evidence-result
-               math-antiderivative-evidence-monomials math-antiderivative-evidence-derivative
                math-report? math-report-candidates
                math-report-reason math-report-limits
                math-report-states math-report-complete? math-report-status math-report-unresolved math-report-name
                math-report-diagnostics math-report-passes math-report-derivation math-report-final
-               math-report-audit))
+               math-report-audit math-report-result))
 
 (define (value->term who value)
   (unless (math-value? value)
@@ -119,16 +91,6 @@
           #:diagnostics (append missing (math-report-diagnostics report))
           #:passes (if (pair? missing) '() (map attach (math-report-passes report))))))
     (math-report-with-origin (attach report) (math-value-origin (car values)))))
-
-(define (math-report-result report)
-  (unless (math-report? report)
-    (error "expected a math report"))
-  (let ((term (math-report-final report)))
-    (and (math-report-complete? report) term (make-math-value term
-                #:requirements (math-derivation-requirements (math-report-derivation report))
-                #:origin (let ((sources (math-derivation-sources (math-report-derivation report))))
-                           (and (pair? sources) (last sources)))
-                #:properties `((assumptions . ,(math-derivation-assumptions (math-report-derivation report))))))))
 
 (define (audit-calculus-report report)
   (let ((certificate (math-report-derivation report)))

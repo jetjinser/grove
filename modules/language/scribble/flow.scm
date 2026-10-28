@@ -6,24 +6,8 @@
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove ir)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
-  #:export (decode-flow content-value? content-sequence? flatten-content-sequence))
-
-(define (content-value? value)
-  "Return true when VALUE is one Grove content value accepted by Scribble."
-  (or (string? value)
-      (content-text? value)
-      (content-layout? value)
-      (content-element? value)
-      (content-document? value)))
-
-(define (content-sequence? value)
-  "Return true when VALUE is a recursively nested list of content values."
-  (and (list? value)
-       (every (lambda (item)
-                (or (content-value? item)
-                    (content-sequence? item)))
-              value)))
+  #:export (decode-flow flatten-content-sequence)
+  #:re-export (content-value? content-sequence?))
 
 (define (flatten-content-sequence values)
   "Flatten a nested content sequence while preserving document order."
@@ -58,7 +42,7 @@
                (events (if (string-null? line)
                            events
                            (cons (make-content-text
-                                   line source
+                                   line #:source source
                                    #:location
                                    (and location
                                         (location-on-next-line

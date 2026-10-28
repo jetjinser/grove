@@ -121,7 +121,7 @@
          (groups (derive-translation-groups (pages forest)))
          (content (sitemap-document base routes route-table groups
                                     default-locale (pages forest))))
-    (list (make-artifact sitemap-path content (source-paths forest)))))
+    (list (make-artifact sitemap-path content #:sources (source-paths forest)))))
 
 (define* (make-sitemap-renderer #:key (settings #f) (site-url #f)
                                   (sitemap-path "sitemap.xml")

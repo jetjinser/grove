@@ -3,16 +3,14 @@
 
 (define-module (grove project load)
   #:use-module (grove private files)
+  #:use-module (grove private procedure)
   #:use-module (grove private project model)
-  #:use-module (grove private project lifecycle)
   #:use-module (grove project diagnostic)
   #:use-module (grove private project timing)
   #:use-module (grove private fingerprint)
   #:use-module (grove private input cache)
   #:use-module (grove private input dependencies)
-  #:use-module (ice-9 ftw)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:export (call-with-loaded-project))
 
 (define (project-load-key root paths)
@@ -28,8 +26,7 @@
                    (list (logical-path path) (input-fingerprint path)))
                  (delete-duplicates paths string=?))
             (lambda (left right) (string<? (car left) (car right))))))
-    (content-fingerprint
-      (call-with-output-string (lambda (port) (write entries port))))))
+    (scheme-datum-fingerprint entries)))
 
 (define (read-project path)
   (save-module-excursion
@@ -48,8 +45,8 @@
 OUTPUT-DIRECTORY, when supplied, is resolved relative to the caller's directory."
   (unless (filesystem-path-string? filename)
     (error "project filename must be a non-empty string" filename))
-  (unless (procedure? procedure)
-    (error "project loader requires a procedure" procedure))
+  (unless (procedure-accepts-arguments? procedure 1)
+    (error "project loader callback must accept one project" procedure))
   (unless (or (not output-directory)
               (filesystem-path-string? output-directory))
     (error "project output directory must be a non-empty string or #f"

@@ -107,12 +107,13 @@
   (string-contains
     (artifact-content (find (lambda (artifact) (string=? "code.html" (artifact-path artifact))) artifacts))
     "href=\"/highlight.css\""))
-(test-assert "grammar libraries are renderer input dependencies"
-  (member (canonicalize-path grammar) ((cached-renderer-inputs renderer))))
+(test-assert "grammar libraries are tracked renderer dependencies"
+  (member (canonicalize-path grammar) ((cached-renderer-dependencies renderer))))
 (test-assert "changed grammars prevent reuse of old highlighted pages"
   (let* ((old (map (lambda (artifact)
                     (if (string=? "code.html" (artifact-path artifact))
-                        (make-artifact "code.html" "stale" (artifact-sources artifact))
+                        (make-artifact "code.html" "stale"
+                                       #:sources (artifact-sources artifact))
                         artifact)) artifacts))
          (updated ((cached-renderer-render-changed renderer)
                    forest (list (canonicalize-path grammar)) '() old)))

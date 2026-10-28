@@ -3,9 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit grove collect)
-  #:use-module (ice-9 ftw)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64)
   #:use-module (grove collect))
 
@@ -45,6 +43,8 @@
   (lambda ()
     (test-error "collection filter must be a procedure" #t
       (collect-directory test-directory 'not-a-procedure))
+    (test-error "collection filters must accept a basename" #t
+      (collect-directory test-directory (lambda () #t)))
     (test-equal "collection descends, includes file aliases, and skips special files"
       (list alias-file
             (string-append nested-directory "/nested.plant")

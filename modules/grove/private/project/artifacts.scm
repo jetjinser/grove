@@ -158,6 +158,6 @@
                     (cons ((if (eq? (build-state-artifact-kind entry) 'bytes)
                                make-byte-artifact make-artifact)
                            (build-state-artifact-path entry) content
-                           (build-state-artifact-sources entry))
+                           #:sources (build-state-artifact-sources entry))
                           artifacts))
               #f)))))

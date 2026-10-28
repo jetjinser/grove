@@ -8,10 +8,8 @@
   #:use-module (grove build)
   #:use-module (grove output)
   #:use-module (ice-9 binary-ports)
-  #:use-module (ice-9 ftw)
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:export (make-static-assets-renderer))
 
 (define (normalize-source-directory directory)
@@ -35,7 +33,7 @@
       (lambda ()
         (make-byte-artifact (static-asset-path source-directory prefix source)
                             (get-bytevector-all port)
-                            (list source)))
+                            #:sources (list source)))
       (lambda () (close-port port)))))
 
 (define* (make-static-assets-renderer #:key source-directory (prefix #f))
@@ -52,7 +50,7 @@
              (read-static-asset source-directory prefix source))
            (collect-directory source-directory)))
     #:configuration (list 'static source-directory prefix)
-    #:inputs (lambda () (collect-directory source-directory))
+    #:dependencies (lambda () (collect-directory source-directory))
     #:render-changed
     (lambda (_model changed _dirty-paths old-artifacts)
       (map

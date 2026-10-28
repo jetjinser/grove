@@ -4,14 +4,12 @@
 
 (define-module (forester input scribble)
   #:use-module ((grove private ir) #:prefix ir:)
-  #:use-module (ice-9 ftw)
   #:use-module (forester private entity-uri)
   #:use-module (grove i18n)
   #:use-module (grove ir)
   #:use-module (grove private string-fun)
   #:use-module (grove site)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:export (make-page-reader
             document->tree-page))
 
@@ -141,8 +139,8 @@
                              '(title summary og-image og-image-alt published updated
                                locale translation describes))))
                 children)
-        (ir:content-document-source/raw document))
-      source
+        #:source (ir:content-document-source/raw document))
+      #:source source
       #:metadata (append metadata
                          (filter cdr
                            (list (cons 'summary summary)

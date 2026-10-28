@@ -5,6 +5,7 @@
   #:use-module (grove private snapshot)
   #:use-module (grove math derivation)
   #:use-module (grove math diagnostic)
+  #:use-module (grove math expression)
   #:use-module (grove math term)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
@@ -13,7 +14,7 @@
             math-report-states math-report-diagnostics math-report-passes
             math-report-complete? math-report-status math-report-unresolved
             math-report-derivation math-report-final
-            math-report-audit))
+            math-report-audit math-report-result))
 
 (define-record-type <math-report>
 (%make-math-report name candidates reason limits states diagnostics passes audit)
@@ -74,6 +75,25 @@ diagnostic and report values; AUDIT is an optional opaque evidence value."
   (let ((derivation (math-report-derivation report)))
     (and derivation (last (math-derivation-terms derivation)))))
 
+(define (math-report-result report)
+  "Return the completed report result as a reusable Semantic value, or #f.
+
+Partial reports retain their final term for inspection through
+MATH-REPORT-FINAL, but do not expose it as a reusable result."
+  (unless (math-report? report)
+    (error "expected a math report" report))
+  (let ((derivation (math-report-derivation report)))
+    (and (math-report-complete? report)
+         derivation
+         (math-report-final report)
+         (make-math-value
+           (math-report-final report)
+           #:requirements (math-derivation-requirements derivation)
+           #:origin (let ((sources (math-derivation-sources derivation)))
+                      (and (pair? sources) (last sources)))
+           #:properties `((assumptions .
+                           ,(math-derivation-assumptions derivation)))))))
+
 (define (math-report-unresolved report)
   "Return operand paths of symbolic derivatives remaining in the final term."
   (let ((term (math-report-final report)))
@@ -83,9 +103,13 @@ diagnostic and report values; AUDIT is an optional opaque evidence value."
                 (math-term-paths term)) '())))
 
 (define (math-report-status report)
-  "Classify completion separately from the strategy's stopping reason."
+  "Classify the outcome as complete, symbolic, no-result, cutoff, unproven, or
+error. COMPLETE? describes whether the computation was exhausted; NO-RESULT
+distinguishes an exhausted report that contains no derivation."
   (cond ((math-report-complete? report)
-         (if (null? (math-report-unresolved report)) 'complete 'symbolic))
+         (cond ((not (math-report-derivation report)) 'no-result)
+               ((null? (math-report-unresolved report)) 'complete)
+               (else 'symbolic)))
         ((memq (math-report-reason report)
                '(depth-limit state-limit result-limit term-size-limit step-limit polynomial-limit)) 'cutoff)
         ((eq? (math-report-reason report) 'equation-not-proven) 'unproven)

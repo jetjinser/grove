@@ -1,9 +1,10 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(define-module (grove math private presentation)
+(define-module (grove math presentation)
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (ice-9 format)
+  #:use-module (ice-9 ftw)
   #:use-module (grove ir)
   #:use-module (grove math derivation)
   #:use-module (grove math diagnostic)
@@ -106,28 +107,31 @@
               (list (format #f "Computation stopped: ~a." (math-report-reason report))) #:flow-kind 'block))))
 
 (define* (math-completed-report->content report #:key (view 'compact) (on-error 'raise))
+  "Present a completed report's derivation, or its summary when it has no
+derivation (for example, an exhaustive search that found no path). Incomplete
+reports raise by default; ON-ERROR 'show presents their diagnostics instead."
   (check-view view) (check-error-mode on-error)
+  (unless (math-report? report) (error "expected a math report" report))
   (if (not (math-report-complete? report))
       (if (eq? on-error 'show) (report-errors report)
           (error (string-join (map math-diagnostic-description (math-report-diagnostics report)) "; ")
                  (math-report-reason report)))
-      (let* ((certificate (math-report-derivation report))
-             (passes (math-report-passes report))
-             (full-content
-               (begin
-                 (unless (math-derivation? certificate)
-                   (error "completed presentation requires a derivation" report))
-                 (if (null? passes) (list (chain-content certificate #f))
-                   (append-map
-                     (lambda (pass)
-                       (list (make-content-element 'paragraph
-                               (list (string-capitalize (symbol->string (math-report-name pass)))) #:flow-kind 'block)
-                             (chain-content (math-report-derivation pass) #f))) passes)))))
-        (append (list (display-certificate certificate view full-content))
-          (if (eq? (math-report-status report) 'symbolic)
-              (list (make-content-element 'paragraph
-                      '("Symbolic result: unevaluated derivatives remain.") #:flow-kind 'block))
-              '())))))
+      (let ((certificate (math-report-derivation report)))
+        (if (not certificate)
+            (math-report->content report #:view view)
+            (let* ((passes (math-report-passes report))
+                   (full-content
+                     (if (null? passes) (list (chain-content certificate #f))
+                       (append-map
+                         (lambda (pass)
+                           (list (make-content-element 'paragraph
+                                   (list (string-capitalize (symbol->string (math-report-name pass)))) #:flow-kind 'block)
+                                 (chain-content (math-report-derivation pass) #f))) passes))))
+              (append (list (display-certificate certificate view full-content))
+                (if (eq? (math-report-status report) 'symbolic)
+                    (list (make-content-element 'paragraph
+                            '("Symbolic result: unevaluated derivatives remain.") #:flow-kind 'block))
+                    '())))))))
 
 (define (reason-label reason)
   (case reason ((exhausted) "finished") ((normal-form) "complete")

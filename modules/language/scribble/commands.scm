@@ -8,6 +8,7 @@
   #:use-module (ice-9 optargs)
   #:use-module (language scribble command)
   #:use-module (grove math pipeline)
+  #:use-module (grove math presentation)
   #:use-module (grove math context)
   #:use-module (grove math private source)
   #:use-module ((grove math semantic) #:prefix semantic:)
@@ -16,6 +17,9 @@
   #:use-module (grove math layout)
   #:use-module (srfi srfi-1)
   #:export (use-commands))
+
+(define (command-module-name? value)
+  (and (list? value) (pair? value) (every symbol? value)))
 
 (define (use-command-module module-name)
   "Import the command modules declared by MODULE-NAME's command-modules export."
@@ -30,10 +34,15 @@
     (let ((interface (resolve-interface module-name)))
       (unless (memq interface (module-uses (current-module)))
         (module-use! (current-module) interface)))
-    (for-each
-      (lambda (dependency)
-        (module-use! (current-module) (resolve-interface dependency)))
-      (variable-ref variable))))
+    (let ((dependencies (variable-ref variable)))
+      (unless (and (list? dependencies)
+                   (every command-module-name? dependencies))
+        (error "command-modules must be a list of non-empty module names"
+               module-name dependencies))
+      (for-each
+        (lambda (dependency)
+          (module-use! (current-module) (resolve-interface dependency)))
+        dependencies))))
 
 (define-syntax use-commands
   (lambda (form)

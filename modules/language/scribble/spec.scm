@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (language scribble spec)
+  #:use-module (grove private procedure)
   #:use-module (system base language)
   #:use-module (language scheme compile-tree-il)
   #:use-module (language scribble parser)
@@ -10,7 +11,6 @@
   #:use-module (language scribble flow)
   #:use-module (grove ir)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:export (scribble
             scribble-evaluate-document))
 
@@ -119,10 +119,12 @@ called with a module selected by a top-level define-module form."
     (error "Scribble evaluation requires a module environment" environment))
   (unless (or (not source) (string? source))
     (error "Scribble source name must be a string or #f" source))
-  (unless (or (not timings) (procedure? timings))
-    (error "Scribble timings callback must be a procedure or #f" timings))
-  (unless (or (not module-changed) (procedure? module-changed))
-    (error "Scribble module-changed callback must be a procedure or #f"
+  (unless (or (not timings) (procedure-accepts-arguments? timings 2))
+    (error "Scribble timings callback must accept a phase and duration or be #f"
+           timings))
+  (unless (or (not module-changed)
+              (procedure-accepts-arguments? module-changed 1))
+    (error "Scribble module-changed callback must accept one module or be #f"
            module-changed))
   (when source (set-port-filename! port source))
   (save-module-excursion
@@ -138,7 +140,9 @@ called with a module selected by a top-level define-module form."
               (if (null? fragments)
                   (let ((document (measure 'decode
                                     (lambda ()
-                                      (make-content-document (decode-flow (reverse children)) source)))))
+                                      (make-content-document
+                                        (decode-flow (reverse children))
+                                        #:source source)))))
                     (when timings
                       (for-each (lambda (phase) (timings phase (hashq-ref elapsed phase 0)))
                                 '(parse translate evaluate decode)))

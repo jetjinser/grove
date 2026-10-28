@@ -4,11 +4,9 @@
 
 (define-module (tests unit grove static)
   #:use-module (ice-9 binary-ports)
-  #:use-module (ice-9 ftw)
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-64)
   #:use-module (grove output)
-  #:use-module (grove build)
   #:use-module (grove private renderer)
   #:use-module (grove render static))
 
@@ -42,7 +40,7 @@
         (list "assets/images/data.bin" (list asset-path))
         (list (artifact-path
                 (car ((cached-renderer-procedure renderer) #f)))
-              ((cached-renderer-inputs renderer)))))
+              ((cached-renderer-dependencies renderer)))))
     (let* ((renderer (make-static-assets-renderer
                        #:source-directory source-directory
                        #:prefix "assets"))
@@ -57,7 +55,7 @@
         (list asset-path) (artifact-sources artifact))
       (test-equal "static renderer tracks its source files as project inputs"
         (list asset-path)
-        ((cached-renderer-inputs renderer)))
+        ((cached-renderer-dependencies renderer)))
       (let* ((trailing-slash-renderer
                (make-static-assets-renderer
                  #:source-directory (string-append source-directory "/")

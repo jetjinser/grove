@@ -3,21 +3,22 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit grove project)
-  #:use-module (ice-9 ftw)
   #:use-module (ice-9 optargs)
   #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64)
-  #:use-module (grove build)
   #:use-module (grove ir)
+  #:use-module (grove build)
   #:use-module (grove output)
   #:use-module (grove project)
   #:use-module (grove private project model)
   #:use-module (grove project diagnostic)
   #:use-module (grove project site)
   #:use-module (grove pipeline)
-  #:use-module (grove site))
+  #:use-module (grove site)
+  #:use-module (grove private build-state)
+  #:use-module (grove private cache-dir)
+  #:use-module (grove private preview rebuild))
 
 (define project-root
   (format #f "/tmp/grove-project-test-~a" (getpid)))
@@ -35,6 +36,9 @@
 (define drift-source-directory (string-append project-root "/drift-source"))
 (define drift-output-directory (string-append project-root "/drift-output"))
 (define drift-source-path (string-append drift-source-directory "/drift.plant"))
+(define preview-output-directory (string-append project-root "/preview-output"))
+(define preview-render-input (string-append project-root "/preview-render-input"))
+(define preview-irrelevant-input (string-append project-root "/preview-irrelevant-input"))
 (define external-source-path (string-append project-root "/theme.css"))
 
 (define (write-test-file path content)
@@ -52,6 +56,37 @@
     (every (lambda (name) (not (module-variable interface name)))
       '(project-source-directory project-renderers project-extra-sources
         project-output-directory project-cache? project-browse))))
+
+(test-error "project constructors reject collectors with the wrong arity" #t
+  (make-project #:collect-sources (lambda (_) '())
+                #:read-source (lambda (_) #f)
+                #:output-directory (string-append project-root "/bad-collector")))
+(test-error "project constructors reject readers with the wrong arity" #t
+  (make-project #:collect-sources (lambda () '())
+                #:read-source (lambda () #f)
+                #:output-directory (string-append project-root "/bad-reader")))
+(test-error "project constructors reject analyzers with the wrong arity" #t
+  (make-project #:collect-sources (lambda () '())
+                #:read-source (lambda (_) #f)
+                #:analyze (lambda () #f)
+                #:output-directory (string-append project-root "/bad-analyzer")))
+(test-error "project constructors reject renderers with the wrong arity" #t
+  (make-project #:collect-sources (lambda () '())
+                #:read-source (lambda (_) #f)
+                #:renderers (list (lambda () '()))
+                #:output-directory (string-append project-root "/bad-renderer")))
+(test-assert "project callbacks may accept optional or rest arguments"
+  (project?
+    (make-project #:collect-sources (lambda () '())
+                  #:read-source (lambda* (path #:optional (context #f)) #f)
+                  #:analyze (lambda (model . options) model)
+                  #:renderers (list (lambda* (model #:optional (context #f)) '()))
+                  #:output-directory (string-append project-root "/flexible-callbacks"))))
+(test-error "site projects reject transforms with the wrong arity" #t
+  (make-site-project #:collect-sources (lambda () '())
+                     #:read-page (lambda (_) #f)
+                     #:transforms (list (lambda () #f))
+                     #:output-directory (string-append project-root "/bad-transform")))
 
 (test-error "source collection rejects non-project values" #t
   (collect-project-sources #f))
@@ -108,13 +143,18 @@
 (test-assert "check validates progress before collecting project inputs"
   (progress-type-error? (lambda () (check-project progress-test-project
                                                    #:progress #f))))
+(test-assert "project progress callbacks must accept stage and value"
+  (progress-type-error? (lambda () (analyze-project progress-test-project
+                                                     #:progress (lambda () #t)))))
 
 (test-error "site pages require a non-empty string ID" #t
   (make-site-page "" "Page" (make-content-document '())))
 (test-error "site pages require a non-empty string title" #t
   (make-site-page "page" #f (make-content-document '())))
 (test-error "site page source paths cannot be empty" #t
-  (make-site-page "page" "Page" (make-content-document '()) ""))
+  (make-site-page "page" "Page" (make-content-document '()) #:source ""))
+(test-error "site page source uses an explicit keyword" #t
+  (make-site-page "page" "Page" (make-content-document '()) "page.plant"))
 (test-error "site page metadata keys are unique" #t
   (make-site-page "page" "Page" (make-content-document '())
     #:metadata '((summary . "first") (summary . "second"))))
@@ -124,7 +164,7 @@
        (source (string-copy "page.plant"))
        (summary (string-copy "Summary"))
        (metadata (list (cons 'summary summary)))
-       (page (make-site-page id title (make-content-document '()) source
+       (page (make-site-page id title (make-content-document '()) #:source source
                              #:metadata metadata)))
   (string-set! id 0 #\x)
   (string-set! title 0 #\x)
@@ -500,13 +540,14 @@
                            "summary.csv"
                            (format #f "items,~a\n"
                                    (length (cadr model)))
-                           (list (string-append source-directory "/first.plant")))))
+                           #:sources (list (string-append source-directory "/first.plant")))))
                  (lambda (model)
                    (set! generic-events (append generic-events '(render-data)))
                    (list (make-artifact
                            "inventory.scm"
                            (call-with-output-string
                              (lambda (port) (write model port) (newline port)))
+                           #:sources
                            (list (string-append module-directory "/shared.plant")
                                  external-source-path)))))
                #:output-directory generic-output-directory))
@@ -546,7 +587,7 @@
                      (set! renders (+ renders 1))
                      (when (= renders 1)
                        (write-test-file source "changed during render"))
-                     (list (make-artifact "drift.txt" model (list source)))))
+                     (list (make-artifact "drift.txt" model #:sources (list source)))))
                  #:output-directory output)))
            (first (build-project/report project)))
       (test-equal "first render observes its original source snapshot" 1 renders)
@@ -578,7 +619,7 @@
                  (lambda (path)
                    (let ((id (string-drop-right (basename path) (string-length ".plant"))))
                      (set! events (append events (list (list 'read id))))
-                     (make-site-page id id (make-content-document '()) path)))
+                     (make-site-page id id (make-content-document '()) #:source path)))
                  #:analyze
                  (lambda (site)
                    (set! observed-site-title (site-title site))
@@ -595,13 +636,13 @@
                            (make-artifact
                              "text/summary.txt"
                              (number->string (length (site-pages site)))
-                             (site-sources site)))
+                             #:sources (site-sources site)))
                          (map (lambda (page)
                                 (make-artifact
                                   (string-append "pages/"
                                                  (site-page-id page) ".txt")
                                   (site-page-id page)
-                                  (list (site-page-source page))))
+                                  #:sources (list (site-page-source page))))
                               (site-pages site))
                          (list (make-artifact "opaque.txt" "opaque"))))
                      #:configuration 'configured-site-renderer))
@@ -692,8 +733,8 @@
                    (list (make-artifact
                            "summary.txt"
                            (string-append "平方：" (number->string (length (site-pages site))))
-                           (append (site-sources site)
-                                   (list external-source-path))))))
+                           #:sources (append (site-sources site)
+                                             (list external-source-path))))))
                (cached-renderer
                  (make-cached-renderer
                    render #:configuration '(summary (precision . 1))))
@@ -706,7 +747,7 @@
                    (lambda (path)
                      (set! reader-count (+ reader-count 1))
                      (let ((id (string-drop-right (basename path) (string-length ".plant"))))
-                       (make-site-page id id (make-content-document '()) path)))
+                       (make-site-page id id (make-content-document '()) #:source path)))
                    #:analyze
                    (lambda (site)
                      (set! analysis-count (+ analysis-count 1))
@@ -795,7 +836,7 @@
                      #:read-page
                      (lambda (path)
                        (let ((id (string-drop-right (basename path) (string-length ".plant"))))
-                         (make-site-page id id (make-content-document '()) path)))
+                         (make-site-page id id (make-content-document '()) #:source path)))
                      #:analyze
                      (lambda (site)
                        (set! analysis-count (+ analysis-count 1))
@@ -817,7 +858,7 @@
                        (lambda (path)
                          (let ((id (string-drop-right (basename path) (string-length ".plant"))))
                            (make-site-page id id (make-content-document '())
-                                           path)))
+                                           #:source path)))
                        #:analyze
                        (lambda (site)
                          (set! analysis-count (+ analysis-count 1))
@@ -843,15 +884,15 @@
                        (list (make-artifact
                                "index.txt"
                                (number->string (length (site-pages site)))
-                               (site-sources site))
-                             (make-artifact "independent.txt" "constant" '())
+                               #:sources (site-sources site))
+                             (make-artifact "independent.txt" "constant" #:sources '())
                              (make-artifact "unknown.txt" "opaque"))
                        (map (lambda (page)
                               (make-artifact
                                 (string-append "pages/"
                                                (site-page-id page) ".txt")
                                 (site-page-id page)
-                                (list (site-page-source page))))
+                                #:sources (list (site-page-source page))))
                             (site-pages site))))
                    #:render-changed
                    (lambda (site changed-paths dirty-paths old-artifacts)
@@ -870,10 +911,10 @@
                          (list (make-artifact
                                  "index.txt"
                                  (number->string (length current-ids))
-                                 (site-sources site))
+                                 #:sources (site-sources site))
                                (or independent
                                    (make-artifact "independent.txt"
-                                                  "constant" '()))
+                                                  "constant" #:sources '()))
                                (make-artifact "unknown.txt" "opaque"))
                          (map
                            (lambda (page)
@@ -892,7 +933,7 @@
                                    old
                                    (make-artifact
                                      path (site-page-id page)
-                                     (list (site-page-source page))))))
+                                     #:sources (list (site-page-source page))))))
                            (site-pages site)))))))
                (incremental-project
                  (make-site-project
@@ -901,7 +942,7 @@
                      #:read-page
                    (lambda (path)
                      (let ((id (string-drop-right (basename path) (string-length ".plant"))))
-                       (make-site-page id id (make-content-document '()) path)))
+                       (make-site-page id id (make-content-document '()) #:source path)))
                    #:renderers (list incremental-renderer)
                    #:output-directory incremental-output-directory)))
           (build-project/report incremental-project)
@@ -947,6 +988,53 @@
               '("index.txt" "independent.txt" "unknown.txt"
                 "pages/first.txt" "pages/fourth.txt")
               (map artifact-path (build-report-artifacts added-page))))))))
+    (let ((render-count 0)
+          (state-path
+            (string-append (grove-cache-directory preview-output-directory)
+                           "/" build-state-name)))
+      (write-test-file preview-render-input "render-1")
+      (write-test-file preview-irrelevant-input "unrelated-1")
+      (let ((project
+              (make-project
+                #:collect-sources (lambda () '())
+                #:extra-sources
+                (list preview-render-input preview-irrelevant-input)
+                #:read-source (lambda (_) #f)
+                #:analyze (lambda (_) 'retained-model)
+                #:renderers
+                (list
+                  (make-cached-renderer
+                    (lambda (_model)
+                      (set! render-count (1+ render-count))
+                      (list
+                        (make-artifact "preview.txt"
+                          (call-with-input-file preview-render-input
+                            get-string-all)
+                          #:sources (list preview-render-input))))
+                    #:configuration 'stable))
+                #:output-directory preview-output-directory)))
+        (build-project/report project)
+        (let ((state (read-build-state state-path)))
+          (write-test-file preview-render-input "render-2")
+          (let ((report
+                  (rebuild-from-model project 'retained-model state
+                                      (list preview-render-input) '())))
+            (test-equal "model reuse reruns a renderer for its changed artifact input"
+              2 render-count)
+            (test-assert "model reuse reports a miss when a renderer runs"
+              (not (build-report-render-cache-hit? report)))
+            (test-equal "model reuse publishes the regenerated artifact"
+              "render-2"
+              (artifact-content (car (build-report-artifacts report)))))
+          (let ((updated-state (read-build-state state-path)))
+            (write-test-file preview-irrelevant-input "unrelated-2")
+            (let ((report
+                    (rebuild-from-model project 'retained-model updated-state
+                                        (list preview-irrelevant-input) '())))
+              (test-equal "model reuse retains renderers independent of the changed input"
+                2 render-count)
+              (test-assert "model reuse reports a hit when all renderer outputs are reused"
+                (build-report-render-cache-hit? report)))))))
     (let* ((view-events '())
            (view-output-directory (string-append project-root "/view-output"))
            (view-project
@@ -1011,6 +1099,8 @@
             (string-append output-directory "/pages/third.txt")
             (string-append output-directory "/opaque.txt")
             (string-append drift-output-directory "/drift.txt")
+            (string-append preview-output-directory "/preview.txt")
+            preview-render-input preview-irrelevant-input
             drift-source-path))
     (let ((text-directory (string-append output-directory "/text")))
       (when (file-exists? text-directory)
@@ -1032,6 +1122,8 @@
       (rmdir incremental-output-directory))
     (when (file-exists? drift-output-directory)
       (rmdir drift-output-directory))
+    (when (file-exists? preview-output-directory)
+      (rmdir preview-output-directory))
     (for-each (lambda (path)
                 (when (file-exists? path)
                   (delete-file path)))

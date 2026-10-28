@@ -17,20 +17,24 @@ set maps each constructor to a backend-specific interpretation.
     (list (cons 'image picture-rule))))
 ```
 
-- A rule is a value: `kind -> (context element children next -> backend value)`.
-  HTML rules return SXML; text and gemtext rules return strings. The rule-set
-  shape and composition are shared, while `children`, `next`, and the result
-  follow the backend using that rule set. A rule is reusable across backends
-  only when it handles those differences itself.
+- A rule is a value: `kind -> (context element payload next -> backend value)`.
+  HTML rules return SXML; text and gemtext rules return strings. For ordinary
+  elements, `payload` is their recursively rendered children. For `math`, it is
+  the complete fallback rendering for that backend. The rule-set shape
+  and composition are shared, while `payload`, `next`, and the result follow
+  the backend using that rule set. A rule is reusable across backends only
+  when it handles those differences itself. `make-render-rules` validates that
+  each interpreter can accept the four positional arguments at construction.
 - `context` is a `render-context` value (forest, routes, page, variants); rules do
   not read hidden global state.  Use `render-context-ref` for named fields.
 - `next` is the next interpretation of the same kind.  Delegation is explicit:
   `(next)`.  It walks composed rule sets, then the internal handler layer, then
-  the built-in interpretation, so an overlay can adjust one case and leave the
-  rest to the defaults.
+  the backend fallback. If a stock internal handler exists for that kind, it
+  handles the element; otherwise the built-in interpretation does. An overlay
+  can adjust one case and delegate the rest without replacing stock behavior.
 - `compose-render-rules` layers any number of sets from left to right: the
   rightmost rule runs first for a kind it interprets, and `next` reaches earlier
-  rules before the backend's internal and built-in interpretations.
+  rules before the stock handler or built-in fallback.
 The composition laws and behaviors:
 
 1. **Identity**: composing with the empty rule set changes nothing.
@@ -38,7 +42,8 @@ The composition laws and behaviors:
 3. **Override**: a later rule wins for its kind and may delegate to the prior
    rule through `next`.
 4. **Totality by fallback**: an overlay that calls `(next)` reaches the base
-   rule, the internal layer, and then the built-in interpretation.
+   rules, then the stock handler when installed for that kind, or the built-in
+   interpretation otherwise.
 5. **Context**: a rule sees exactly the context passed to the interpreter.
 
 Composition is not generally idempotent: composing a delegating rule again
@@ -52,6 +57,9 @@ intentional fallback chain; do not treat repeated composition as deduplication.
 ```text
 composed rules -> internal handlers -> built-in interpretation
 ```
+
+The final two stages are alternatives for a given kind: an installed internal
+handler replaces the built-in interpretation for that kind.
 
 `content->sxml`/`content->text` accept `#:rules` and `#:context` directly, so
 the built-in interpretation is always the terminal fallback.  Each backend
@@ -68,9 +76,9 @@ can read `(render-context-ref context 'page)`.
   arguments to the public `content->sxml` or `content->text` procedures and
   are not extension points. Projects should use render rules instead.
 - **Math:** the built-in semantic renderer remains the fallback. A `math` rule
-  can replace it or delegate with `next`; its `children` value is the complete
-  backend-specific math rendering (MathML/HTML for HTML, text for text and
-  gemtext), rather than a list of recursively rendered child nodes.
+  can replace it or delegate with `next`; its `payload` is the complete
+  fallback math rendering (MathML/HTML for HTML, text for text and gemtext),
+  rather than a list of recursively rendered child nodes.
 - **Trees and transclusions:** handled by lazy structural recursion before
   rules are consulted.  A rule cannot replace the tree walk; customize the
   target page instead.
@@ -99,9 +107,9 @@ Image variants are data, not a format policy in the core:
   '(("forest.jpg" . (("avif" . "/images/forest.avif")
                      ("jxl"  . "/images/forest.jxl")))))
 
-(define (picture-rule context element children next)
+(define (picture-rule context element payload next)
   (let ((source (content-element-property element 'source))
-        (alt (content-verbatim-string children)))
+        (alt (content-verbatim-string payload)))
     (if (assoc-ref variants source)
         (picture-from-variants source alt)
         (next))))
@@ -166,10 +174,11 @@ counterpart:
 (site->gemtext forest #:options (make-gemtext-options #:rules rules))
 ```
 
-The text adapter receives the rendered body as `children`; `next` delegates to
-the internal handler layer and then the default text interpretation.  Gemtext
-reuses the text adapter and its own line-oriented internal handlers, so a
-project rule can override one kind without rewriting the capsule.
+The text adapter passes the rendered body as `payload`; `next` delegates to the
+stock internal handler when one exists, otherwise to the default text
+interpretation. Gemtext reuses the text adapter and its own line-oriented
+internal handlers, so a project rule can override one kind without rewriting
+the capsule.
 
 ## Options
 

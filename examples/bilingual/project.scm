@@ -46,7 +46,7 @@
     default-bilingual-style
     (make-html-style
       #:stylesheets
-      (list (make-artifact "style.css" style-css (list style-css-path))))))
+      (list (make-artifact "style.css" style-css #:sources (list style-css-path))))))
 
 (define bilingual-routes
   (make-html-routes))

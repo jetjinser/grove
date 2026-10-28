@@ -5,12 +5,12 @@
 (define-module (grove render html routes)
   #:use-module (grove i18n)
   #:use-module (grove private snapshot)
+  #:use-module (grove private procedure)
   #:use-module (grove private string-fun)
   #:use-module (grove private uri)
   #:use-module (grove output)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:export (html-routes?
             make-html-routes
             html-page-path
@@ -51,8 +51,8 @@ it together with each artifact path when constructing URLs. PAGE-PATH must
 return the same path for a page ID under the same project state; renderers may
 evaluate it repeatedly while validating routes, resolving links, and building
 cache identities."
-  (unless (procedure? page-path)
-    (error "HTML page path requires a procedure" page-path))
+  (unless (procedure-accepts-arguments? page-path 1)
+    (error "HTML page path must accept one page ID" page-path))
   (unless (artifact-path? index-path)
     (error "HTML index requires a relative artifact path" index-path))
   (unless (or (not home-page) (non-empty-string? home-page))
@@ -130,10 +130,11 @@ LOCALE-OF maps a page id to its locale tag or #f.  BUILD, an optional
 `(locale id) -> path' procedure, decides the path; the default keeps
 Forester's flat layout with a locale suffix (`guide.zh-Hans.html').
 Pages without a locale, and pages in DEFAULT-LOCALE, use `id.html'."
-  (unless (procedure? locale-of)
-    (error "Locale page path requires a procedure" locale-of))
-  (unless (or (not build) (procedure? build))
-    (error "Locale page path builder must be a procedure or #f" build))
+  (unless (procedure-accepts-arguments? locale-of 1)
+    (error "Locale page path must accept one page ID" locale-of))
+  (unless (or (not build) (procedure-accepts-arguments? build 2))
+    (error "Locale page path builder must accept locale and page ID or be #f"
+           build))
   (unless (or (not default-locale) (non-empty-string? default-locale))
     (error "Locale page path default locale must be a string or #f"
            default-locale))

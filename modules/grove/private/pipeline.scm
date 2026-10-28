@@ -7,9 +7,9 @@
   #:use-module (grove private asset-pipeline)
   #:use-module (grove output)
   #:use-module (grove private artifact-store)
+  #:use-module (grove private files)
   #:use-module (grove private fingerprint)
   #:use-module (grove private input dependencies)
-  #:use-module (ice-9 binary-ports)
   #:use-module (srfi srfi-1)
   #:export (run-asset-pipelines
             merge-pipeline-artifacts))
@@ -37,18 +37,34 @@
     string=?))
 
 (define (pipeline-identity pipeline project-key input-table)
-  (content-fingerprint
-   (call-with-output-string
-    (lambda (port)
-      (write (list "grove-asset-pipeline"
-                   (asset-pipeline-name pipeline)
-                   (asset-pipeline-version pipeline)
-                   project-key
-                   (map car input-table)
-                   (map cdr input-table)
-                   (map (lambda (pair) (input-fingerprint (cdr pair)))
-                        input-table))
-             port)))))
+  (scheme-datum-fingerprint
+    (list "grove-asset-pipeline"
+          (asset-pipeline-name pipeline)
+          (asset-pipeline-version pipeline)
+          project-key
+          (map car input-table)
+          (map cdr input-table)
+          (map (lambda (pair) (input-fingerprint (cdr pair)))
+               input-table))))
+
+(define (restore-index-artifacts entries sources)
+  (let loop ((remaining entries) (artifacts '()))
+    (if (null? remaining)
+        (reverse artifacts)
+        (let* ((entry (car remaining))
+               (bytes (read-content-blob (cdr entry))))
+          (and bytes
+               (loop (cdr remaining)
+                 (cons (make-byte-artifact (car entry) bytes #:sources sources)
+                       artifacts)))))))
+
+(define (valid-cached-artifact-set? artifacts)
+  ;; An index can be well-formed Scheme data while still describing an
+  ;; impossible artifact set (for example, duplicate paths or file/directory
+  ;; conflicts). Treat that as a cache miss so the pipeline can regenerate it.
+  (catch #t
+    (lambda () (validate-artifacts artifacts) #t)
+    (lambda args #f)))
 
 (define (restore-pipeline-artifacts identity inputs)
   (let ((index (read-pipeline-index identity)))
@@ -57,52 +73,41 @@
                   (equal? (cadr dependency)
                           (input-fingerprint (car dependency))))
                 (car index))
-         (let ((sources (pipeline-artifact-sources inputs (car index))))
-         (let loop ((entries (cadr index)) (artifacts '()))
-           (if (null? entries)
-               (reverse artifacts)
-               (let* ((entry (car entries))
-                      (bytes (read-content-blob (cdr entry))))
-                 (and bytes
-                      (loop (cdr entries)
-                            (cons (make-byte-artifact
-                                   (car entry) bytes sources)
-                                  artifacts))))))))))
+         (let* ((sources (pipeline-artifact-sources inputs (car index)))
+                (artifacts (restore-index-artifacts (cadr index) sources)))
+           (and artifacts
+                (valid-cached-artifact-set? artifacts)
+                artifacts)))))
+
+(define (valid-pipeline-index? index)
+  (and (list? index)
+       (= (length index) 4)
+       (eq? (car index) 'grove-pipeline-index)
+       (= (cadr index) 1)
+       (list? (caddr index))
+       (every (lambda (entry)
+                (and (list? entry)
+                     (= (length entry) 2)
+                     (filesystem-path-string? (car entry))
+                     (fingerprint? (cadr entry))))
+              (caddr index))
+       (unique-filesystem-path-list? (map car (caddr index)))
+       (list? (cadddr index))
+       (every (lambda (entry)
+                (and (pair? entry)
+                     (artifact-path? (car entry))
+                     (fingerprint? (cdr entry))))
+              (cadddr index))))
 
 (define (read-pipeline-index identity)
   ;; Runtime Scheme loads are discovered while the procedure runs. Keep their
   ;; fingerprints in this pipeline-specific index beside its returned outputs.
-  (catch #t
-    (lambda ()
-      (let ((path (artifact-blob-path identity)))
-        (and (artifact-blob-exists? identity)
-             (call-with-input-file path
-               (lambda (port)
-                 (let ((index (read port)))
-                   (and (list? index)
-                        (= (length index) 4)
-                        (eq? (car index) 'grove-pipeline-index)
-                        (= (cadr index) 1)
-                        (list? (caddr index))
-                        (every (lambda (entry)
-                                 (and (list? entry)
-                                      (= (length entry) 2)
-                                      (string? (car entry))
-                                      (fingerprint? (cadr entry))))
-                               (caddr index))
-                        (list? (cadddr index))
-                        (every (lambda (entry)
-                                 (and (pair? entry)
-                                      (artifact-path? (car entry))
-                                      (fingerprint? (cdr entry))))
-                               (cadddr index))
-                        (list (caddr index) (cadddr index)))))))))
-    (lambda args #f)))
+  (let ((index (read-artifact-index identity valid-pipeline-index?)))
+    (and index (list (caddr index) (cadddr index)))))
 
 (define (write-pipeline-index identity dependencies entries)
-  (publish-artifact-blob! identity
-    (lambda (port)
-      (write (list 'grove-pipeline-index 1 dependencies entries) port))))
+  (write-artifact-index!
+    identity (list 'grove-pipeline-index 1 dependencies entries)))
 
 (define (run-pipeline-procedure pipeline identity inputs cache?)
   (let* ((trace (make-hash-table))
@@ -143,7 +148,8 @@
             (map (lambda (artifact)
                    ((if (string? (artifact-content artifact))
                         make-artifact make-byte-artifact)
-                    (artifact-path artifact) (artifact-content artifact) sources))
+                    (artifact-path artifact) (artifact-content artifact)
+                    #:sources sources))
                  artifact-list)))
       (when (and cache?
                  (every (lambda (entry) (cdr entry)) entries))

@@ -14,6 +14,8 @@
   #:use-module (grove math types)
   #:use-module ((grove math notation) #:prefix notation:)
   #:use-module (grove math pipeline)
+  #:use-module (grove math presentation)
+  #:use-module (grove math provenance)
   #:use-module ((grove math derivation)
                 #:select (make-math-derivation make-math-derivation-step))
   #:use-module (grove relation)
@@ -70,6 +72,38 @@
     (not (module-variable
            (module-public-interface (resolve-module '(grove math pipeline)))
            'math-report-result->notation)))
+  (test-assert "calculation presentation belongs to its public module"
+    (module-variable
+      (module-public-interface (resolve-module '(grove math presentation)))
+      'math-completed-report->content))
+  (test-assert "calculation pipeline does not export presentation helpers"
+    (not (module-variable
+           (module-public-interface (resolve-module '(grove math pipeline)))
+           'math-completed-report->content)))
+  (test-assert "math provenance has a dedicated public interface"
+    (module-variable
+      (module-public-interface (resolve-module '(grove math provenance)))
+      'math-origin-location))
+  (test-assert "calculation pipeline does not export provenance inspection"
+    (not (module-variable
+           (module-public-interface (resolve-module '(grove math pipeline)))
+           'math-origin-location)))
+  (test-assert "independent polynomial checks belong to semantic-check"
+    (module-variable
+      (module-public-interface (resolve-module '(grove math semantic-check)))
+      'math-polynomial-check-derivative))
+  (test-assert "calculation pipeline does not export semantic-check evidence"
+    (not (module-variable
+           (module-public-interface (resolve-module '(grove math pipeline)))
+           'math-polynomial-check-derivative)))
+  (test-assert "assumption scopes belong to the context module"
+    (module-variable
+      (module-public-interface (resolve-module '(grove math context)))
+      'with-math-assumptions))
+  (test-assert "calculation pipeline does not export context parameters"
+    (not (module-variable
+           (module-public-interface (resolve-module '(grove math pipeline)))
+           'with-math-assumptions)))
   (test-equal "underscore tokenizes as a script marker between identifiers"
     '(identifier subscript identifier eof)
     (map math-token-kind (tokenize-math "E_x")))

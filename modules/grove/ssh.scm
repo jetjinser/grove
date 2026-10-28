@@ -4,18 +4,17 @@
 
 (define-module (grove ssh)
   #:use-module (grove private files)
+  #:use-module (grove private procedure)
   #:use-module (grove private string-fun)
   #:use-module (ice-9 format)
   #:use-module (ice-9 optargs)
   #:use-module (ice-9 rdelim)
-  #:use-module (ssh auth)
   #:use-module (ssh channel)
   #:use-module (ssh key)
   #:use-module (ssh message)
   #:use-module (ssh server)
   #:use-module (ssh session)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:export (read-authorized-keys
             generate-host-key
             serve-ssh))
@@ -309,16 +308,16 @@ host; SESSION-TIMEOUT bounds a session and is enforced by a watchdog process."
                     (output (current-error-port)))
   "Serve HANDLER over SSH until interrupted.
 
-HANDLER receives the session channel as both input and output. HOST-KEY is an
-RSA host key file; AUTHORIZED-KEYS is a list from read-authorized-keys. The
+HANDLER receives the session channel as input and output arguments. HOST-KEY is
+an RSA host key file; AUTHORIZED-KEYS is a list from read-authorized-keys. The
 default listener is 127.0.0.1:2222; PORT must be from 1 to 65535.
 
 WORKERS is the number of session-handling processes, and thus the concurrency
 limit. LOGIN-TIMEOUT drops clients that do not authenticate in time;
 SESSION-TIMEOUT caps a browsing session (0 disables it); MEMORY-LIMIT, in bytes,
 caps each worker's address space."
-  (unless (procedure? handler)
-    (error "SSH server requires a session handler" handler))
+  (unless (procedure-accepts-arguments? handler 2)
+    (error "SSH session handler must accept input and output channels" handler))
   (unless (non-empty-string? address)
     (error "SSH server address must be a non-empty string" address))
   (unless (and (exact-integer? port) (<= 1 port 65535))

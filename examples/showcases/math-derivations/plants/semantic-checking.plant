@@ -4,6 +4,7 @@
 @use-commands{math-derivations}
 @use-modules[((grove math formula) #:prefix φ:)
              (grove math pipeline)
+             (grove math presentation)
              ((grove math term) #:select (math-term->source))]
 @title{Independent checks for polynomial math}
 @summary{A small semantic checker checks registered scalar-polynomial schemas, replays a derivative certificate, and verifies its exact result independently.}

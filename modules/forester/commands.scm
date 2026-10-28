@@ -6,7 +6,6 @@
   #:use-module ((grove private ir) #:prefix ir:)
   #:replace (link)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-26) ; cut(e)
   #:use-module (ice-9 match)
   #:use-module (ice-9 optargs)
@@ -15,6 +14,7 @@
   #:use-module (language scribble command)
   #:use-module (language scribble flow)
   #:use-module (grove private string-fun)
+  #:use-module (grove private procedure)
   #:use-module (forester private topic)
   #:use-module (forester i18n))
 
@@ -51,8 +51,8 @@
 
 (define-public (forest-query query)
   "Record a query to run against the complete Forest after source analysis."
-  (unless (procedure? query)
-    (error "Forester query must be a procedure" query))
+  (unless (procedure-accepts-arguments? query 2)
+    (error "Forester query must accept a forest and page ID" query))
   (make-content-element 'forest-query '()
                         #:properties `((query . ,query))
                         #:flow-kind 'block))

@@ -3,8 +3,6 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit grove state)
-  #:use-module (ice-9 ftw)
-  #:use-module (ice-9 textual-ports)
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-64)
@@ -20,6 +18,10 @@
 (define (write-test-file path content)
   (call-with-output-file path
     (lambda (port) (display content port))))
+
+(define (write-test-datum path datum)
+  (call-with-output-file path
+    (lambda (port) (write datum port))))
 
 (test-begin "grove build state")
 
@@ -43,7 +45,8 @@
     (let* ((sources (list (list input-path (file-fingerprint input-path) 'source)))
            (artifacts
              (list (make-artifact "page.html" "rendered"
-                                  (list input-path))))
+                                  #:sources (list input-path))))
+           (identities (list (content-fingerprint "renderer")))
            (state (list 'grove-build-state
                         sources
                         (list (list "page.html"
@@ -51,10 +54,10 @@
                                     (list input-path)
                                     0
                                     'text))
-                        "test-project-renderers-v1")))
+                        identities)))
       (write-build-state state-path temp-path sources artifacts
                          '(("page.html" . 0))
-                         "test-project-renderers-v1")
+                         identities)
       (test-equal "build state round trips input and artifact provenance"
         state
         (read-build-state state-path))
@@ -77,12 +80,44 @@
         #f
         (read-build-state state-path))
       (write-test-file state-path
+        "(grove-build-state () () \"legacy-renderer-set-fingerprint\")")
+      (test-equal "legacy renderer-set identities are discarded"
+        #f
+        (read-build-state state-path))
+      (write-test-file state-path
         "(grove-build-state-v4 () () #f)")
       (test-equal "previous versioned build states are discarded"
         #f
         (read-build-state state-path))
       (write-test-file state-path "(grove-build-state-v9 () () #f)")
       (test-equal "unknown build-state versions are discarded"
+        #f
+        (read-build-state state-path))
+      (write-test-file state-path "(grove-build-state")
+      (test-equal "a syntactically corrupt build state is discarded"
+        #f
+        (read-build-state state-path))
+      (write-test-datum state-path
+        (list 'grove-build-state
+              (list (list (string #\nul) #f 'source))
+              '() #f))
+      (test-equal "source paths with NUL characters are discarded"
+        #f
+        (read-build-state state-path))
+      (write-test-datum state-path
+        (list 'grove-build-state '()
+              (list (list "page.html" (content-fingerprint "rendered")
+                          (list (string #\nul)) #f 'text))
+              #f))
+      (test-equal "artifact dependency paths with NUL characters are discarded"
+        #f
+        (read-build-state state-path))
+      (write-test-datum state-path
+        (list 'grove-build-state '()
+              (list (list "page.html" (content-fingerprint "rendered")
+                          '("source.plant" "source.plant") #f 'text))
+              #f))
+      (test-equal "duplicate artifact dependency paths are discarded"
         #f
         (read-build-state state-path))))
   (lambda ()

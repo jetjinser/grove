@@ -4,9 +4,7 @@
 
 (define-module (tests unit scribble read)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64)
-  #:use-module (ice-9 ftw)
   #:use-module (rnrs io ports)
   #:use-module (system base language)
   #:use-module (language scheme spec)
@@ -14,7 +12,6 @@
   #:use-module (language scribble source)
   #:use-module (language scribble flow)
   #:use-module (grove private input dependencies)
-  #:use-module (ice-9 textual-ports)
   #:use-module ((language scribble spec)
                 #:select (scribble scribble-evaluate-document))
   #:use-module (grove input scribble)
@@ -38,6 +35,15 @@
 (test-equal "content sequences flatten recursively in document order"
   '("first" "second" "third")
   (flatten-content-sequence '("first" ("second" ("third")))))
+
+(test-assert "Scribble flow reexports the Grove IR sequence predicates"
+  (let ((grove-ir (module-public-interface (resolve-module '(grove ir))))
+        (flow (module-public-interface
+                (resolve-module '(language scribble flow)))))
+    (and (eq? (module-variable grove-ir 'content-value?)
+              (module-variable flow 'content-value?))
+         (eq? (module-variable grove-ir 'content-sequence?)
+              (module-variable flow 'content-sequence?)))))
 
 (test-error "content sequence flattening rejects non-content values" #t
   (flatten-content-sequence '("valid" 42)))
@@ -95,6 +101,11 @@
   (make-scribble-module-setup ""))
 (test-error "Scribble module sessions reject empty paths" #t
   (make-scribble-module-session (list "")))
+(test-error "Scribble module filters must accept a file basename" #t
+  (make-scribble-module-setup "modules" #:module-filter (lambda () #t)))
+(test-error "Scribble module session readers must accept a source path" #t
+  (make-scribble-module-session (list "page.plant")
+                                #:read-document (lambda () #f)))
 
 (let* ((document (evaluate-document (default-environment scribble)
                    "@with-assumptions[\"scalar(x)\"]{
@@ -496,9 +507,15 @@
   (test-error "Scribble evaluation rejects an invalid timing callback" #t
     (scribble-evaluate-document (open-input-string "@bold{text}") env
       #:timings #t))
+  (test-error "Scribble timings callbacks must accept phase and duration" #t
+    (scribble-evaluate-document (open-input-string "@bold{text}") env
+      #:timings (lambda (_) #t)))
   (test-error "Scribble evaluation rejects an invalid module callback" #t
     (scribble-evaluate-document (open-input-string "@bold{text}") env
       #:module-changed #t))
+  (test-error "Scribble module callbacks must accept one module" #t
+    (scribble-evaluate-document (open-input-string "@bold{text}") env
+      #:module-changed (lambda () #t)))
   (test-assert "syntax errors report source file and line/column"
     (exception-contains?
       (lambda ()

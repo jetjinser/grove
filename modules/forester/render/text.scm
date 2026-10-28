@@ -25,8 +25,6 @@
   #:use-module (grove site)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
-  #:use-module (srfi srfi-13)
-  #:use-module (srfi srfi-14)
   #:export (site->text
             render-text
             make-text-options
@@ -355,12 +353,12 @@
             (cons
               (make-artifact (text-index-path routes)
                              (index->text forest routes)
-                             sources)
+                             #:sources sources)
               (map (lambda (page)
                      (make-artifact
                        (text-page-path routes (site-page-id page))
                        (render-page page)
-                       (page-source-paths forest page)))
+                       #:sources (page-source-paths forest page)))
                    (pages forest)))))
       (if prefix (prefix-artifacts prefix artifacts) artifacts))))
 

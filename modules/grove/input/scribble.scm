@@ -4,11 +4,11 @@
 
 (define-module (grove input scribble)
   #:use-module (grove private files)
+  #:use-module (grove private procedure)
   #:use-module (grove collect)
   #:use-module (grove private input cache)
   #:use-module (grove private input dependencies)
   #:use-module (system base language)
-  #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-1)
   #:use-module (grove ir)
   #:use-module ((language scribble spec)
@@ -26,10 +26,10 @@
                                      (module-filter scribble-source-file?))
   "Return a project preparation procedure that loads Scribble module sources.
 MODULE-DIRECTORY must be non-empty and is copied at construction. MODULE-FILTER
-receives each regular file's basename and defaults to non-hidden `.plant` files.
+receives one regular file basename and defaults to non-hidden `.plant` files.
 The procedure returns loaded paths so Grove can track them as build inputs."
   (unless (and (filesystem-path-string? module-directory)
-               (procedure? module-filter))
+               (procedure-accepts-arguments? module-filter 1))
     (error "Scribble module setup requires a directory and filter"
            module-directory module-filter))
   (set! module-directory (string-copy module-directory))
@@ -45,11 +45,12 @@ The procedure returns loaded paths so Grove can track them as build inputs."
   "Return a project preparation procedure and its document reader.
 PATHS is a list of non-empty path strings, copied at construction. PREPARE
 evaluates module articles in PATHS order, once per preparation. The reader
-reuses those document results within that preparation and delegates other
-paths. Preparing again resets reuse; this is not a persistent cache."
+accepts one path, reuses those document results within that preparation, and
+delegates other paths. Preparing again resets reuse; this is not a persistent
+cache."
   (unless (and (list? paths)
                (every filesystem-path-string? paths)
-               (procedure? read-document))
+               (procedure-accepts-arguments? read-document 1))
     (error "module session requires source paths and a reader" paths read-document))
   (set! paths (map string-copy paths))
   (let ((prepared (make-hash-table)))
@@ -88,7 +89,9 @@ paths. Preparing again resets reuse; this is not a persistent cache."
   "Reuse data-only documents by default during builds. CACHE? may be a boolean
 or path predicate. Imported modules are tracked automatically; register other
 file inputs with DEPEND-ON! or CACHE-DEPENDENCIES, which returns a list of
-non-empty paths. DISABLE-CACHE! opts out from within a document. A supplied
+non-empty paths. CACHE? accepts one path; CACHE-DEPENDENCIES and
+ENVIRONMENT-FACTORY take no arguments; TIMINGS receives path, phase, and
+duration. DISABLE-CACHE! opts out from within a document. A supplied
 ENVIRONMENT must be a module; shared environments and checks always evaluate
 sources."
   (define (read-document path)
@@ -115,16 +118,18 @@ sources."
           document))))
   (unless (or (not environment) (module? environment))
     (error "Scribble reader environment must be a module or #f" environment))
-  (unless (or (boolean? cache?) (procedure? cache?))
+  (unless (or (boolean? cache?)
+              (procedure-accepts-arguments? cache? 1))
     (error "Scribble reader cache option must be a boolean or path predicate"
            cache?))
-  (unless (procedure? cache-dependencies)
-    (error "Scribble cache dependencies must be a procedure"
+  (unless (procedure-accepts-arguments? cache-dependencies 0)
+    (error "Scribble cache dependencies must accept zero arguments"
            cache-dependencies))
-  (unless (or (not timings) (procedure? timings))
-    (error "Scribble reader timings must be a procedure or #f" timings))
-  (unless (procedure? environment-factory)
-    (error "Scribble reader environment factory must be a procedure"
+  (unless (or (not timings) (procedure-accepts-arguments? timings 3))
+    (error "Scribble reader timings must accept three arguments or be #f"
+           timings))
+  (unless (procedure-accepts-arguments? environment-factory 0)
+    (error "Scribble reader environment factory must accept zero arguments"
            environment-factory))
   (lambda (path)
     (if (current-input-cache)

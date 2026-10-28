@@ -42,6 +42,10 @@ into global state for unrelated lifecycles.
   key to inherit it; use `render-context-without` to remove a key.
 - Context keys are open-ended. Grove supplies no domain-specific keys or
   defaults; renderers and projects define the values they need.
+- `content->sxml` and `content->text` create an empty render context when
+  `#:context` is omitted. Rules therefore always receive a `render-context`
+  value; passing any other value, including `#f`, is an error at the renderer
+  boundary.
 - Constructors and `render-context-ref` copy mutable strings, bytevectors,
   vectors, and pair structure. Opaque values such as records, procedures, and
   hash tables remain shared; treat those values as read-only for the render
@@ -51,8 +55,10 @@ into global state for unrelated lifecycles.
 - The context is shared with rules and custom renderers for the duration of a
   render pass. Treat it and its values as read-only; use `render-context-with`
   or `render-context-without` to derive a context with different bindings.
-- Rules receive `(context element children next)` and use
-  `render-context-ref` for named fields.
+- Rules receive `(context element payload next)` and use
+  `render-context-ref` for named fields. For ordinary elements, `payload` is
+  rendered child content; for `math`, it is the complete fallback rendering
+  for that backend (see [Renderer rules](renderer-rules.md#public-boundary)).
 - Rules and built-in interface helpers receive the render context explicitly.
   A custom renderer builds one through `make-site-render-context` when needed.
   There is no ambient render context.
@@ -77,9 +83,9 @@ pages within each group keep that same order.
 ## Interpreter boundary
 
 - `next` in a rule walks composed rules, then the stock renderer's private
-  handlers, then
-  the built-in interpretation.  A rule that only wants to adjust one kind can
-  call `(next)` and delegate the rest.
+  handler when one is installed for that kind, or the built-in interpretation
+  otherwise. A rule that only wants to adjust one kind can call `(next)` and
+  delegate the rest.
 - Trees and transclusions use lazy structural recursion and stay outside the
   rule chain. Math rules can replace or delegate to the backend's built-in
   semantic math interpretation.

@@ -3,12 +3,11 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit forester project)
-  #:use-module (ice-9 ftw)
   #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64)
   #:use-module (forester project)
+  #:use-module (forester project new)
   #:use-module (forester input scribble)
   #:use-module (forester relations)
   #:use-module (forester render gemtext)
@@ -60,6 +59,9 @@
   (shorter-than-o nodes paragraph-id maximum))
 
 (test-begin "forester project")
+
+(test-error "Forester source templates must accept a tree ID and date" #t
+  (make-forester-source-creator #:template (lambda (_) "source")))
 
 (test-assert "Forester projects require a home tree ID"
   (exception-contains?
@@ -142,7 +144,7 @@
              (make-render-rules
                (list
                  (cons 'paragraph
-                       (lambda (context element children next)
+                       (lambda (context element _payload next)
                          (set! calls (+ calls 1))
                          (next))))))
            (project
@@ -888,7 +890,7 @@
                          (list (make-content-element
                                  'paragraph
                                  '("Added before Forester analysis."))))
-                       (content-document-source document))))))
+                       #:source (content-document-source document))))))
              (text-artifacts (build-project text-project))
              (artifacts (build-project project))
              (_ (build-project transform-project))
@@ -966,10 +968,10 @@
                   (list (make-content-element 'paragraph
                           (list (make-content-element 'link '("Target")
                                   #:properties '((target . "target")))))))
-                source-path))
+                #:source source-path))
              (target-page
               (make-site-page "target" "Target"
-                (make-content-document '()) target-path))
+                (make-content-document '()) #:source target-path))
              (moved? #f)
              (html-routes
               (make-html-routes
@@ -1066,8 +1068,8 @@
                         (list (make-content-element 'paragraph
                                 (list (make-content-text
                                         (read-test-file path)))))
-                        path)
-                      path)))
+                        #:source path)
+                      #:source path)))
                 #:analyze make-forest
                 #:renderers
                 (list (make-gemtext-renderer

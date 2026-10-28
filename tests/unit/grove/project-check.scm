@@ -9,7 +9,6 @@
   #:use-module (grove pipeline)
   #:use-module (grove project)
   #:use-module (grove project diagnostic)
-  #:use-module (ice-9 ftw)
   #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-64))
 
@@ -98,6 +97,33 @@
     (set! artifacts '())
     (test-assert "check does not read malformed output cache state"
       (null? (check-project project)))
+    (let* ((state-output (string-append root "/state-output"))
+           (state-renders 0)
+           (state-project
+            (make-project
+              #:collect-sources (lambda () (list source))
+              #:read-source (lambda (path)
+                              (call-with-input-file path get-string-all))
+              #:renderers
+              (list (make-cached-renderer
+                      (lambda (_model)
+                        (set! state-renders (1+ state-renders))
+                        (list (make-artifact "state.txt" "recovered")))))
+              #:output-directory state-output)))
+      (build-project/report state-project)
+      (call-with-output-file
+        (string-append (grove-cache-directory state-output)
+                       "/.grove-build-state")
+        (lambda (port) (display "(grove-build-state" port)))
+      (let ((report (build-project/report state-project)))
+        (test-equal "corrupt build state triggers a renderer rebuild" 2
+          state-renders)
+        (test-assert "corrupt build state is reported as a renderer cache miss"
+          (not (build-report-render-cache-hit? report)))
+        (test-equal "rebuild restores output after discarding corrupt state"
+          "recovered"
+          (call-with-input-file
+            (string-append state-output "/state.txt") get-string-all))))
     (let* ((pipeline-name (format #f "check-pipeline-~a" (getpid)))
            (pipeline
             (make-asset-pipeline

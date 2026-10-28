@@ -64,7 +64,7 @@
             (lambda (port)
               (write (site->graph forest) port)
               (newline port)))))
-    (list (make-artifact path content (source-paths forest)))))
+    (list (make-artifact path content #:sources (source-paths forest)))))
 
 (define* (make-graph-renderer #:key (path "forest-graph.scm"))
   (unless (artifact-path? path)

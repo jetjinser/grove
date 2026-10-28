@@ -67,6 +67,10 @@
       (test-assert "help describes the command" (string-contains (cadr result) "build"))
       (test-equal "help writes no diagnostics" ""
         (without-loader-notes (caddr result))))
+    (let ((result (run "build" "--help")))
+      (test-assert "profile help describes its additional reports"
+        (and (string-contains (cadr result) "input-cache timings")
+             (string-contains (cadr result) "peak RSS"))))
     (let ((result (run "--version")))
       (test-equal "version succeeds without loading a project" 0 (car result))
       (test-assert "version identifies the program" (string-contains (cadr result) "grove"))
@@ -119,6 +123,8 @@
         (string-contains (cadr result) "1 artifact checked in "))
       (test-assert "check progress identifies the input on stderr"
         (string-contains (caddr result) "Reading sources/input.txt"))
+      (test-assert "ordinary progress reports project-load timing"
+        (string-contains (caddr result) "project-load"))
       (test-assert "check progress never reports writing"
         (not (string-contains (caddr result) "Writing")))
       (test-assert "check creates no output directory"
@@ -269,7 +275,7 @@
     ;; Exercise generated source through the real document/page reader.
     (mkdir (string-append root "/template-sources"))
     (write-file config
-      "(use-modules (forester project))\n(make-forester-project #:source-directory \"template-sources\" #:default-prefix \"tutorial\" #:template (lambda (id date) (string-append \"@use-modules[(forester commands) (language scribble commands)]\\n@title{教程：\" id \"}\\n@published{\" date \"}\\nHello.\\n\")) #:output-directory \"output\" #:home \"tutorial-0001\")\n")
+      "(use-modules (forester project))\n(make-forester-project #:source-directory \"template-sources\" #:default-prefix \"tutorial\" #:template (lambda (id date) (string-append \"@use-modules[(forester commands)]\\n@title{教程：\" id \"}\\n@published{\" date \"}\\nHello.\\n\")) #:output-directory \"output\" #:home \"tutorial-0001\")\n")
       (test-equal "Forester projects preserve custom templates through CLI loading" 0
       (car (run "new" "--project" config)))
     (test-assert "custom templates receive the allocated ID and preserve Unicode"

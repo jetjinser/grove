@@ -3,15 +3,14 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove i18n)
+  #:use-module (grove private procedure)
   #:use-module (grove private string-fun)
   #:use-module (grove private snapshot)
   #:use-module (grove unicode)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
-  #:use-module (srfi srfi-13)
   #:use-module (ice-9 format)
   #:use-module (ice-9 match)
-  #:use-module (ice-9 unicode)
   #:use-module ((ice-9 i18n) #:prefix glibc:)
   #:export (locale?
             make-locale
@@ -706,8 +705,8 @@ predicate, overrides both.  Two strings with equal keys keep their input
 order."
   (unless (and (list? strings) (every string? strings))
     (error "sort-strings requires a list of strings" strings))
-  (unless (or (not compare) (procedure? compare))
-    (error "sort-strings comparator must be a procedure or #f" compare))
+  (unless (or (not compare) (procedure-accepts-arguments? compare 2))
+    (error "sort-strings comparator must accept two strings or be #f" compare))
   (sort strings
         (or compare
             (and locale (locale-collation-comparator locale))

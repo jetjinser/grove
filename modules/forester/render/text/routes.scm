@@ -4,10 +4,10 @@
 
 (define-module (forester render text routes)
   #:use-module (grove private snapshot)
+  #:use-module (grove private procedure)
   #:use-module (grove private string-fun)
   #:use-module (grove output)
   #:use-module (srfi srfi-9)
-  #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-1)
   #:export (text-routes?
             make-text-routes
@@ -35,8 +35,8 @@ index artifact. Gemtext uses `.gmi` defaults, while this constructor defaults
 to `.txt` paths. PAGE-PATH must return the same path for a page ID under the
 same project state; renderers may evaluate it repeatedly while validating
 routes, resolving links, and building cache identities."
-  (unless (procedure? page-path)
-    (error "text page path requires a procedure" page-path))
+  (unless (procedure-accepts-arguments? page-path 1)
+    (error "text page path must accept one page ID" page-path))
   (unless (artifact-path? index-path)
     (error "text index requires a relative path" index-path))
   (%make-text-routes page-path (snapshot-data index-path)))

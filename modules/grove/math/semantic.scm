@@ -4,7 +4,6 @@
 (define-module (grove math semantic)
   #:use-module (grove ir)
   #:use-module (grove math expression)
-  #:use-module (grove math term)
   #:use-module ((grove math private identifier) #:select (math-identifier?))
   #:use-module (grove math private source)
   #:use-module (grove math private declaration)

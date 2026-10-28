@@ -3,10 +3,8 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit grove platform)
-  #:use-module (ice-9 ftw)
   #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64)
   #:use-module (grove ir)
   #:use-module (grove output)
@@ -58,7 +56,7 @@
                           (append rendered-models (list values)))
                     (list (make-artifact "pages.list"
                                          (string-join values "\n")
-                                         sources))))
+                                         #:sources sources))))
                 (lambda (inputs)
                   (let ((values (map project-input-value inputs))
                         (sources (map project-input-path inputs)))
@@ -66,7 +64,7 @@
                           (append rendered-models (list values)))
                     (list (make-artifact "page-count"
                                          (number->string (length values))
-                                         sources))))
+                                         #:sources sources))))
                 (lambda (inputs)
                   (set! rendered-models
                         (append rendered-models

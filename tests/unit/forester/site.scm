@@ -33,6 +33,9 @@
 
 (test-begin "forester site")
 
+(test-error "forest timing callbacks must accept phase and duration" #t
+  (make-forest (make-site '()) #:timings (lambda (_) #t)))
+
 (test-assert "module dependency projection stays internal"
   (not (module-variable
          (module-public-interface (resolve-module '(forester site)))
@@ -135,12 +138,12 @@
 
 (let* ((body
          (make-content-element 'paragraph
-           (list (make-content-text "Authored body." "notes/body.scm")
-                 (make-content-layout 'newline "\n" "notes/layout.scm"))
-           "notes/paragraph.scm"
+           (list (make-content-text "Authored body." #:source "notes/body.scm")
+                 (make-content-layout 'newline "\n" #:source "notes/layout.scm"))
+           #:source "notes/paragraph.scm"
            #:flow-kind 'block))
        (page (make-site-page "authored" "Authored"
-               (make-content-document (list body) "notes/document.scm")))
+               (make-content-document (list body) #:source "notes/document.scm")))
        (forest (make-forest (make-site (list page)))))
   (test-equal "all Grove content source paths participate in page dependencies"
     '("notes/document.scm" "notes/paragraph.scm" "notes/body.scm"
@@ -162,7 +165,7 @@
                         "broken" "Broken"
                         (evaluate-document
                           "@paragraph{@link[\"missing\"]{nowhere}}")
-                        "notes/broken.plant"))))
+                        #:source "notes/broken.plant"))))
             #f)
           (lambda (key . args) (format #f "~s" (cons key args))))))
   (test-assert "unresolved-link errors identify source page and target"
@@ -297,10 +300,10 @@
             (make-site
               (list (make-site-page
                       "same" "First" (evaluate-document "first")
-                      "plants/math/cat-0001.plant")
+                      #:source "plants/math/cat-0001.plant")
                     (make-site-page
                       "same" "Second" (evaluate-document "second")
-                      "plants/logic/cat-0001.plant")))
+                      #:source "plants/logic/cat-0001.plant")))
             #f)
           (lambda (key . args) (format #f "~s" (cons key args))))))
   (test-assert "duplicate page id errors identify every source path"
@@ -343,10 +346,10 @@
            (make-content-document
              (list plain-paragraph math-paragraph link-node tag-node
                    taxon-node subtree-node))
-           "query-article.plant"))
+           #:source "query-article.plant"))
        (target
          (make-site-page "target" "Target" (make-content-document '())
-                         "target.plant"))
+                         #:source "target.plant"))
        (forest (make-forest (make-site (list article target))))
        (nodes (content-node-relation forest))
        (math-paragraph-ids
@@ -450,7 +453,7 @@
        (page
          (make-site-page "query-article" "Query article"
                          (make-content-document (list paragraph))
-                         "query-article.plant"))
+                         #:source "query-article.plant"))
        (forest (make-forest (make-site (list page))))
        (nodes (content-node-relation forest)))
   (test-equal "math text projection keeps powers and fractions legible"
@@ -489,13 +492,13 @@
            "@paragraph{Authored link: @link[\"manual\"]{manual}.}")))
        (catalog
          (make-site-page "catalog" "Catalog" catalog-document
-                         "catalog.plant"))
+                         #:source "catalog.plant"))
        (article
          (make-site-page "article" "Article"
            (evaluate-document "@paragraph{范畴论 appears in this note.}")
-           "article.plant"))
+           #:source "article.plant"))
        (manual (make-site-page "manual" "Manual" (make-content-document '())
-                               "manual.plant"))
+                               #:source "manual.plant"))
        (forest
          (make-forest
            (make-site (list catalog article manual)
@@ -559,7 +562,7 @@
                                               'subtree '()
                                               #:properties
                                               '((target . "other")))))))))))
-                    "query.plant"))))
+                    #:source "query.plant"))))
             #f)
           (lambda (key . args) (format #f "~s" (cons key args))))))
   (test-assert "query output cannot mutate Forest composition recursively"

@@ -165,7 +165,7 @@
   (test-assert "Gemtext accepts renderer rules"
     (let* ((rules (make-render-rules
                     (list (cons 'paragraph
-                                (lambda (context element children next)
+                                (lambda (context element _payload next)
                                   "CUSTOM\n")))))
            (page (cdr (assoc "algebra"
                               (site->gemtext
@@ -350,7 +350,7 @@
 (let* ((forest (make-forest (make-site (list algebra limits))))
        (rules (make-render-rules
                 (list (cons 'paragraph
-                            (lambda (context element children next)
+                            (lambda (context element _payload next)
                               (if (render-context-ref context 'page)
                                   "HASPAGE\n" "NOPAGE\n")))))))
   (test-assert "text rules see the current page context"
@@ -364,7 +364,7 @@
                                    #:properties '((tex? . #t))))
        (rules (make-render-rules
                 (list (cons 'math
-                            (lambda (context element children next)
+                            (lambda (context element _payload next)
                               "MATH-RULE"))))))
   (test-equal "text rules can override math"
     "MATH-RULE"
@@ -376,12 +376,12 @@
       #:rules
       (make-render-rules
         (list (cons 'math
-                    (lambda (context element children next)
+                    (lambda (context element _payload next)
                       (next))))))))
 
 (let ((rules (make-render-rules
                (list (cons 'paragraph
-                           (lambda (context element children next) "X"))))))
+                           (lambda (context element _payload next) "X"))))))
   (test-assert "custom text rules disable caching without a rules id"
     (procedure?
       (make-text-renderer
@@ -396,7 +396,7 @@
 
 (let ((rules (make-render-rules
                (list (cons 'paragraph
-                           (lambda (context element children next) "X"))))))
+                           (lambda (context element _payload next) "X"))))))
   (test-assert "custom HTML rules disable caching without a rules id"
     (procedure?
       (make-html-renderer
@@ -753,7 +753,7 @@
                           #:style (make-content-style #f
                                     (list (make-html-attributes '((id . "mine")))))
                           #:flow-kind 'block)))
-                target))))))
+                #:source target))))))
 
 (let* ((equations
          (make-site-page "equations" "Equations"
@@ -1093,11 +1093,11 @@
            (make-site
              (list (make-site-page
                      "a&b" "A and B" (make-content-document '())
-                     "notes/a&b.plant"
+                     #:source "notes/a&b.plant"
                      #:metadata '((updated . "2026-09-27")))
                    (make-site-page
                      "plain" "Plain" (make-content-document '())
-                     "notes/plain.plant"))
+                     #:source "notes/plain.plant"))
              #:sources '("notes/a&b.plant" "notes/plain.plant"))))
        (artifact
          (car (render-sitemap
@@ -1150,9 +1150,9 @@
                                'link '("Beta")
                                #:properties '((target . "beta")))
                              "."))))
-                 "alpha.plant")
+                 #:source "alpha.plant")
                (make-site-page "beta" "Beta" (make-content-document '())
-                               "beta.plant")))))
+                               #:source "beta.plant")))))
        (routes
          (make-text-routes
            #:index-path "index.txt"
@@ -1161,12 +1161,26 @@
        (artifacts (render-text forest
                               #:options (make-text-options #:routes routes)))
        (index (artifact-content (car artifacts)))
-       (alpha (artifact-content (cadr artifacts))))
+       (alpha (artifact-content (cadr artifacts)))
+       (delegated-alpha
+         (artifact-content
+           (cadr
+             (render-text forest
+               #:options
+               (make-text-options
+                 #:routes routes
+                 #:rules
+                 (make-render-rules
+                   (list (cons 'link
+                               (lambda (_context _element _payload next)
+                                 (next)))))))))))
   (test-equal "text routes configure the index and page output paths"
     '("index.txt" "notes/alpha.md" "notes/beta.md")
     (map artifact-path artifacts))
   (test-assert "text links resolve relative to the source page route"
     (string-contains alpha "Beta [beta.md]"))
+  (test-equal "delegating rules preserve Forester's stock link handler"
+    alpha delegated-alpha)
   (test-assert "nested text pages link back to the configured index"
     (string-contains alpha "Home: ../index.txt"))
   (test-assert "text index references configured page routes"
@@ -1450,7 +1464,7 @@
            ;;     whose style carries the tag and whose properties
            ;;     declare the anchor.
            (make-content-element
-             'span children #f
+             'span children
              #:properties `((anchor . ,anchor))
              #:style (merge-content-style
                        (make-content-style #f (list (make-html-tag "span")))
@@ -1518,7 +1532,7 @@
 
 (let* ((dfn (lambda (anchor children)
               (make-content-element
-                'span children #f
+                'span children
                 #:properties `((anchor . ,anchor))
                 #:style (make-content-style #f (list (make-html-tag "dfn"))))))
        (text (lambda (value) (make-content-text value)))

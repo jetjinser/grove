@@ -8,12 +8,10 @@
   #:use-module (grove private render text)
   #:use-module (grove site)
   #:use-module (forester site)
-  #:use-module (forester backmatter)
   #:use-module (forester i18n)
   #:use-module (ice-9 format)
   #:use-module (ice-9 rdelim)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:export (browse-forest
             make-forest-browser))
 
@@ -238,6 +236,7 @@
            (loop current history expanded)))))))
 
 (define* (make-forest-browser #:key start)
-  "Return a project browse callback over a Forest."
+  "Return a project browse callback over a Forest.
+The callback accepts #:input and #:output port keywords."
   (lambda (forest . arguments)
     (apply browse-forest forest (append (list #:start start) arguments))))

@@ -236,12 +236,12 @@
 
 
 (let* ((picture-rule
-         (lambda (context element children next)
+         (lambda (context element payload next)
            `(picture
               (source (@ (type "image/avif")
                          (srcset "/forest.avif")))
               (img (@ (src ,(content-element-property element 'source))
-                      (alt ,(content-verbatim-string children)))))))
+                      (alt ,(content-verbatim-string payload)))))))
        (rules (make-render-rules (list (cons 'image picture-rule))))
        (page (render-page-with
                "@title{Root}@image{forest.jpg}{A forest}@paragraph{Body.}"
@@ -327,12 +327,12 @@
       "property=\"og:image:alt\" content=\"Root\"")))
 
 (let* ((picture-rule
-         (lambda (context element children next)
+         (lambda (context element payload next)
            `(picture
               (source (@ (type "image/avif")
                          (srcset "/forest.avif")))
               (img (@ (src ,(content-element-property element 'source))
-                      (alt ,(content-verbatim-string children)))))))
+                      (alt ,(content-verbatim-string payload)))))))
        (rules (make-render-rules (list (cons 'image picture-rule))))
        (presentation (make-html-presentation #:rules rules))
        (page (render-page-with

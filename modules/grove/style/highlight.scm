@@ -12,4 +12,5 @@
     #:stylesheets
     (list (make-artifact "highlight.css"
             (include-text "grove/style/highlight.css")
-            '("modules/grove/style/highlight.scm" "modules/grove/style/highlight.css")))))
+            #:sources '("modules/grove/style/highlight.scm"
+                        "modules/grove/style/highlight.css")))))

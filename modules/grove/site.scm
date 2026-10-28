@@ -46,8 +46,8 @@
 (define (site-page-metadata page)
   (snapshot-data (site-page-metadata/raw page)))
 
-(define* (make-site-page id title document #:optional (source #f)
-                         #:key (metadata '()))
+(define* (make-site-page id title document
+                         #:key (source #f) (metadata '()))
   "Construct one page from its ID, title, and Content IR DOCUMENT.
 
 SOURCE is the page's optional primary input path. METADATA is an association

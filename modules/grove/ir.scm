@@ -8,7 +8,6 @@
   #:use-module (grove private string-fun)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
-  #:use-module (srfi srfi-13)
   #:use-module (grove style)
   #:export (content-text?
             make-content-text
@@ -41,7 +40,9 @@
             make-content-document
             content-document-children
             content-document-source
-            content-source-paths))
+            content-source-paths
+            content-value?
+            content-sequence?))
 
 ;; Content nodes are values: constructors snapshot caller-owned strings,
 ;; bytevectors, and pair structure; collection accessors return fresh
@@ -85,8 +86,7 @@
               (or (not column)
                   (and (exact-integer? (cdr column)) (positive? (cdr column))))))))
 
-(define* (make-content-text value #:optional (source #f)
-                            #:key (location #f))
+(define* (make-content-text value #:key (source #f) (location #f))
   (unless (string? value)
     (error "content text must be a string" value))
   (check-content-source 'text source)
@@ -109,7 +109,7 @@
 (define (content-layout-source content)
   (snapshot-data (content-layout-source/raw content)))
 
-(define* (make-content-layout kind raw #:optional (source #f))
+(define* (make-content-layout kind raw #:key (source #f))
   (unless (symbol? kind)
     (error "content layout kind must be a symbol" kind))
   (unless (string? raw)
@@ -137,7 +137,7 @@
     (error "content-element-with-children requires a content element" element))
   (make-content-element
     (content-element-kind element) children
-    (content-element-source/raw element)
+    #:source (content-element-source/raw element)
     #:properties (content-element-properties/raw element)
     #:style (content-element-style element)
     #:location (content-element-location/raw element)
@@ -154,11 +154,15 @@
       (make-content-text child)
       child))
 
-(define* (make-content-element kind children #:optional (source #f)
-                               #:key (properties '())
+(define* (make-content-element kind children #:key (source #f)
+                                     (properties '())
                                      (style #f)
                                      (location #f)
-                                     (flow-kind #f))
+                                     (flow-kind 'inline))
+  "Construct an extensible content element.
+
+KIND is interpreted by renderers and analyses. FLOW-KIND is independent of
+KIND; it defaults to inline and can be set to block for flow normalization."
   (unless (symbol? kind)
     (error "content element kind must be a symbol" kind))
   (check-content-source 'element source)
@@ -168,14 +172,13 @@
   (unless (or (not location) (valid-source-location? location))
     (error "content element location must be a source-location alist" location))
   (set! style (normalize-style style))
-  (let ((flow-kind (or flow-kind 'inline)))
   (unless (memq flow-kind '(inline block))
     (error "content element flow kind must be inline or block" flow-kind))
   (%make-content-element kind
                          (snapshot-data (normalize-children children 'element))
                          (snapshot-data properties) style
                          (snapshot-data source) (snapshot-data location)
-                         flow-kind)))
+                         flow-kind))
 
 (define (normalize-style style)
   (cond
@@ -290,12 +293,31 @@ documents do not; a document's children carry their own locations."
   (let ((location (content-source-location content)))
     (and location (assq-ref location 'file))))
 
+(define (content-child? value)
+  (or (string? value)
+      (content-text? value)
+      (content-layout? value)
+      (content-element? value)))
+
+(define (content-value? value)
+  "Return true when VALUE is a content node accepted in content sequences."
+  (or (content-child? value)
+      (content-document? value)))
+
+(define (content-sequence? value)
+  "Return true when VALUE is a proper, possibly nested sequence of content values."
+  (and (list? value)
+       (every (lambda (item)
+                (or (content-value? item)
+                    (content-sequence? item)))
+              value)))
+
 (define (content-source-paths content)
   "Return unique source paths recorded anywhere in CONTENT, in traversal order.
 
 Text, layout, element, and document sources are included. File fields from
 text and element locations are included as well.
-Raw strings have no source; a list may contain any proper sequence of content
+Raw strings have no source; lists may contain nested sequences of content
 values."
   (define (paths value)
     (cond
@@ -316,17 +338,11 @@ values."
        (append
          (filter identity (list (content-document-source/raw value)))
          (append-map paths (content-document-children/raw value))))
-      ((and (list? value) (every content-child? value))
+      ((content-sequence? value)
        (append-map paths value))
       (else
        (error "content-source-paths requires content values" value))))
   (snapshot-data (delete-duplicates (paths content) string=?)))
-
-(define (content-child? value)
-  (or (string? value)
-      (content-text? value)
-      (content-layout? value)
-      (content-element? value)))
 
 (define (normalize-children children who)
   (unless (list? children)
@@ -349,7 +365,7 @@ values."
              (and (not (memq (caar entries) keys))
                   (loop (cdr entries) (cons (caar entries) keys)))))))
 
-(define* (make-content-document children #:optional (source #f))
+(define* (make-content-document children #:key (source #f))
   (unless (list? children)
     (error "content children must be a proper list" 'document children))
   (check-content-source 'document source)
@@ -369,7 +385,8 @@ values."
 (define (content-with-source-location content location)
   "Attach a source start alist with file, one-based line and column fields.
 Raw strings become located text values. For a document, attach the location to
-each top-level content value. Other Scheme values pass through unchanged so
+each top-level content value. Nested content sequences retain their shape and
+are annotated recursively. Other Scheme values pass through unchanged so
 source annotation can wrap arbitrary Scribble expressions."
   (unless (valid-source-location? location)
     (error "content source location must be a source-location alist" location))
@@ -385,7 +402,7 @@ source annotation can wrap arbitrary Scribble expressions."
      (make-content-element
        (content-element-kind content)
        (content-element-children/raw content)
-       (content-element-source/raw content)
+       #:source (content-element-source/raw content)
        #:properties (content-element-properties/raw content)
        #:style (content-element-style content)
        #:location location
@@ -394,8 +411,8 @@ source annotation can wrap arbitrary Scribble expressions."
      (make-content-document
        (map (lambda (child) (content-with-source-location child location))
             (content-document-children content))
-       (content-document-source content)))
-    ((and (list? content) (every content-child? content))
+       #:source (content-document-source content)))
+    ((content-sequence? content)
      (map (lambda (child) (content-with-source-location child location))
           content))
     (else content)))

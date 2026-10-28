@@ -1,7 +1,8 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math term)
+(use-modules ((grove math formula) #:prefix φ:) (grove math pipeline)
+             (grove math provenance) (grove math term)
              (grove math differentiation) (grove math rewrite) (grove relation)
              (grove math layout) (grove ir) (grove render html)
              (tests unit grove source-fixtures)

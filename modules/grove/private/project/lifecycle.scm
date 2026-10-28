@@ -22,6 +22,7 @@
   #:use-module (grove collect)
   #:use-module (grove project diagnostic)
   #:use-module (grove private snapshot)
+  #:use-module (grove private procedure)
   #:use-module (srfi srfi-1)
   #:export (collect-project-sources
             build-project/report
@@ -35,8 +36,8 @@
     (error "expected a Grove project" project)))
 
 (define (require-progress progress)
-  (unless (procedure? progress)
-    (error "project progress callback must be a procedure" progress)))
+  (unless (procedure-accepts-arguments? progress 2)
+    (error "project progress callback must accept a stage and value" progress)))
 
 (define (read-source-with-context path read-source)
   (call-with-project-stage 'read path (lambda () (read-source path))))
@@ -48,12 +49,12 @@
     (error "~a contains duplicate paths" who paths))
   (snapshot-data paths))
 
-(define (renderer-input-paths renderer)
-  (let* ((input-spec (cached-renderer-inputs renderer))
-         (paths (cond ((not input-spec) '())
-                      ((procedure? input-spec) (input-spec))
-                      (else input-spec))))
-    (snapshot-unique-paths paths "renderer inputs")))
+(define (renderer-dependency-paths renderer)
+  (let* ((dependency-spec (cached-renderer-dependencies renderer))
+         (paths (cond ((not dependency-spec) '())
+                      ((procedure? dependency-spec) (dependency-spec))
+                      (else dependency-spec))))
+    (snapshot-unique-paths paths "renderer dependencies")))
 
 (define (collect-project-sources project)
   "Return PROJECT's validated source paths as independent data."
@@ -125,7 +126,8 @@ Return the internal analysis record used by the build pipeline."
 (define* (browse-project project #:key (progress (lambda (stage path) #t))
                          (input (current-input-port))
                          (output (current-output-port)))
-  "Analyze PROJECT without rendering and run its browse callback on the model."
+  "Analyze PROJECT without rendering and run its browse callback on the model.
+The callback receives #:input and #:output ports."
   (require-project project)
   (require-progress progress)
   (unless (input-port? input)
@@ -196,7 +198,7 @@ Return the internal analysis record used by the build pipeline."
                      (append-map
                        (lambda (renderer)
                          (if (cached-renderer? renderer)
-                             (renderer-input-paths renderer)
+                             (renderer-dependency-paths renderer)
                              '()))
                        (project-renderers project))
                      (project-extra-sources project))

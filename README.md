@@ -68,7 +68,7 @@ mkdir -p plants
 
 ```scribble
 ;; plants/hello.plant
-@use-modules[(forester commands) (language scribble commands)]
+@use-modules[(forester commands)]
 
 @title{Hello, Grove}
 @tag["example"]

@@ -2,12 +2,10 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit grove ssh)
-  #:use-module (ice-9 ftw)
   #:use-module (ice-9 optargs)
   #:use-module (ice-9 popen)
   #:use-module (ice-9 rdelim)
   #:use-module (ice-9 textual-ports)
-  #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-64))
 
 ;; SSH transport tests. (grove ssh) is a conditional component, so it is
@@ -121,6 +119,9 @@
 (if (not ssh-supported?)
     (test-assert "SSH tests skipped: guile-ssh is unavailable" #t)
     (begin
+      (test-error "SSH handlers must accept input and output channels" #t
+        ((ssh-proc 'serve-ssh) #:host-key "missing"
+         #:handler (lambda (_) #t)))
       (test-error "SSH server rejects out-of-range ports" #t
         ((ssh-proc 'serve-ssh) #:port 65536 #:handler echo-handler))
       (test-error "SSH server rejects an empty address" #t

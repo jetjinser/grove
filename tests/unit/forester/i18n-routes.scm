@@ -22,6 +22,15 @@
 
 (test-begin "forester i18n routes")
 
+(test-error "HTML route callbacks must accept a page ID" #t
+  (make-html-routes #:page-path (lambda () "page.html")))
+(test-error "text route callbacks must accept a page ID" #t
+  (make-text-routes #:page-path (lambda () "page.txt")))
+(test-error "locale lookup callbacks must accept a page ID" #t
+  (locale-page-path (lambda () #f)))
+(test-error "locale path builders must accept locale and page ID" #t
+  (locale-page-path (lambda (_) #f) (lambda (_) "page.html")))
+
 (test-assert "Open Graph formatting is not part of Grove's locale API"
   (not (module-variable
          (module-public-interface (resolve-module '(grove i18n)))

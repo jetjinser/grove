@@ -3,9 +3,8 @@
 
 (define-module (forester project new)
   #:use-module (grove collect)
-  #:use-module (ice-9 ftw)
+  #:use-module (grove private procedure)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:export (make-forester-source-creator))
 
 (define (prefix? value)
@@ -35,7 +34,8 @@
 
 (define* (make-forester-source-creator #:key default-prefix source-directory
                                        (template default-tree-template))
-  "Return a project source creator for `.plant` Forester trees."
+  "Return a project source creator for `.plant` Forester trees.
+TEMPLATE receives the allocated tree ID and local date, then returns source text."
   (unless (or (not default-prefix) (prefix? default-prefix))
     (error "Forester default prefix must be lowercase letters, digits, and internal hyphens"
            default-prefix))
@@ -48,8 +48,8 @@
   (set! source-directory
     (and source-directory (string-copy source-directory)))
   (set! template (or template default-tree-template))
-  (unless (procedure? template)
-    (error "Forester tree template must be a procedure" template))
+  (unless (procedure-accepts-arguments? template 2)
+    (error "Forester tree template must accept a tree ID and date" template))
   (lambda (requested-prefix destination)
     (let ((prefix (or requested-prefix default-prefix)))
       (unless (prefix? prefix)

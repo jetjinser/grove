@@ -18,7 +18,6 @@
   #:use-module (sxml simple)
   #:use-module (srfi srfi-19)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:export (render-rss
             make-rss-renderer))
 
@@ -163,7 +162,7 @@
            (serialize-rss
              (rss-document site home-url items stylesheet-url stylesheet-type
                            language))))
-    (list (make-artifact feed-path content (source-paths forest)))))
+    (list (make-artifact feed-path content #:sources (source-paths forest)))))
 
 (define* (make-rss-renderer #:key (settings #f) (site-url #f)
                                (feed-path "feed.xml")

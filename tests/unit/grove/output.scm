@@ -30,7 +30,7 @@
        (content (string-copy "artifact content"))
        (source (string-copy "source.plant"))
        (sources (list source))
-       (artifact (make-artifact path content sources)))
+       (artifact (make-artifact path content #:sources sources)))
   (string-set! path 0 #\x)
   (string-set! content 0 #\x)
   (string-set! source 0 #\x)
@@ -65,12 +65,14 @@
                   (artifact-content artifact))))
 
 (test-error "artifact sources reject empty paths" #t
-  (make-artifact "page.txt" "content" '("")))
+  (make-artifact "page.txt" "content" #:sources '("")))
 (test-error "artifact sources reject filesystem NUL characters" #t
   (make-artifact "page.txt" "content"
-    (list (string-append "page" (string #\nul)))))
+    #:sources (list (string-append "page" (string #\nul)))))
 (test-error "artifact source paths must be unique" #t
-  (make-artifact "page.txt" "content" '("page.plant" "page.plant")))
+  (make-artifact "page.txt" "content" #:sources '("page.plant" "page.plant")))
+(test-error "artifact sources are an explicit keyword" #t
+  (make-artifact "page.txt" "content" '("page.plant")))
 (test-error "artifact paths reject NUL characters before writing" #t
   (make-artifact (string-append "page" (string #\nul) ".txt") "content"))
 (test-error "artifact prefix requires a relative path" #t
@@ -87,9 +89,9 @@
       "assets/image.bin" (0 255) ("page.plant"))
     (let ((artifacts
             (prefix-artifacts "assets"
-              (list (make-artifact "page.txt" "text" sources)
+              (list (make-artifact "page.txt" "text" #:sources sources)
                     (make-byte-artifact "image.bin"
-                      (u8-list->bytevector '(0 255)) sources)))))
+                      (u8-list->bytevector '(0 255)) #:sources sources)))))
       (list (artifact-path (car artifacts))
             (artifact-content (car artifacts))
             (artifact-sources (car artifacts))
@@ -115,7 +117,7 @@
     (test-equal "an explicit empty source set means known independent"
       '()
       (artifact-sources
-        (make-artifact "independent.txt" "constant" '())))
+        (make-artifact "independent.txt" "constant" #:sources '())))
     (let ((inode (stat:ino (stat output-path))))
       (write-artifacts output-directory
         (list (make-artifact "nested/page.txt" "artifact content")

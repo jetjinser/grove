@@ -5,6 +5,7 @@
 (define-module (grove render html)
   #:use-module (grove private render html)
   #:use-module (grove render rules)
+  #:use-module (grove render context)
   #:use-module (grove highlight)
   #:use-module (sxml simple)
   #:export (content->sxml
@@ -12,8 +13,15 @@
 
 (define* (content->sxml content #:key (id-prefix "")
                         (highlighters (default-highlighters))
-                        (rules empty-render-rules) (context #f))
+                        (rules empty-render-rules)
+                        (context (make-render-context)))
   "Render CONTENT to SXML using public render rules and context."
+  (unless (render-rules? rules)
+    (error "not a render rule set" rules))
+  (unless (render-context? context)
+    (error "not a render context" context))
+  (unless (string? id-prefix)
+    (error "HTML style ID prefix must be a string" id-prefix))
   (content->sxml/internal content #:id-prefix id-prefix
     #:highlighters highlighters #:rules rules #:context context))
 

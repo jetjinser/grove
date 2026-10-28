@@ -6,8 +6,8 @@
   #:use-module (grove private files)
   #:use-module (grove private asset-pipeline)
   #:use-module (grove private snapshot)
+  #:use-module (grove private procedure)
   #:use-module (grove private string-fun)
-  #:use-module (srfi srfi-1)
   #:export (make-asset-pipeline))
 
 ;;     An asset pipeline derives build assets with Scheme code: the
@@ -36,8 +36,8 @@ Grove cannot track, such as an external toolchain."
     (error "asset pipeline inputs must be a list of paths" inputs))
   (unless (unique-filesystem-path-list? inputs)
     (error "asset pipeline inputs must be unique" inputs))
-  (unless (procedure? procedure)
-    (error "asset pipeline requires a procedure" procedure))
+  (unless (procedure-accepts-arguments? procedure 1)
+    (error "asset pipeline procedure must accept an input lookup" procedure))
   (%make-asset-pipeline (snapshot-data name)
                        (snapshot-data version)
                        (snapshot-data inputs)

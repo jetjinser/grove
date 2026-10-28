@@ -3,7 +3,6 @@
 
 (define-module (forester private topic)
   #:use-module (grove private string-fun)
-  #:use-module (ice-9 string-fun)
   #:export (valid-topic-id?
             canonical-topic-id?))
 

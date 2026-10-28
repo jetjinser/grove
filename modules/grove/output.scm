@@ -15,7 +15,6 @@
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
-  #:use-module (srfi srfi-13)
   #:export (artifact?
             artifact-path?
             make-artifact
@@ -63,7 +62,7 @@ An empty list means the artifact is known to have no file dependencies."
                       (bytevector-copy content))
                   (and sources (snapshot-data sources))))
 
-(define* (make-artifact path content #:optional (sources #f))
+(define* (make-artifact path content #:key (sources #f))
   "Construct a text artifact at PATH with optional source dependencies.
 
 SOURCES is a list of input paths, or #f when the dependencies are unknown.
@@ -72,7 +71,7 @@ An explicit empty list asserts that the artifact depends on no input files."
     (error "artifact requires text content" content))
   (make-artifact* path content sources))
 
-(define* (make-byte-artifact path content #:optional (sources #f))
+(define* (make-byte-artifact path content #:key (sources #f))
   "Construct a byte artifact at PATH with optional source dependencies.
 
 SOURCES is a list of input paths, or #f when the dependencies are unknown.
@@ -92,7 +91,7 @@ Validate ARTIFACTS as one complete set before prefixing it."
               make-byte-artifact)
           (string-append prefix "/" (artifact:artifact-path/raw artifact))
           (artifact:artifact-content/raw artifact)
-          (artifact:artifact-sources/raw artifact)))
+          #:sources (artifact:artifact-sources/raw artifact)))
        artifacts))
 
 (define artifact-manifest-name ".grove-artifacts")

@@ -9,7 +9,6 @@
   #:use-module (grove site)
   #:use-module (forester input scribble)
   #:use-module (srfi srfi-1)
-  #:use-module (srfi srfi-13)
   #:export (walk-content
             walk-owned-content
             element-kind?
@@ -84,7 +83,8 @@
                  (non-empty-string? title))
       (error "invalid Forester subtree element" element))
     (document->tree-page
-      id (make-content-document (ir:content-element-children/raw element) source) source
+      id (make-content-document
+           (ir:content-element-children/raw element) #:source source) source
       #:title title
       #:metadata `((inline-subtree . #t)
                    ,@(let ((location (ir:content-element-location/raw element)))
@@ -129,7 +129,7 @@
                           (ir:content-element-properties/raw content))))
            (make-content-element
              kind children
-             (ir:content-element-source/raw content)
+             #:source (ir:content-element-source/raw content)
              #:properties (if id
                               (cons (cons 'tree-id id) properties)
                               properties)
@@ -139,14 +139,14 @@
         ((content-document? content)
          (make-content-document
            (map transform (ir:content-document-children/raw content))
-           (ir:content-document-source/raw content)))
+           #:source (ir:content-document-source/raw content)))
         (else content)))
     (map (lambda (page)
            (make-site-page
              (site-page-id page)
              (site-page-title page)
              (transform (site-page-document page))
-             (site-page-source page)
+             #:source (site-page-source page)
              #:metadata (site-page-metadata page)))
          pages)))
 
@@ -184,7 +184,7 @@ check documents."
                       (ir:content-element-properties/raw content))))
            (make-content-element
              kind children
-             (ir:content-element-source/raw content)
+             #:source (ir:content-element-source/raw content)
              #:properties properties
              #:style (content-element-style content)
              #:location (ir:content-element-location/raw content)
@@ -192,7 +192,7 @@ check documents."
         ((content-document? content)
          (make-content-document
            (map next (ir:content-document-children/raw content))
-           (ir:content-document-source/raw content)))
+           #:source (ir:content-document-source/raw content)))
         (else content))))
   (map
     (lambda (page)
@@ -209,7 +209,7 @@ check documents."
           (site-page-id page)
           (site-page-title page)
           (rewrite-document document counts)
-          (site-page-source page)
+          #:source (site-page-source page)
           #:metadata (site-page-metadata page))))
     pages))
 
@@ -235,7 +235,7 @@ math ID."
            (make-content-document
              (map (lambda (child) (next child nested?))
                   (ir:content-document-children/raw content))
-             (ir:content-document-source/raw content)))
+             #:source (ir:content-document-source/raw content)))
           ((not (content-element? content)) content)
           ;; Equations inside subtrees belong to the subtrees' own pages.
           ((or nested?
@@ -264,7 +264,7 @@ math ID."
                                             (ir:content-element-properties/raw content)))))))
              (make-content-element
                'math (ir:content-element-children/raw content)
-               (ir:content-element-source/raw content)
+               #:source (ir:content-element-source/raw content)
                #:properties properties
                #:style (content-element-style content)
                #:location (ir:content-element-location/raw content)
@@ -279,6 +279,6 @@ math ID."
            (site-page-id page)
            (site-page-title page)
            (rewrite page)
-           (site-page-source page)
+           #:source (site-page-source page)
            #:metadata (site-page-metadata page)))
        pages))

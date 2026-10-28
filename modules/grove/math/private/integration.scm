@@ -7,7 +7,6 @@
   #:use-module (grove math private declaration)
   #:use-module (grove math rule)
   #:use-module (grove math diagnostic)
-  #:use-module (grove math term)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
   #:export (math-polynomial-rules polynomial-calculus-diagnostics))

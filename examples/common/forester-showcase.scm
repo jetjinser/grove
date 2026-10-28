@@ -14,7 +14,6 @@
              (forester style html)
              (grove input scribble)
              (grove output)
-             (grove project)
              (grove project site)
              (grove render html presentation)
              (grove render html routes)
@@ -33,7 +32,7 @@
              (make-html-style
                #:stylesheets
                (list (make-artifact "style.css" stylesheet
-                                    (list stylesheet-path))))))
+                                    #:sources (list stylesheet-path))))))
          (routes (make-html-routes #:home-page home-page))
          (settings (make-site-settings #:site-url site-url))
          (project

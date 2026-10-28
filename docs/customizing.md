@@ -35,6 +35,9 @@ preserving their relative paths and optionally adding `#:prefix`. It follows
 are skipped; hidden files and symlinks to regular files are included. Grove
 tracks each copied file as both a project input and an artifact dependency, so
 changed files are reread and removed files disappear from the output set.
+Use it when directory membership should be discovered during each build. Use
+an asset pipeline when a tool step has a declared input list and needs Grove to
+provide materialized paths to its procedure.
 
 HTML routes distinguish output paths from URLs. `#:page-path` and
 `#:index-path` choose artifact paths relative to the project's output
@@ -131,26 +134,32 @@ the project. Grove tracks declared files and loaded Scheme code. Include tool
 identity in the pipeline's `#:version` when Grove cannot observe it, as the
 Graphviz adapter does.
 
+Each value in `#:pipelines` is an independent file-to-artifact generator. A
+pipeline can perform several tool steps inside its procedure, but its outputs
+are not inputs to sibling pipelines. If one generated result feeds another,
+compose those steps in one pipeline procedure.
+
 ### Cache identity
 
 Plain renderer procedures run on every build. For artifact reuse, wrap one with
-`make-cached-renderer`, declare external files with `#:inputs`, and describe
-untracked output-affecting state with `#:configuration`. A pipeline may omit
-`#:inputs` when it reads no project files; add `#:version` when toolchain or
-environment state can change its output. See [site outputs](site-outputs.md)
+`make-cached-renderer`, declare external files with `#:dependencies`, and
+describe untracked output-affecting state with `#:configuration`. An asset
+pipeline may omit `#:inputs` when it reads no project files; add `#:version`
+when toolchain or environment state can change its output. See
+[site outputs](site-outputs.md)
 for the cache identity and dependency rules. Pipeline reuse assumes that the
 same project code, declared and materialized paths, input bytes, and version
 produce the same bytes. Grove verifies stored-byte integrity but cannot verify
 external tool determinism.
 
-Renderer `#:inputs` make those files part of the project's change set and
-invalidate cached renderer output when they change. If the renderer has
+Renderer `#:dependencies` make those files part of the project's change set
+and invalidate cached renderer output when they change. If the renderer has
 `#:render-changed`, its callback receives those changed paths for selective
 work. To select outputs safely, also pass each artifact's actual dependencies
-as the optional source list to `make-artifact` or `make-byte-artifact`; Grove
+with `#:sources` to `make-artifact` or `make-byte-artifact`; Grove
 uses these paths to identify dirty outputs for the callback. Without
 `#:render-changed`, Grove reruns the renderer as a whole when an output is dirty.
-Omitting an artifact's source list means its dependencies are unknown, so it
+Omitting `#:sources` means an artifact's dependencies are unknown, so it
 cannot be selectively reused after project changes; an explicit empty list
 declares that it depends on no files.
 
@@ -216,7 +225,7 @@ project-specific fields remain available through the same interface.
 (define rules
   (make-render-rules
     (list (cons 'image
-                (lambda (context element children next)
+                (lambda (context element payload next)
                   (if (string=? (content-element-property element 'source)
                                 "forest.jpg")
                       (picture-from-variants ...)

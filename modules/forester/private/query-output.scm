@@ -41,7 +41,7 @@ reports whether the page declares that anchor; unknown fragments warn."
                 (element
                   (make-content-element
                     kind (map prepare (ir:content-element-children/raw content))
-                    (ir:content-element-source/raw content)
+                    #:source (ir:content-element-source/raw content)
                     #:properties (ir:content-element-properties/raw content)
                     #:style (content-element-style content)
                     #:location (ir:content-element-location/raw content)
@@ -59,4 +59,4 @@ reports whether the page declares that anchor; unknown fragments warn."
       source result)))
   (make-content-document
     (map prepare (ir:content-document-children/raw result))
-    (ir:content-document-source/raw result)))
+    #:source (ir:content-document-source/raw result)))
