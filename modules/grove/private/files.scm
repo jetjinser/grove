@@ -2,17 +2,33 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove private files)
+  #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-13)
   #:export (file-signature
             filesystem-path-string?
             regular-file?
             ensure-directory
-            call-with-staging-file!))
+            call-with-staging-file!
+            include-text))
 
 (define-inlinable (filesystem-path-string? value)
   (and (string? value)
        (not (string-null? value))
        (not (string-index value #\nul))))
+
+(define-syntax include-text
+  (lambda (stx)
+    (syntax-case stx ()
+      [(_ filename)
+       (let* ([path   (syntax->datum #'filename)]
+              [source (search-path %load-path path)])
+         (unless source
+           (syntax-violation 'include-text "text file not found in load path"
+                             stx #'filename))
+         (datum->syntax stx
+           `(quote ,(call-with-include-port
+                      (datum->syntax #'filename (canonicalize-path source))
+                      get-string-all))))])))
 
 (define (file-signature path)
   "Identify PATH's target file, including same-size edits and replacements.

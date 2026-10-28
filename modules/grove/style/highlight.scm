@@ -3,7 +3,7 @@
 
 (define-module (grove style highlight)
   #:use-module (grove output)
-  #:use-module (grove private string-fun)
+  #:use-module (grove private files)
   #:use-module (grove style html)
   #:export (default-highlight-style))
 

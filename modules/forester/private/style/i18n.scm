@@ -4,7 +4,7 @@
 
 (define-module (forester private style i18n)
   #:use-module (grove output)
-  #:use-module (grove private string-fun)
+  #:use-module (grove private files)
   #:use-module (grove style)
   #:use-module (grove style html)
   #:use-module (ice-9 optargs)
