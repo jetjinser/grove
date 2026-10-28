@@ -63,8 +63,8 @@ ID selects the tree rendered at `index.html`; Grove does not guess which page
 should represent the site. `make-site-project` remains available when a project
 needs to assemble these pieces itself. A named command vocabulary is optional:
 use `@use-commands` to refer to a reusable manifest. Modules already on Guile's
-load path need no setup; preload local `.plant` modules discovered in a
-directory with `make-scribble-module-setup`. Use
+load path need no setup; preload non-hidden local `.plant` modules discovered
+in a directory with `make-scribble-module-setup`. Use
 `make-scribble-module-session` when module articles also appear as pages and
 their preparation results should be reused for display. Direct
 `@use-modules` imports of available modules also need no preparation.

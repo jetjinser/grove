@@ -533,6 +533,7 @@
 (let* ((root (mkdtemp "/tmp/grove-scribble-modules-XXXXXX"))
        (module-directory (string-append root "/modules"))
        (module-path (string-append module-directory "/preloaded.plant"))
+       (hidden-module-path (string-append module-directory "/.draft.plant"))
        (read-document (make-scribble-document-reader)))
   (dynamic-wind
     (lambda ()
@@ -541,7 +542,9 @@
         (lambda (port)
           (display
             "@(define-module (tests unit scribble preloaded-module) #:use-module (forester commands) #:export (preloaded-label))\n@(define preloaded-label \"preloaded module\")"
-            port))))
+            port)))
+      (call-with-output-file hidden-module-path
+        (lambda (port) (display "@" port))))
     (lambda ()
       (let* ((directory (string-copy module-directory))
              (setup (make-scribble-module-setup directory)))

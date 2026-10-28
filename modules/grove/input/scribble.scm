@@ -18,15 +18,16 @@
             make-scribble-document-reader))
 
 (define (scribble-source-file? filename)
-  (string-suffix? ".plant" filename))
+  (and (not (string-prefix? "." filename))
+       (string-suffix? ".plant" filename)))
 
 (define* (make-scribble-module-setup module-directory
                                      #:key
                                      (module-filter scribble-source-file?))
   "Return a project preparation procedure that loads Scribble module sources.
 MODULE-DIRECTORY must be non-empty and is copied at construction. MODULE-FILTER
-receives each regular file's basename and defaults to `.plant` files. The
-procedure returns loaded paths so Grove can track them as build inputs."
+receives each regular file's basename and defaults to non-hidden `.plant` files.
+The procedure returns loaded paths so Grove can track them as build inputs."
   (unless (and (non-empty-string? module-directory)
                (procedure? module-filter))
     (error "Scribble module setup requires a directory and filter"
