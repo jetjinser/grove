@@ -121,6 +121,19 @@
 (if (not ssh-supported?)
     (test-assert "SSH tests skipped: guile-ssh is unavailable" #t)
     (begin
+      (test-error "SSH server rejects out-of-range ports" #t
+        ((ssh-proc 'serve-ssh) #:port 65536 #:handler echo-handler))
+      (test-error "SSH server rejects an empty address" #t
+        ((ssh-proc 'serve-ssh) #:address "" #:handler echo-handler))
+      (test-error "SSH server rejects malformed authorized keys" #t
+        ((ssh-proc 'serve-ssh) #:authorized-keys '(42) #:handler echo-handler))
+      (test-error "SSH server enforces the CLI worker limit" #t
+        ((ssh-proc 'serve-ssh) #:workers 65 #:handler echo-handler))
+      (test-error "SSH server rejects non-positive memory limits" #t
+        ((ssh-proc 'serve-ssh) #:memory-limit 0 #:handler echo-handler))
+      (test-error "SSH server requires an output port" #t
+        ((ssh-proc 'serve-ssh) #:output #f #:handler echo-handler))
+
       ;; Authorized keys
       (test-equal "authorized keys parse into language-tagged blobs"
         '("AAAAaaa" "BBBBbbb")

@@ -285,7 +285,7 @@ host; SESSION-TIMEOUT bounds a session and is enforced by a watchdog process."
 
 (define* (serve-ssh #:key
                     (address "127.0.0.1")
-                    (port 0)
+                    (port 2222)
                     host-key
                     (authorized-keys '())
                     (banner "Grove")
@@ -299,7 +299,8 @@ host; SESSION-TIMEOUT bounds a session and is enforced by a watchdog process."
   "Serve HANDLER over SSH until interrupted.
 
 HANDLER receives the session channel as both input and output. HOST-KEY is an
-RSA host key file; AUTHORIZED-KEYS is a list from read-authorized-keys.
+RSA host key file; AUTHORIZED-KEYS is a list from read-authorized-keys. The
+default listener is 127.0.0.1:2222; PORT must be from 1 to 65535.
 
 WORKERS is the number of session-handling processes, and thus the concurrency
 limit. LOGIN-TIMEOUT drops clients that do not authenticate in time;
@@ -307,14 +308,29 @@ SESSION-TIMEOUT caps a browsing session (0 disables it); MEMORY-LIMIT, in bytes,
 caps each worker's address space."
   (unless (procedure? handler)
     (error "SSH server requires a session handler" handler))
+  (unless (non-empty-string? address)
+    (error "SSH server address must be a non-empty string" address))
+  (unless (and (exact-integer? port) (<= 1 port 65535))
+    (error "SSH server port must be an integer from 1 to 65535" port))
+  (unless (and (list? authorized-keys)
+               (every non-empty-string? authorized-keys))
+    (error "SSH authorized keys must be a list of non-empty key blobs"
+           authorized-keys))
+  (unless (non-empty-string? banner)
+    (error "SSH server banner must be a non-empty string" banner))
   (unless (and (string? host-key) (file-exists? host-key))
     (error "SSH server requires an existing host key" host-key))
   (unless (and (exact-integer? login-timeout) (>= login-timeout 0))
     (error "SSH login timeout must be a non-negative integer" login-timeout))
   (unless (and (exact-integer? session-timeout) (>= session-timeout 0))
     (error "SSH session timeout must be a non-negative integer" session-timeout))
-  (unless (and (exact-integer? workers) (>= workers 1))
-    (error "SSH worker count must be a positive integer" workers))
+  (unless (and (exact-integer? workers) (<= 1 workers 64))
+    (error "SSH worker count must be an integer from 1 to 64" workers))
+  (unless (or (not memory-limit)
+              (and (exact-integer? memory-limit) (> memory-limit 0)))
+    (error "SSH memory limit must be a positive integer or #f" memory-limit))
+  (unless (output-port? output)
+    (error "SSH server output must be an output port" output))
   (let ((server (make-server #:bindaddr address
                              #:bindport port
                              #:rsakey host-key
@@ -331,7 +347,8 @@ caps each worker's address space."
         (primitive-exit status))
       (sigaction SIGINT (lambda (_signal) (terminate 130)))
       (sigaction SIGTERM (lambda (_signal) (terminate 143)))
-      (format output "grove ssh: serving with ~a worker(s)~%" workers)
+      (format output "grove ssh: serving on ~a:~a with ~a worker(s)~%"
+              address port workers)
       (dynamic-wind
         (lambda () #t)
         (lambda ()
