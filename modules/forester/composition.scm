@@ -22,10 +22,10 @@
             transclusion-target-tree-id
             composition?
             make-composition
-            target-ids
-            subtree-definitions
-            outgoing-transclusions
-            incoming-transclusions))
+            composition-target-ids
+            composition-subtree-definitions
+            composition-outgoing-transclusions
+            composition-incoming-transclusions))
 
 (define-syntax all-of
   (syntax-rules ()
@@ -161,7 +161,7 @@
                        transclusions-by-source
                        transclusions-by-target)))
 
-(define (target-ids composition source-tree-id)
+(define (composition-target-ids composition source-tree-id)
   ;;     Every tree reachable in one hop: defined subtrees first, then
   ;;     transclusion targets, matching the relation's row order.
   (append
@@ -172,15 +172,15 @@
          (hash-ref (composition-transclusions-by-source composition)
                    source-tree-id '()))))
 
-(define (subtree-definitions composition)
+(define (composition-subtree-definitions composition)
   (snapshot-data (composition-definitions composition)))
 
-(define (outgoing-transclusions composition source-tree-id)
+(define (composition-outgoing-transclusions composition source-tree-id)
   (snapshot-data
     (hash-ref (composition-transclusions-by-source composition)
               source-tree-id '())))
 
-(define (incoming-transclusions composition target-tree-id)
+(define (composition-incoming-transclusions composition target-tree-id)
   (snapshot-data
     (hash-ref (composition-transclusions-by-target composition)
               target-tree-id '())))

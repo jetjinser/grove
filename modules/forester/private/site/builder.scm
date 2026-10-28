@@ -96,7 +96,7 @@ walk itself."
                (lambda (definition)
                  (link! (composition:subtree-definition-parent definition)
                         (composition:subtree-definition-child definition)))
-               (composition:subtree-definitions composition))
+               (composition:composition-subtree-definitions composition))
              table))
          (dom (make-hash-table)))
     (define (dom-of id)
@@ -397,7 +397,8 @@ anchors."
               pages))
          (_ (validate-tree-cycles! pages
               (lambda (page)
-                (composition:target-ids composition (site-page-id page))))))
+                (composition:composition-target-ids
+                  composition (site-page-id page))))))
     ;;     Force every column index while still single-threaded: page
     ;;     rendering reads them in parallel and a concurrent force would
     ;;     race inside the promise.

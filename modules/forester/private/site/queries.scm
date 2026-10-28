@@ -149,7 +149,8 @@
     resolved-pages
     (lambda (page)
       (append
-        (composition:target-ids (composition forest) (site-page-id page))
+        (composition:composition-target-ids
+          (composition forest) (site-page-id page))
         (map (lambda (element) (ir:content-element-property/raw element 'target))
              (tree-pass:walk-content (tree-pass:owned-content (site-page-document page))
                            (tree-pass:element-kind? 'query-transclude)))))))
@@ -323,7 +324,7 @@ those trees' frontmatter."
   (map (lambda (definition)
        (list (composition:subtree-definition-parent definition)
                (composition:subtree-definition-child definition)))
-       (composition:subtree-definitions
+       (composition:composition-subtree-definitions
          (composition forest))))
 
 (define (links forest id)
@@ -359,12 +360,12 @@ those trees' frontmatter."
 
 (define (outgoing-transclusions forest id)
   (require-page forest id)
-  (composition:outgoing-transclusions
+  (composition:composition-outgoing-transclusions
     (composition forest) id))
 
 (define (incoming-transclusions forest id)
   (require-page forest id)
-  (composition:incoming-transclusions
+  (composition:composition-incoming-transclusions
     (composition forest) id))
 
 (define (transcluding-pages forest id)
@@ -396,7 +397,7 @@ those trees' frontmatter."
                                   (equal? (composition:subtree-definition-child
                                             definition)
                                           id))
-                                (composition:subtree-definitions
+                                (composition:composition-subtree-definitions
                                   (composition forest)))))
                   equal?))))
         (filter (lambda (page)
@@ -497,7 +498,7 @@ pages that only exist inside another article's DOM."
               (hash-set! parent-of
                 (composition:subtree-definition-child definition)
                 (composition:subtree-definition-parent definition))))
-          (composition:subtree-definitions (composition forest)))
+          (composition:composition-subtree-definitions (composition forest)))
         (for-each
           (lambda (page)
             (for-each
@@ -508,7 +509,7 @@ pages that only exist inside another article's DOM."
                   (hash-set! parent-of
                     (composition:transclusion-target-tree-id transclusion)
                     (composition:transclusion-source-id transclusion))))
-              (composition:outgoing-transclusions
+              (composition:composition-outgoing-transclusions
                 (composition forest) (site-page-id page))))
           (pages forest))
         (let ((hosts (make-hash-table)))
@@ -592,14 +593,14 @@ pages that only exist inside another article's DOM."
                     (loop
                       (append
                        (map composition:transclusion-target-tree-id
-                            (composition:outgoing-transclusions
+                            (composition:composition-outgoing-transclusions
                               (composition forest) id))
                        (map composition:subtree-definition-child
                             (filter (lambda (definition)
                                       (equal? (composition:subtree-definition-parent
                                                 definition)
                                             id))
-                                    (composition:subtree-definitions
+                                    (composition:composition-subtree-definitions
                                       (composition forest))))
                        (cdr pending))
                       (cons id seen))))))))))

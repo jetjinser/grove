@@ -104,7 +104,9 @@ after the built-in date items:
 
 `(forester composition)` accepts typed `make-subtree-definition` and
 `make-transclusion` records through `make-composition`. Query via
-`subtree-definitions`, `outgoing-transclusions`, or `incoming-transclusions`.
+`composition-subtree-definitions`, `composition-outgoing-transclusions`, or
+`composition-incoming-transclusions`. These names distinguish composition
+queries from the corresponding Forest queries in `(forester site)`.
 Occurrence order is preserved; duplicate definitions and duplicate occurrence
 IDs within a source tree are rejected. Tuple layout and relation implementation
 remain private, so other providers can supply the same semantic facts. These

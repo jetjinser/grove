@@ -94,26 +94,26 @@
 
 (test-equal "composition queries targets across its relation kinds"
   '("exercise" "exercise" "exercise")
-  (target-ids composition "lecture"))
+  (composition-target-ids composition "lecture"))
 
 (test-equal "composition API returns typed subtree definitions"
   '(("lecture" "exercise"))
   (map (lambda (definition)
          (list (subtree-definition-parent definition)
                (subtree-definition-child definition)))
-       (subtree-definitions composition)))
+       (composition-subtree-definitions composition)))
 
 (test-equal "outgoing composition API returns transclusion occurrences"
   '("embed-1" "embed-2")
   (map transclusion-source-id
-       (outgoing-transclusions composition "lecture")))
+       (composition-outgoing-transclusions composition "lecture")))
 
 (test-equal "incoming transclusion queries retain each occurrence"
   '(("lecture" "embed-1") ("lecture" "embed-2"))
   (map (lambda (transclusion)
          (list (transclusion-source-tree-id transclusion)
                (transclusion-source-id transclusion)))
-       (incoming-transclusions composition "exercise")))
+       (composition-incoming-transclusions composition "exercise")))
 
 (let* ((parent (string-copy "parent"))
        (child (string-copy "child"))
@@ -154,18 +154,19 @@
     (map (lambda (item)
            (list (subtree-definition-parent item)
                  (subtree-definition-child item)))
-         (subtree-definitions snapshot)))
-  (let ((definitions-copy (subtree-definitions snapshot)))
+         (composition-subtree-definitions snapshot)))
+  (let ((definitions-copy (composition-subtree-definitions snapshot)))
     (set-car! definitions-copy (make-subtree-definition "changed" "page"))
     (test-equal "composition accessors return independent list structure"
       '("child")
-      (map subtree-definition-child (subtree-definitions snapshot))))
-  (let ((outgoing (outgoing-transclusions snapshot "parent")))
+      (map subtree-definition-child
+           (composition-subtree-definitions snapshot))))
+  (let ((outgoing (composition-outgoing-transclusions snapshot "parent")))
     (set-car! outgoing (make-transclusion "changed" "other" "page"))
     (test-equal "transclusion queries return independent list structure"
       '("embed")
       (map transclusion-source-id
-           (outgoing-transclusions snapshot "parent")))))
+           (composition-outgoing-transclusions snapshot "parent")))))
 
 (test-error "subtree definition API rejects empty tree IDs" #t
   (make-subtree-definition "parent" ""))
