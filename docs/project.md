@@ -108,10 +108,9 @@ or otherwise needs to compose the complete site lifecycle.
 `make-project` connects source collection, preparation, reading, analysis,
 and rendering. `make-site-project` assembles page inputs into a site before
 calling its analyzer. All renderers receive the same model and return artifacts.
-Use `build-project` when a Scheme host only needs the resulting artifact list;
-use `build-project/report` when it also needs source changes, affected
-artifacts, or cache status. `check-project` returns the same report shape but
-does not read or write published output state.
+Use `build-project` to publish and return artifacts, `check-project` to
+validate and return artifacts without publishing, and `build-project/report`
+when the host also needs source changes, affected artifacts, or cache status.
 
 `collect-project-sources` runs only the collection stage and returns its
 validated, ordered path list. It is useful for inspecting a custom collector or
@@ -230,8 +229,10 @@ peak resident set (VmHWM). Serve passes the flag to its workers, so the
 lines land on the serve terminal.
 
 `check-project` fully evaluates, analyzes, renders, and validates without
-accessing published output state. It does not sandbox Scheme effects or check
-browser layout. Its report treats all sources as added and artifacts as affected.
+accessing published output state, returning the complete validated artifact
+list. It does not sandbox Scheme effects or check browser layout. Use
+`build-project/report` for source deltas and affected-artifact information;
+checks have no prior build baseline to compare against.
 CLI exit codes are 0 for success, 1 for execution failure, and 2 for invalid
 arguments. Summaries use stdout; diagnostics use stderr.
 

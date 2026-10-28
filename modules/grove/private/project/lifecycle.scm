@@ -322,10 +322,12 @@ watch and a manual build over one project must not run concurrently."
     (lambda () (execute-project project #t progress))))
 
 (define* (check-project project #:key (progress (lambda (stage path) #t)))
-  "Read, analyze, render, and validate PROJECT without accessing output state."
+  "Read, analyze, render, and validate PROJECT without accessing output state.
+Return its complete validated artifact list; use BUILD-PROJECT/REPORT when
+source changes or cache status are needed."
   (require-project project)
   (require-progress progress)
-  (execute-project project #f progress))
+  (build-report-artifacts (execute-project project #f progress)))
 
 (define* (build-project project #:key (progress (lambda (stage path) #t)))
   (build-report-artifacts (build-project/report project #:progress progress)))

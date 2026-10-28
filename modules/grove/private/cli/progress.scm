@@ -85,18 +85,20 @@ whole process lifetime, no sampling needed."
   (newline port)
   (force-output port))
 
-(define* (print-cli-summary report elapsed #:key output (checked? #f))
-  (print-cli-status "Finished"
-    (if checked?
-        (format #f "~d artifact~:p checked in ~a"
-                (length (build-report-artifacts report))
-                (format-duration elapsed))
-        (format #f "~d artifact~:p (~d affected) in ~a"
-                (length (build-report-artifacts report))
-                (length (build-report-affected-artifacts report))
-                (format-duration elapsed))))
+(define* (print-cli-summary result elapsed #:key output (checked? #f))
+  (let ((artifacts
+          (if checked? result (build-report-artifacts result))))
+    (print-cli-status "Finished"
+      (if checked?
+          (format #f "~d artifact~:p checked in ~a"
+                  (length artifacts)
+                  (format-duration elapsed))
+          (format #f "~d artifact~:p (~d affected) in ~a"
+                  (length artifacts)
+                  (length (build-report-affected-artifacts result))
+                  (format-duration elapsed)))))
   (when output (print-cli-status "Output" output))
-  (when (build-report-render-cache-hit? report)
+  (when (and (not checked?) (build-report-render-cache-hit? result))
     (print-cli-status "Cached" "Renderer cache hit.")))
 
 (define (progress-bar completed total width)

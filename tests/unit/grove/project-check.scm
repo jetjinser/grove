@@ -56,7 +56,7 @@
     (call-with-output-file source (lambda (port) (display "source" port))))
   (lambda ()
     (test-assert "check returns the complete validated artifact set"
-      (equal? artifacts (build-report-artifacts (check-project project))))
+      (equal? artifacts (check-project project)))
     (test-assert "check does not create an output directory"
       (not (file-exists? output)))
     (build-project project)
@@ -97,7 +97,7 @@
       (lambda (port) (display "invalid state" port)))
     (set! artifacts '())
     (test-assert "check does not read malformed output cache state"
-      (null? (build-report-artifacts (check-project project))))
+      (null? (check-project project)))
     (let* ((pipeline-name (format #f "check-pipeline-~a" (getpid)))
            (pipeline
             (make-asset-pipeline
