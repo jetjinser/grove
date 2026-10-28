@@ -6,7 +6,7 @@
   #:use-module (grove math term)
   #:use-module (grove math rewrite)
   #:use-module (grove math types)
-  #:use-module (grove math pass)
+  #:use-module (grove math private pass)
   #:use-module (grove math report)
   #:use-module (grove math diagnostic)
   #:use-module (grove math source)
