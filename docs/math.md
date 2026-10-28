@@ -196,6 +196,8 @@ Derivation and step records snapshot their term trees, paths, assumptions, and
 ordered collections. Accessors return independent copies, so changing a
 displayed trace cannot alter a certificate before it is checked. Opaque source
 provenance values remain shared according to their own contract.
+Constructing a derivation records proposed evidence but does not certify it;
+use `math-verify-derivation` before trusting a caller-supplied chain.
 
 Semantic values follow the same data rule: construction snapshots the term,
 presentation properties, declarations, and domain requirements; their

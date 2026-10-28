@@ -23,6 +23,8 @@
   (path derivation-step-path/raw))
 
 (define (make-math-derivation-step from to rule path)
+  "Construct a proposed transition. Construction records the supplied data;
+it does not establish that the rule proves FROM to TO at PATH."
   (%make-math-derivation-step (snapshot-data from) (snapshot-data to)
                               rule (snapshot-data path)))
 
@@ -60,6 +62,9 @@
   (snapshot-data (derivation-requirements/raw derivation)))
 
 (define* (make-math-derivation terms steps assumptions #:key (sources '()) (requirements '()))
+  "Construct a derivation certificate without asserting that it is valid.
+The verifier checks the term chain and each proposed step; REQUIREMENTS must
+be mathematical terms."
   (unless (and (list? requirements) (every math-term? requirements))
     (error "expected mathematical domain requirements" requirements))
   (%make-math-derivation (snapshot-data terms)
