@@ -291,14 +291,24 @@
       ;;     rebuilds. The worker's load paths resolve into trees whose
       ;;     stamps differ between resolutions; each flip used to chain
       ;;     another full rebuild with no project edit behind it.
-      (let ((baseline-churn (rebuild-count)))
-        (for-each touch-rewrite
-                  (map (lambda (name)
-                         (string-append (dirname sources) "/build/grove/" name))
-                       '("build.go" "cli.go" "collect.go")))
-        (usleep 3000000)
-        (test-assert "rewriting grove's compiled tree does not rebuild"
-          (= baseline-churn (rebuild-count))))
+      (let* ((compiled-paths
+               (filter file-exists?
+                 (map (lambda (name)
+                        (string-append (dirname sources) "/build/grove/" name))
+                      '("build.go" "cli.go" "collect.go"))))
+             (baseline-churn (rebuild-count)))
+        (if (null? compiled-paths)
+            (begin
+              ;; `blue check` is valid on a clean tree, before any generated
+              ;; Guile modules exist. A warm-tree run exercises file churn.
+              (test-skip 1)
+              (test-assert "rewriting existing compiled modules does not rebuild"
+                #f))
+            (begin
+              (for-each touch-rewrite compiled-paths)
+              (usleep 3000000)
+              (test-assert "rewriting existing compiled modules does not rebuild"
+                (= baseline-churn (rebuild-count))))))
       (write-file (string-append external "/theme.txt") "css-3")
       (test-assert "the watcher still answers real edits" (await-text "css-3"))
       (let ((settled (rebuild-count)))
