@@ -19,7 +19,6 @@
             image-set-source
             image-set-variants
             image-set-fallback
-            define-image-sets
             image-set-rule))
 
 ;; An image set is data: a source name, alternative encodings, and a fallback
@@ -74,17 +73,6 @@ SOURCE selects the set; FALLBACK is used by the final @code{<img>} element."
   (%make-image-set (snapshot-data source)
                    (snapshot-data variants)
                    (snapshot-data fallback)))
-
-(define-syntax define-image-sets
-  (syntax-rules ()
-    ((_ name (image-set source (variant type url) ... (fallback fallback-url)) ...)
-     (define name
-       (list
-         (make-image-set source
-                         #:variants
-                         (list (make-image-variant type url) ...)
-                         #:fallback fallback-url)
-         ...)))))
 
 (define (image-set-rule sets)
   (unless (and (list? sets) (every image-set? sets))

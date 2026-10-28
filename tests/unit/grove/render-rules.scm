@@ -417,11 +417,13 @@
 (test-error "empty content transform composition still validates its input" #t
   ((compose-content-transforms) 'not-a-document))
 
-(define-image-sets image-sets
-  (image-set "forest.jpg"
-    (variant "image/avif" "/images/forest.avif")
-    (variant "image/jxl" "/images/forest.jxl")
-    (fallback "/images/forest.jpg")))
+(define image-sets
+  (list
+    (make-image-set "forest.jpg"
+      #:variants
+      (list (make-image-variant "image/avif" "/images/forest.avif")
+            (make-image-variant "image/jxl" "/images/forest.jxl"))
+      #:fallback "/images/forest.jpg")))
 
 (test-assert "image variants snapshot constructor strings and accessors"
   (let* ((type (string-copy "image/avif"))
@@ -458,7 +460,7 @@
          (string=? (image-variant-type (car (image-set-variants image-set)))
                    "image/avif"))))
 
-(test-assert "image-set macro stores sets as values with their own sources"
+(test-assert "image-set constructors store source-specific variant values"
   (and (list? image-sets)
        (every image-set? image-sets)
        (string=? (image-set-source (car image-sets)) "forest.jpg")))

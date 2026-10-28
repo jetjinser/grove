@@ -129,28 +129,29 @@ separate means a transform can be tested without HTML and a rule can be tested
 without rewriting the document.  Composition is ordinary function composition
 with the identity transform as its unit.
 
-## Image-set DSL
+## Image-set data
 
 The image rule can be expressed as data:
 
 ```scheme
-(define-image-sets image-sets
-  (image-set "forest.jpg"
-    (variant "image/avif" "/images/forest.avif")
-    (variant "image/jxl" "/images/forest.jxl")
-    (fallback "/images/forest.jpg")))
+(define image-sets
+  (list
+    (make-image-set "forest.jpg"
+      #:variants
+      (list (make-image-variant "image/avif" "/images/forest.avif")
+            (make-image-variant "image/jxl" "/images/forest.jxl"))
+      #:fallback "/images/forest.jpg")))
 
 (define rules
   (make-render-rules
     (list (cons 'image (image-set-rule image-sets)))))
 ```
 
-The macro expands to a list of `make-image-set` values; each set carries its
-own source key, variants, and required fallback URL. `image-set-rule` accepts
-that list and rejects duplicate source keys. It does not run encoders: an asset
-pipeline produces the files, and the rule only chooses the URLs and fallback.
-These configuration values snapshot their strings and list structure when
-built.
+Each set carries its own source key, variants, and required fallback URL.
+`image-set-rule` accepts the list and rejects duplicate source keys. It does not
+run encoders: an asset pipeline produces the files, and the rule only chooses
+the URLs and fallback. These values snapshot their strings and list structure
+when built.
 
 ## Text and gemtext
 
