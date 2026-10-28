@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove render html presentation)
+  #:use-module (grove private alist)
   #:use-module (grove style html)
   #:use-module (grove style html element)
   #:use-module (grove render rules)
@@ -68,12 +69,6 @@
        (or (symbol? value) (string? value) (number? value)
            (char? value) (boolean? value))))
 
-(define (unique-attribute-names? attributes)
-  (let loop ((rest attributes) (seen '()))
-    (or (null? rest)
-        (and (not (memq (caar rest) seen))
-             (loop (cdr rest) (cons (caar rest) seen))))))
-
 (define (valid-sxml-attributes? attributes)
   (and (list? attributes)
        (every (lambda (attribute)
@@ -82,7 +77,7 @@
                      (symbol? (car attribute))
                      (sxml-atom? (cadr attribute))))
               attributes)
-       (unique-attribute-names? attributes)))
+       (unique-symbol-key-alist? attributes)))
 
 (define (static-sxml-node? node)
   (cond
