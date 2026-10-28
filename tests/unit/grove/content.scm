@@ -341,6 +341,9 @@
   (make-content-element 'paragraph '() #:source ""))
 (test-error "content element source is an explicit keyword" #t
   (make-content-element 'paragraph '() "page.plant"))
+(test-error "content element properties reject duplicate keys" #t
+  (make-content-element 'paragraph '()
+    #:properties '((value . "first") (value . "second"))))
 (test-error "content elements reject non-content children" #t
   (make-content-element 'paragraph '(42)))
 (test-error "content documents reject non-content children" #t

@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove ir)
+  #:use-module (grove private alist)
   #:use-module (grove private files)
   #:use-module (grove private snapshot)
   #:use-module (grove private string-fun)
@@ -364,16 +365,10 @@ values."
     normalized))
 
 (define (valid-properties? properties)
-  (and (list? properties)
+  (and (unique-symbol-key-alist? properties)
        (every (lambda (entry)
-                (and (pair? entry)
-                     (symbol? (car entry))
-                     (not (eq? (car entry) 'source-location))))
-              properties)
-       (let loop ((entries properties) (keys '()))
-         (or (null? entries)
-             (and (not (memq (caar entries) keys))
-                  (loop (cdr entries) (cons (caar entries) keys)))))))
+                (not (eq? (car entry) 'source-location)))
+              properties)))
 
 (define* (make-content-document children #:key (source #f))
   (unless (list? children)
