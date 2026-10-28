@@ -36,8 +36,11 @@
   (unless (non-empty-string? key)
     (error "content cache key must be a non-empty string" key))
   (private:content-fingerprint
-    (string-append "grove-content-cache-v1\0"
-                   (content-cache-namespace cache) "\0" key)))
+    (string-append "grove-content-cache-v2\0"
+                   (number->string
+                     (string-length (content-cache-namespace cache))) ":"
+                   (content-cache-namespace cache)
+                   (number->string (string-length key)) ":" key)))
 
 (define (read-cache-index identity)
   (catch #t

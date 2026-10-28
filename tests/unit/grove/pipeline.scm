@@ -226,6 +226,13 @@
   (test-equal "content cache namespaces isolate keys" #f
     (content-cache-ref (make-content-cache "other-pipeline") "font-key")))
 
+(let ((left (make-content-cache (string-append "a" (string #\nul) "b")))
+      (right (make-content-cache "a")))
+  (content-cache-store! left "c" (string->utf8 "left"))
+  (test-equal "content cache identities distinguish embedded NUL boundaries"
+    #f
+    (content-cache-ref right (string-append "b" (string #\nul) "c"))))
+
 (let* ((namespace (string-copy "snapshot-namespace"))
        (cache (make-content-cache namespace))
        (bytes (string->utf8 "stable bytes")))
