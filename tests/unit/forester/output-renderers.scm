@@ -119,6 +119,8 @@
   (make-site-settings #:site-url "https://example.org/?preview=1"))
 (test-error "shared site settings reject a deployment path" #t
   (make-site-settings #:site-url "https://example.org/notes/"))
+(test-error "shared site settings reject origin credentials" #t
+  (make-site-settings #:site-url "https://writer:secret@example.org"))
 (test-error "RSS renderer rejects a site URL with a query" #t
   (make-rss-renderer #:site-url "https://example.org/?preview=1"))
 (test-error "RSS renderer rejects a deployment path in its origin" #t

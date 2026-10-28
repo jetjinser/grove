@@ -38,7 +38,7 @@ HTML, RSS, and sitemap so their links agree. Set the absolute HTTP(S) origin
 with `#:site-url` (scheme and authority, optionally followed by `/`). Put a
 deployment path such as `/notes/` in the shared routes' `#:url-prefix`; this
 keeps HTML links and absolute RSS, sitemap, and canonical URLs aligned. The
-origin cannot include a query or fragment.
+origin cannot include credentials, a query, or a fragment.
 
 Route callbacks must be deterministic for a fixed project state: the same page
 ID must resolve to the same artifact path. Renderers may evaluate them more

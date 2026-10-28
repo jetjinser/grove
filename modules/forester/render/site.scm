@@ -28,8 +28,9 @@
 (define* (make-site-settings #:key site-url (default-locale #f))
   "Shared site values for the HTML, sitemap, and RSS renderers.
 
-SITE-URL, when supplied, is an absolute HTTP(S) origin with no non-root path,
-query, or fragment. Put any deployment path prefix in the shared HTML routes.
+SITE-URL, when supplied, is an absolute HTTP(S) origin with no credentials,
+non-root path, query, or fragment. Put any deployment path prefix in the shared
+HTML routes.
 DEFAULT-LOCALE is the language used for x-default alternates and the feed
 language. A settings value may omit SITE-URL, but sitemap and RSS renderers
 still require an origin."

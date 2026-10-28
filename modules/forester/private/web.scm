@@ -22,6 +22,7 @@
                   (member (string-downcase (symbol->string scheme))
                           '("http" "https"))
                   (and (string? host) (not (string-null? host)))
+                  (not (uri-userinfo uri))
                   (or (not path) (string-null? path) (string=? path "/"))
                   (not (uri-query uri))
                   (not (uri-fragment uri)))))
