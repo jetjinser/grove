@@ -146,12 +146,13 @@ external tool determinism.
 Renderer `#:inputs` make those files part of the project's change set and
 invalidate cached renderer output when they change. If the renderer has
 `#:render-changed`, its callback receives those changed paths for selective
-work. For reuse at artifact granularity, also pass each output's actual
-dependencies as the optional source list to `make-artifact` or
-`make-byte-artifact`. These per-artifact paths let Grove identify which outputs
-are dirty. Omitting the list means dependencies are unknown, so that artifact
-cannot be safely reused after project changes; an explicit empty list declares
-that it depends on no files.
+work. To select outputs safely, also pass each artifact's actual dependencies
+as the optional source list to `make-artifact` or `make-byte-artifact`; Grove
+uses these paths to identify dirty outputs for the callback. Without
+`#:render-changed`, Grove reruns the renderer as a whole when an output is dirty.
+Omitting an artifact's source list means its dependencies are unknown, so it
+cannot be selectively reused after project changes; an explicit empty list
+declares that it depends on no files.
 
 ## Three renderer entry points
 

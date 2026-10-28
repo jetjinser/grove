@@ -60,14 +60,14 @@
     (make-project #:collect-sources (lambda () '("same" "same"))
                   #:read-source (lambda (_) #f)
                   #:output-directory
-                  (string-append project-root "/duplicate-source-output")))
+                  (string-append project-root "/duplicate-source-output"))))
 (test-error "project preparation rejects duplicate paths" #t
   (check-project
     (make-project #:collect-sources (lambda () '())
                   #:prepare (lambda () '("same" "same"))
                   #:read-source (lambda (_) #f)
                   #:output-directory
-                  (string-append project-root "/duplicate-prepare-output")))
+                  (string-append project-root "/duplicate-prepare-output"))))
 (test-error "analysis rejects non-project values" #t
   (analyze-project #f))
 (test-error "browsing rejects non-project values before reading project fields" #t
