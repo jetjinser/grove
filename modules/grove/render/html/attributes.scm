@@ -42,8 +42,7 @@
   (and (list? attributes)
        (every (lambda (attribute)
                 (and (pair? attribute)
-                     (symbol? (car attribute))
-                     (string? (cdr attribute))))
+                     (valid-html-attribute-list? (list attribute))))
               attributes)))
 
 (define (merge-html-attributes original additions)
@@ -52,7 +51,7 @@ Classes and inline styles concatenate; other style values override, except
 that a style cannot replace a renderer-owned ID."
   (unless (and (valid-html-attribute-list? original)
                (html-attribute-assoc? additions))
-    (error "renderer attributes must be unique symbol/string pairs, and style additions must be symbol/string pairs"
+    (error "renderer attributes must be unique valid HTML attributes, and style additions must be valid HTML attributes"
            original additions))
   (fold
     (lambda (addition attributes)

@@ -70,6 +70,15 @@
   (html-attributes:merge-html-attributes
     '((class . "first") (class . "second")) '()))
 
+(test-error "HTML style additions reject invalid attribute names" #t
+  (html-attributes:merge-html-attributes
+    '()
+    (list (cons (string->symbol "bad name") "value"))))
+
+(test-error "HTML style additions require string values" #t
+  (html-attributes:merge-html-attributes
+    '() '((title . 42))))
+
 (test-equal "HTML style additions compose repeated class attributes in order"
   '((class . "tree first second"))
   (html-attributes:merge-html-attributes
