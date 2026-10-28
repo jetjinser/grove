@@ -608,9 +608,11 @@
        (forest (make-forest (make-site (list target source))))
        (html (render-test-html forest))
        (text (site->text forest)))
-  (test-equal "tree references preserve source, identity and label"
-    '("source" "ref-1" "overview" "the overview")
-    (let ((reference (car (outgoing-references forest "source"))))
+  (let ((reference (car (outgoing-references forest "source"))))
+    (test-assert "tree reference queries return typed reference values"
+      (reference? reference))
+    (test-equal "tree references preserve source, identity and label"
+      '("source" "ref-1" "overview" "the overview")
       (list (reference-source-page-id reference) (reference-source-id reference)
             (reference-target-page-id reference) (reference-label reference))))
   (test-assert "tree directory follows nested display structure"

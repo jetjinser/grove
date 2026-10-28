@@ -121,7 +121,11 @@ row: `(source-page-id local-reference-id target-page-id label)`. Its
 low-level incoming and outgoing queries return complete occurrence rows; its
 other helpers provide backlinks, common backlinks, and transitive reachability.
 Use `(forester site)` when the operation should return page or reference
-records and preserve site ordering.
+records and preserve site ordering. Forest-level `outgoing-references` and
+`incoming-references` return typed values recognized by `reference?`; their
+`reference-source-page-id`, `reference-source-id`,
+`reference-target-page-id`, and `reference-label` accessors retain each
+authored occurrence's identity and label.
 
 A link fragment (`@link["page#node"]`) is not part of the reference row: the
 reader splits it off, so `target-page-id` is the page and the relation stays
