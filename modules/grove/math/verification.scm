@@ -11,7 +11,7 @@
   #:use-module (grove math term)
   #:use-module (grove math rewrite)
   #:use-module (grove math types)
-  #:use-module (grove math source)
+  #:use-module (grove math private source)
   #:use-module (grove relation)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)

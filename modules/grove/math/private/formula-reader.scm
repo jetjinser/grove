@@ -3,9 +3,9 @@
 
 (define-module (grove math private formula-reader)
   #:use-module (grove ir)
-  #:use-module (grove math syntax)
+  #:use-module (grove math private syntax)
   #:use-module (grove math expression)
-  #:use-module (grove math source)
+  #:use-module (grove math private source)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (read read-lines))

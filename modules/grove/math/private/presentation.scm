@@ -8,7 +8,7 @@
   #:use-module (grove math derivation)
   #:use-module (grove math diagnostic)
   #:use-module (grove math report)
-  #:use-module (grove math source)
+  #:use-module (grove math private source)
   #:use-module (grove math layout)
   #:use-module (grove math term)
   #:use-module (grove math rule)

@@ -1,11 +1,11 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(define-module (grove math source)
+(define-module (grove math private source)
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove private snapshot)
   #:use-module (grove ir)
-  #:use-module (grove math syntax)
+  #:use-module (grove math private syntax)
   #:use-module (grove math diagnostic)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)

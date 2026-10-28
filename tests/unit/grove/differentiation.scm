@@ -4,7 +4,6 @@
 (use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math term)
              (grove math differentiation) (grove relation)
              (grove math layout) (grove ir) (grove render html)
-             (grove math source)
              (tests unit grove source-fixtures)
              (ice-9 match) (srfi srfi-1) (srfi srfi-64))
 

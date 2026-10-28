@@ -4,7 +4,7 @@
 (define-module (grove math expression)
   #:use-module (grove private snapshot)
   #:use-module (grove math term)
-  #:use-module (grove math source)
+  #:use-module (grove math private source)
   #:use-module (grove math premise)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-1)

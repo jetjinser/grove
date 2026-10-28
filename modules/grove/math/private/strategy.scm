@@ -9,7 +9,7 @@
   #:use-module (grove math private pass)
   #:use-module (grove math report)
   #:use-module (grove math diagnostic)
-  #:use-module (grove math source)
+  #:use-module (grove math private source)
   #:use-module (srfi srfi-1)
   #:export (search-math-terms simplify-math-term calculate-math-term collect-math-term)
   #:re-export (math-selected-rules math-rewrite-answers

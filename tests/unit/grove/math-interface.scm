@@ -7,7 +7,7 @@
              ((grove math private notation) #:prefix core:)
              ((language scribble commands) #:prefix document:)
              (grove math pipeline) (grove math context) (grove math expression)
-             (grove math layout) (grove math source)
+             (grove math layout)
              (grove render html) (grove render text) (grove ir)
              (language scribble spec) (language scribble parser) (system base language)
              (srfi srfi-13) (srfi srfi-64))

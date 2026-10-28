@@ -2,7 +2,7 @@
 ;;;
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(define-module (grove math syntax)
+(define-module (grove math private syntax)
   #:use-module ((grove math private identifier)
                 #:select (math-identifier-start-char?
                           math-identifier-char?

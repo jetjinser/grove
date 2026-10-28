@@ -5,7 +5,7 @@
 (define-module (tests unit grove math)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-64)
-  #:use-module (grove math syntax)
+  #:use-module (grove math private syntax)
   #:use-module ((grove math formula) #:prefix φ:)
   #:use-module (grove math expression)
   #:use-module (grove math term)

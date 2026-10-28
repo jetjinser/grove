@@ -8,7 +8,7 @@
   #:use-module (language scribble command)
   #:use-module (grove math pipeline)
   #:use-module (grove math context)
-  #:use-module (grove math source)
+  #:use-module (grove math private source)
   #:use-module ((grove math semantic) #:prefix semantic:)
   #:use-module ((grove math formula) #:prefix φ:)
   #:use-module (grove math expression)
