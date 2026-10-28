@@ -28,10 +28,10 @@ set maps each constructor to a backend-specific interpretation.
 - `context` is a `render-context` value (forest, routes, page, variants); rules do
   not read hidden global state.  Use `render-context-ref` for named fields.
 - `next` is the next interpretation of the same kind.  Delegation is explicit:
-  `(next)`.  It walks composed rule sets, then the internal handler layer, then
-  the backend fallback. If a stock internal handler exists for that kind, it
-  handles the element; otherwise the built-in interpretation does. An overlay
-  can adjust one case and delegate the rest without replacing stock behavior.
+  `(next)`. It walks composed rule sets, then uses the stock internal handler
+  when one exists for that kind; otherwise it uses the backend's built-in
+  interpretation. An overlay can adjust one case and delegate the rest without
+  replacing stock behavior.
 - `compose-render-rules` layers any number of sets from left to right: the
   rightmost rule runs first for a kind it interprets, and `next` reaches earlier
   rules before the stock handler or built-in fallback.
@@ -55,16 +55,17 @@ intentional fallback chain; do not treat repeated composition as deduplication.
 `content->sxml` and `content->text` resolve a kind in this order:
 
 ```text
-composed rules -> internal handlers -> built-in interpretation
+composed rules -> installed internal handler, or built-in interpretation
 ```
 
-The final two stages are alternatives for a given kind: an installed internal
-handler replaces the built-in interpretation for that kind.
+For each kind, an installed internal handler replaces the built-in
+interpretation.
 
-`content->sxml`/`content->text` accept `#:rules` and `#:context` directly, so
-the built-in interpretation is always the terminal fallback.  Each backend
-derives the page context per page (including transcluded targets), so a rule
-can read `(render-context-ref context 'page)`.
+`content->sxml`/`content->text` accept `#:rules` and `#:context` directly. The
+stock handler is the terminal interpretation for kinds that have one; other
+kinds reach the built-in fallback. Each backend derives the page context per
+page (including transcluded targets), so a rule can read
+`(render-context-ref context 'page)`.
 
 ### Public boundary
 
