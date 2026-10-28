@@ -57,6 +57,10 @@
     (map (lambda (group)
            (cons (car group) (map site-page-id (cdr group))))
          groups))
+  (test-equal "site render context derives translation groups by default"
+    groups
+    (render-context-ref (make-site-render-context forest)
+                        'translation-groups))
   (test-equal "site render context can explicitly omit translation groups"
     '()
     (render-context-ref

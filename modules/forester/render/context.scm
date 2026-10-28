@@ -20,8 +20,6 @@
 ;; page-level values are derived from it with render-context-with. Custom
 ;; renderers can use the same helper when they need a site render context.
 
-(define derive-translation-groups-later (list 'derive-translation-groups-later))
-
 (define (derive-translation-groups pages)
   (let ((groups (make-hash-table))
         (keys '()))
@@ -68,7 +66,10 @@
                                    (og-image-alt #f)
                                    (locale #f)
                                    (messages default-message-catalog)
-                                   (translation-groups derive-translation-groups-later))
+                                   (translation-groups
+                                     (and (forest? forest)
+                                          (derive-translation-groups
+                                            (pages forest)))))
   "Build the site-level render context for FOREST.
 
 LOCALE and MESSAGES are resolved once, here, so renderers no longer read
@@ -93,8 +94,6 @@ dynamic locale or message parameters."
   (unless (or (not default-locale) (non-empty-string? default-locale))
     (error "render context default locale must be a non-empty tag or #f"
            default-locale))
-  (when (eq? translation-groups derive-translation-groups-later)
-    (set! translation-groups (derive-translation-groups (pages forest))))
   (unless (valid-translation-groups? translation-groups)
     (error "render context translation groups must map unique string keys to page lists"
            translation-groups))
