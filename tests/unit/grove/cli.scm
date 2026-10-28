@@ -98,6 +98,16 @@
       (test-equal "store gc accepts its scoped cleanup options" 0 (car result))
       (test-assert "store gc dry run reports without deleting entries"
         (string-contains (cadr result) "Would remove")))
+    (let ((result (run "store" "size" "--help")))
+      (test-equal "store size help succeeds" 0 (car result))
+      (test-assert "store size help omits gc-only options"
+        (and (not (string-contains (cadr result) "--dry-run"))
+             (not (string-contains (cadr result) "--older-than")))))
+    (let ((result (run "store" "gc" "--help")))
+      (test-equal "store gc help succeeds" 0 (car result))
+      (test-assert "store gc help lists cleanup options"
+        (and (string-contains (cadr result) "--dry-run")
+             (string-contains (cadr result) "--older-than"))))
     (test-equal "check help describes validation without build-only options" #t
       (let ((result (run "check" "--help")))
         (and (= (car result) 0)

@@ -252,19 +252,22 @@ keyed by command."
                   (car entry) (command-summary (cdr entry))))
         command-synopses))))
 
-(define (print-help command)
+(define (print-help command action)
   (display (or (and command (assq-ref command-synopses command))
                (general-synopsis)))
   (let ((lines
          (filter-map
            (lambda (spec)
              (let ((commands (option-field spec 'commands)))
-               (if (or (not commands) (not command)
-                       (member command (map symbol->string commands)))
+               (let ((actions (option-field spec 'actions)))
+                 (if (and (or (not commands) (not command)
+                              (member command (map symbol->string commands)))
+                          (or (not actions) (not action)
+                              (member action (map symbol->string actions))))
                    (or (and command (assq-ref (or (option-field spec 'helps) '())
                                               command))
                        (option-field spec 'help))
-                   #f)))
+                   #f))))
            option-specs)))
     (when (pair? lines)
       (display "\nOptions:\n")
@@ -438,7 +441,7 @@ keyed by command."
            (version-etc "grove" grove-version #:command-name "grove")
            0)
           ((assq-ref options 'help)
-           (print-help command)
+           (print-help command (assq-ref options 'store-action))
            0)
           (else
            (catch 'grove-project-error
