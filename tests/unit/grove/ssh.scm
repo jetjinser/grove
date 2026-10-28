@@ -196,8 +196,6 @@
               (lambda () (stop-server server-pid))))
           (test-assert "SSH transport (skipped: ssh/ssh-keygen unavailable)" #t))))
 
-(test-end "grove ssh")
-
 (for-each (lambda (name)
             (let ((path (string-append test-directory "/" name)))
               (when (file-exists? path) (delete-file path))))
@@ -207,3 +205,5 @@
             "authorized_keys" "authorized_keys.sample" "authorized_keys.empty"
             "generated_host" "generated_host.pub"))
 (rmdir test-directory)
+
+(test-end "grove ssh")
