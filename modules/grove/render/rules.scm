@@ -89,9 +89,11 @@ With no arguments, return the empty rule set."
             (cdr rule-sets))))
 
 (define (render-rules-ref rules kind)
-  "Return the interpreter for KIND, or #f."
+  "Return the interpreter for symbol KIND, or #f when no rule is defined."
   (unless (render-rules? rules)
     (error "not a render rule set" rules))
+  (unless (symbol? kind)
+    (error "render rule kinds must be symbols" kind))
   (assq-ref (render-rules-map rules) kind))
 
 (define-syntax define-render-rules

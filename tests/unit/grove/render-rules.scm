@@ -14,7 +14,6 @@
   #:use-module (grove style html)
   #:use-module (grove content transform)
   #:use-module (grove render html image)
-  #:use-module (grove render rules)
   #:use-module (grove render text)
   #:use-module (forester commands))
 
@@ -67,6 +66,9 @@
 (test-equal "zero render rule layers produce the empty rule set"
   #f
   (render-rules-ref (compose-render-rules) 'image))
+
+(test-error "render rule lookup rejects non-symbol kinds" #t
+  (render-rules-ref base "image"))
 
 (test-eq "an explicitly constructed empty rule set is canonical"
   empty-render-rules
