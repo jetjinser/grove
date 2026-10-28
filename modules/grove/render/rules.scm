@@ -10,8 +10,7 @@
             make-render-rules
             empty-render-rules
             compose-render-rules
-            render-rules-ref
-            define-render-rules))
+            render-rules-ref))
 
 ;; A renderer rule is a value, not a callback registration.  A rule maps a
 ;; content kind to an interpretation:
@@ -95,10 +94,3 @@ With no arguments, return the empty rule set."
   (unless (symbol? kind)
     (error "render rule kinds must be symbols" kind))
   (assq-ref (render-rules-map rules) kind))
-
-(define-syntax define-render-rules
-  (syntax-rules ()
-    ((_ name (kind (argument ...) body ...) ...)
-     (define name
-       (make-render-rules
-         (list (cons 'kind (lambda (argument ...) body ...)) ...))))))

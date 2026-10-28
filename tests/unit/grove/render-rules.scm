@@ -146,15 +146,6 @@
                     (lambda (_context _element _children next)
                       (next))))))))
 
-(define-render-rules dsl-rules
-  (image (context element children next)
-    (picture-rule context element children next)))
-
-(test-assert "define-render-rules expands to a rule value"
-  (let ((sxml (render-with dsl-rules)))
-    (and (render-rules? dsl-rules)
-         (pair? (memq 'picture sxml)))))
-
 (test-error "duplicate kinds are rejected" #t
   (make-render-rules (list (cons 'image img-rule)
                          (cons 'image picture-rule))))

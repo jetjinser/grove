@@ -31,10 +31,6 @@ set maps each constructor to a backend-specific interpretation.
 - `compose-render-rules` layers any number of sets from left to right: the
   rightmost rule runs first for a kind it interprets, and `next` reaches earlier
   rules before the backend's internal and built-in interpretations.
-- `define-render-rules` is a thin macro that expands to `make-render-rules`; it
-  adds no new evaluation model.  `next` remains an ordinary parameter, so the
-  macro stays hygienic.
-
 The composition laws and behaviors:
 
 1. **Identity**: composing with the empty rule set changes nothing.
@@ -44,7 +40,6 @@ The composition laws and behaviors:
 4. **Totality by fallback**: an overlay that calls `(next)` reaches the base
    rule, the internal layer, and then the built-in interpretation.
 5. **Context**: a rule sees exactly the context passed to the interpreter.
-6. **Expansion**: the DSL produces the same values as the explicit API.
 
 Composition is not generally idempotent: composing a delegating rule again
 adds another layer that `next` can invoke. Use composition to build an
