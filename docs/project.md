@@ -122,6 +122,8 @@ unless the analyzer deliberately includes them in its own model.
 
 `project-with-options` returns a project copy with an output-directory override,
 additional tracked inputs, or a cache setting; the original project is unchanged.
+Its `#:extra-sources` paths append to the project's existing declarations,
+with duplicates removed while preserving their first occurrence.
 Project constructors snapshot declared path strings and list containers.
 Project inputs and callback contexts copy mutable strings, bytevectors, and
 pair/list structure when exposed. Other values, including mutable vectors,
