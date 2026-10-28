@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove private html-attributes)
+  #:use-module (grove private alist)
   #:use-module (srfi srfi-1)
   #:export (valid-html-attribute-list?))
 
@@ -30,5 +31,4 @@
                      (html-attribute-name? (car entry))
                      (string? (cdr entry))))
               attributes)
-       (= (length attributes)
-          (length (delete-duplicates (map car attributes) eq?)))))
+       (unique-symbol-key-alist? attributes)))
