@@ -13,17 +13,15 @@
           (string=? (out:artifact-path/raw artifact) path))
         artifacts))
 
-(define (artifact-reusable? current previous changed)
-  (let ((sources (out:artifact-sources/raw current)))
-    (and previous
-         (equal? sources (out:artifact-sources/raw previous))
-         (not (and sources
-                   (any (lambda (path) (member path sources string=?))
-                        changed))))))
+(define (artifact-reusable? sources previous changed)
+  (and previous
+       (equal? sources (out:artifact-sources/raw previous))
+       (not (and sources
+                 (any (lambda (path) (member path sources string=?))
+                      changed)))))
 
 (define (reuse-artifact path sources previous-artifacts changed render)
-  (let* ((previous (find-artifact-by-path previous-artifacts path))
-         (current (make-artifact path "" sources)))
-    (if (artifact-reusable? current previous changed)
+  (let ((previous (find-artifact-by-path previous-artifacts path)))
+    (if (artifact-reusable? sources previous changed)
         previous
         (make-artifact path (render) sources))))
