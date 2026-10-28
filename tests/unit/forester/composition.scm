@@ -294,7 +294,8 @@
                              "href=\"/reusable.html#ref-1\"")
            (string-contains destination-html "[reusable]"))))
   (test-assert "context sources are included in target artifact dependencies"
-    (member "plants/host.plant" (page-source-paths forest target) string=?))
+    (member "plants/host.plant"
+            (page-source-paths forest (site-page-id target)) string=?))
   (test-assert "backmatter sections can be disabled"
     (and (not (string-contains
                 (assoc-ref (render-test-html forest #:backmatter '())
@@ -333,7 +334,7 @@
          (string-contains (assoc-ref text "host") "Shared content.")))
   (test-assert "host artifacts depend on transcluded tree sources"
     (member "plants/reusable.plant"
-            (page-source-paths forest host)
+            (page-source-paths forest (site-page-id host))
             string=?))
   (test-equal "links in transcluded content remain owned by the source tree"
     '("reusable")
@@ -420,8 +421,10 @@
          (string-contains (assoc-ref text "source")
                           "A citation (citation.txt)")))
   (test-assert "related targets are included in source artifact dependencies"
-    (and (member "plants/idea.plant" (page-source-paths forest source) string=?)
-         (member "plants/citation.plant" (page-source-paths forest source)
+    (and (member "plants/idea.plant"
+                 (page-source-paths forest (site-page-id source)) string=?)
+         (member "plants/citation.plant"
+                 (page-source-paths forest (site-page-id source))
                  string=?)))
   (test-equal "reference classification is case-insensitive"
     '("citation")

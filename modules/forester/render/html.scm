@@ -869,7 +869,8 @@ to the lane, and an in-place numbered marker links to it."
                (page-artifacts
                  (map (lambda (page)
                         (let* ((path (cdr (assoc (site-page-id page) route-table)))
-                               (sources (page-source-paths forest page)))
+                               (sources (page-source-paths
+                                          forest (site-page-id page))))
                           (reuse-artifact path sources old-artifacts changed
                             (lambda () (render-page page #f)))))
                       (pages forest))))
@@ -1005,7 +1006,8 @@ Entry points take this value with #:options."
                (make-artifact
                  (cdr (assoc (site-page-id page) route-table))
                  (render-page page #f)
-                 #:sources (page-source-paths forest page)))
+                 #:sources (page-source-paths
+                             forest (site-page-id page))))
              forest-pages
              (iota total 1))))))
 (define* (make-html-renderer #:key (options (make-html-options))

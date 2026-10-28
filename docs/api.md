@@ -84,7 +84,7 @@ Opaque objects and cyclic structures cannot provide stable cache identity.
 `make-render-rules` is narrower: it changes the interpretation of content kinds
 inside an existing renderer. See the [customization guide](customizing.md) for
 how these layers compose. Forester renderers can use `(forester site)`'s
-`tree-occurrences`, `tree-occurrence-target`, `page-source-paths`,
+`tree-occurrences`, `tree-occurrence-target`, `page-source-paths` (by page ID),
 `source-paths`, and `used-codepoints` projections instead of rebuilding tree
 structure, dependency closure, or character inventories; see
 [tree composition](forester-composition.md#renderer-queries).

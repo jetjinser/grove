@@ -590,8 +590,10 @@ pages that only exist inside another article's DOM."
                        (cdr pending))
                       (cons id seen))))))))))
 
-(define (page-source-paths forest page)
-  (let ((included (included-tree-ids forest (site-page-id page))))
+(define (page-source-paths forest page-id)
+  "Return the tracked source closure for PAGE-ID in FOREST."
+  (let* ((page (require-page forest page-id))
+         (included (included-tree-ids forest page-id)))
     (if (any (lambda (id) (member id (query-page-ids forest) string=?))
              included)
         (source-paths forest)

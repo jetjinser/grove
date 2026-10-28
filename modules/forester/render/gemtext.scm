@@ -352,7 +352,8 @@ default. Paths are validated by MAKE-TEXT-ROUTES."
                            (output-path
                              prefix
                              (text-page-path routes (site-page-id page))))
-                         (sources (page-source-paths forest page)))
+                         (sources (page-source-paths
+                                    forest (site-page-id page))))
                     (reuse-artifact path sources old-artifacts changed
                       (lambda () (render-page page)))))
                 (pages forest))))
@@ -407,7 +408,8 @@ default. Paths are validated by MAKE-TEXT-ROUTES."
                          (make-artifact
                            (text-page-path routes (site-page-id page))
                            (render-page page)
-                           #:sources (page-source-paths forest page)))
+                           #:sources (page-source-paths
+                                       forest (site-page-id page))))
                        (pages forest)))))
       (if prefix (prefix-artifacts prefix artifacts) artifacts))))
 

@@ -148,7 +148,10 @@
   (test-equal "all Grove content source paths participate in page dependencies"
     '("notes/document.scm" "notes/paragraph.scm" "notes/body.scm"
       "notes/layout.scm")
-    (page-source-paths forest page)))
+    (page-source-paths forest "authored"))
+
+(test-error "page source paths reject IDs outside the Forest" #t
+  (page-source-paths forest "missing")))
 
 (test-error "unresolved links fail site analysis" #t
   (make-forest
@@ -529,7 +532,10 @@
       (== page-id "article"))))
   (test-assert "query pages depend on every Forest source for caching"
     (every (lambda (source)
-            (member source (page-source-paths forest resolved-catalog) string=?))
+            (member source
+                    (page-source-paths forest
+                      (site-page-id resolved-catalog))
+                    string=?))
       '("catalog.plant" "article.plant" "manual.plant" "commands.scm")))
   (let ((html (assoc-ref (render-test-html forest) "catalog")))
   (test-assert "query-generated links render without consuming authored link IDs"

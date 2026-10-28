@@ -127,14 +127,14 @@ subtrees and transclusions. `subtree-definitions` returns the Forest's
 addressable parent/child relationships as `subtree-definition` records, using
 the same validated value type as `(forester composition)`.
 
-Use `page-source-paths` for the dependency closure of a page artifact and
-`source-paths` for an aggregate artifact that depends on the whole Forest. The
-page closure includes composed tree sources, page content provenance, linked
-targets and context pages that affect rendered output, plus project modules
-and other site sources. If a page in the closure contains `@forest-query`, the
-closure conservatively expands to all Forest sources because the query may
-depend on any page. Attach these paths to custom artifacts so Grove can
-invalidate and reuse them correctly.
+Use `(page-source-paths forest page-id)` for the dependency closure of a page
+artifact and `(source-paths forest)` for an aggregate artifact that depends
+on the whole Forest. The page closure includes composed tree sources, page
+content provenance, linked targets and context pages that affect rendered
+output, plus project modules and other site sources. If a page in the closure
+contains `@forest-query`, the closure conservatively expands to all Forest
+sources because the query may depend on any page. Attach these paths to custom
+artifacts so Grove can invalidate and reuse them correctly.
 
 `used-codepoints` returns the sorted set of characters in the site title, page
 titles, authored content, and reference labels. It uses plain-text math as a
