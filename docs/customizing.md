@@ -102,6 +102,13 @@ Choose the extension point from the tool's input and where its result belongs:
 | A custom content node should become inline output markup | Render rule; the hackable math experiment uses this for SMathML. |
 | The result belongs inline in the `.plant` page being evaluated | Scheme in `.plant`; register files with `depend-on!` from `(grove input)`, or use `#:cache-dependencies` for reader-wide inputs. Disable reader caching when behavior depends on untracked external state. |
 
+Inline Scheme uses the normal document cache. `depend-on!` tracks files, but
+Grove does not fingerprint an executable's version, environment variables, or
+network state. Track a version or configuration file when those affect the
+result, or call `disable-cache!` before the effect so it runs on every build.
+Use a renderer or pipeline when tool identity should be declared once and its
+output should be reused as a project artifact.
+
 ### File-driven tool example
 
 Keep the invocation in project Scheme and describe its declared inputs and
