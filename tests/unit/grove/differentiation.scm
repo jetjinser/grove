@@ -14,6 +14,12 @@
 (define (differentiate source)
   (φ:differentiate source "x" #:assumptions facts))
 
+(test-assert "polynomial term recognition stays internal to differentiation"
+  (not (module-variable
+         (module-public-interface
+           (resolve-module '(grove math differentiation)))
+         'polynomial-term?)))
+
 ;; Independent oracle: evaluate the original polynomial over dual numbers.
 ;; Compare its tangent with ordinary evaluation of the generated derivative.
 (define (dual term x y)

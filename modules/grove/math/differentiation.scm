@@ -14,7 +14,7 @@
   #:use-module (grove math rule)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
-  #:export (polynomial-term? differentiation-input-diagnostics differentiation-stepo math-differentiation-rules
+  #:export (differentiation-input-diagnostics differentiation-stepo math-differentiation-rules
             math-differentiation-rule-definitions make-function-chain-rule))
 
 (define natural-value math-natural-value)

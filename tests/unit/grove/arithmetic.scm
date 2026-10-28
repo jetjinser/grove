@@ -21,6 +21,11 @@
       (value a environment) (value b environment)))))
 
 (test-begin "exact arithmetic and collection")
+(test-assert "arithmetic rule transforms stay behind the rule-pack API"
+  (let ((interface
+          (module-public-interface (resolve-module '(grove math arithmetic)))))
+    (every (lambda (name) (not (module-variable interface name)))
+      '(constant-rewrite collect-rewrite coefficient-rewrite))))
 (for-each
   (lambda (pair)
     (let ((report (φ:calculate (car pair))))

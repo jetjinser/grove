@@ -9,7 +9,7 @@
   #:use-module (grove math private number)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
-  #:export (constant-rewrite collect-rewrite coefficient-rewrite math-arithmetic-rules))
+  #:export (math-arithmetic-rules))
 
 (define (constant-rewrite input)
   (define (binary operator left right)
