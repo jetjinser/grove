@@ -22,6 +22,11 @@
 
 (test-begin "forester i18n routes")
 
+(test-assert "Open Graph formatting is not part of Grove's locale API"
+  (not (module-variable
+         (module-public-interface (resolve-module '(grove i18n)))
+         'og-locale-tag)))
+
 (test-equal "text routes resolve sibling artifact paths"
   "chapter.txt"
   (text-relative-path "pages/guide.txt" "pages/chapter.txt"))
@@ -283,6 +288,30 @@
     (and (string-contains
            page "<nav class=\"language-switcher\" aria-label=\"Language\">")
          (string-contains page "aria-current=\"true\""))))
+
+(let* ((pages (list (make-page "home" #f #f)
+                    (make-page "regional" "fr-CA" #f)
+                    (make-page "numeric-region" "en-419" #f)
+                    (make-page "traditional" "zh-Hant" #f)
+                    (make-page "extended" "en-u-nu-latn" #f)
+                    (make-page "unsupported" "sw" #f)))
+       (regional-forest (make-forest (make-site pages)))
+       (html (site->html regional-forest
+                         #:options (make-html-options
+                                     #:routes (make-html-routes
+                                                #:home-page "home")
+                                     #:mathjax-src #f))))
+  (test-assert "Open Graph locale output preserves BCP 47 regions and scripts"
+    (and (string-contains (assoc-ref html "regional")
+                          "property=\"og:locale\" content=\"fr_CA\"")
+         (string-contains (assoc-ref html "numeric-region")
+                          "property=\"og:locale\" content=\"en_419\"")
+         (string-contains (assoc-ref html "traditional")
+                          "property=\"og:locale\" content=\"zh_TW\"")
+         (string-contains (assoc-ref html "extended")
+                          "property=\"og:locale\" content=\"en_US\"")
+         (string-contains (assoc-ref html "unsupported")
+                          "property=\"og:locale\" content=\"sw\""))))
 
 (let ((page (assoc-ref (site->html forest
                                    #:options

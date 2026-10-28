@@ -555,14 +555,6 @@
 
 ;;; Open Graph locales
 
-(test-equal "Open Graph locale tags use language_TERRITORY"
-  "en_US" (og-locale-tag "en"))
-(test-equal "Open Graph locales honor a region subtag"
-  "fr_CA" (og-locale-tag "fr-CA"))
-(test-equal "Open Graph locales map Chinese scripts"
-  (list "zh_CN" "zh_TW")
-  (list (og-locale-tag "zh-Hans") (og-locale-tag "zh-Hant")))
-
 (test-equal "German long dates"
   "27. September 2026" (format-date "de" "2026-09-27" #:style 'long))
 (test-equal "German medium dates"
@@ -592,8 +584,6 @@
   "1.5" (format-number "en" 1.5))
 (test-equal "format-number can skip grouping"
   "1234" (format-number "en" 1234 #:group? #f))
-(test-equal "unsupported Open Graph locales keep the language"
-  "sw" (og-locale-tag "sw"))
 (test-equal "German short dates"
   "2026-09-27" (format-date "de" "2026-09-27" #:style 'short))
 (test-equal "French short dates"

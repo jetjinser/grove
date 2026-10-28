@@ -50,6 +50,56 @@
 
 ;; Forester's tree traversal uses the private content interpreter for lazy
 ;; handlers; those handlers are deliberately outside the public renderer API.
+;; Open Graph uses language_TERRITORY, so language-only tags need a stable
+;; site-facing territory default. These defaults belong to this output format;
+;; BCP 47 tags with an explicit region always take precedence.
+(define og-default-territories
+  '(("en" . "US") ("fr" . "FR") ("de" . "DE") ("es" . "ES")
+    ("it" . "IT") ("pt" . "PT") ("nl" . "NL") ("sv" . "SE")
+    ("da" . "DK") ("nb" . "NO") ("fi" . "FI") ("pl" . "PL")
+    ("cs" . "CZ") ("tr" . "TR") ("ru" . "RU") ("el" . "GR")
+    ("ja" . "JP") ("ko" . "KR") ("zh" . "CN")))
+
+(define (ascii-alpha? character)
+  (or (char<=? #\A character #\Z)
+      (char<=? #\a character #\z)))
+
+(define (ascii-digit? character)
+  (char<=? #\0 character #\9))
+
+(define (og-region? part)
+  (or (and (= (string-length part) 2)
+           (string-every ascii-alpha? part))
+      (and (= (string-length part) 3)
+           (string-every ascii-digit? part))))
+
+(define (og-script? part)
+  (and (= (string-length part) 4)
+       (string-every ascii-alpha? part)))
+
+(define (open-graph-locale-tag locale)
+  "Return the Open Graph language_TERRITORY form for LOCALE."
+  (let* ((tag (locale-tag (if (locale? locale) locale (make-locale locale))))
+         (parts (string-split tag #\-))
+         (language (car parts))
+         (subtags (cdr parts)))
+    (let scan ((subtags subtags) (script #f) (region #f))
+      (cond
+        ((or (null? subtags) (= (string-length (car subtags)) 1))
+         (let ((territory
+                 (or region
+                     (and (string=? language "zh")
+                          (if (equal? script "Hant") "TW" "CN"))
+                     (assoc-ref og-default-territories language))))
+           (if territory
+               (string-append language "_" territory)
+               language)))
+        ((og-region? (car subtags))
+         (scan (cdr subtags) script (car subtags)))
+        ((and (not script) (og-script? (car subtags)))
+         (scan (cdr subtags) (car subtags) region))
+        (else (scan (cdr subtags) script region))))))
+
 (define (format-rendered-date text context)
   (let ((locale (render-context-ref context 'locale-object)))
     (if locale (format-date locale text #:style 'long) text)))
@@ -733,12 +783,12 @@ name, property, rel, or title."
                  '())
              (if locale
                  (list `(meta (@ (property "og:locale")
-                                  (content ,(og-locale-tag
+                                  (content ,(open-graph-locale-tag
                                                (render-context-ref context 'locale))))))
                  '())
              (map (lambda (tag)
                     `(meta (@ (property "og:locale:alternate")
-                              (content ,(og-locale-tag tag)))))
+                              (content ,(open-graph-locale-tag tag)))))
                   og-locales)
              (if og-image-url
                  (append
