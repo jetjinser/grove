@@ -8,6 +8,7 @@
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove private snapshot)
+  #:use-module (grove private string-fun)
   #:use-module (grove private render text)
   #:use-module (grove private uri)
   #:use-module (grove render rules)
@@ -71,10 +72,6 @@
                       (and (char>=? character #\0) (char<=? character #\9))
                       (memv character '(#\+ #\. #\-))))
                 (string->list (substring value 1 colon))))))
-
-(define (ascii-alpha? character)
-  (or (and (char>=? character #\a) (char<=? character #\z))
-      (and (char>=? character #\A) (char<=? character #\Z))))
 
 (define (route-uri path)
   (uri-encode-path path))

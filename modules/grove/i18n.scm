@@ -61,13 +61,6 @@
     "Hani" "Hans" "Hant" "Hira" "Jpan" "Kana" "Khmr" "Knda" "Kore" "Laoo"
     "Latn" "Mlym" "Mong" "Mymr" "Sinh" "Taml" "Telu" "Thai" "Tibt"))
 
-(define (ascii-alpha? char)
-  (or (and (char<=? #\a char) (char<=? char #\z))
-      (and (char<=? #\A char) (char<=? char #\Z))))
-
-(define (ascii-digit? char)
-  (and (char<=? #\0 char) (char<=? char #\9)))
-
 (define (ascii-alphanumeric? char)
   (or (ascii-alpha? char) (ascii-digit? char)))
 

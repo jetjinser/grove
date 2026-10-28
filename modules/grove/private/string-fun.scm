@@ -5,10 +5,23 @@
 (define-module (grove private string-fun)
   #:use-module (srfi srfi-13)
   #:use-module (ice-9 textual-ports)
-  #:export (non-empty-string? include-text))
+  #:export (non-empty-string? ascii-alpha? ascii-digit? ascii-hex?
+            include-text))
 
 (define-inlinable (non-empty-string? value)
   (and (string? value) (not (string-null? value))))
+
+(define-inlinable (ascii-alpha? character)
+  (or (and (char>=? character #\a) (char<=? character #\z))
+      (and (char>=? character #\A) (char<=? character #\Z))))
+
+(define-inlinable (ascii-digit? character)
+  (and (char>=? character #\0) (char<=? character #\9)))
+
+(define-inlinable (ascii-hex? character)
+  (or (ascii-digit? character)
+      (and (char>=? character #\A) (char<=? character #\F))
+      (and (char>=? character #\a) (char<=? character #\f))))
 
 (define-syntax include-text
   (lambda (stx)

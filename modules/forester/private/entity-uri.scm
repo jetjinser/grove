@@ -3,21 +3,10 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester private entity-uri)
+  #:use-module (grove private string-fun)
   #:use-module (srfi srfi-13)
   #:use-module (web uri)
   #:export (absolute-entity-uri? entity-uri-href))
-
-(define (ascii-alpha? character)
-  (or (and (char>=? character #\A) (char<=? character #\Z))
-      (and (char>=? character #\a) (char<=? character #\z))))
-
-(define (ascii-digit? character)
-  (and (char>=? character #\0) (char<=? character #\9)))
-
-(define (ascii-hex? character)
-  (or (ascii-digit? character)
-      (and (char>=? character #\A) (char<=? character #\F))
-      (and (char>=? character #\a) (char<=? character #\f))))
 
 (define (one-of? character characters)
   (and (string-index characters character) #t))
