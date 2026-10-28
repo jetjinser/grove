@@ -74,7 +74,9 @@ With no arguments, return an empty HTML style."
   (snapshot-data (html-attributes-assoc/raw attributes)))
 
 (define (make-html-attributes assoc)
-  "Add HTML attributes to the tag produced for a styled content element."
+  "Construct a validated HTML-attributes value from symbol/string pairs.
+
+Use it in content styles and HTML presentation values."
   (unless (valid-html-attribute-list? assoc)
     (error "HTML attributes must be unique symbol/string pairs" assoc))
   (%make-html-attributes (snapshot-data assoc)))
