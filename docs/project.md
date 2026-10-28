@@ -523,14 +523,15 @@ blocks while the preview server runs; the command is the simpler entry point
 for ordinary local use.
 
 The watcher polls identity, size, and precise timestamps. It observes project
-and source directories, declared dependencies, loaded sources, and discovered
-external input directories. Recursive scans skip hidden entries and nested
-directory symlinks; explicit source-directory symlinks are resolved. Outputs
-are excluded from watching and should live in a separate directory. Store
-paths and compiled artifacts (`.go` files, grove's compiled tree) are excluded
-too: they change behind builds and load-path resolutions, so watching them
-would requeue rebuilds no project edit caused. Grove source modules stay
-watched; editing one restarts the worker on purpose.
+and source directories, directories containing collected documents, declared
+dependencies, and loaded sources. Declared dependencies are watched as exact
+files; they do not recursively add their parent directories. Recursive scans
+skip hidden entries and nested directory symlinks; explicit source-directory
+symlinks are resolved. Outputs are excluded from watching and should live in a
+separate directory. Store paths and compiled artifacts (`.go` files, Grove's
+compiled tree) are excluded too: they change behind builds and load-path
+resolutions, so watching them would requeue rebuilds no project edit caused.
+Grove source modules stay watched; editing one restarts the worker on purpose.
 
 Ctrl-C and SIGTERM stop the server and active worker process group, returning
 130 and 143 respectively. Detached project processes are outside that group.

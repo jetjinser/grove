@@ -30,19 +30,12 @@
               (and info (eq? (stat:type info) 'regular))))
           (delete-duplicates paths string=?)))
 
-;; Runtime inputs are watched as exact files through the build report.
-;; Turning their parent directories into recursive roots would expand a
-;; dependency like /tmp/tool-input into a scan of all of /tmp.
-(define (tracked-source-paths state)
-  (if state
-      (map build-state-source-path
-        (filter (lambda (source)
-                  (eq? (build-state-source-kind source) 'source))
-                (build-state-sources state)))
-      '()))
-
-(define (watch-roots filename project sources modules)
+(define (watch-roots filename project modules)
   (let* ((extra-files (map absolute-path (project-extra-sources project)))
+         ;; Only collected documents imply a directory whose membership
+         ;; affects the project. Renderer, preparation, and other declared
+         ;; dependencies stay exact files through the build report.
+         (sources (collect-project-sources project))
          (roots
            (delete-duplicates
              (map (lambda (path)
@@ -166,9 +159,7 @@
                                           (project-extra-sources configured))))
                       (roots (delete-duplicates
                                (append previous-roots
-                                       (watch-roots filename project
-                                         (tracked-source-paths retained-state)
-                                         modules))
+                                       (watch-roots filename project modules))
                                string=?))
                       (before (watch-snapshot roots files output))
                        ;;     The diff set must see additions and
@@ -229,11 +220,7 @@
                                                      (build-report-sources report))
                                                 modules)
                                         string=?))
-                               (state (read-build-state
-                                        (worker-state-path output)))
-                               (roots (watch-roots filename project
-                                         (tracked-source-paths state)
-                                         modules)))
+                               (roots (watch-roots filename project modules)))
                           ;; This is a private process protocol, not a second artifact API.
                           (write-result! result-path
                             (list 'preview request-serial output roots files modules

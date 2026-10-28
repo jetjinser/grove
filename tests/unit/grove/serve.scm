@@ -18,6 +18,7 @@
   (mkdtemp (string-append (or (getenv "TMPDIR") "/tmp")
                           "/grove-serve-test-XXXXXX")))
 (define external (string-append root "-external"))
+(define external-neighbor (string-append external "/unrelated.txt"))
 (define inputs (string-append root "-inputs"))
 (define config (string-append root "/project.scm"))
 (define article (string-append root "/sources/one.txt"))
@@ -198,6 +199,7 @@
     (write-file control "fast")
     (write-file (string-append root "/asset.txt") "asset-1")
     (write-file (string-append external "/theme.txt") "css-1")
+    (write-file external-neighbor "unrelated-1")
     (write-file pipeline-runtime-input "pipeline-1")
     (write-file unrelated-runtime-neighbor "unrelated-1")
     (write-file helper (helper-text "module-1"))
@@ -219,7 +221,7 @@
 (define pipeline-runtime-input ~s)
 (make-project
   #:source-directory \"sources\"
-  #:extra-sources (list external \"control\")
+  #:extra-sources (list \"control\")
   #:read-source (lambda (path)
                  (let ((text (call-with-input-file path get-string-all)))
                    (when (string-contains text \"FAIL\") (error \"article failure\"))
@@ -265,7 +267,8 @@
                 (map (lambda (input)
                        (make-artifact (string-append (basename (project-input-path input)) \".html\")
                                       (project-input-value input)))
-                     (project-context-inputs context)))))))
+                     (project-context-inputs context)))))
+          #:dependencies (list external)))
   #:output-directory \"output\")\n"
         (string-append external "/theme.txt")
         (string-append root "/asset.txt")
@@ -289,6 +292,11 @@
       (test-assert "named Scheme modules reload and invalidate renderer cache" (await-text "two|module-2"))
       (write-file (string-append external "/theme.txt") "css-2")
       (test-assert "declared external file edits rebuild" (await-text "css-2"))
+      (let ((before (rebuild-count)))
+        (write-file external-neighbor "unrelated-2")
+        (usleep 1200000)
+        (test-equal "renderer dependencies are watched as exact files"
+          before (rebuild-count)))
       (write-file (string-append root "/sources/nested/new.txt") "new")
       (test-assert "new nested sources are discovered through a source-directory symlink" (await-text "new,two|"))
       (delete-file (string-append root "/sources/nested/new.txt"))
