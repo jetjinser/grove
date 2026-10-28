@@ -364,9 +364,16 @@ Asset pipelines fingerprint the project file, its load-time inputs, declared
 files, and Scheme files loaded while the pipeline runs. A self-contained
 pipeline can omit `#:inputs`. Set its `#:version` when behavior depends on
 external toolchain state, environment variables, or runtime arguments Grove
-cannot inspect. Pipeline artifacts and build reports retain the file inputs
-and loaded Scheme dependencies, so cache invalidation and affected-artifact
-reporting use the same dependency set.
+cannot inspect. A pipeline can also register a file discovered while it runs
+with `depend-on!` from `(grove input)`, then read or pass the returned path to a
+tool. Unlike `#:inputs`, this does not add the path to the pipeline's input
+lookup. Grove checks the recorded file on later cache hits and includes it in
+the pipeline artifacts' source dependencies. Since a cache hit skips the
+procedure, a newly appearing file is not discovered by itself; when output
+depends on a changing set of files, track a manifest whose contents describe
+that set. Pipeline artifacts and build reports retain declared and discovered
+file inputs and loaded Scheme dependencies, so cache invalidation and
+affected-artifact reporting use the same dependency set.
 Each value in a project's `#:pipelines` list runs independently: a pipeline
 cannot read another pipeline's output. Put a multi-step conversion in one
 pipeline procedure when later steps consume earlier results.

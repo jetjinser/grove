@@ -132,7 +132,10 @@ ordinary Grove artifact. A pipeline procedure receives an input lookup and
 returns an artifact list; it can use any executable or library available to
 the project. Grove tracks declared files and loaded Scheme code. Include tool
 identity in the pipeline's `#:version` when Grove cannot observe it, as the
-Graphviz adapter does.
+Graphviz adapter does. If a path is only known during execution, register it
+with `depend-on!` before reading or passing it to the tool; see the
+[project guide](project.md#dependencies-and-caching) for how this affects cache
+reuse.
 
 Each value in `#:pipelines` is an independent file-to-artifact generator. A
 pipeline can perform several tool steps inside its procedure, but its outputs

@@ -358,6 +358,32 @@
   "two" (artifact-text (car (run-runtime-loaded-pipeline))))
 (test-equal "the changed runtime dependency reruns its pipeline" 2 runtime-runs)
 
+(let ((runs 0))
+  (define (run-dynamic-input-pipeline)
+    (car (run-asset-pipelines
+           (list (make-asset-pipeline
+                   #:name "runtime-input"
+                   #:procedure
+                   (lambda (_input)
+                     (set! runs (1+ runs))
+                     (let ((path (depend-on! input-c)))
+                       (list (make-artifact
+                               "runtime-input.txt"
+                               (call-with-input-file path get-string-all)))))))
+           (current-project-key))))
+  (let ((first (car (run-dynamic-input-pipeline))))
+    (test-equal "a pipeline can register a discovered input at runtime"
+      "alpha" (artifact-text first))
+    (test-assert "runtime inputs become artifact source dependencies"
+      (member (canonicalize-path input-c) (artifact-sources first) string=?)))
+  (run-dynamic-input-pipeline)
+  (test-equal "unchanged runtime inputs reuse pipeline output" 1 runs)
+  (call-with-output-file input-c
+    (lambda (port) (display "gamma" port)))
+  (test-equal "a changed runtime input invalidates pipeline output"
+    "gamma" (artifact-text (car (run-dynamic-input-pipeline))))
+  (test-equal "a changed runtime input reruns its pipeline" 2 runs))
+
 (define (run-constant-pipeline)
   (car (run-asset-pipelines
          (list (make-asset-pipeline
