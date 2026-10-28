@@ -422,10 +422,10 @@
 ;;; Style
 
 (test-equal "the bilingual stylesheet is an installable artifact"
-  "i18n.css" (artifact-path bilingual-stylesheet))
-(test-equal "the default bilingual style exposes its stylesheet"
-  (list bilingual-stylesheet)
-  (html-style-stylesheets default-bilingual-style))
+  "i18n.css"
+  (artifact-path (car (html-style-stylesheets default-bilingual-style))))
+(test-equal "the default bilingual style exposes its stylesheet" 1
+  (length (html-style-stylesheets default-bilingual-style)))
 
 
 ;;; Formatting

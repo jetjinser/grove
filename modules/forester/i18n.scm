@@ -9,7 +9,7 @@
   #:use-module (grove style)
   #:use-module (grove style html)
   #:use-module (grove render rules)
-  #:use-module (forester style i18n)
+  #:use-module (forester private style i18n)
   #:use-module (language scribble command)
   #:use-module (language scribble flow)
   #:use-module (ice-9 format)
