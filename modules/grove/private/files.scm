@@ -3,6 +3,7 @@
 
 (define-module (grove private files)
   #:use-module (ice-9 textual-ports)
+  #:use-module (grove private string-fun)
   #:use-module (srfi srfi-13)
   #:export (file-signature
             filesystem-path-string?
@@ -12,8 +13,7 @@
             include-text))
 
 (define-inlinable (filesystem-path-string? value)
-  (and (string? value)
-       (not (string-null? value))
+  (and (non-empty-string? value)
        (not (string-index value #\nul))))
 
 (define-syntax include-text
