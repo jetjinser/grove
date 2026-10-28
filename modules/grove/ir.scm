@@ -33,7 +33,6 @@
             content-element-style
             content-with-style
             content-with-property
-            checked-anchor-id
             content-element-source
             make-content-disclosure
             content-document?
@@ -220,18 +219,6 @@
                   (content-element-properties element)))
     (content-element-style element)
     (content-element-source element) (content-element-flow-kind element)))
-
-(define (checked-anchor-id id)
-  "Validate an optional anchor ID: #f, or a non-empty string with no whitespace or #."
-  (if (not id)
-      #f
-      (begin
-        (unless (and (string? id)
-                     (not (string-null? id))
-                     (not (string-any char-whitespace? id))
-                     (not (string-index id #\#)))
-          (error "anchor ID must be a non-empty string without whitespace or #" id))
-        id)))
 
 (define* (make-content-disclosure title children #:key (open? #t)
                                   (addressable? #f) (style #f))

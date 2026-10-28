@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (language scribble commands)
+  #:use-module (grove private anchor)
   #:use-module (grove ir)
   #:use-module (ice-9 optargs)
   #:use-module (language scribble command)

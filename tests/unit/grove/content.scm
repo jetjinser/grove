@@ -21,6 +21,14 @@
 
 (test-begin "grove content")
 
+(test-assert "anchor validation is an internal shared helper"
+  (and (not (module-variable
+              (module-public-interface (resolve-module '(grove ir)))
+              'checked-anchor-id))
+       (module-variable
+         (module-public-interface (resolve-module '(grove private anchor)))
+         'checked-anchor-id)))
+
 (test-equal "content styles expose scoped HTML attributes"
   '((class . "note") (id . "page-term") (href . "#page-term"))
   (html-attributes:content-style-html-attributes

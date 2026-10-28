@@ -2,6 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove math notation)
+  #:use-module (grove private anchor)
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove ir)
   #:use-module (ice-9 optargs)

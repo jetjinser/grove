@@ -12,6 +12,7 @@
   #:use-module (ice-9 string-fun)
   #:use-module (ice-9 optargs)
   #:use-module (grove ir)
+  #:use-module (grove private anchor)
   #:use-module (language scribble command)
   #:use-module (language scribble flow)
   #:use-module (grove private string-fun)
