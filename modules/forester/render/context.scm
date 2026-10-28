@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester render context)
+  #:use-module (grove private alist)
   #:use-module (grove i18n)
   #:use-module (grove render context)
   #:use-module (grove site)
@@ -49,8 +50,7 @@
                      (list? (cdr entry))
                      (every site-page? (cdr entry))))
               groups)
-       (= (length groups)
-          (length (delete-duplicates (map car groups) string=?)))))
+       (unique-string-key-alist? groups)))
 
 (define* (make-site-render-context forest #:key
                                    (routes #f)

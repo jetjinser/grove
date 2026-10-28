@@ -141,8 +141,7 @@ is a list of symbol/string pairs."
                 (and (pair? entry) (non-empty-string? (car entry))
                      (static-sxml-list? (cdr entry))))
               entries)
-       (= (length entries)
-          (length (delete-duplicates (map car entries) string=?)))))
+       (unique-string-key-alist? entries)))
 
 (define-record-type <html-presentation>
   (%make-html-presentation style rules head home-link site-nav
