@@ -9,7 +9,6 @@
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-26) ; cut(e)
   #:use-module (ice-9 match)
-  #:use-module (ice-9 string-fun)
   #:use-module (ice-9 optargs)
   #:use-module (grove ir)
   #:use-module (grove private anchor)
