@@ -150,8 +150,22 @@
         (let ((path (string-append test-directory "/authorized_keys.empty")))
           (call-with-output-file path (lambda (port) #t))
           ((ssh-proc 'read-authorized-keys) path)))
+      (test-error "authorized keys require a non-empty path" #t
+        ((ssh-proc 'read-authorized-keys) ""))
 
       ;; Host key generation
+      (test-error "host key generation requires positive integer bits" #t
+        ((ssh-proc 'generate-host-key)
+         (string-append test-directory "/invalid-bits") #:bits 0))
+      (test-error "host key generation requires a symbol type" #t
+        ((ssh-proc 'generate-host-key)
+         (string-append test-directory "/invalid-type") #:type "rsa"))
+      (test-error "host key force option must be boolean" #t
+        ((ssh-proc 'generate-host-key)
+         (string-append test-directory "/invalid-force") #:force 'yes))
+      (test-error "host key generation requires an output port" #t
+        ((ssh-proc 'generate-host-key)
+         (string-append test-directory "/invalid-output") #:output #f))
       (test-assert "generate-host-key writes an RSA host key"
         (let ((path (string-append test-directory "/generated_host")))
           ((ssh-proc 'generate-host-key) path #:output (open-output-string))

@@ -37,6 +37,8 @@
 
 (define (read-authorized-keys path)
   "Read authorized public keys from PATH as base64 blobs."
+  (unless (non-empty-string? path)
+    (error "authorized keys require a non-empty file path" path))
   (call-with-input-file path
     (lambda (port)
       (let loop ((keys '()))
@@ -166,9 +168,17 @@
   "Generate a host key at PATH for use with serve-ssh.
 
 TYPE is a key symbol understood by (ssh key), BITS its size where the
-type has one.  Refuses to overwrite an existing key unless FORCE is #t."
+type has one. Refuses to overwrite an existing key unless FORCE is #t."
   (unless (non-empty-string? path)
     (error "host key requires a file path" path))
+  (unless (and (exact-integer? bits) (> bits 0))
+    (error "host key bit count must be a positive integer" bits))
+  (unless (symbol? type)
+    (error "host key type must be a symbol" type))
+  (unless (boolean? force)
+    (error "host key force option must be a boolean" force))
+  (unless (output-port? output)
+    (error "host key output must be an output port" output))
   (when (and (file-exists? path) (not force))
     (error "host key already exists; pass --force to overwrite" path))
   (catch 'guile-ssh-error
