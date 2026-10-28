@@ -52,6 +52,13 @@
     (for-each (lambda (id) (hash-set! table id #t)) ids)
     table))
 
+(define (pages-with-ids forest ids)
+  "Return the pages identified by IDS in the forest's stable site order."
+  (let ((members (id-member-set ids)))
+    (filter (lambda (page)
+              (hash-ref members (site-page-id page)))
+            (pages forest))))
+
 (define (describe-tree-cycle pages cycle)
   (string-join
     (map (lambda (tree-id)
@@ -215,13 +222,9 @@
   ;;     string-list scan.
   (cached-rows forest `(topic-pages ,topic-id ,kind)
     (lambda ()
-      (let ((page-ids
-              (id-member-set
-                (topic-page-ids (content-node-relation forest)
-                                topic-id kind))))
-        (filter (lambda (page)
-                  (hash-ref page-ids (site-page-id page)))
-                (pages forest))))))
+      (pages-with-ids
+        forest
+        (topic-page-ids (content-node-relation forest) topic-id kind)))))
 
 (define* (related-pages forest page-id
                         #:optional (reference-taxon-id "reference"))
@@ -317,11 +320,9 @@ those trees' frontmatter."
 
 (define (describing-pages forest uri)
   "Return pages that declare they describe URI, in site order."
-  (let ((ids (id-member-set
-               (described-entity-page-ids
-                 (described-entity-relation forest) uri))))
-    (filter (lambda (page) (hash-ref ids (site-page-id page)))
-            (pages forest))))
+  (pages-with-ids
+    forest
+    (described-entity-page-ids (described-entity-relation forest) uri)))
 
 (define (subtree-definitions forest)
   (map (lambda (definition)
@@ -375,14 +376,11 @@ those trees' frontmatter."
   (cached-rows forest `(transcluding-pages ,id)
     (lambda ()
       (let ((source-ids
-              (id-member-set
-                (delete-duplicates
-                  (map composition:transclusion-source-tree-id
-                       (incoming-transclusions forest id))
-                  equal?))))
-        (filter (lambda (page)
-                  (hash-ref source-ids (site-page-id page)))
-                (pages forest))))))
+              (delete-duplicates
+                (map composition:transclusion-source-tree-id
+                     (incoming-transclusions forest id))
+                equal?)))
+        (pages-with-ids forest source-ids)))))
 
 ;; Context = every page in whose displayed content this page appears:
 ;; hosts of its transclusions and the page that defines it as a subtree.
@@ -390,22 +388,19 @@ those trees' frontmatter."
   (cached-rows forest `(context-pages ,id)
     (lambda ()
       (let ((source-ids
-              (id-member-set
-                (delete-duplicates
-                  (append
-                   (map composition:transclusion-source-tree-id
-                        (incoming-transclusions forest id))
-                   (map composition:subtree-definition-parent
-                        (filter (lambda (definition)
-                                  (equal? (composition:subtree-definition-child
-                                            definition)
-                                          id))
-                                (composition:composition-subtree-definitions
-                                  (composition forest)))))
-                  equal?))))
-        (filter (lambda (page)
-                  (hash-ref source-ids (site-page-id page)))
-                (pages forest))))))
+              (delete-duplicates
+                (append
+                 (map composition:transclusion-source-tree-id
+                      (incoming-transclusions forest id))
+                 (map composition:subtree-definition-parent
+                      (filter (lambda (definition)
+                                (equal? (composition:subtree-definition-child
+                                          definition)
+                                        id))
+                              (composition:composition-subtree-definitions
+                                (composition forest)))))
+                equal?)))
+        (pages-with-ids forest source-ids)))))
 
 (define (used-codepoints forest)
   "Every codepoint in the site's authored rendered text as a sorted character
@@ -451,32 +446,22 @@ since MathJax draws it with its own fonts."
   (require-page forest id)
   (cached-rows forest `(backlink-pages ,id)
     (lambda ()
-      (let ((source-ids
-              (id-member-set
-                (backlink-page-ids (reference-relation forest) id))))
-        (filter (lambda (page) (hash-ref source-ids (site-page-id page)))
-                (pages forest))))))
+      (pages-with-ids
+        forest (backlink-page-ids (reference-relation forest) id)))))
 
 (define (common-backlinks forest left-id right-id)
   (for-each
     (lambda (id)
       (require-page forest id))
     (list left-id right-id))
-  (let ((source-ids
-          (id-member-set
-            (common-backlink-page-ids
-              (reference-relation forest) left-id right-id))))
-    (filter (lambda (page) (hash-ref source-ids (site-page-id page)))
-            (pages forest))))
+  (pages-with-ids
+    forest
+    (common-backlink-page-ids (reference-relation forest) left-id right-id)))
 
 (define (reachable-pages forest id)
   (require-page forest id)
-  (let ((reachable-ids
-          (id-member-set
-            (reachable-page-ids (reference-relation forest) id))))
-    (filter (lambda (page)
-              (hash-ref reachable-ids (site-page-id page)))
-            (pages forest))))
+  (pages-with-ids
+    forest (reachable-page-ids (reference-relation forest) id)))
 
 ;;     Term queries: one term's defining occurrences for glossary
 ;;     generation and hover previews; terms whose occurrences disagree;
