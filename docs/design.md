@@ -70,7 +70,8 @@ vocabulary decisions without committing to a public API.
 
 ## Testing
 
-- `blue verify` runs the test suite, REUSE, the example builds, and axe.
+- `blue verify` runs `blue check`, `blue lint`, and `blue check-examples` in
+  order; the last command builds the audited examples and runs axe.
 - `blue a11y [HTML ...]` audits explicit pages.
 - Axe does not test keyboard order, focus movement, or media queries; check
   those in a browser or with a dedicated interaction test.
