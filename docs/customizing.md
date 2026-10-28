@@ -83,13 +83,23 @@ Projection renderers run against the analyzed forest and participate in
 Grove's renderer cache. Use `make-site-project #:renderers` when building a
 non-Forester site or when you need lower-level site configuration.
 
-## Add output from an external tool
+## Integrate an external tool
 
-Keep the tool invocation in project Scheme and describe its inputs and output
-as an asset pipeline when it consumes declared project files. A
-`make-asset-pipeline` value from `(grove pipeline)` can be passed to the compact
-Forester constructor, which keeps its standard reader, analyzer, and HTML
-renderer:
+Choose the extension point from the tool's input and where its result belongs:
+
+| Tool input and result | Extension point |
+| --- | --- |
+| A declared project file produces a standalone artifact, independently of the analyzed model | Asset pipeline in `#:pipelines`. |
+| Data in the analyzed model produces a standalone artifact | Renderer in `#:renderers` or `#:additional-renderers`; the [hackable math experiment](../examples/hackable-math/README.md) compiles Typst and LaTeX source embedded in pages this way. |
+| A custom content node should become inline output markup | Render rule; the hackable math experiment uses this for SMathML. |
+| The result belongs inline in the `.plant` page being evaluated | Scheme in `.plant`; register files with `depend-on!` from `(grove input)`, or use `#:cache-dependencies` for reader-wide inputs. Disable reader caching when behavior depends on untracked external state. |
+
+### File-driven tool example
+
+Keep the invocation in project Scheme and describe its declared inputs and
+artifacts with `make-asset-pipeline` from `(grove pipeline)`. Pass the value to
+the compact Forester constructor to retain its standard reader, analyzer, and
+HTML renderer:
 
 ```scheme
 ;; diagram-pipeline is a project-owned asset-pipeline value.
@@ -106,43 +116,17 @@ the project. Grove tracks declared files and loaded Scheme code. Include tool
 identity in the pipeline's `#:version` when Grove cannot observe it, as the
 Graphviz adapter does.
 
-Pipeline caching assumes that the same project code, declared and materialized
-input paths, input bytes, and version produce the same returned bytes. Both
-path forms participate in identity because the procedure receives materialized
-paths and may use their names or locations. Grove verifies stored bytes against
-their content hashes, but cannot verify that an external tool is deterministic.
-Include relevant tool and environment state in `#:version`, or disable project
-caching when that state cannot be represented.
+### Cache identity
 
-Choose the extension point by the data flow, not by whether the adapter starts
-a process. A pipeline consumes declared project files and returns artifacts
-independently of the analyzed model. A renderer can consume values already in
-the model and emit corresponding assets; the
-[hackable math experiment](../examples/hackable-math/README.md) uses this for
-Typst and LaTeX source embedded in pages. A render rule can turn a custom
-content node into inline markup; the same experiment demonstrates this with
-SMathML. Declare external files and tool identity in the renderer or HTML
-configuration so cache reuse stays correct.
-
-Plain renderer procedures run on each build because Scheme procedures have no
-stable cache identity. Use `make-cached-renderer` when artifact reuse is useful;
-declare unique extra file paths with `#:inputs` and state not represented by the
-model or tracked project files with `#:configuration`. A pipeline may omit `#:inputs`
-when it does not read project files, and may keep the default empty `#:version`
-when its behavior is determined by project code and declared inputs. Add a
-version for state Grove cannot observe, such as an external toolchain version
-or environment variables.
-
-Use a Scheme expression in `.plant` when the tool's result belongs inline in
-that document. Declare files read during evaluation with `depend-on!` from
-`(grove input)`; Grove remembers those reads for the next cache
-lookup. Use the reader's `#:cache-dependencies` option for files that can
-affect every document even when an individual evaluation does not open them.
-Opt out of reader caching when behavior depends on untracked external state.
-Use a pipeline when the tool consumes declared project files and returns
-standalone build artifacts. Both keep the integration code in the project.
-Pipelines use Grove's artifact validation and content-addressed cache; declare
-opaque tool identity with `#:version`.
+Plain renderer procedures run on every build. For artifact reuse, wrap one with
+`make-cached-renderer`, declare external files with `#:inputs`, and describe
+untracked output-affecting state with `#:configuration`. A pipeline may omit
+`#:inputs` when it reads no project files; add `#:version` when toolchain or
+environment state can change its output. See [site outputs](site-outputs.md)
+for the cache identity and dependency rules. Pipeline reuse assumes that the
+same project code, declared and materialized paths, input bytes, and version
+produce the same bytes. Grove verifies stored-byte integrity but cannot verify
+external tool determinism.
 
 ## Three renderer entry points
 
