@@ -7,6 +7,7 @@
   #:use-module (forester private entity-uri)
   #:use-module (grove i18n)
   #:use-module (grove ir)
+  #:use-module (grove private procedure)
   #:use-module (grove private string-fun)
   #:use-module (grove site)
   #:use-module (srfi srfi-1)
@@ -118,6 +119,8 @@ must contain one @title. Any @title elements in the document are checked for
 uniqueness and non-empty content even when TITLE overrides their value.
 METADATA adds page metadata; it cannot duplicate keys extracted from the
 document."
+  (unless (content-document? document)
+    (error "Forester tree page requires a content document" document))
   (let* ((children (ir:content-document-children/raw document))
          (metadata-nodes (filter metadata-element? children))
          (declared-title
@@ -169,6 +172,16 @@ document."
       (string-drop-right filename (string-length ".plant")) document path)))
 
 (define (make-page-reader read-document)
-  "Return a reader whose page IDs are source basenames without `.plant'."
+  "Adapt a one-path document reader to a Forester page reader.
+
+READ-DOCUMENT must accept one path and return a Content IR document. Page IDs
+are source basenames without `.plant'."
+  (unless (procedure-accepts-arguments? read-document 1)
+    (error "Forester document reader must accept one source path"
+           read-document))
   (lambda (path)
-    (page-from-document path (read-document path))))
+    (let ((document (read-document path)))
+      (unless (content-document? document)
+        (error "Forester document reader must return a content document"
+               path document))
+      (page-from-document path document))))

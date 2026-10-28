@@ -33,6 +33,16 @@
 
 (test-begin "forester site")
 
+(test-error "Forester page readers reject callbacks with the wrong arity" #t
+  (make-page-reader (lambda () (make-content-document '()))))
+
+(test-error "Forester page readers reject non-document results at the boundary"
+  #t
+  ((make-page-reader (lambda (_) 'not-a-document)) "page.plant"))
+
+(test-error "tree-page construction requires a content document" #t
+  (document->tree-page "page" 'not-a-document "page.plant"))
+
 (test-error "forest timing callbacks must accept phase and duration" #t
   (make-forest (make-site '()) #:timings (lambda (_) #t)))
 
