@@ -57,12 +57,14 @@ An empty list means the artifact is known to have no file dependencies."
   (unless (or (not sources)
               (and (list? sources) (every non-empty-string? sources)))
     (error "artifact sources must be #f or a list of paths" sources))
+  (when (and sources
+             (not (= (length sources)
+                     (length (delete-duplicates sources string=?)))))
+    (error "artifact source paths must be unique" sources))
   (artifact:%make-artifact (snapshot-data path)
                   (if (string? content) (string-copy content)
                       (bytevector-copy content))
-                  (and sources
-                       (snapshot-data
-                         (delete-duplicates sources string=?)))))
+                  (and sources (snapshot-data sources))))
 
 (define* (make-artifact path content #:optional (sources #f))
   "Construct a text artifact at PATH with optional source dependencies.

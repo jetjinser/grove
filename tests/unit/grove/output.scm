@@ -66,6 +66,8 @@
 
 (test-error "artifact sources reject empty paths" #t
   (make-artifact "page.txt" "content" '("")))
+(test-error "artifact source paths must be unique" #t
+  (make-artifact "page.txt" "content" '("page.plant" "page.plant")))
 (test-error "artifact paths reject NUL characters before writing" #t
   (make-artifact (string-append "page" (string #\nul) ".txt") "content"))
 (test-error "artifact prefix requires a relative path" #t

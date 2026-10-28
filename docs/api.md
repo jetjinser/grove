@@ -200,8 +200,9 @@ flow. Project builds perform validation and publication automatically and
 remain the recommended entry point when Grove should also collect sources,
 analyze content, and coordinate renderer and pipeline caches.
 
-The optional third constructor argument declares the input paths that an
-artifact depends on. Omitting it means dependencies are unknown (`#f`), so
+The optional third constructor argument declares the unique input paths that an
+artifact depends on. Duplicate paths are rejected. Omitting it means
+dependencies are unknown (`#f`), so
 Grove handles the artifact conservatively during invalidation and incremental
 rendering. Pass an explicit empty list when the artifact is known to depend on
 no input files; pass the relevant paths when it depends on only part of the
