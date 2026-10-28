@@ -171,7 +171,8 @@ To extend the default CSS, compose styles in cascade order:
 
 Pass the custom style alone to replace the default, or `(make-html-style)` to
 omit stylesheets entirely. File-backed CSS artifacts should list their source
-paths as dependencies, as in the showcase builder.
+paths as dependencies, as in the showcase builder. When only that CSS source
+changes, Grove refreshes the stylesheet artifact and reuses the page artifacts.
 
 ### Element styles
 
