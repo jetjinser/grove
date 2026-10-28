@@ -45,11 +45,12 @@
            (url-prefix "/"))
   "Build HTML routes from page and index artifact paths.
 
-URL-PREFIX is raw absolute path text beginning and ending with /. Grove
-encodes it together with each artifact path when constructing URLs. PAGE-PATH
-must return the same path for a page ID under the same project state; renderers
-may evaluate it repeatedly while validating routes, resolving links, and
-building cache identities."
+URL-PREFIX is raw absolute site-path text beginning and ending with /; it
+cannot be a protocol-relative authority such as //example.org/. Grove encodes
+it together with each artifact path when constructing URLs. PAGE-PATH must
+return the same path for a page ID under the same project state; renderers may
+evaluate it repeatedly while validating routes, resolving links, and building
+cache identities."
   (unless (procedure? page-path)
     (error "HTML page path requires a procedure" page-path))
   (unless (artifact-path? index-path)
@@ -58,8 +59,10 @@ building cache identities."
     (error "HTML home page ID must be a non-empty string or #f" home-page))
   (unless (and (string? url-prefix)
                (string-prefix? "/" url-prefix)
+               (not (string-prefix? "//" url-prefix))
                (string-suffix? "/" url-prefix))
-    (error "HTML URL prefix must begin and end with /" url-prefix))
+    (error "HTML URL prefix must be an absolute site path beginning and ending with /"
+           url-prefix))
   (%make-html-routes page-path (snapshot-data index-path)
                      (snapshot-data url-prefix) (snapshot-data home-page)))
 

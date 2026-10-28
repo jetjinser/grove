@@ -38,6 +38,8 @@
   (html-page-path #f "guide"))
 (test-error "HTML route tables reject malformed page ID lists" #t
   (html-route-table (make-html-routes) '("guide" "")))
+(test-error "HTML URL prefixes reject protocol-relative authorities" #t
+  (make-html-routes #:url-prefix "//example.org/"))
 (test-error "text page paths reject empty page IDs" #t
   (text-page-path (make-text-routes) ""))
 (test-error "locale page paths reject empty page IDs" #t
