@@ -107,6 +107,16 @@
   (make-sitemap-renderer #:settings 'not-site-settings))
 (test-error "RSS renderer rejects invalid settings at construction" #t
   (make-rss-renderer #:settings 'not-site-settings))
+(test-error "sitemap renderer rejects empty default locales at construction" #t
+  (make-sitemap-renderer #:site-url "https://example.org"
+                         #:default-locale ""))
+(test-error "RSS renderer rejects empty language tags at construction" #t
+  (make-rss-renderer #:site-url "https://example.org" #:language ""))
+(test-error "sitemap rendering rejects empty default locales" #t
+  (render-sitemap forest #:site-url "https://example.org"
+                  #:default-locale ""))
+(test-error "RSS rendering rejects empty language tags" #t
+  (render-rss forest #:site-url "https://example.org" #:language ""))
 (test-error "sitemap renderer requires a site URL at construction" #t
   (make-sitemap-renderer))
 (test-error "RSS renderer requires a site URL at construction" #t

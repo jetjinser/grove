@@ -5,6 +5,7 @@
 (define-module (forester render sitemap)
   #:use-module (grove i18n)
   #:use-module (grove build)
+  #:use-module (grove private string-fun)
   #:use-module (forester private render-routes)
   #:use-module (forester private translations)
   #:use-module (forester private web)
@@ -108,8 +109,9 @@
   (unless (html-routes? routes)
     (error "Forester sitemap renderer requires HTML routes" routes))
   (when default-locale
-    (unless (string? default-locale)
-      (error "Sitemap default locale must be a tag or #f" default-locale))
+    (unless (non-empty-string? default-locale)
+      (error "Sitemap default locale must be a non-empty tag or #f"
+             default-locale))
     (set! default-locale (locale-tag (make-locale default-locale))))
   (set! routes (validate-site-home-route
                  forest (resolve-site-routes forest routes)))
@@ -145,8 +147,9 @@ not SITE-URL. SITE-URL overrides the origin in SETTINGS."
   (unless (html-routes? routes)
     (error "Forester sitemap renderer requires HTML routes" routes))
   (when default-locale
-    (unless (string? default-locale)
-      (error "Sitemap default locale must be a tag or #f" default-locale))
+    (unless (non-empty-string? default-locale)
+      (error "Sitemap default locale must be a non-empty tag or #f"
+             default-locale))
     (set! default-locale (locale-tag (make-locale default-locale))))
   (set! site-url (string-copy site-url))
   (set! sitemap-path (string-copy sitemap-path))

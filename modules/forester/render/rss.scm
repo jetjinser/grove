@@ -196,8 +196,8 @@ not SITE-URL. SITE-URL overrides the origin in SETTINGS."
     (error "RSS stylesheet type must be a non-empty media type without whitespace"
            stylesheet-type))
   (when language
-    (unless (string? language)
-      (error "RSS language must be a tag or #f" language))
+    (unless (non-empty-string? language)
+      (error "RSS language must be a non-empty tag or #f" language))
     (set! language (locale-tag (make-locale language))))
   (set! site-url (string-copy site-url))
   (set! feed-path (string-copy feed-path))

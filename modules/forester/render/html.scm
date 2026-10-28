@@ -1123,8 +1123,9 @@ Entry points take this value with #:options."
     (unless (valid-side-lane? side-lane)
       (error "HTML side-lane kinds must be unique symbols" side-lane))
     (when default-locale
-      (unless (string? default-locale)
-        (error "HTML default locale must be a tag or #f" default-locale))
+      (unless (non-empty-string? default-locale)
+        (error "HTML default locale must be a non-empty tag or #f"
+               default-locale))
       (set! default-locale (locale-tag (make-locale default-locale))))
     (unless (or (not site-url) (web-origin? site-url))
       (error "HTML site URL must be an absolute HTTP(S) origin or #f"

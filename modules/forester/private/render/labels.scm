@@ -4,6 +4,7 @@
 
 (define-module (forester private render labels)
   #:use-module (grove i18n)
+  #:use-module (grove private string-fun)
   #:use-module (grove render context)
   #:use-module (forester private backmatter)
   #:export (resolve-interface-locale
@@ -23,7 +24,10 @@
           (cond
             ((not locale) #f)
             ((locale? locale) locale)
-            ((string? locale) (make-locale locale))
+            ((string? locale)
+             (unless (non-empty-string? locale)
+               (error "renderer locale must be a non-empty tag or #f" locale))
+             (make-locale locale))
             (else
              (error "renderer locale must be a locale, tag, or #f" locale)))))
     (unless (message-catalog? messages)

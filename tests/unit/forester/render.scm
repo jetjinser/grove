@@ -491,6 +491,8 @@
   (make-text-renderer #:cache? 'yes))
 (test-error "renderer options reject invalid message catalogs at construction" #t
   (make-text-options #:messages 'not-a-catalog))
+(test-error "renderer options reject empty locale tags at construction" #t
+  (make-text-options #:locale ""))
 (test-error "HTML options reject malformed root attributes at construction" #t
   (make-html-options #:html-attributes '((lang . 42))))
 (test-error "HTML options reject duplicate root attributes at construction" #t
