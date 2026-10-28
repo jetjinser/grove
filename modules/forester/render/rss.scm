@@ -141,7 +141,8 @@
     (error "RSS feed path must be a relative artifact path" feed-path))
   (unless (html-routes? routes)
     (error "Forester RSS renderer requires HTML routes" routes))
-  (set! routes (resolve-site-routes forest routes))
+  (set! routes (validate-site-home-route
+                 forest (resolve-site-routes forest routes)))
   (when (and stylesheet-url (not (rss-stylesheet-url? stylesheet-url)))
     (error "RSS stylesheet URL must be a non-empty URL without whitespace"
            stylesheet-url))

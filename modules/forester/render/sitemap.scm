@@ -111,11 +111,8 @@
     (unless (string? default-locale)
       (error "Sitemap default locale must be a tag or #f" default-locale))
     (set! default-locale (locale-tag (make-locale default-locale))))
-  (set! routes (resolve-site-routes forest routes))
-  ;;     home-page 是可选的：没有主页的项目不需要校验它存在。
-  (unless (or (not (html-home-page routes))
-              (find-page forest (html-home-page routes)))
-    (error "configured HTML home page was not found" (html-home-page routes)))
+  (set! routes (validate-site-home-route
+                 forest (resolve-site-routes forest routes)))
   (let* ((base (web-base-url site-url))
          (route-table
            (html-route-table routes (map site-page-id (pages forest))))

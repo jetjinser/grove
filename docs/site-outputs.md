@@ -45,8 +45,9 @@ supplied through the shared settings or directly to either renderer with
 
 When routes omit a home page, HTML, RSS, and sitemap renderers infer it from the
 analyzed site's `#:home`. You do not need to repeat the home tree ID in each
-renderer. If a project customizes page paths, pass the same route value to HTML,
-RSS, and sitemap so their canonical links agree.
+renderer. A home page set in routes must exist in the analyzed site. If a
+project customizes page paths, pass the same route value to HTML, RSS, and
+sitemap so their canonical links agree.
 
 An extension can use a plain procedure from the analyzed model to an artifact
 list; plain procedures rerun on each build. Wrap it with

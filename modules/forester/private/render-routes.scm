@@ -9,6 +9,7 @@
   #:use-module (grove site)
   #:use-module (srfi srfi-1)
   #:export (resolve-site-routes
+            validate-site-home-route
             resolve-text-route-table))
 
 (define (validate-unique-render-paths! renderer paths)
@@ -25,6 +26,13 @@
         (if home
             (html-routes-with-home-page routes home)
             routes))))
+
+(define (validate-site-home-route forest routes)
+  "Reject ROUTES when its configured home page is absent from FOREST."
+  (let ((home (html-home-page routes)))
+    (when (and home (not (find-page forest home)))
+      (error "configured HTML home page was not found" home))
+    routes))
 
 (define (resolve-text-route-table renderer forest routes)
   "Resolve and validate ROUTES for every page in FOREST.

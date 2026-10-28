@@ -133,6 +133,14 @@
 (test-error "RSS renderer validates its artifact path at construction" #t
   (make-rss-renderer #:site-url "https://example.org"
                      #:feed-path "../feed.xml"))
+(test-error "RSS renderer rejects a configured home page absent from the forest" #t
+  (render-rss forest
+    #:site-url "https://example.org"
+    #:routes (make-html-routes #:home-page "missing")))
+(test-error "sitemap renderer rejects a configured home page absent from the forest" #t
+  (render-sitemap forest
+    #:site-url "https://example.org"
+    #:routes (make-html-routes #:home-page "missing")))
 (let* ((site-url (string-copy "https://example.org"))
        (sitemap-path (string-copy "map.xml"))
        (feed-path (string-copy "feed.xml"))
