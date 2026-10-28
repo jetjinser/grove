@@ -32,6 +32,7 @@ the work; drop lower only when you need to replace part of its behavior.
 | Pass explicit state through a render pass | `(grove render context)` → `make-render-context`, `render-context-with`; Forester renderers can use `(forester render context)` → `make-site-render-context` | renderer options configure a renderer; context carries values to rules and custom rendering code |
 | Add an output derived from the analyzed model | a renderer in `#:additional-renderers` or `#:renderers` | the output depends only on declared project files, independently of the model; use `#:pipelines` |
 | Construct a renderer's output artifacts | `(grove output)` → `make-artifact`, `make-byte-artifact` | output comes from declared files independently of the model; use an asset pipeline |
+| Publish artifacts outside a project build | `(grove output)` → `write-artifacts`; use `validate-artifacts` to check a complete set before writing | a normal Grove project already validates and publishes its artifacts |
 | Copy a static asset directory into the build | `(grove render static)` → `make-static-assets-renderer` | files are generated from declared inputs or a tool; use an asset pipeline |
 | Render alternate image encodings as HTML `<picture>` | `(grove render html image)` → `define-image-sets`, `image-set-rule` | the encoded files still come from a project-owned asset pipeline |
 | Configure code highlighting | `(grove highlight)` → `make-highlighter`, `default-highlighters`; HTML `#:highlighters` | use `(grove style highlight)` → `default-highlight-style` to compose its stylesheet; see [syntax highlighting](project.md#highlighting) |
@@ -179,6 +180,12 @@ Artifacts use the same ownership rule: `make-artifact` and
 `prefix-artifacts` places a validated artifact set under a relative output
 directory while preserving each artifact's content and source dependencies.
 Artifact paths reject absolute paths, empty or traversal components, and NUL.
+For a Scheme host that owns publication, `write-artifacts` validates and writes
+an artifact list to an output directory, removing only stale outputs recorded
+in Grove's manifest. Pair it with `render-model` for a direct render-and-write
+flow. Project builds perform validation and publication automatically and
+remain the recommended entry point when Grove should also collect sources,
+analyze content, and coordinate renderer and pipeline caches.
 
 The optional third constructor argument declares the input paths that an
 artifact depends on. Omitting it means dependencies are unknown (`#f`), so
