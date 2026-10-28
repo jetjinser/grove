@@ -5,6 +5,7 @@
   #:use-module (grove collect)
   #:use-module (grove private build-state)
   #:use-module (grove private files)
+  #:use-module (grove private string-fun)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (runtime-inputs input-fingerprint normalize-input-path
@@ -97,6 +98,8 @@
 
 (define (depend-on! path)
   "Register a file input before reading it; return its absolute path."
+  (unless (non-empty-string? path)
+    (error "input dependency path must be a non-empty string" path))
   (let* ((requested (if (absolute-file-name? path) path
                         (string-append (getcwd) "/" path)))
          (path (if (file-exists? requested) (canonicalize-path requested)

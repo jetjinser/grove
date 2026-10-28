@@ -76,6 +76,10 @@
   (make-input-cache-context 'enabled '()))
 (test-error "input cache dependencies must be non-empty paths" #t
   (make-input-cache-context #t (list "")))
+(test-error "input dependency path must be a non-empty string" #t
+  (depend-on! ""))
+(test-error "input dependency path must be a non-empty string" #t
+  (depend-on! #f))
 (test-error "Scribble reader cache option is checked at construction" #t
   (make-scribble-document-reader #:cache? 'enabled))
 (test-error "Scribble dependency collector is checked at construction" #t
