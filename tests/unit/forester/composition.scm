@@ -10,7 +10,7 @@
   #:use-module (forester render rss)
   #:use-module (forester render sitemap)
   #:use-module (forester render text)
-  #:use-module ((forester composition) #:prefix composition:)
+  #:use-module (forester composition)
   #:use-module (forester relations)
   #:use-module (forester site)
   #:use-module (grove build)
@@ -209,7 +209,7 @@
     (string-contains (assoc-ref html "stable-piece") "Reusable."))
   (test-equal "explicit subtree addresses are included in composition data"
     '("stable-piece")
-    (map composition:transclusion-target-tree-id
+    (map transclusion-target-tree-id
          (outgoing-transclusions forest "root")))
   (test-assert "explicit subtree addresses survive insertion of anonymous trees"
     (require-page changed-forest "stable-piece"))
@@ -262,10 +262,10 @@
        (transclusions (outgoing-transclusions forest "host")))
   (test-equal "transclusions are indexed as a distinct tree relation"
     '("reusable")
-       (map composition:transclusion-target-tree-id transclusions))
+       (map transclusion-target-tree-id transclusions))
   (test-equal "transclusion records identify their source occurrence"
     '("transclude-1")
-    (map composition:transclusion-source-id transclusions))
+    (map transclusion-source-id transclusions))
   (test-equal "incoming transclusions return every occurrence"
     1
     (length (incoming-transclusions forest "reusable")))
