@@ -13,6 +13,7 @@
   #:use-module (grove render html)
   #:use-module (grove render text)
   #:use-module (grove site)
+  #:use-module (grove style)
   #:use-module (grove style html)
   #:use-module (forester i18n)
   #:use-module (forester commands)
@@ -355,6 +356,16 @@
   ;;     meaning to CSS, and the style name is emitted first.
   '(div (@ (class "note bilingual-lane") (lang "en") (dir "ltr")) (p "Text"))
   (content->sxml (lang "en" #:style 'note "Text")))
+
+(test-equal "ARIA roles use explicit HTML style attributes"
+  '(div (@ (role "note") (class "bilingual-lane")
+           (lang "en") (dir "ltr"))
+     (p "Text"))
+  (content->sxml
+    (lang "en"
+      #:style (make-content-style #f
+                (list (make-html-attributes '((role . "note")))))
+      "Text")))
 
 ;;; Text presentation
 

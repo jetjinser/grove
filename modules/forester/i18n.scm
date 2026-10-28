@@ -41,16 +41,14 @@
     (error "text direction must be ltr, rtl, or auto" dir))
   dir)
 
-(define* (make-content-translation locale children #:key (dir #f) (role #f)
-                                   (style #f))
+(define* (make-content-translation locale children #:key (dir #f) (style #f))
   "Build one language lane for LOCALE from decoded content CHILDREN."
   (unless (locale? locale)
     (error "translation requires a locale" locale))
   (let* ((tag (locale-tag locale))
          (dir (if dir (check-direction dir) (locale-dir locale))))
     (make-content-element 'bilingual-lane children
-      #:properties `((lang . ,tag) (dir . ,dir)
-                     ,@(if role `((role . ,role)) '()))
+      #:properties `((lang . ,tag) (dir . ,dir))
       #:style (bilingual-lane-style tag dir style)
       #:flow-kind 'block)))
 
@@ -209,11 +207,11 @@ hint. Parallel mode shows every lane as before."
       (else
        (error "bilingual mode must be fold or parallel" mode)))))
 
-(define*-public (lang code #:key (dir #f) (role #f) (style #f) . body)
+(define*-public (lang code #:key (dir #f) (style #f) . body)
   "Author one language lane from a BCP 47 language tag."
   (set! body (command-body body))
   (make-content-translation (make-locale code) (decode-flow body)
-    #:dir dir #:role role #:style style))
+    #:dir dir #:style style))
 
 (define*-public (term code #:key (dir #f) (style #f) . body)
   "Mark inline foreign-language text with its language and direction."
