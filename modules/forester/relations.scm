@@ -290,33 +290,6 @@
              (hash-map->list cons by-term))
         (lambda (left right) (string<? (car left) (car right)))))))
 
-(defrel (not-membero value values)
-  (conde
-    ((== '() values))
-    ((fresh (head tail)
-       (== `(,head . ,tail) values)
-       (=/= value head)
-       (not-membero value tail)))))
-
-(defrel (page-linko relation source-page-id target-page-id)
-  (referenceo relation
-              (source-page-id source-page-id)
-              (target-page-id target-page-id)))
-
-(defrel (reachableo relation source-page-id target-page-id)
-  (reachable-step relation source-page-id target-page-id
-                  (list source-page-id)))
-
-(defrel (reachable-step relation source-page-id target-page-id seen)
-  (conde
-    ((page-linko relation source-page-id target-page-id)
-     (not-membero target-page-id seen))
-    ((fresh (middle-page-id)
-       (page-linko relation source-page-id middle-page-id)
-       (not-membero middle-page-id seen)
-       (reachable-step relation middle-page-id target-page-id
-                       (cons middle-page-id seen))))))
-
 (define (reachable-page-ids relation source-page-id)
   ;;     Breadth-first closure over the source index. The solver's
   ;;     path enumeration is exponential in branchy graphs; the target
