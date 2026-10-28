@@ -96,18 +96,23 @@
       #:properties (if language `((language . ,language)) '())
       #:style style #:flow-kind 'block)))
 
+(define (make-math-element children style display? properties)
+  (make-content-element 'math children
+    #:style style
+    #:properties properties
+    #:flow-kind (if display? 'block 'inline)))
+
 (define*-public (math #:key (style #f) . source)
   (set! source (command-body source))
-  (make-content-element 'math
-    (list (math-value->layout (apply φ:read source) (math-assumptions '()))) #:style style))
+  (make-math-element
+    (list (math-value->layout (apply φ:read source) (math-assumptions '())))
+    style #f '()))
 
 (define*-public (display-math #:key (style #f) . source)
   (set! source (command-body source))
-  (make-content-element 'math
-                        (list (math-value->layout (apply φ:read source) (math-assumptions '())))
-                        #:style style
-                        #:properties '((display? . #t))
-                        #:flow-kind 'block))
+  (make-math-element
+    (list (math-value->layout (apply φ:read source) (math-assumptions '())))
+    style #t '((display? . #t))))
 
 ;; A function would evaluate the body before installing its assumptions.
 (define-syntax-rule (with-assumptions assumptions body ...)
@@ -173,32 +178,22 @@
           (if display? '((display? . #t)) '())
           (if id `((id . ,id)) '())))
 
-(define*-public (tex-math #:key (style #f) (id #f) . source)
+(define (make-tex-math-element style id display? source)
   (set! source (command-body source))
-  (make-content-element 'math
-                        (map make-content-text
-                             (map (lambda (value)
-                                    (if (string? value)
-                                        value
-                                        (error "TeX math accepts plain source text"
-                                               value)))
-                                  source))
-                        #:style style
-                        #:properties (math-properties #t #f (checked-anchor-id id))))
+  (make-math-element
+    (map make-content-text
+      (map (lambda (value)
+             (if (string? value)
+                 value
+                 (error "TeX math accepts plain source text" value)))
+           source))
+    style display? (math-properties #t display? (checked-anchor-id id))))
+
+(define*-public (tex-math #:key (style #f) (id #f) . source)
+  (make-tex-math-element style id #f source))
 
 (define*-public (tex-display-math #:key (style #f) (id #f) . source)
-  (set! source (command-body source))
-  (make-content-element 'math
-                        (map make-content-text
-                             (map (lambda (value)
-                                    (if (string? value)
-                                        value
-                                        (error "TeX math accepts plain source text"
-                                               value)))
-                                  source))
-                        #:style style
-                        #:properties (math-properties #t #t (checked-anchor-id id))
-                        #:flow-kind 'block))
+  (make-tex-math-element style id #t source))
 
 (define-public compute
   (lambda* (#:key (assumptions #f) (view 'compact) (on-error 'raise)
