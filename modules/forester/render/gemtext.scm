@@ -430,13 +430,9 @@ default. Paths are validated by MAKE-TEXT-ROUTES."
         (make-cached-renderer render
           #:configuration
           (lambda (forest)
-            (append
-              (list 'gemtext prefix
-                    (resolve-text-route-table "Gemtext" forest routes)
-                    (text-index-path routes)
-                    backmatter reference-taxon-id rules-id
-                    (site-title (site forest)) (site-description (site forest)))
-              (interface-cache-identity locale messages)))
+            (text-renderer-cache-identity
+              'gemtext forest prefix routes backmatter reference-taxon-id
+              rules-id locale messages))
           #:render-changed
           (lambda (forest changed _dirty-paths old-artifacts)
             (render-gemtext-changed forest options changed old-artifacts)))))))

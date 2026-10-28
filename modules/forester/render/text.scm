@@ -382,13 +382,9 @@
         (make-cached-renderer render
           #:configuration
           (lambda (forest)
-            (append
-              (list 'text prefix
-                    (resolve-text-route-table "text" forest routes)
-                    (site-title (site forest))
-                    (site-description (site forest)) (text-index-path routes)
-                    backmatter reference-taxon-id rules-id)
-              (interface-cache-identity locale messages)))
+            (text-renderer-cache-identity
+              'text forest prefix routes backmatter reference-taxon-id
+              rules-id locale messages))
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
             (render-text-changed forest options changed old-artifacts)))))))
