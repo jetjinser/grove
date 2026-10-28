@@ -16,6 +16,7 @@
   #:use-module (forester site)
   #:use-module (forester style html)
   #:use-module (grove build)
+  #:use-module (grove highlight)
   #:use-module (grove private renderer)
   #:use-module (grove ir)
   #:use-module (grove render html)
@@ -555,6 +556,11 @@
   (render-html #f #:options #f))
 (test-error "make-html-renderer rejects a value that is not HTML options" #t
   (make-html-renderer #:options #f))
+(let ((highlighter (cdr (assq 'scheme (default-highlighters)))))
+  (test-error "HTML options reject duplicate highlighter keys" #t
+    (make-html-options
+      #:highlighters (list (cons 'scheme highlighter)
+                           (cons 'scheme highlighter)))))
 (test-error "site->text rejects a value that is not text options" #t
   (site->text #f #:options #f))
 (test-error "render-text rejects a value that is not text options" #t

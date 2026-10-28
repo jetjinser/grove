@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester render html)
+  #:use-module (grove private alist)
   #:use-module ((grove private artifact) #:prefix out:)
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove build)
@@ -952,8 +953,7 @@ Entry points take this value with #:options."
                                (symbol? (car entry))
                                (highlighter? (cdr entry))))
                         highlighters)
-                 (= (length highlighters)
-                    (length (delete-duplicates (map car highlighters) eq?)))
+                 (unique-symbol-key-alist? highlighters)
                  (boolean? article?)
                  (boolean? backmatter-details?)
                  (boolean? hreflang?)

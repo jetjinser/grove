@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove i18n)
+  #:use-module (grove private alist)
   #:use-module (grove private procedure)
   #:use-module (grove private string-fun)
   #:use-module (grove private snapshot)
@@ -609,8 +610,7 @@ comma-separated groups of three digits."
                       (string? text)))
                 (_ #f))
               forms)
-       (= (length forms)
-          (length (delete-duplicates (map car forms) eq?)))))
+       (unique-symbol-key-alist? forms)))
 
 (define* (plural locale count forms)
   "Choose the plural form for COUNT from FORMS, an alist of CLDR
