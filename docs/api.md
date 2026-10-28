@@ -24,6 +24,7 @@ the work; drop lower only when you need to replace part of its behavior.
 | Collect files recursively | `(grove collect)` → `collect-directory` | Forester can accept an ordered `#:collect-sources` callback while retaining its defaults; custom site projects can use the same option |
 | Handle project failures in a Scheme host | `(grove project diagnostic)` for structured errors and Grove's formatter | custom work needs to add a stage or path; use `call-with-project-stage` |
 | Add a terminal browser to a Forester project | `(forester browse)` → `make-forest-browser` | the project needs its own `#:browse` callback |
+| Customize Gemtext output paths | `(forester render gemtext)` → `make-gemtext-routes` | use `(forester render text routes)` only when intentionally sharing a common text route value |
 | Change how content renders | the format's renderer options and `(grove render rules)` | the project needs a new output format or a different build stage |
 | Define a reusable custom HTML element command | `(grove render html element)` → `make-element` | the element needs semantic data or a non-HTML interpretation; use `(grove ir)` and add render rules as needed |
 | Construct a titled disclosure block | `(grove ir)` → `make-content-disclosure` | `#:addressable? #t` is interpreted by Forester as an anonymous subtree; see [tree composition](forester-composition.md) |

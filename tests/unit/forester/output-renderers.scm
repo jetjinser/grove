@@ -7,9 +7,11 @@
   #:use-module (srfi srfi-13)
   #:use-module (forester render graph)
   #:use-module (forester render context)
+  #:use-module (forester render gemtext)
   #:use-module (forester render rss)
   #:use-module (forester render site)
   #:use-module (forester render sitemap)
+  #:use-module (forester render text routes)
   #:use-module (forester site)
   #:use-module (grove build)
   #:use-module (grove output)
@@ -37,6 +39,11 @@
 (test-equal "translation groups use association-list data"
   (list (cons "guide" (list (car (pages forest)) (cadr (pages forest)))))
   (derive-translation-groups (pages forest)))
+
+(let ((routes (make-gemtext-routes #:index-path "capsule/index.gmi")))
+  (test-equal "Gemtext routes keep their page suffix when only the index changes"
+    (list "capsule/index.gmi" "guide.gmi")
+    (list (text-index-path routes) (text-page-path routes "guide"))))
 
 (let* ((settings (make-site-settings
                    #:site-url "https://example.org"

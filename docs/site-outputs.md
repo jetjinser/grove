@@ -49,6 +49,10 @@ renderer. A home page set in routes must exist in the analyzed site. If a
 project customizes page paths, pass the same route value to HTML, RSS, and
 sitemap so their canonical links agree.
 
+Gemtext uses `.gmi` page and index paths by default. Use
+`make-gemtext-routes` to change one path while retaining the other Gemtext
+default; `make-text-routes` defaults to `.txt` for the plain-text renderer.
+
 An extension can use a plain procedure from the analyzed model to an artifact
 list; plain procedures rerun on each build. Wrap it with
 `make-cached-renderer` to reuse artifacts, declaring configuration Grove cannot

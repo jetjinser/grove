@@ -29,14 +29,23 @@
   #:use-module (srfi srfi-13)
   #:export (site->gemtext
             render-gemtext
+            make-gemtext-routes
             make-gemtext-options
             gemtext-options?
             make-gemtext-renderer))
 
-(define (default-gemtext-routes)
+(define* (make-gemtext-routes #:key
+                              (page-path (lambda (id)
+                                           (string-append id ".gmi")))
+                              (index-path "index.gmi"))
+  "Construct Gemtext routes with `.gmi' defaults.
+
+PAGE-PATH maps a page ID to its artifact path. INDEX-PATH names the aggregate
+index artifact. Either can be overridden while keeping the other Gemtext
+default. Paths are validated by MAKE-TEXT-ROUTES."
   (make-text-routes
-    #:page-path (lambda (id) (string-append id ".gmi"))
-    #:index-path "index.gmi"))
+    #:page-path page-path
+    #:index-path index-path))
 
 (define (line-text text)
   (string-join (string-tokenize text) " "))
@@ -352,7 +361,7 @@
 
 (define* (make-gemtext-options #:key
                                (prefix #f)
-                               (routes (default-gemtext-routes))
+                               (routes (make-gemtext-routes))
                                (backmatter default-backmatter-sections)
                                (reference-taxon-id default-reference-taxon-id)
                                (locale #f)
