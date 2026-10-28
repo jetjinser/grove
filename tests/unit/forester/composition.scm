@@ -525,8 +525,14 @@
     1 (assq-ref (assq-ref (site-page-metadata child) 'source-location) 'line))
   (test-equal "nested topics belong only to their tree"
     '("child") (map site-page-id (topic-pages forest "nested")))
-  (test-equal "direct definition is retained"
-    '(("frontmatter" "child")) (subtree-definitions forest)))
+  (test-assert "Forest subtree queries return typed definitions"
+    (every subtree-definition? (subtree-definitions forest)))
+  (test-equal "direct definition retains its parent and child IDs"
+    '(("frontmatter" "child"))
+    (map (lambda (definition)
+           (list (subtree-definition-parent definition)
+                 (subtree-definition-child definition)))
+         (subtree-definitions forest))))
 
 (test-error "subtree frontmatter validates dates" #t
   (make-forest

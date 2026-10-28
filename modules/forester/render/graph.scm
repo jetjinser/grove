@@ -43,8 +43,10 @@
             pages))
        (subtrees
          ,(map (lambda (definition)
-                 `((parent-tree . ,(car definition))
-                   (subtree . ,(cadr definition))))
+                 `((parent-tree . ,(composition:subtree-definition-parent
+                                     definition))
+                   (subtree . ,(composition:subtree-definition-child
+                                 definition))))
                (subtree-definitions forest)))
        (transclusions
          ,(append-map

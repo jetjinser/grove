@@ -325,11 +325,7 @@ those trees' frontmatter."
     (described-entity-page-ids (described-entity-relation forest) uri)))
 
 (define (subtree-definitions forest)
-  (map (lambda (definition)
-       (list (composition:subtree-definition-parent definition)
-               (composition:subtree-definition-child definition)))
-       (composition:composition-subtree-definitions
-         (composition forest))))
+  (composition:composition-subtree-definitions (composition forest)))
 
 (define (links forest id)
   (map reference-target-page-id (outgoing-references forest id)))

@@ -123,7 +123,9 @@ composition example.
 `tree-occurrences` returns a page's direct subtree and transclusion display
 elements in body order; it stops at each displayed tree boundary. Use
 `tree-occurrence-target` to read the target tree ID consistently across
-subtrees and transclusions.
+subtrees and transclusions. `subtree-definitions` returns the Forest's
+addressable parent/child relationships as `subtree-definition` records, using
+the same validated value type as `(forester composition)`.
 
 Use `page-source-paths` for the dependency closure of a page artifact and
 `source-paths` for an aggregate artifact that depends on the whole Forest. The
