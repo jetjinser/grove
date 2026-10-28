@@ -4,7 +4,6 @@
 (define-module (grove project diagnostic)
   #:use-module (grove private files)
   #:use-module (grove private snapshot)
-  #:use-module (grove private string-fun)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
   #:export (print-project-error

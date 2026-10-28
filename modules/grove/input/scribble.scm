@@ -5,7 +5,6 @@
 (define-module (grove input scribble)
   #:use-module (grove private files)
   #:use-module (grove collect)
-  #:use-module (grove private string-fun)
   #:use-module (grove private input cache)
   #:use-module (grove private input dependencies)
   #:use-module (system base language)

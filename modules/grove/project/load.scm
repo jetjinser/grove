@@ -8,7 +8,6 @@
   #:use-module (grove project diagnostic)
   #:use-module (grove private project timing)
   #:use-module (grove private fingerprint)
-  #:use-module (grove private string-fun)
   #:use-module (grove private input cache)
   #:use-module (grove private input dependencies)
   #:use-module (ice-9 ftw)

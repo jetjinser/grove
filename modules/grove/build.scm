@@ -6,7 +6,6 @@
   #:use-module (grove private files)
   #:use-module (grove private renderer)
   #:use-module (grove private snapshot)
-  #:use-module (grove private string-fun)
   #:use-module (grove output)
   #:use-module (srfi srfi-1)
   #:export (render-model

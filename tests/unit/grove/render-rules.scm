@@ -378,7 +378,7 @@
   (test-equal "content transforms compose in order"
     '("a" "b")
     (map content-text-value
-      (content-document-children (composed document)))
+      (content-document-children (composed document))))
   (test-equal "content transform composition is associative"
     '("a" "b" "c")
     (map content-text-value (content-document-children
