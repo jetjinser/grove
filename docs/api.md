@@ -141,9 +141,14 @@ own type's contract.
 Content source locations are association lists with unique symbol keys. The
 `file` value, when present, is a non-empty string; `line` and `column` are
 positive one-based integers. Text constructors validate and snapshot a
-supplied `#:location`, and `content-with-source-location` applies the same
-contract when attaching a location to content. Content text, layout, element,
-and document source arguments are either `#f` or non-empty paths.
+supplied `#:location`; `content-with-source-location` applies the same
+contract when attaching a location to text or an element. Use
+`content-source-location` to read either kind uniformly. It returns `#f` for
+strings, layout nodes, and documents; document children carry their own
+locations. Non-content Scheme values pass through `content-with-source-location`
+unchanged, which lets Scribble annotate arbitrary expressions safely. Content
+text, layout, element, and document source arguments are either `#f` or
+non-empty paths.
 `content-source-paths` walks an IR value or sequence and returns its unique
 recorded source paths, including location file fields. This is the dependency
 projection used when content-derived artifacts need to track their origins.

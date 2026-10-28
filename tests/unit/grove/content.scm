@@ -21,6 +21,11 @@
 
 (test-begin "grove content")
 
+(test-assert "content source locations use one public accessor"
+  (let ((public (module-public-interface (resolve-module '(grove ir)))))
+    (and (module-variable public 'content-source-location)
+         (not (module-variable public 'content-text-location)))))
+
 (test-assert "anchor validation is an internal shared helper"
   (and (not (module-variable
               (module-public-interface (resolve-module '(grove ir)))
@@ -88,7 +93,7 @@
       "\n  " "page.plant")
     (list (content-text-value text)
           (content-text-source text)
-          (content-text-location text)
+          (content-source-location text)
           (content-layout-raw layout)
           (content-layout-source layout)))
   (let ((value (content-text-value text))
@@ -182,13 +187,24 @@
           "included.plant" location #f #f)
     (list (content-document-source located)
           (content-element-source paragraph)
-          (content-element-property paragraph 'source-location)
+          (content-source-location paragraph)
           (content-text-source text)
-          (content-text-location text)
+          (content-source-location text)
           (content-text-source
             (car (content-element-children paragraph)))
-          (content-text-location
+          (content-source-location
             (car (content-element-children paragraph))))))
+
+(test-equal "content source locations are absent on strings, layout, and documents"
+  '(#f #f #f)
+  (list (content-source-location "plain text")
+        (content-source-location (make-content-layout 'newline "\n"))
+        (content-source-location (make-content-document '()))))
+
+(test-equal "source location annotation preserves non-content Scheme values"
+  'project-setting
+  (content-with-source-location
+    'project-setting '((file . "project.scm") (line . 3))))
 
 (let* ((location '((file . "computed.plant") (line . 3) (column . 5)))
        (located (content-with-source-location "computed text" location)))
@@ -198,7 +214,7 @@
     (list "computed text" #f location (list "computed.plant"))
     (list (content-text-value located)
           (content-text-source located)
-          (content-text-location located)
+          (content-source-location located)
           (content-source-paths located))))
 
 (test-error "content text values are strings" #t

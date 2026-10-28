@@ -226,7 +226,7 @@
           (test-equal "cache preserves text and source provenance"
             (list source "λ" source `((file . ,source) (line . 3) (column . 2)))
             (list (content-document-source decoded) (content-text-value text)
-                  (content-text-source text) (content-text-location text)))
+                  (content-text-source text) (content-source-location text)))
           (test-equal "cache preserves element identity and arbitrary data properties"
             (list 'paragraph 'block source
                   '((open? . #f) (arbitrary . (text "literal"))))

@@ -114,13 +114,7 @@ block elements flush the current paragraph."
                        (make-content-element 'paragraph contents
                                              #:flow-kind 'block))
                      (first (car contents))
-                     (location
-                       (cond
-                         ((content-text? first)
-                          (ir:content-text-location/raw first))
-                         ((content-element? first)
-                          (ir:content-element-property/raw first 'source-location))
-                         (else #f))))
+                     (location (content-source-location first)))
                 (cons (if location
                           (content-with-source-location paragraph location)
                           paragraph)

@@ -13,7 +13,7 @@
             make-content-text
             content-text-value
             content-text-source
-            content-text-location
+            content-source-location
             content-with-source-location
             content-layout?
             make-content-layout
@@ -57,9 +57,6 @@
 
 (define (content-text-source content)
   (snapshot-data (content-text-source/raw content)))
-
-(define (content-text-location content)
-  (snapshot-data (content-text-location/raw content)))
 
 (define (valid-content-source? source)
   (or (not source) (non-empty-string? source)))
@@ -250,6 +247,22 @@ subtree during site analysis. Other Grove renderers treat it as a disclosure."
 (define (content-document-source document)
   (snapshot-data (content-document-source/raw document)))
 
+(define (content-source-location content)
+  "Return CONTENT's source start, or #f when it has no location.
+
+Text and element nodes can carry a location. Strings, layout nodes, and
+documents do not; a document's children carry their own locations."
+  (cond
+    ((content-text? content)
+     (snapshot-data (content-text-location/raw content)))
+    ((content-element? content)
+     (content-element-property content 'source-location))
+    ((or (string? content)
+         (content-layout? content)
+         (content-document? content))
+     #f)
+    (else (error "content-source-location requires a content value" content))))
+
 (define (content-source-location-file element)
   (let ((location (content-element-property/raw element 'source-location)))
     (and (valid-source-location? location)
@@ -336,7 +349,8 @@ values."
 (define (content-with-source-location content location)
   "Attach a source start alist with file, one-based line and column fields.
 Raw strings become located text values. For a document, attach the location to
-each top-level content value."
+each top-level content value. Other Scheme values pass through unchanged so
+source annotation can wrap arbitrary Scribble expressions."
   (unless (valid-source-location? location)
     (error "content source location must be a source-location alist" location))
   (cond

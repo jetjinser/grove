@@ -563,15 +563,14 @@
              (first-text (car (content-element-children first-paragraph))))
         (test-equal "paragraph IR records its first source line and column"
           `((file . ,path) (line . 2) (column . 1))
-          (content-element-property first-paragraph 'source-location))
+          (content-source-location first-paragraph))
         (test-equal "text IR retains its source position"
           `((file . ,path) (line . 2) (column . 1))
-          (content-text-location first-text))
+          (content-source-location first-text))
         (test-equal "inline commands retain the command source position"
           `((file . ,path) (line . 4) (column . 8))
-          (content-element-property
-            (cadr (content-element-children second-paragraph))
-            'source-location))))))
+          (content-source-location
+            (cadr (content-element-children second-paragraph))))))))
 
 (let* ((document
          (scribble-evaluate-document
@@ -582,7 +581,7 @@
        (text (car (content-element-children paragraph))))
   (test-equal "computed Scribble text retains its source position"
     (list "computed text" '((file . "computed.plant") (line . 1) (column . 1)))
-    (list (content-text-value text) (content-text-location text))))
+    (list (content-text-value text) (content-source-location text))))
 
 (let ((phases '()))
   (let ((document
