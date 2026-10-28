@@ -91,7 +91,13 @@
         ("browse" "--ssh-generate-host-key")
         ("browse" "--ssh-workers" "0")
         ("browse" "--ssh-memory-limit" "0")
-        ("build" "--ssh-workers" "2")))
+        ("build" "--ssh-workers" "2")
+        ("store" "size" "--dry-run")
+        ("store" "size" "--older-than" "5")))
+    (let ((result (run "store" "gc" "--dry-run" "--older-than=30")))
+      (test-equal "store gc accepts its scoped cleanup options" 0 (car result))
+      (test-assert "store gc dry run reports without deleting entries"
+        (string-contains (cadr result) "Would remove")))
     (test-equal "check help describes validation without build-only options" #t
       (let ((result (run "check" "--help")))
         (and (= (car result) 0)

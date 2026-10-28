@@ -61,15 +61,18 @@
   action)
 
 (define* (option-spec flag #:key (key (string->symbol flag)) (arity 'flag)
-                      (parse 'string) check (commands #f) help helps)
+                      (parse 'string) check (commands #f) (actions #f)
+                      help helps)
   "Describe one option as an association list.
 
 FLAG is the literal token (including dashes). ARITY is `flag' or `value'.
 PARSE is `string' or `integer'. CHECK validates a parsed value. COMMANDS lists
-the commands the option is accepted by, or #f for all. HELP is the help line,
-with HELP overrides keyed by command."
+the commands the option is accepted by, or #f for all. ACTIONS narrows an
+option to subcommands of COMMANDS. HELP is the help line, with HELP overrides
+keyed by command."
   (list (cons 'flag flag) (cons 'key key) (cons 'arity arity)
         (cons 'parse parse) (cons 'check check) (cons 'commands commands)
+        (cons 'actions actions)
         (cons 'help help) (cons 'helps helps)))
 
 (define (option-field spec field) (assq-ref spec field))
@@ -146,9 +149,11 @@ with HELP overrides keyed by command."
     (option-spec "--force" #:key 'force #:commands '(ssh-keygen)
                  #:help "  --force         Overwrite an existing host key.\n")
     (option-spec "--dry-run" #:key 'dry-run #:commands '(store)
+                 #:actions '(gc)
                  #:help "  --dry-run       Report what store gc would remove, deleting nothing.\n")
     (option-spec "--older-than" #:key 'older-than #:arity 'value
                  #:parse 'integer #:check seconds-check #:commands '(store)
+                 #:actions '(gc)
                  #:help "  --older-than N  store gc prunes entries older than N days (default 30).\n")
     (option-spec "--debug" #:key 'debug)
     (option-spec "--help" #:key 'help)
@@ -179,7 +184,14 @@ with HELP overrides keyed by command."
             (when (and commands command (not (command-in? command commands)))
               (usage-error "~a is a ~a option"
                            (option-field spec 'flag)
-                           (string-join (map symbol->string commands) " and ")))))))
+                           (string-join (map symbol->string commands) " and "))))
+          (let* ((actions (option-field spec 'actions))
+                 (action (assq-ref options 'store-action)))
+            (when (and actions
+                       (not (member action (map symbol->string actions))))
+              (usage-error "~a requires 'store ~a'"
+                           (option-field spec 'flag)
+                           (string-join (map symbol->string actions) " or ")))))))
     options)
   (when (and (assq 'ssh-generate-host-key options) (not (assq 'ssh options)))
     (usage-error "--ssh-generate-host-key requires --ssh")))
