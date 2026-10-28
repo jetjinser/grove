@@ -194,6 +194,8 @@ locale, chooses the visible language, or the last lane of each group is shown
 when READER is omitted. SOURCE-LABEL, when given, replaces the folded-language
 hint. Parallel mode shows every lane as before."
   (set! body (command-body body))
+  (unless (or (not source-label) (string? source-label))
+    (error "bilingual source label must be a string or #f" source-label))
   (let ((lanes (bilingual-lanes body)))
     (unless (pair? lanes)
       (error "bilingual requires at least one @lang block"))

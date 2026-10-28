@@ -273,6 +273,15 @@
   (test-equal "the source lanes are in a disclosure"
     'details (content-element-kind details)))
 
+(test-equal "source labels replace the folded-language hint"
+  "原文"
+  (let* ((pair (car (content-element-children
+                      (bilingual #:reader "en" #:source-label "原文"
+                        english chinese))))
+         (details (cadr (content-element-children pair)))
+         (summary (car (content-element-children details))))
+    (chip-text summary)))
+
 (let* ((pair (car (content-element-children
                     (bilingual #:reader "en" english chinese))))
        (kids (content-element-children pair)))
@@ -309,6 +318,8 @@
 
 (test-error "bilingual rejects unknown modes" #t
   (bilingual #:mode 'side english))
+(test-error "bilingual source labels must be strings or #f" #t
+  (bilingual #:mode 'parallel #:source-label 42 english chinese))
 
 (test-assert "folded bilingual keeps the reader lane visible"
   (let ((html (sxml->html
