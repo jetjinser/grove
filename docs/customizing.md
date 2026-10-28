@@ -266,14 +266,16 @@ For a custom site, the same seam is available on `make-site-project`:
   ...)
 ```
 
-### Cache intermediate bytes in extensions
+### Cache derived bytes inside extensions
 
 Project builds already cache complete renderer artifacts and pipeline outputs.
-Use `(grove cache)` only when an extension needs to reuse intermediate bytes
-inside its own computation. Choose a namespaced cache and a key that includes
-every semantic input and a version for the generating tool or arguments. Cache
-misses return `#f`; the extension remains responsible for generating and
-emitting the bytes:
+Use `(grove cache)` when an extension needs finer-grained reuse than its
+complete renderer or pipeline result provides. For example, a font subset may
+depend only on one font's bytes, a character set, and the subsetting tool
+version, so it can be reused even when an unrelated source change reruns the
+renderer. Choose a namespaced cache and a key that includes every semantic
+input and a version for the generating tool or arguments. Cache misses return
+`#f`; the extension remains responsible for generating and emitting the bytes:
 
 ```scheme
 (define subset-cache (make-content-cache "site-font-subsets"))
