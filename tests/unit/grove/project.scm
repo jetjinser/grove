@@ -258,6 +258,13 @@
                 #:source-filter #f
                 #:read-source (lambda (_) #f)
                 #:output-directory "output"))
+(test-equal "project options reject non-project values before reading defaults"
+  #t
+  (catch 'misc-error
+    (lambda () (project-with-options #f) #f)
+    (lambda (_key _module template arguments _rest)
+      (string-prefix? "project options require a Grove project"
+                      (apply format #f template arguments)))))
 (let* ((path (string-copy "selected.plant"))
        (collector-paths (list path))
        (project

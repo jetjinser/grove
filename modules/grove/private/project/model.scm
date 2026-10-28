@@ -279,17 +279,24 @@ identity is declared."
                  (snapshot-data output-directory) cache? browse
                  (snapshot-data pipelines) create-source))
 
+(define project-option-unspecified (list 'project-option-unspecified))
+
 (define* (project-with-options project
                                #:key
-                               (output-directory
-                                 (project-output-directory project))
+                               (output-directory project-option-unspecified)
                                (extra-sources '())
-                               (cache? (project-cache? project)))
+                               (cache? project-option-unspecified))
   "Copy PROJECT with execution options and additional tracked source paths."
+  (unless (project? project)
+    (error "project options require a Grove project" project))
   (unless (and (list? extra-sources)
                (every non-empty-string? extra-sources))
     (error "project additional sources must be a list of non-empty paths"
            extra-sources))
+  (when (eq? output-directory project-option-unspecified)
+    (set! output-directory (project-output-directory project)))
+  (when (eq? cache? project-option-unspecified)
+    (set! cache? (project-cache? project)))
   (make-project
     #:source-directory (project-source-directory project)
     #:source-filter (project-source-filter project)
