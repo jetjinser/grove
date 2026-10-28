@@ -26,6 +26,12 @@
   (grapheme-count "é"))
 (test-equal "grapheme-count keeps emoji ZWJ sequences together" 1
   (grapheme-count "👩‍💻"))
+(test-equal "grapheme-count pairs regional indicators into flags" 2
+  (grapheme-count "🇺🇸🇫🇷"))
+(test-equal "grapheme-count keeps emoji skin-tone modifiers together" 1
+  (grapheme-count "👍🏽"))
+(test-equal "grapheme-count keeps keycap variation sequences together" 1
+  (grapheme-count "1️⃣"))
 (test-error "grapheme-count rejects non-strings" #t
   (grapheme-count #f))
 
