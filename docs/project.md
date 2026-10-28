@@ -533,14 +533,18 @@ source without highlight markup. The `grove-highlights` Nix package includes
 the grammar, its matching upstream query, and the grammar's license; their
 version is fixed by `nix/flake.lock`.
 
-## HTML presentation
+## HTML presentation and options
 
-The HTML renderer accepts presentation options instead of requiring projects to
-rewrite rendered markup. They are available on `render-html`, `site->html`, and
-`make-html-renderer`. The presentation carries static, composable presentation data:
+HTML customization has two layers. Pass `make-html-options` to
+`render-html`, `site->html`, or `make-html-renderer`; use its fields for
+renderer behavior such as document attributes and article structure. Put
+reusable markup, style, and content rules in `make-html-presentation`, which
+can be composed and passed through the options' `#:presentation` field:
 
 ```scheme
 (make-html-options
+  #:html-attributes '((lang . "zh-Hans"))
+  #:article? #t
   #:presentation
   (make-html-presentation
       #:head '((link (@ (rel "alternate") (href "/feed.xml"))))
@@ -553,25 +557,27 @@ rewrite rendered markup. They are available on `render-html`, `site->html`, and
       '(("about" . ((li (@ (class "meta-item")) "Author"))))))
 ```
 
-- `#:html-attributes` — an association list merged onto the root `<html>`
-  element, for example `'((lang . "zh-Hans"))`.
-- `#:head` — static SXML nodes placed in `<head>` after the description and
-  before the stylesheets. Use it for viewport metadata or feed autodiscovery.
-- `#:site-nav` — static SXML nodes appended inside the site `<nav>`; use
-  `make-html-nav-link` for links whose route and current-page state Grove should
-  resolve.
-- `#:home-link` — a `make-html-home-link` value replaces the default link while
-  Grove supplies the route. Its content and attributes can add icons or
-  branding without a callback.
-- `#:title-decorations` — a page-ID-to-SXML map inserted before titles in tree
-  headings and the table of contents. Resolve page metadata while constructing
-  the presentation (for example, `(page-taxon page)`), then store the resulting
-  static markup by page ID.
-- `#:metadata-items` — a page-ID-to-SXML map appended after the built-in date
-  items in the metadata list.
-- `#:article?` — wraps the page tree and its backmatter in one `<article>`
-  element, leaving the table of contents outside it.
-- `#:side-lane` — a list of content element kinds (e.g. `(sidenote)`).
+- `make-html-options #:html-attributes` — an association list merged onto the
+  root `<html>` element, for example `'((lang . "zh-Hans"))`.
+- `make-html-presentation #:head` — static SXML nodes placed in `<head>` after
+  the description and before the stylesheets. Use it for viewport metadata or
+  feed autodiscovery.
+- `make-html-presentation #:site-nav` — static SXML nodes appended inside the
+  site `<nav>`; use `make-html-nav-link` for links whose route and current-page
+  state Grove should resolve.
+- `make-html-presentation #:home-link` — a `make-html-home-link` value replaces
+  the default link while Grove supplies the route. Its content and attributes
+  can add icons or branding without a callback.
+- `make-html-presentation #:title-decorations` — a page-ID-to-SXML map inserted
+  before titles in tree headings and the table of contents. Resolve page
+  metadata while constructing the presentation (for example,
+  `(page-taxon page)`), then store the resulting static markup by page ID.
+- `make-html-presentation #:metadata-items` — a page-ID-to-SXML map appended
+  after the built-in date items in the metadata list.
+- `make-html-options #:article?` — wraps the page tree and its backmatter in one
+  `<article>` element, leaving the table of contents outside it.
+- `make-html-options #:side-lane` — a list of content element kinds (e.g.
+  `(sidenote)`).
   Elements of these kinds are lifted out of the text flow into a
   `<div class="margin-lane">` beside the page tree; each note becomes a
   lane item with a numbered back-reference, and its anchor position keeps
@@ -581,8 +587,8 @@ rewrite rendered markup. They are available on `render-html`, `site->html`, and
   `make-element` defaults to `span` — declare `#:kind 'sidenote` on the
   element definition (or build the element with `make-content-element`)
   so the lane can see it.
-- `#:backmatter-details?` — renders each backmatter section as a collapsible
-  `details`/`summary` block.
+- `make-html-options #:backmatter-details?` — renders each backmatter section
+  as a collapsible `details`/`summary` block.
 
 Static SXML in a presentation participates in its cache identity, so changing
 it invalidates cached pages without requiring a separate identity token. The
