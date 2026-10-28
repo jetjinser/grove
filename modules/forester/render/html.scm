@@ -502,29 +502,30 @@ top-level taxon element; pages without one contribute nothing."
   ;;     transclusion cycles from recursing forever.
   (letrec ((entries
              (lambda (id prefix visited)
-               (map (lambda (element position)
-                      (let* ((target-id (tree-occurrence-target element))
-                             (target (require-page forest target-id))
-                             (anchor (occurrence-anchor element prefix
-                                                        position))
-                             (decoration
-                               (if title-decoration
-                                   (title-decoration forest target)
-                                   '()))
-                             (nested
-                               (if (member target-id visited)
-                                   '()
-                                   (entries target-id
-                                            (string-append anchor "--")
-                                            (cons target-id visited)))))
-                        `(li (a (@ (href ,(string-append base-url "#"
-                                                         anchor)))
-                                ,@decoration
-                                ,(site-page-title target))
-                             ,@(if (null? nested) '()
-                                   (list `(ol ,@nested))))))
-                    (tree-occurrences forest id)
-                    (iota (length (tree-occurrences forest id)) 1)))))
+               (let ((occurrences (tree-occurrences forest id)))
+                 (map (lambda (element position)
+                        (let* ((target-id (tree-occurrence-target element))
+                               (target (require-page forest target-id))
+                               (anchor (occurrence-anchor element prefix
+                                                          position))
+                               (decoration
+                                 (if title-decoration
+                                     (title-decoration forest target)
+                                     '()))
+                               (nested
+                                 (if (member target-id visited)
+                                     '()
+                                     (entries target-id
+                                              (string-append anchor "--")
+                                              (cons target-id visited)))))
+                          `(li (a (@ (href ,(string-append base-url "#"
+                                                           anchor)))
+                                  ,@decoration
+                                  ,(site-page-title target))
+                               ,@(if (null? nested) '()
+                                     (list `(ol ,@nested))))))
+                      occurrences
+                      (iota (length occurrences) 1))))))
     (entries id "" (list id))))
 
 (define* (table-of-contents-sxml forest page #:key (title-decoration #f) (context #f))

@@ -113,14 +113,16 @@
 
 (define* (table-of-contents-text forest page #:optional context)
   (define (entries id prefix indent)
-    (string-concatenate
-      (map (lambda (element position)
-             (let* ((target-id (tree-occurrence-target element))
-                    (target (require-page forest target-id))
-                    (anchor (occurrence-anchor element prefix position)))
-               (string-append indent "- " (site-page-title target) " [#" anchor "]\n"
-                 (entries target-id (string-append anchor "--") (string-append indent "  ")))))
-           (tree-occurrences forest id) (iota (length (tree-occurrences forest id)) 1))))
+    (let ((occurrences (tree-occurrences forest id)))
+      (string-concatenate
+        (map (lambda (element position)
+               (let* ((target-id (tree-occurrence-target element))
+                      (target (require-page forest target-id))
+                      (anchor (occurrence-anchor element prefix position)))
+                 (string-append indent "- " (site-page-title target) " [#" anchor "]\n"
+                   (entries target-id (string-append anchor "--")
+                            (string-append indent "  ")))))
+             occurrences (iota (length occurrences) 1)))))
   (let ((items (entries (site-page-id page) "" "")))
     (if (string-null? items)
         ""
