@@ -312,5 +312,13 @@
   "zh-Hans" (locale-tag (make-locale "zh-CN")))
 (test-equal "zh-TW canonicalizes to zh-Hant"
   "zh-Hant" (locale-tag (make-locale "zh-TW")))
+(test-equal "bare zh and Simplified Chinese regions canonicalize to zh-Hans"
+  '("zh-Hans" "zh-Hans" "zh-Hans" "zh-Hans")
+  (map (lambda (tag) (locale-tag (make-locale tag)))
+       '("zh" "zh-CN" "zh-SG" "zh-MY")))
+(test-equal "Traditional Chinese regions canonicalize to zh-Hant"
+  '("zh-Hant" "zh-Hant" "zh-Hant")
+  (map (lambda (tag) (locale-tag (make-locale tag)))
+       '("zh-TW" "zh-HK" "zh-MO")))
 
 (test-end "grove i18n")
