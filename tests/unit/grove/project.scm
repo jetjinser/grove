@@ -66,6 +66,29 @@
 (test-error "check-project rejects non-project values" #t
   (check-project #f))
 
+(define progress-test-project
+  (make-project #:collect-sources (lambda () '())
+                #:read-source (lambda (_) #f)
+                #:output-directory
+                (string-append project-root "/progress-output")
+                #:browse (lambda* (_ #:key input output) #t)))
+(define (progress-type-error? thunk)
+  (catch #t
+    (lambda () (thunk) #f)
+    (lambda (key . _) (eq? key 'misc-error))))
+(test-assert "analysis validates progress before wrapping project errors"
+  (progress-type-error? (lambda () (analyze-project progress-test-project
+                                                     #:progress #f))))
+(test-assert "browsing validates progress before collecting project inputs"
+  (progress-type-error? (lambda () (browse-project progress-test-project
+                                                     #:progress #f))))
+(test-assert "build validates progress before acquiring its output lock"
+  (progress-type-error? (lambda () (build-project/report progress-test-project
+                                                          #:progress #f))))
+(test-assert "check validates progress before collecting project inputs"
+  (progress-type-error? (lambda () (check-project progress-test-project
+                                                   #:progress #f))))
+
 (test-error "site pages require a non-empty string ID" #t
   (make-site-page "" "Page" (make-content-document '())))
 (test-error "site pages require a non-empty string title" #t
