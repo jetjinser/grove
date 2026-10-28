@@ -1089,7 +1089,16 @@
             (string-contains
               (read-test-file (string-append output-directory
                                              "/gemini/beta.gmi"))
-              "Beta")))))
+              "Beta"))
+          (delete-file (string-append source-directory "/beta.plant"))
+          (let ((removed (build-project/report project)))
+            (test-assert "Gemtext page removal updates the index and retires its artifact"
+              (let ((affected (build-report-affected-artifacts removed)))
+                (and (member "gemini/index.gmi" affected string=?)
+                     (member "gemini/beta.gmi" affected string=?))))
+            (test-assert "Gemtext page removal cleans its published file"
+              (not (file-exists?
+                     (string-append output-directory "/gemini/beta.gmi"))))))))
     (lambda () (system* "rm" "-rf" root))))
 
 (test-end "forester project")
