@@ -53,6 +53,19 @@
       '(project-source-directory project-renderers project-extra-sources
         project-output-directory project-cache? project-browse))))
 
+(test-error "source collection rejects non-project values" #t
+  (collect-project-sources #f))
+(test-error "analysis rejects non-project values" #t
+  (analyze-project #f))
+(test-error "browsing rejects non-project values before reading project fields" #t
+  (browse-project #f))
+(test-error "building rejects non-project values before acquiring a lock" #t
+  (build-project/report #f))
+(test-error "build-project rejects non-project values" #t
+  (build-project #f))
+(test-error "check-project rejects non-project values" #t
+  (check-project #f))
+
 (test-error "site pages require a non-empty string ID" #t
   (make-site-page "" "Page" (make-content-document '())))
 (test-error "site pages require a non-empty string title" #t

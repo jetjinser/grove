@@ -30,6 +30,10 @@
             analyze-project
             browse-project))
 
+(define (require-project project)
+  (unless (project? project)
+    (error "expected a Grove project" project)))
+
 (define (read-source-with-context path read-source)
   (call-with-project-stage 'read path (lambda () (read-source path))))
 
@@ -47,6 +51,7 @@
 
 (define (collect-project-sources project)
   "Return PROJECT's validated source paths as independent data."
+  (require-project project)
   (let ((paths
           ((or (project-collect-sources project)
                (lambda ()
@@ -77,8 +82,7 @@
                                 #:key (progress (lambda (stage path) #t)))
   "Collect, read, and analyze PROJECT without rendering or writing outputs.
 Return the internal analysis record used by the build pipeline."
-  (unless (project? project)
-    (error "project analysis requires a Grove project" project))
+  (require-project project)
   (parameterize ((current-input-fingerprints (make-hash-table)))
     (let* ((source-paths (call-with-project-stage 'collect #f
                            (lambda ()
@@ -129,6 +133,7 @@ Return the internal analysis record used by the build pipeline."
                          (input (current-input-port))
                          (output (current-output-port)))
   "Analyze PROJECT without rendering and run its browse callback on the model."
+  (require-project project)
   (let ((browse (project-browse project)))
     (unless (procedure? browse)
       (error "project does not define a #:browse callback"))
@@ -136,8 +141,6 @@ Return the internal analysis record used by the build pipeline."
       (browse model #:input input #:output output))))
 
 (define (execute-project project write? progress)
-  (unless (project? project)
-    (error "project execution requires a Grove project" project))
   (let* (;;     Capture extra-sources fingerprints before anything runs:
          ;;     these files are read at project-load time and may define
          ;;     configuration values or procedures used by later stages,
@@ -314,11 +317,13 @@ Return the internal analysis record used by the build pipeline."
 The build takes the project's build lock: the artifact set, manifest,
 and stale-output cleanup all live in the output directory, so a serve
 watch and a manual build over one project must not run concurrently."
+  (require-project project)
   (with-build-lock (project-output-directory project)
     (lambda () (execute-project project #t progress))))
 
 (define* (check-project project #:key (progress (lambda (stage path) #t)))
   "Read, analyze, render, and validate PROJECT without accessing output state."
+  (require-project project)
   (execute-project project #f progress))
 
 (define* (build-project project #:key (progress (lambda (stage path) #t)))
