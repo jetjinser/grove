@@ -6,7 +6,7 @@
   #:use-module ((grove private artifact) #:prefix out:)
   #:use-module (grove output)
   #:use-module (srfi srfi-1)
-  #:export (find-artifact-by-path artifact-reusable? reuse-artifact))
+  #:export (reuse-artifact))
 
 (define (find-artifact-by-path artifacts path)
   (find (lambda (artifact)
