@@ -11,8 +11,8 @@
   #:export (render-model
             make-cached-renderer))
 
-(define* (make-cached-renderer procedure #:key (cache? #t) (configuration '()) render-changed inputs)
-"Wrap PROCEDURE for project use with explicit cache behavior.
+(define* (make-cached-renderer procedure #:key (configuration '()) render-changed inputs)
+"Declare PROCEDURE cacheable for project use.
 
 CONFIGURATION is data or a model-to-data procedure included in cache identity.
 INPUTS, when supplied, is a no-argument procedure returning additional paths
@@ -20,13 +20,9 @@ to track, or a list of paths when the dependencies are fixed. RENDER-CHANGED,
 when supplied, receives the model, changed source
 paths, dirty artifact paths, and this renderer's previous artifacts. It must
 return the renderer's complete current artifact list, or #f to request a full
-render. CACHE? false marks this renderer uncached; in a project this disables
-this renderer's artifact cache without disabling cache reuse for its peers. Use
-this constructor when its stable cache identity is known; a plain renderer
-procedure runs on each build because procedure identity cannot be persisted
-safely."
-  (unless (boolean? cache?)
-    (error "renderer cache option must be a boolean" cache?))
+render. Use this constructor when its stable cache identity is known; a plain
+renderer procedure runs on each build because procedure identity cannot be
+persisted safely."
   (unless (procedure? procedure)
     (error "cached renderer requires a procedure" procedure))
   (unless (or (not render-changed) (procedure? render-changed))
@@ -40,7 +36,6 @@ safely."
       (error "renderer input paths must be unique" inputs))
     (set! inputs (snapshot-data inputs)))
   (%make-cached-renderer
-    cache?
     (if (procedure? configuration) configuration (snapshot-data configuration))
     procedure render-changed inputs))
 

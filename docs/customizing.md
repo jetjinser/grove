@@ -27,7 +27,7 @@ This is the shortest path from “I want to change X” to the right Grove API.
 | turn source embedded in the analyzed model into output assets | a renderer | `#:renderers` or `#:additional-renderers` |
 | choose the complete renderer set for a site | a renderer list | `make-site-project #:renderers` |
 | cache behavior for any project kind | project options | `make-site-project` / `make-forester-project #:cache?`, or `project-with-options #:cache?` |
-| control caching for HTML/text/Gemtext | cached renderer constructors | These accept `#:cache?`; custom rules need `#:rules-id`. On Forester's standard HTML renderer, pass it as `make-forester-project #:html-rules-id`. Project options control caching globally. |
+| control caching for HTML/text/Gemtext | built-in renderer factories | These accept `#:cache?` and return plain procedures when caching is disabled; custom rules need `#:rules-id`. On Forester's standard HTML renderer, pass it as `make-forester-project #:html-rules-id`. Project options control caching globally. |
 
 HTML routes distinguish output paths from URLs. `#:page-path` and
 `#:index-path` choose artifact paths relative to the project's output
@@ -50,8 +50,8 @@ with an explicit home page while preserving its other settings, use
 `html-routes-with-home-page` from `(grove render html routes)`.
 
 Each renderer has its own artifact-cache identity. A plain procedure, a
-renderer that opts out with `#:cache? #f`, or one with opaque rules and no
-`#:rules-id` reruns on each build; cacheable peers can still reuse their
+built-in renderer configured with `#:cache? #f`, or one with opaque rules and
+no `#:rules-id` reruns on each build; cacheable peers can still reuse their
 artifacts. Source changes may still rerun the full set because renderers see
 the same analyzed model. Use `project-with-options #:cache? #f` to disable
 document, renderer, and pipeline caching for a project.

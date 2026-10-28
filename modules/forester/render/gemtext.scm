@@ -402,13 +402,15 @@
     (error "Forester Gemtext renderer cache option must be a boolean" cache?))
   (let ((render (lambda (forest)
                   (render-gemtext forest #:options options))))
-    (make-cached-renderer render #:cache? effective-cache?
-      #:configuration
-      (lambda (forest)
-        (append
-          (list 'gemtext prefix
-                (resolve-text-route-table "Gemtext" forest routes)
-                (text-index-path routes)
-                backmatter reference-taxon-id rules-id
-                (site-title (site forest)) (site-description (site forest)))
-          (interface-cache-identity locale messages)))))))
+    (if (not effective-cache?)
+        render
+        (make-cached-renderer render
+          #:configuration
+          (lambda (forest)
+            (append
+              (list 'gemtext prefix
+                    (resolve-text-route-table "Gemtext" forest routes)
+                    (text-index-path routes)
+                    backmatter reference-taxon-id rules-id
+                    (site-title (site forest)) (site-description (site forest)))
+              (interface-cache-identity locale messages))))))))

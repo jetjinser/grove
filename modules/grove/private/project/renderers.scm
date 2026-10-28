@@ -21,7 +21,6 @@
        (map
          (lambda (renderer configuration)
            (and (cached-renderer? renderer)
-                (cached-renderer-cache? renderer)
                 (content-fingerprint
                   (call-with-output-string
                     (lambda (port)

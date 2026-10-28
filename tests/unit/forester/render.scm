@@ -376,47 +376,46 @@
                (list (cons 'paragraph
                            (lambda (context element children next) "X"))))))
   (test-assert "custom text rules disable caching without a rules id"
-    (not (cached-renderer-cache?
-           (make-text-renderer
-             #:options (make-text-options #:rules rules)))))
+    (procedure?
+      (make-text-renderer
+        #:options (make-text-options #:rules rules))))
   (test-assert "text rules with an id stay cacheable"
-    (cached-renderer-cache?
+    (cached-renderer?
       (make-text-renderer
         #:options (make-text-options #:rules rules)
         #:rules-id 'v1)))
   (test-assert "text renderer can disable its cache explicitly"
-    (not (cached-renderer-cache?
-           (make-text-renderer #:cache? #f)))))
+    (procedure? (make-text-renderer #:cache? #f))))
 
 (let ((rules (make-render-rules
                (list (cons 'paragraph
                            (lambda (context element children next) "X"))))))
   (test-assert "custom HTML rules disable caching without a rules id"
-    (not (cached-renderer-cache?
-           (make-html-renderer
-             #:options
-             (make-html-options
-               #:presentation (make-html-presentation #:rules rules))))))
+    (procedure?
+      (make-html-renderer
+        #:options
+        (make-html-options
+          #:presentation (make-html-presentation #:rules rules)))))
   (test-assert "HTML rules with an id stay cacheable"
-    (cached-renderer-cache?
+    (cached-renderer?
       (make-html-renderer
         #:options
         (make-html-options
           #:presentation (make-html-presentation #:rules rules))
         #:rules-id 'v1)))
   (test-assert "HTML renderer can disable its cache explicitly"
-    (not (cached-renderer-cache? (make-html-renderer #:cache? #f))))
+    (procedure? (make-html-renderer #:cache? #f)))
   (test-assert "custom gemtext rules disable caching without a rules id"
-    (not (cached-renderer-cache?
-           (make-gemtext-renderer
-             #:options (make-gemtext-options #:rules rules)))))
+    (procedure?
+      (make-gemtext-renderer
+        #:options (make-gemtext-options #:rules rules))))
   (test-assert "gemtext rules with an id stay cacheable"
-    (cached-renderer-cache?
+    (cached-renderer?
       (make-gemtext-renderer
         #:options (make-gemtext-options #:rules rules)
         #:rules-id 'v1)))
   (test-assert "Gemtext renderer can disable its cache explicitly"
-    (not (cached-renderer-cache? (make-gemtext-renderer #:cache? #f)))))
+    (procedure? (make-gemtext-renderer #:cache? #f))))
 
 (let* ((forest (make-forest (make-site (list algebra limits))))
        (rules-id (string-copy "rules-v1"))
@@ -431,7 +430,7 @@
     (renderer-configurations forest renderers)))
 
 (test-assert "declarative HTML presentation remains cacheable"
-  (cached-renderer-cache?
+  (cached-renderer?
     (make-html-renderer
       #:options
       (make-html-options

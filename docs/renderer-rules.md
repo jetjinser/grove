@@ -208,12 +208,11 @@ derives the page context per page; rules receive it through `#:context`.
 Project rules override the default interpretation; no core codec knowledge is
 involved. A renderer with project rules is cacheable only when its constructor
 receives a stable `#:rules-id` (a symbol or non-empty string). Renderer values
-have independent cache identities, so a plain procedure, an opaque renderer,
-or an explicitly uncached renderer reruns without disabling cache reuse for
-its peers. Pass `#:cache? #f` to `make-html-renderer`,
-`make-text-renderer`, or `make-gemtext-renderer` to make that choice explicit.
-These are cache controls, so they live on the cached renderer constructors
-rather than render options.
+have independent cache identities. Plain procedures always run on each build;
+cacheable peers can still reuse their artifacts. Pass `#:cache? #f` to
+`make-html-renderer`, `make-text-renderer`, or `make-gemtext-renderer` to
+disable that renderer's cache. These factories then return plain procedures.
+The cache controls live on renderer factories rather than render options.
 `make-forester-project` constructs its standard HTML renderer for you; give
 that renderer's opaque rules identity with `#:html-rules-id`, and list files
 read by the rules in the project's `#:extra-sources`.

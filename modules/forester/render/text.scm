@@ -383,7 +383,9 @@
           (and cache?
                (or (eq? rules empty-render-rules)
                    (and rules-id #t)))))
-    (make-cached-renderer render #:cache? effective-cache?
+    (if (not effective-cache?)
+        render
+        (make-cached-renderer render
           #:configuration
           (lambda (forest)
             (append
@@ -395,4 +397,4 @@
               (interface-cache-identity locale messages)))
           #:render-changed
           (lambda (forest changed dirty-paths old-artifacts)
-            (render-text-changed forest options changed old-artifacts))))))
+            (render-text-changed forest options changed old-artifacts)))))))

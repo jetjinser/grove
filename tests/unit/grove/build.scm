@@ -59,12 +59,12 @@
   (renderer-configurations
     #f (list (make-cached-renderer (lambda (site) '())))))
 
-(test-equal "renderer configurations retain per-renderer cache boundaries"
+(test-equal "plain renderers retain independent cache slots"
   '(stable #f)
   (renderer-configurations
     #f (list (make-cached-renderer (lambda (_) '())
                                   #:configuration 'stable)
-             (make-cached-renderer (lambda (_) '()) #:cache? #f))))
+             (lambda (_) '()))))
 
 (test-error "incremental callbacks must be procedures" #t
   (make-cached-renderer (lambda (site) '())

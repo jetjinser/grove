@@ -431,11 +431,11 @@
       (let ((uncached (make-project
                        #:collect-sources (lambda () (list source))
                        #:read-source (lambda (path) (call-with-input-file path get-string-all))
-                       #:renderers (list (make-cached-renderer render #:cache? #f))
+                       #:renderers (list render)
                        #:output-directory (string-append root "/plain"))))
         (build-project uncached)
         (build-project uncached)
-        (test-equal "renderer opt-out forces rendering on every build" 5 renders)))
+        (test-equal "a plain renderer runs on every build" 5 renders)))
       (let* ((cached-runs 0)
              (plain-runs 0)
              (mixed
@@ -478,11 +478,9 @@
                     (lambda (_)
                       (set! cached-runs (+ cached-runs 1))
                       (list (make-artifact "cached.txt" "cached"))))
-                  (make-cached-renderer
-                    (lambda (_)
-                      (set! uncached-runs (+ uncached-runs 1))
-                      (list (make-artifact "uncached.txt" "uncached")))
-                    #:cache? #f))
+                  (lambda (_)
+                    (set! uncached-runs (+ uncached-runs 1))
+                    (list (make-artifact "uncached.txt" "uncached"))))
                 #:output-directory (string-append root "/mixed"))))
         (build-project mixed)
         (build-project mixed)

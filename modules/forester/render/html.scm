@@ -1242,7 +1242,9 @@ Entry points take this value with #:options."
         (error "Forester HTML renderer cache option must be a boolean" cache?))
       (let ((render (lambda (forest)
                       (render-html forest #:options options))))
-    (make-cached-renderer render #:cache? effective-cache?
+    (if (not effective-cache?)
+        render
+        (make-cached-renderer render
           #:configuration
           (lambda (forest)
             (let* ((routes (resolve-site-routes forest routes))
@@ -1281,4 +1283,4 @@ Entry points take this value with #:options."
                             (highlighter-inputs (cdr entry)))) highlighters)
                 (render forest)
                 (render-html-changed forest options changed old-artifacts
-                                     dirty-paths)))))))
+                                     dirty-paths))))))))
