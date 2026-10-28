@@ -289,9 +289,8 @@ features that match on kinds - `#:anchor` and `#:side-lane` are the
 current ones.
 
 `#:anchor` declares the occurrence as a linkable anchor — a term
-definition, a figure. It renders as the tag's `id` and registers the
-element with the anchor registry (`page-anchor-facts`), so fragment links
-against the page resolve to it and term queries can see it:
+definition, a figure. It renders as the tag's `id`, so fragment links against
+the page resolve to it and term queries can see it:
 
 ```scheme
 (define defn (make-element #:tag "dfn" #:anchor "term-loom"))

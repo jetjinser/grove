@@ -20,6 +20,7 @@
   #:use-module (grove build)
   #:use-module (grove ir)
   #:use-module (grove render html)
+  #:use-module (grove render html element)
   #:use-module (grove render html routes)
   #:use-module (grove output)
   #:use-module (grove relation dsl)
@@ -35,6 +36,31 @@
   (not (module-variable
          (module-public-interface (resolve-module '(forester site)))
          'module-paths)))
+
+(test-assert "anchor registry details stay internal"
+  (not (module-variable
+         (module-public-interface (resolve-module '(forester site)))
+         'page-anchor-facts)))
+
+(let* ((definition (make-element #:tag "dfn" #:anchor "term-id"))
+       (document
+         (make-content-document
+           (list
+             (make-content-element
+               'paragraph
+               (list (make-content-element
+                       'link '("term")
+                       #:properties '((target . "glossary")
+                                      (fragment . "term-id")))))
+             (make-content-element
+               'paragraph (list (definition "term"))))))
+       (port (open-output-string)))
+  (parameterize ((current-warning-port port))
+    (make-forest
+      (make-site
+        (list (make-site-page "glossary" "Glossary" document)))))
+  (test-assert "custom HTML anchors resolve fragment links"
+    (string-null? (get-output-string port))))
 
 (let* ((phases '())
        (page (make-site-page "measured" "Measured"

@@ -22,8 +22,7 @@
   #:use-module (grove relation dsl)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (make-forest
-            page-anchor-facts))
+  #:export (make-forest))
 
 (define (page-anchor-facts page)
   "Return (kind . id) pairs for the anchor IDs a page declares in its own
@@ -110,10 +109,9 @@ walk itself."
 (define (ensure-unique-anchor-ids pages)
   "Reject duplicate author-facing anchor IDs in a page's own rendering.
 
-A page's scope is the set page-anchor-facts returns. Content pulled in
-through transclusions is not scanned, and author anchors may collide with the
-generated tree-N position anchors; both are known limitations of global
-anchors."
+A page's scope is the set of anchors it declares. Content pulled in through
+transclusions is not scanned, and author anchors may collide with the generated
+tree-N position anchors; both are known limitations of global anchors."
   (for-each
     (lambda (page)
       (let ((seen (make-hash-table)))

@@ -25,7 +25,6 @@
                links
                tree-occurrences
                tree-occurrence-target
-               page-anchor-facts
                backlinks
                common-backlinks
                reachable-pages

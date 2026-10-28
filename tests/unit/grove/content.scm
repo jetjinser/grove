@@ -521,9 +521,6 @@
                          'paragraph
                          (list (definition "a term")))))))
        (forest (make-forest (make-site (list page)))))
-  (test-equal "declared anchors enter the page's anchor registry"
-    '(("anchor" . "tree-root-glossary") ("anchor" . "term-id"))
-    (page-anchor-facts page))
   (test-assert "the anchored element renders on its page"
     (string-contains
       (assoc-ref (site->html forest
