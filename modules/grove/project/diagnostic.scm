@@ -3,6 +3,7 @@
 
 (define-module (grove project diagnostic)
   #:use-module (grove private snapshot)
+  #:use-module (grove private string-fun)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
   #:export (print-project-error
@@ -33,7 +34,15 @@
   (snapshot-data (project-error-arguments/raw error)))
 
 (define (call-with-project-stage stage path thunk)
-  "Attach execution context without flattening the original exception."
+  "Attach execution context without flattening the original exception.
+STAGE is a symbol, PATH is a non-empty path string or #f, and THUNK is a
+procedure. Invalid context is rejected before THUNK runs."
+  (unless (symbol? stage)
+    (error "project stage must be a symbol" stage))
+  (unless (or (not path) (non-empty-string? path))
+    (error "project stage path must be a non-empty string or #f" path))
+  (unless (procedure? thunk)
+    (error "project stage requires a thunk" thunk))
   (let ((stack #f))
     (catch #t thunk
       (lambda (key . arguments)

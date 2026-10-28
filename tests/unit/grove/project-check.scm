@@ -43,6 +43,12 @@
              (cons (grove-cache-directory output) ".grove-build-state"))))
 
 (test-begin "project checks")
+(test-error "project stage must be a symbol" #t
+  (call-with-project-stage "read" #f (lambda () 'unreachable)))
+(test-error "project stage path must be a non-empty string or #f" #t
+  (call-with-project-stage 'read "" (lambda () 'unreachable)))
+(test-error "project stage requires a thunk" #t
+  (call-with-project-stage 'read #f #f))
 (dynamic-wind
   (lambda ()
     (setenv "XDG_CACHE_HOME" (string-append root "/.cache"))

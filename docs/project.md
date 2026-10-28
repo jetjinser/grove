@@ -167,8 +167,9 @@ or debug formatting:
 ```
 
 When a host adds its own operation around Grove, `call-with-project-stage`
-attaches a stage and optional path without flattening the original Guile
-exception. Grove's project callbacks already receive stage context automatically.
+attaches a symbol stage and optional non-empty path without flattening the
+original Guile exception. Grove's project callbacks already receive stage
+context automatically.
 
 The analyzer's `project-context` follows the same value rule: its input list,
 source-path strings, and pair-based source values are copied when the context is
