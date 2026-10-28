@@ -183,6 +183,13 @@ lowercase value; ground topic selectors are
 case-insensitive and enumerated values are canonical. Page facts and content
 facts can be joined through their shared page ID:
 
+For direct inspection of one page, `(page-taxon page)` returns its own
+top-level taxon Content element or `#f`, and `(page-tags page)` returns its own
+top-level tag elements in declaration order. `(links forest page-id)` is the
+simple projection of outgoing authored references to target page IDs; it keeps
+reference occurrence order and duplicates. Use the relation goals when these
+values need to join with other facts or participate in a custom query.
+
 Use `described-entityo` in relational queries, or
 `(describing-pages forest uri)` to get matching page records in site order.
 Multiple pages may describe the same external entity; URI strings are compared
