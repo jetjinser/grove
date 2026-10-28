@@ -695,8 +695,8 @@ name, property, rel, or title."
                                            page-url)))
          (og-image-url
            (and og-image
-                (cond ((or (string-prefix? "http://" og-image)
-                           (string-prefix? "https://" og-image))
+                (cond ((or (string-prefix-ci? "http://" og-image)
+                           (string-prefix-ci? "https://" og-image))
                        og-image)
                       ((and site-url (string-prefix? "/" og-image))
                        (string-append (string-trim-right site-url #\/)

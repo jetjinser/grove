@@ -257,6 +257,13 @@
       page
       "property=\"og:image\" content=\"https://cdn.example.org/cover.png\"")))
 
+(let ((page (render-page-with
+              "@title{Root}@og-image{HTTPS://cdn.example.org/cover.png}@paragraph{Body.}")))
+  (test-assert "external og:image schemes are case-insensitive"
+    (string-contains
+      page
+      "property=\"og:image\" content=\"HTTPS://cdn.example.org/cover.png\"")))
+
 
 (let ((page (render-page-with
               "@title{Root}@og-image{assets/cover.png}@paragraph{Body.}")))
