@@ -5,7 +5,6 @@
 (define-module (forester private site queries)
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove private snapshot)
-  #:use-module (grove private string-fun)
   #:use-module (grove ir)
   #:use-module (grove render plain-text)
   #:use-module (grove site)
