@@ -320,6 +320,9 @@
   (make-html-nav-link "home" "Home"
     #:attributes '((class . "first") (class . "second"))))
 
+(test-error "navigation links reject empty page IDs" #t
+  (make-html-nav-link "" "Home"))
+
 (let* ((content (string-copy "body { color: red; }"))
        (artifact (make-artifact "site.css" content))
        (stylesheets (list artifact))

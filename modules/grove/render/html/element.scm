@@ -36,7 +36,8 @@ the tag's id and registers the element with the anchor registry, so
 fragment links and queries can resolve it (a term definition, say).
 KIND overrides the content element kind (default SPAN) - renderer
 features that match on kinds, like #:side-lane, only see elements
-whose kind is declared here."
+whose kind is declared here. Mark VOID? only when HTML defines TAG as a
+void element; browsers ignore the self-closing slash on other HTML tags."
   (unless tag
     (error "custom element requires a tag" tag))
   (unless (symbol? kind)

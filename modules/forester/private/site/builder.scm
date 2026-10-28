@@ -5,6 +5,7 @@
 (define-module (forester private site builder)
   #:use-module (grove i18n)
   #:use-module ((grove private ir) #:prefix ir:)
+  #:use-module (grove private html-style)
   #:use-module (grove private snapshot)
   #:use-module (grove private string-fun)
   #:use-module (grove ir)
@@ -12,8 +13,6 @@
   #:use-module (grove site)
   #:use-module (grove private relation)
   #:use-module (grove private project timing)
-  #:use-module (grove style)
-  #:use-module (grove style html)
   #:use-module ((forester private trees) #:prefix tree-pass:)
   #:use-module (forester private content-index)
   #:use-module (forester private site model)
@@ -53,15 +52,7 @@ transclusions belong to their own pages and stay out of this set."
   "The HTML tag a vocabulary element renders as, from the style's tag
  marker - dfn for a defining occurrence, say. Later markers override earlier
  ones, matching Grove's HTML renderer and MERGE-CONTENT-STYLE."
-  (let ((style (content-element-style element)))
-    (and style
-      (let loop ((properties (content-style-properties style)) (tag #f))
-        (if (null? properties)
-            tag
-            (loop (cdr properties)
-                  (if (html-tag? (car properties))
-                      (html-tag-name (car properties))
-                      tag)))))))
+  (content-style-html-tag-name (content-element-style element)))
 
 (define (dom-anchor-index pages composition transclusion-index)
   "Build a page-id → rendered-anchor-ids table.  A page's set is its own

@@ -6,6 +6,7 @@
   #:use-module (grove style html)
   #:use-module (grove render rules)
   #:use-module (grove private snapshot)
+  #:use-module (grove private string-fun)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:export (html-nav-link?
@@ -49,8 +50,8 @@
 
 (define* (make-html-nav-link page-id label #:key (attributes '()))
   "Describe a route-aware site navigation link."
-  (unless (and (string? page-id) (string? label))
-    (error "HTML navigation links require a page ID and string label"
+  (unless (and (non-empty-string? page-id) (string? label))
+    (error "HTML navigation links require a non-empty page ID and string label"
            page-id label))
   (let* ((attributes (make-html-attributes attributes))
          (assoc (html-attributes-assoc attributes)))

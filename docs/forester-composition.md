@@ -275,8 +275,10 @@ output keeps the body. This is an HTML presentation helper; use
 ```
 
 `@wbr[]` renders `<wbr/>`; `#:void?` marks the element as empty, rejects
-content, and emits a self-closing tag. Other elements close explicitly, so
-unknown tags never swallow the rest of the document. `#:class` joins the
+content, and emits a self-closing tag. Set it only for tags HTML defines as
+void, such as `wbr` or `img`: browsers ignore the slash on other HTML tags,
+which can make following content part of that element. Other elements close
+explicitly. `#:class` joins the
 tag's class, `#:attributes` carries static attribute pairs such as namespace
 declarations, and `#:flow-kind` selects inline or block. Tag names are
 validated at definition time: they must start with a letter and contain

@@ -110,7 +110,9 @@ Use it in content styles and HTML presentation values."
   (marker html-void-marker))
 
 (define (make-html-void)
-  "Mark a styled content element as empty: the HTML renderer emits a
-self-closing tag and rejects content.  Voidness is the vocabulary
-author's decision; the renderer keeps no element table of its own."
+  "Mark a styled content element as empty and reject content.
+
+The HTML renderer emits a self-closing tag. Use this only for an element
+that HTML defines as void: browsers ignore the self-closing slash on other
+HTML elements. Grove leaves that tag-semantic choice to the vocabulary."
   (%make-html-void 'void))

@@ -5,8 +5,7 @@
 (define-module (grove private render html)
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove ir)
-  #:use-module (grove style)
-  #:use-module (grove style html)
+  #:use-module (grove private html-style)
   #:use-module (grove render html attributes)
   #:use-module (grove render rules)
   #:use-module (grove highlight)
@@ -34,24 +33,12 @@
        (cons 'article (map render (ir:content-document-children/raw content))))
       (else (error "not a content node" content))))
 
-  (define (style-html-tag style)
-    (and style
-      (let loop ((properties (content-style-properties style)) (tag #f))
-        (if (null? properties) tag
-            (loop (cdr properties)
-              (if (html-tag? (car properties))
-                  (string->symbol (html-tag-name (car properties)))
-                  tag))))))
-
-  (define (style-html-void? style)
-    (and style
-      (any html-void? (content-style-properties style))))
-
   (define (apply-element-style element rendered)
     (let* ((style (content-element-style element))
            (attributes (content-style-html-attributes style id-prefix))
-           (tag (style-html-tag style))
-           (void? (style-html-void? style)))
+           (tag-name (content-style-html-tag-name style))
+           (tag (and tag-name (string->symbol tag-name)))
+           (void? (content-style-html-void? style)))
       (cond
         ((and (null? attributes) (not tag) (not void?)) rendered)
         ((not (and (pair? rendered) (symbol? (car rendered))))
@@ -135,7 +122,7 @@
        ;;     no invented class.  Styles that only add
        ;;     attributes keep the kind class.
        (if (and (content-element-style element)
-                (style-html-tag
+                (content-style-html-tag-name
                   (content-element-style element)))
            (cons 'span children)
            `(span (@ (class ,(symbol->string
