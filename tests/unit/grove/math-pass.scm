@@ -6,6 +6,10 @@
 
 (define facts '("scalar(x)"))
 (test-begin "shared math execution")
+(test-assert "bound validation helper is not part of the pass API"
+  (not (module-variable
+         (module-public-interface (resolve-module '(grove math pass)))
+         'check-math-bound)))
 (for-each
   (lambda (report)
     (test-assert "every executor returns the shared report" (math-report? report))

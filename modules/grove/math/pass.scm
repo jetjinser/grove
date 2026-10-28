@@ -12,7 +12,7 @@
   #:use-module (grove math premise)
   #:use-module (grove math rewrite)
   #:use-module (srfi srfi-1)
-  #:export (run-math-pass run-math-passes math-execution-diagnostics check-math-bound))
+  #:export (run-math-pass run-math-passes math-execution-diagnostics))
 
 (define (check-math-bound name value minimum)
   (unless (and (exact-integer? value) (>= value minimum))
