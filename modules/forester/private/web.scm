@@ -6,9 +6,16 @@
   #:use-module (web uri)
   #:use-module (srfi srfi-13)
   #:export (web-origin?
+            external-url?
             web-base-url
             web-absolute-route-url
             web-xml-escape))
+
+(define (external-url? value)
+  (and (string? value)
+       (or (string-prefix-ci? "https://" value)
+           (string-prefix-ci? "http://" value)
+           (string-prefix? "//" value))))
 
 (define (web-origin? url)
   (and (string? url)
