@@ -455,7 +455,12 @@ directory. `input-cache` carries `(hits . total-inputs)` when the project read
 at least one input. Each `render-renderer` event carries `(index seconds
 artifact-count)`, with a zero-based renderer index and elapsed time in seconds.
 Other details are `#f`. A complete build-cache hit skips both render events.
-CLI formatting uses the same events.
+These are the lifecycle events sent to Scheme callbacks. The CLI may add
+`analysis-phase-start` events (whose detail is a phase symbol) and
+`analysis-phase` events (whose detail is `(phase . seconds)`) while Forester
+analysis is running; these expose its internal timing breakdown and are not
+part of the general project callback contract. CLI formatting uses the
+lifecycle events as well as these optional analysis details.
 
 ## Tree creation
 
