@@ -47,6 +47,7 @@ the work; drop lower only when you need to replace part of its behavior.
 | Query finite relations | `(grove relation)` for relation values and miniKanren goals; `(grove relation dsl)` for named schemas and rules; see the [Relation reference](relations.md) | a domain API should return ordered, domain-specific results |
 | Query Forester pages, content, references, and terms | `(forester relations)` for finite relation goals and row queries | use `(forester site)` when results should be page/content records in site order; see the [Relation reference](relations.md) |
 | Count user-perceived text units | `grapheme-count` from `(grove unicode)` | the task needs codepoint or UTF-8 byte counts instead |
+| Match text independent of Unicode case and canonical spelling | `canonical-caseless-key` from `(grove unicode)` | sorting or locale-aware collation is also needed; use `(grove i18n)` → `sort-strings` |
 | Run a live preview from Scheme | `(grove serve)` → `serve-project` | ordinary local previews can use the `grove serve` command |
 | Serve an interactive browser over SSH from Scheme | `(grove ssh)` → `serve-ssh`, `read-authorized-keys`, `generate-host-key`; available when `guile-ssh` is installed; `serve-ssh` defaults to `127.0.0.1:2222` | the CLI's `grove browse --ssh` path is covered in [Preview and progress](project.md#preview-and-progress) |
 

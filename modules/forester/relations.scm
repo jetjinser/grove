@@ -3,7 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester relations)
-  #:use-module (grove i18n)
+  #:use-module (grove unicode)
   #:use-module (grove private relation)
   #:use-module (grove relation dsl)
   #:use-module (srfi srfi-1)
@@ -183,7 +183,8 @@
     ;; stay canonical.
     (project (stored-id topic-id)
       (if (string? topic-id)
-          (== (match-key stored-id) (match-key topic-id))
+          (== (canonical-caseless-key stored-id)
+              (canonical-caseless-key topic-id))
           (== stored-id topic-id)))))
 
 (defrel (topic-membero relation topic-id page-id label)

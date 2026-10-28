@@ -2,9 +2,22 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (grove unicode)
+  #:use-module ((scheme char) #:select (string-foldcase))
+  #:use-module (ice-9 unicode)
   #:use-module (rnrs bytevectors)
   #:use-module (system foreign)
-  #:export (grapheme-count))
+  #:export (canonical-caseless-key
+            grapheme-count))
+
+(define (canonical-caseless-key text)
+  "Return TEXT's canonical caseless key for Unicode identity matching.
+
+Case folding and canonical composition make `STRASSE', `Straße', and a
+decomposed `e' plus combining acute compare equal to their canonical
+spellings."
+  (unless (string? text)
+    (error "canonical-caseless-key requires a string" text))
+  (string-normalize-nfc (string-foldcase (string-normalize-nfd text))))
 
 (define u8-grapheme-breaks
   (pointer->procedure void

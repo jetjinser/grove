@@ -16,6 +16,18 @@
 (test-assert "non-empty-string? rejects non-strings"
   (not (non-empty-string? #f)))
 
+(test-equal "caseless keys fold case across the full Unicode range"
+  (canonical-caseless-key "STRASSE")
+  (canonical-caseless-key "Straße"))
+(test-equal "caseless keys compose canonically equivalent spellings"
+  (canonical-caseless-key "café")
+  (canonical-caseless-key
+    (string-append "cafe" (string (integer->char #x301)))))
+(test-equal "caseless keys keep the folded canonical spelling"
+  "strasse" (canonical-caseless-key "Straße"))
+(test-error "caseless keys require strings" #t
+  (canonical-caseless-key 'en))
+
 (test-equal "grapheme-count handles empty text" 0
   (grapheme-count ""))
 (test-equal "grapheme-count counts ordinary characters" 5

@@ -111,15 +111,6 @@
 
 ;;; Matching keys
 
-(test-equal "matching keys fold case across the full Unicode range"
-  (match-key "STRASSE") (match-key "Straße"))
-(test-equal "matching keys compose canonically equivalent spellings"
-  (match-key "café")
-  (match-key (string-append "cafe" (string (integer->char #x301)))))
-(test-equal "matching keys keep the folded canonical spelling"
-  "strasse" (match-key "Straße"))
-(test-error "matching keys require strings" #t (match-key 'en))
-
 ;;; Message catalogs
 
 (define catalog
@@ -512,10 +503,12 @@
 
 ;;; Sorting
 
-(test-assert "i18n exposes one canonical caseless key"
-  (let ((public (module-public-interface (resolve-module '(grove i18n)))))
-    (and (module-variable public 'match-key)
-         (not (module-variable public 'locale-sort-key)))))
+(test-assert "Unicode exposes canonical caseless matching"
+  (let ((unicode (module-public-interface (resolve-module '(grove unicode))))
+        (i18n (module-public-interface (resolve-module '(grove i18n)))))
+    (and (module-variable unicode 'canonical-caseless-key)
+         (not (module-variable i18n 'canonical-caseless-key))
+         (not (module-variable i18n 'locale-sort-key)))))
 (test-equal "strings sort by their folded keys"
   '("apple" "Straße" "Zebra" "éclair")
   (sort-strings '("Straße" "apple" "Zebra" "éclair")))

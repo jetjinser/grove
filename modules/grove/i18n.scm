@@ -5,7 +5,7 @@
 (define-module (grove i18n)
   #:use-module (grove private string-fun)
   #:use-module (grove private snapshot)
-  #:use-module ((scheme char) #:select (string-foldcase))
+  #:use-module (grove unicode)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
@@ -20,7 +20,6 @@
             locale-dir
             locale-html-attributes
             locale-matches?
-            match-key
             message-catalog?
             make-message-catalog
             message-catalog-default
@@ -264,16 +263,6 @@ and a `zh-Hans' reader matches `zh-Hans-CN'."
         (tag (locale-tag (make-locale tag))))
     (or (string-ci=? reader tag)
         (string-prefix-ci? (string-append reader "-") tag))))
-
-(define (match-key text)
-  "Return TEXT as a canonical caseless key for identity matching.
-
-Case folding and canonical composition make `STRASSE', `Straße', and a
-decomposed `e' plus combining acute compare equal to their canonical
-spellings."
-  (unless (string? text)
-    (error "match-key requires a string" text))
-  (string-normalize-nfc (string-foldcase (string-normalize-nfd text))))
 
 (define-record-type <message-catalog>
   (%make-message-catalog default entries)
@@ -696,16 +685,16 @@ fall back to folded code-point order."
            ;; first; use that as the probe.
            (and (glibc:string-locale<? "a" "B" loc)
                 (lambda (a b)
-                  (let ((ka (match-key a))
-                        (kb (match-key b)))
+                  (let ((ka (canonical-caseless-key a))
+                        (kb (canonical-caseless-key b)))
                     (cond
                       ((string=? ka kb) #f)
                       ((glibc:string-locale<? ka kb loc) #t)
                       (else #f)))))))))
 
 (define (folded-order a b)
-  (let ((ka (match-key a))
-        (kb (match-key b)))
+  (let ((ka (canonical-caseless-key a))
+        (kb (canonical-caseless-key b)))
     (and (not (string=? ka kb))
          (string<? ka kb))))
 
