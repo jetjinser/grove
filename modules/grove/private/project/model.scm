@@ -177,16 +177,25 @@
 (define (project-renderers project)
   (append (project-renderers/raw project) '()))
 
+(define source-destination-unspecified (list 'source-destination-unspecified))
+
 (define* (create-project-source project #:key prefix
-                                (destination (project-source-directory project)))
+                                (destination source-destination-unspecified))
   "Create a source through PROJECT's configured creator.
 
 PREFIX and DESTINATION are passed to the project-owned procedure. DESTINATION
 defaults to the project's source directory."
+  (unless (project? project)
+    (error "source creation requires a Grove project" project))
+  (when (eq? destination source-destination-unspecified)
+    (set! destination (project-source-directory project)))
   (let ((creator (project-create-source-procedure project)))
     (unless creator
       (error "this project does not define how to create a source file"))
-    (creator prefix destination)))
+    (let ((path (creator prefix destination)))
+      (unless (filesystem-path-string? path)
+        (error "project source creator must return a non-empty path" path))
+      (snapshot-data path))))
 
 (define (project-output-directory project)
   (snapshot-data (project-output-directory/raw project)))

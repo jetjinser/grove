@@ -374,7 +374,7 @@
 (let* ((source-directory (string-copy "sources"))
        (output-directory (string-copy "output"))
        (source-creator (lambda (prefix destination)
-                         (list prefix destination)))
+                         (string-append prefix ":" destination)))
        (extra-sources (list (string-copy "theme.css")))
        (renderers (list (lambda (_) '())))
        (project (make-project
@@ -389,14 +389,14 @@
   (set-car! extra-sources "changed.css")
   (set-car! renderers #f)
   (test-equal "projects snapshot caller-owned path and source values"
-    '("sources" "output" ("theme.css") ("note" "destination"))
+    '("sources" "output" ("theme.css") "note:destination")
     (list (project-source-directory project)
           (project-output-directory project)
           (project-extra-sources project)
           (create-project-source project
             #:prefix "note" #:destination "destination")))
   (test-equal "source creation defaults to the project source directory"
-    '("note" "sources")
+    "note:sources"
     (create-project-source project #:prefix "note"))
   (let ((exposed-sources (project-extra-sources project))
         (exposed-renderers (project-renderers project)))
@@ -406,6 +406,15 @@
     '("theme.css" 1)
     (list (car (project-extra-sources project))
           (length (project-renderers project)))))
+
+(test-error "source creators must return a non-empty path" #t
+  (create-project-source
+    (make-project #:collect-sources (lambda () '())
+                  #:read-source (lambda (_) #f)
+                  #:output-directory "output"
+                  #:create-source (lambda (_prefix _destination) 'not-a-path))))
+(test-error "source creation rejects non-project values" #t
+  (create-project-source #f))
 
 (let* ((extra-sources (list (string-copy "theme.css")))
        (project (make-site-project
