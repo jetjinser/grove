@@ -5,22 +5,24 @@
 (define-module (forester private web)
   #:use-module (web uri)
   #:use-module (srfi srfi-13)
-  #:export (web-url?
+  #:export (web-origin?
             web-base-url
             web-absolute-route-url
             web-xml-escape))
 
-(define (web-url? url)
+(define (web-origin? url)
   (and (string? url)
        (catch #t
          (lambda ()
            (let* ((uri (string->uri url))
                   (scheme (and uri (uri? uri) (uri-scheme uri)))
-                  (host (and uri (uri? uri) (uri-host uri))))
+                  (host (and uri (uri? uri) (uri-host uri)))
+                  (path (and uri (uri? uri) (uri-path uri))))
              (and scheme
                   (member (string-downcase (symbol->string scheme))
                           '("http" "https"))
                   (and (string? host) (not (string-null? host)))
+                  (or (not path) (string-null? path) (string=? path "/"))
                   (not (uri-query uri))
                   (not (uri-fragment uri)))))
          (lambda _ #f))))

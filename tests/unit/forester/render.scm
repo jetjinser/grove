@@ -82,6 +82,10 @@
   (test-error "site context rejects malformed site URLs"
     #t
     (make-site-render-context forest #:site-url "https:///path"))
+  (test-error "site context rejects deployment paths in site origins"
+    #t
+    (make-site-render-context forest
+      #:site-url "https://example.org/notes/"))
   (test-error "site context rejects empty Open Graph image URLs"
     #t
     (make-site-render-context forest #:og-image ""))
@@ -479,6 +483,8 @@
   (make-html-options #:settings 'not-site-settings))
 (test-error "HTML options reject malformed site URLs" #t
   (make-html-options #:site-url "https:///path"))
+(test-error "HTML options reject deployment paths in site origins" #t
+  (make-html-options #:site-url "https://example.org/notes/"))
 (test-error "HTML options reject invalid default locales at construction" #t
   (make-html-options #:default-locale ""))
 (test-error "HTML options reject invalid Open Graph image values" #t

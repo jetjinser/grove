@@ -134,8 +134,8 @@
     (error "Forester RSS renderer requires a forest" forest))
   (unless (or (not settings) (site-settings? settings))
     (error "RSS settings must be site settings or #f" settings))
-  (unless (web-url? site-url)
-    (error "Forester RSS renderer requires an absolute HTTP(S) site URL"
+  (unless (web-origin? site-url)
+    (error "Forester RSS renderer requires an absolute HTTP(S) origin"
            site-url))
   (unless (artifact-path? feed-path)
     (error "RSS feed path must be a relative artifact path" feed-path))
@@ -175,13 +175,14 @@
   "Construct a cached RSS renderer.
 
 Provide SITE-URL directly or through SETTINGS; at least one must contain an
-absolute HTTP(S) base URL. SITE-URL overrides the URL in SETTINGS."
+absolute HTTP(S) origin. Put a deployment path prefix in ROUTES,
+not SITE-URL. SITE-URL overrides the origin in SETTINGS."
   (unless (or (not settings) (site-settings? settings))
     (error "RSS settings must be site settings or #f" settings))
   (set! site-url (or site-url
                      (and settings (site-settings-site-url settings))))
-  (unless (web-url? site-url)
-    (error "Forester RSS renderer requires an absolute HTTP(S) site URL"
+  (unless (web-origin? site-url)
+    (error "Forester RSS renderer requires an absolute HTTP(S) origin"
            site-url))
   (unless (artifact-path? feed-path)
     (error "RSS feed path must be a relative artifact path" feed-path))

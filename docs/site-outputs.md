@@ -35,10 +35,13 @@ Scheme-datum graph. Import the constructors from the format modules:
 The normal Forester project always includes HTML. `#:additional-renderers`
 adds peer formats and projections; a `make-site-project` instead receives the
 complete renderer list through `#:renderers`. A shared `make-site-settings`
-value keeps the HTML, RSS, and sitemap base URL and default locale aligned.
-`make-site-settings` may omit the base URL when only the locale is shared;
-RSS and sitemap still require an absolute site URL, supplied through the shared
-settings or directly to either renderer with `#:site-url`.
+value keeps the HTML, RSS, and sitemap origin and default locale aligned.
+`#:site-url` is an absolute HTTP(S) origin; put a deployment path prefix in the
+shared HTML routes' `#:url-prefix` so generated HTML links and absolute feed,
+sitemap, and canonical URLs agree. `make-site-settings` may omit the origin
+when only the locale is shared; RSS and sitemap still require an origin,
+supplied through the shared settings or directly to either renderer with
+`#:site-url`.
 
 When routes omit a home page, HTML, RSS, and sitemap renderers infer it from the
 analyzed site's `#:home`. You do not need to repeat the home tree ID in each

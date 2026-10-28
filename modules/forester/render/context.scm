@@ -81,8 +81,8 @@ dynamic locale or message parameters."
     (error "render context language switches must be booleans"
            hreflang? language-switcher?))
   (set! locale (validate-interface-options locale messages))
-  (unless (or (not site-url) (web-url? site-url))
-    (error "render context site URL must be an absolute HTTP(S) base URL or #f"
+  (unless (or (not site-url) (web-origin? site-url))
+    (error "render context site URL must be an absolute HTTP(S) origin or #f"
            site-url))
   (unless (or (not og-image) (non-empty-string? og-image))
     (error "render context Open Graph image must be a non-empty string or #f"

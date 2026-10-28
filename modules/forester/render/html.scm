@@ -1135,8 +1135,8 @@ Entry points take this value with #:options."
       (unless (string? default-locale)
         (error "HTML default locale must be a tag or #f" default-locale))
       (set! default-locale (locale-tag (make-locale default-locale))))
-    (unless (or (not site-url) (web-url? site-url))
-      (error "HTML site URL must be an absolute HTTP(S) base URL or #f"
+    (unless (or (not site-url) (web-origin? site-url))
+      (error "HTML site URL must be an absolute HTTP(S) origin or #f"
              site-url))
     (unless (or (not og-image) (non-empty-string? og-image))
       (error "HTML Open Graph image must be a non-empty string or #f"

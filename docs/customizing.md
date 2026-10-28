@@ -34,9 +34,11 @@ HTML routes distinguish output paths from URLs. `#:page-path` and
 directory. `#:url-prefix` is added to links emitted by the renderers; it does
 not move artifacts into a matching subdirectory. Set the project output
 directory to choose where files are written, and reuse the same routes for
-HTML, RSS, and sitemap so their links agree. Set the absolute HTTP(S) site base
-with `#:site-url`; it may include a path prefix but cannot include a query or
-fragment.
+HTML, RSS, and sitemap so their links agree. Set the absolute HTTP(S) origin
+with `#:site-url` (scheme and authority, optionally followed by `/`). Put a
+deployment path such as `/notes/` in the shared routes' `#:url-prefix`; this
+keeps HTML links and absolute RSS, sitemap, and canonical URLs aligned. The
+origin cannot include a query or fragment.
 
 Route callbacks must be deterministic for a fixed project state: the same page
 ID must resolve to the same artifact path. Renderers may evaluate them more

@@ -71,11 +71,14 @@
          (string-contains (artifact-content (cadr artifacts))
                           "HTTPS://example.org/index.html"))))
 
-(let* ((artifacts
+(let* ((routes (make-html-routes #:url-prefix "/notes/"))
+       (artifacts
         (render-model forest
-          (list (make-sitemap-renderer #:site-url "https://example.org/notes/")
-                (make-rss-renderer #:site-url "https://example.org/notes/")))))
-  (test-assert "site renderer URLs retain a path prefix"
+          (list (make-sitemap-renderer #:site-url "https://example.org"
+                                       #:routes routes)
+                (make-rss-renderer #:site-url "https://example.org"
+                                   #:routes routes)))))
+  (test-assert "site renderer URLs use the shared route prefix"
     (and (string-contains (artifact-content (car artifacts))
                           "https://example.org/notes/index.html")
          (string-contains (artifact-content (cadr artifacts))
@@ -114,8 +117,12 @@
   (make-site-settings #:site-url "https:///path"))
 (test-error "shared site settings reject a URL query" #t
   (make-site-settings #:site-url "https://example.org/?preview=1"))
+(test-error "shared site settings reject a deployment path" #t
+  (make-site-settings #:site-url "https://example.org/notes/"))
 (test-error "RSS renderer rejects a site URL with a query" #t
   (make-rss-renderer #:site-url "https://example.org/?preview=1"))
+(test-error "RSS renderer rejects a deployment path in its origin" #t
+  (make-rss-renderer #:site-url "https://example.org/notes/"))
 (test-error "sitemap renderer rejects a site URL with a fragment" #t
   (make-sitemap-renderer #:site-url "https://example.org/#section"))
 (test-error "sitemap renderer validates its artifact path at construction" #t

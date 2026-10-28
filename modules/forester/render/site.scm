@@ -28,12 +28,13 @@
 (define* (make-site-settings #:key site-url (default-locale #f))
   "Shared site values for the HTML, sitemap, and RSS renderers.
 
-SITE-URL, when supplied, is an absolute HTTP(S) base URL with a host and no
-query or fragment; it may include a path prefix. DEFAULT-LOCALE is the language
-used for x-default alternates and the feed language. A settings value may omit
-SITE-URL, but sitemap and RSS renderers still require a base URL."
-  (unless (or (not site-url) (web-url? site-url))
-    (error "Site settings URL must be an absolute HTTP(S) base URL or #f"
+SITE-URL, when supplied, is an absolute HTTP(S) origin with no non-root path,
+query, or fragment. Put any deployment path prefix in the shared HTML routes.
+DEFAULT-LOCALE is the language used for x-default alternates and the feed
+language. A settings value may omit SITE-URL, but sitemap and RSS renderers
+still require an origin."
+  (unless (or (not site-url) (web-origin? site-url))
+    (error "Site settings URL must be an absolute HTTP(S) origin or #f"
            site-url))
   (unless (or (not default-locale) (non-empty-string? default-locale))
     (error "Site settings default locale must be a tag or #f"
