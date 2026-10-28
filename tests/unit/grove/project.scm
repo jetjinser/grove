@@ -44,6 +44,9 @@
 (define preview-pipeline-a (string-append project-root "/preview-pipeline-a"))
 (define preview-pipeline-b (string-append project-root "/preview-pipeline-b"))
 (define external-source-path (string-append project-root "/theme.css"))
+(define presence-source-path (string-append project-root "/optional-input.txt"))
+(define presence-output-directory
+  (string-append project-root "/presence-output"))
 
 (define (write-test-file path content)
   (call-with-output-file path
@@ -854,6 +857,41 @@
               (build-report-affected-artifacts changed-external))
             (test-equal "extra source modifications rerun cached renderers"
               4 render-count))
+          (let* ((presence-project
+                   (make-project
+                     #:collect-sources (lambda () '())
+                     #:read-source (lambda (_) #f)
+                     #:extra-sources (list presence-source-path)
+                     #:renderers
+                     (list (make-cached-renderer
+                             (lambda (_) (list (make-artifact
+                                                 "optional.txt" "optional"
+                                                 #:sources
+                                                 (list presence-source-path))))
+                             #:configuration 'optional-input))
+                     #:output-directory presence-output-directory))
+                 (initial (build-project/report presence-project)))
+            (test-assert "an absent declared input is tracked without being added"
+              (and (member presence-source-path
+                           (build-report-sources initial) string=?)
+                   (not (member presence-source-path
+                                (build-report-added-sources initial) string=?))))
+            (write-test-file presence-source-path "present")
+            (let ((present (build-project/report presence-project)))
+              (test-equal "a declared input appearing at the same path is modified"
+                (list presence-source-path)
+                (build-report-modified-sources present))
+              (test-equal "appearance invalidates its artifact"
+                '("optional.txt")
+                (build-report-affected-artifacts present)))
+            (delete-file presence-source-path)
+            (let ((absent-again (build-project/report presence-project)))
+              (test-equal "a declared input disappearing at the same path is modified"
+                (list presence-source-path)
+                (build-report-modified-sources absent-again))
+              (test-equal "disappearance invalidates its artifact"
+                '("optional.txt")
+                (build-report-affected-artifacts absent-again))))
           (let* ((changed-renderer
                    (make-cached-renderer
                      render #:configuration '(summary (precision . 2))))
@@ -1196,6 +1234,9 @@
       (rmdir drift-output-directory))
     (when (file-exists? preview-output-directory)
       (rmdir preview-output-directory))
+    (when (file-exists? presence-source-path)
+      (delete-file presence-source-path))
+    (system* "rm" "-rf" presence-output-directory)
     (for-each (lambda (path)
                 (when (file-exists? path)
                   (delete-file path)))

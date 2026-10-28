@@ -35,17 +35,14 @@
         entries))
 
 (define (changed-sources old-sources current-sources)
-  ;;     An absent file has no content and cannot shape the outputs.
-  ;;     Project loads record load-path candidates that do not exist,
-  ;;     and those candidate sets shift between build processes, so
-  ;;     absent entries are dropped before the comparison instead of
-  ;;     counting as additions and removals. Runtime inputs (module
-  ;;     files resolved through the load path) can additionally land
-  ;;     under different absolute paths in different build processes
-  ;;     without changing what the build produces, so a
-  ;;     removed-and-re-added pair with the same content cancels.
-  ;;     Declared project sources never cancel: a renamed page is a
-  ;;     real change.
+  ;;     Unfingerprinted paths do not count as additions or removals.
+  ;;     If a path remains in both snapshots, however, a transition
+  ;;     between absent and present content is a modification. Runtime
+  ;;     inputs (such as modules resolved through the load path) can
+  ;;     also land under different absolute paths across build
+  ;;     processes, so equal-content runtime additions and removals
+  ;;     cancel. Declared project sources never cancel: a renamed page
+  ;;     remains a real change.
   (let* ((added
            (filter (lambda (entry)
                      (and (build-state-source-fingerprint entry)
