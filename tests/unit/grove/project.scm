@@ -532,6 +532,32 @@
     (write-test-file (string-append source-directory "/.draft.plant") "hidden")
     (write-test-file (string-append source-directory "/ignore.txt") "ignored"))
   (lambda ()
+    (let* ((dynamic-input (string-append project-root "/analyzer-input.txt"))
+           (dynamic-output (string-append project-root "/analyzer-output"))
+           (project
+             (make-project
+               #:collect-sources (lambda () '())
+               #:read-source (lambda (_) #f)
+               #:analyze (lambda (_context)
+                           (call-with-input-file (depend-on! dynamic-input)
+                             get-string-all))
+               #:renderers
+               (list (lambda (model)
+                       (list (make-artifact "value.txt" model))))
+               #:cache? #f
+               #:output-directory dynamic-output)))
+      (write-test-file dynamic-input "first")
+      (let ((report (build-project/report project)))
+        (test-assert "uncached projects report analyzer dependencies"
+          (member dynamic-input (build-report-sources report))))
+      (write-test-file dynamic-input "second")
+      (let ((report (build-project/report project)))
+        (test-assert "uncached projects retain analyzer dependency tracking"
+          (member dynamic-input (build-report-sources report)))
+        (test-equal "uncached analyzer dependencies reach rendered output"
+          "second"
+          (call-with-input-file (string-append dynamic-output "/value.txt")
+            get-string-all))))
     (let ((project
             (make-site-project
               #:source-directory source-directory
@@ -1267,6 +1293,9 @@
             (string-append source-directory "/ignore.txt")))
     (when (file-exists? external-source-path)
       (delete-file external-source-path))
+    (when (file-exists? (string-append project-root "/analyzer-input.txt"))
+      (delete-file (string-append project-root "/analyzer-input.txt")))
+    (system* "rm" "-rf" (string-append project-root "/analyzer-output"))
     (system* "rm" "-rf" (string-append project-root "/.cache"))
     (rmdir module-directory)
     (rmdir source-directory)

@@ -25,8 +25,9 @@
 (define current-input-cache (make-parameter #f))
 
 (define-record-type <input-cache-context>
-  (%make-input-cache-context directory shared statuses globals)
+  (%make-input-cache-context enabled? directory shared statuses globals)
   input-cache-context?
+  (enabled? input-cache-context-enabled?)
   (directory input-cache-context-directory)
   (shared input-cache-context-shared)
   (statuses input-cache-context-statuses)
@@ -76,16 +77,16 @@
   (unless (and (list? dependencies)
                (every filesystem-path-string? dependencies))
     (error "input cache dependencies must be a list of paths" dependencies))
-  (and enabled?
-    (let ((globals (make-hash-table)))
-      (for-each (lambda (path) (hash-set! globals path #t)) dependencies)
-      ;;     The document cache lives in the per-user shared store, not
-      ;;     a per-output directory: its keys are content-derived, so
-      ;;     concurrent checkouts and worktrees share one set of
-      ;;     entries instead of recomputing identical analyses.
-      (%make-input-cache-context
-        (string-append (grove-store-directory) "/input-cache")
-        dependencies (make-hash-table) globals))))
+  (let ((globals (make-hash-table)))
+    (for-each (lambda (path) (hash-set! globals path #t)) dependencies)
+    ;;     Dependency collection remains active when reuse is disabled.
+    ;;     The document cache lives in the per-user shared store, not
+    ;;     a per-output directory: its keys are content-derived, so
+    ;;     concurrent checkouts and worktrees share one set of entries.
+    (%make-input-cache-context
+      enabled? (and enabled?
+                    (string-append (grove-store-directory) "/input-cache"))
+      dependencies (make-hash-table) globals)))
 
 (define (register-input-dependencies! context paths)
   (when context
@@ -100,7 +101,7 @@
       '()))
 
 (define (input-cache-summary context)
-  (if context
+  (if (and context (input-cache-context-enabled? context))
       (let ((statuses (input-cache-context-statuses context)))
         (cons (hash-count (lambda (path status) (eq? status 'hit)) statuses)
               (hash-count (const #t) statuses)))
@@ -108,11 +109,12 @@
 
 (define (input-cache-disabled? context)
   (and context
-       (> (hash-count (lambda (path status) (eq? status 'disabled))
-                      (input-cache-context-statuses context)) 0)))
+       (or (not (input-cache-context-enabled? context))
+           (> (hash-count (lambda (path status) (eq? status 'disabled))
+                          (input-cache-context-statuses context)) 0))))
 
 (define (prune-input-cache! context)
-  (when context
+  (when (and context (input-cache-context-enabled? context))
     (let ((directory (input-cache-context-directory context))
           (statuses (input-cache-context-statuses context)))
       (when (file-exists? directory)
@@ -290,8 +292,10 @@
                                  paths))
                   (identity (list reader (version) (setlocale LC_CTYPE)
                                   %load-path %load-compiled-path snapshot))
-                  (entry-path (string-append directory "/"
-                                (entry-key path)))
+                  (reuse? (and reuse? (input-cache-context-enabled? context)))
+                  (entry-path (and (input-cache-context-enabled? context)
+                                   (string-append directory "/"
+                                                  (entry-key path))))
                   (entry (and reuse? (read-entry entry-path)))
                   (hit (catch #t
                          (lambda ()

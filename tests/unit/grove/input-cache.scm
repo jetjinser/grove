@@ -101,8 +101,8 @@
         #f %load-hook))
     (lambda () (set! %load-hook initial-hook))))
 
-(test-equal "disabled input caching has no context"
-  #f (make-input-cache-context #f '()))
+(test-equal "disabled input caching still has a dependency context"
+  '() (input-cache-dependencies (make-input-cache-context #f '())))
 (test-error "input cache option must be boolean" #t
   (make-input-cache-context 'enabled '()))
 (test-error "input cache dependencies must be non-empty paths" #t
@@ -406,7 +406,25 @@
           (test-assert "registered data updates rendered output"
             (string-contains
               (call-with-input-file (string-append output "/page.html") get-string-all)
-              "beta")))))
+              "beta"))))
+      (let* ((uncached-project (project #f))
+             (before evaluations)
+             (report (build-project/report uncached-project)))
+        (test-assert "disabling cache preserves document dependency tracking"
+          (member data (build-report-sources report)))
+        (test-equal "disabled cache still evaluates the document"
+          (+ before 1) evaluations)
+        (put data "gamma")
+        (let ((before evaluations)
+              (report (build-project/report uncached-project)))
+          (test-assert "disabled cache reports changed document dependencies"
+            (member data (build-report-sources report)))
+          (test-equal "disabled cache reevaluates after dependency changes"
+            (+ before 1) evaluations)
+          (test-assert "disabled cache renders changed dependency contents"
+            (string-contains
+              (call-with-input-file (string-append output "/page.html") get-string-all)
+              "gamma")))))
     (let* ((first-target (string-append root "/target-first.txt"))
            (second-target (string-append root "/target-second.txt"))
            (alias (string-append root "/data-alias.txt")))
