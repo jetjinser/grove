@@ -332,6 +332,10 @@
   (content-element-has-property? 'not-an-element 'role))
 (test-error "content property presence requires a symbol key" #t
   (content-element-has-property? (make-content-element 'paragraph '()) "role"))
+(test-error "source locations are not ordinary content properties"
+  #t
+  (content-element-has-property? (make-content-element 'paragraph '())
+    'source-location))
 (test-error "source locations use the dedicated accessor" #t
   (content-element-property (make-content-element 'paragraph '())
     'source-location))
