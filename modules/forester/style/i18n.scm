@@ -11,10 +11,8 @@
   #:export (bilingual-container-style
             bilingual-fold-container-style
             bilingual-pair-style
-            bilingual-fold-pair-style
             bilingual-source-style
             bilingual-lane-style
-            bilingual-summary-style
             foreign-term-style
             bilingual-stylesheet
             default-bilingual-style))
@@ -61,16 +59,6 @@
 
 (define bilingual-source-style
   (make-content-style 'bilingual-source))
-
-(define bilingual-fold-pair-style
-  (make-content-style 'bilingual-pair))
-
-(define* (bilingual-summary-style tag dir #:optional (style #f))
-  "Present the reader lane as a disclosure summary with its language."
-  (unless (string? tag)
-    (error "bilingual summary tag must be a string" tag))
-  (with-html-presentation (or style 'bilingual-lane)
-    (list (make-html-attributes `((lang . ,tag) (dir . ,dir))))))
 
 (define* (bilingual-lane-style tag dir #:optional (style #f))
   "Present one language lane as a block with an explicit language and direction."
