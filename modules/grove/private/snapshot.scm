@@ -7,8 +7,8 @@
   #:export (snapshot-data))
 
 (define (snapshot-data value)
-  "Copy mutable strings, bytevectors, and pair structure, preserving opaque
-values.
+  "Copy mutable strings, bytevectors, vectors, and pair structure, preserving
+opaque values.
 
 Use at public constructor boundaries for declarative data. Procedures and
 records remain shared values; their own constructors define their semantics."
@@ -23,6 +23,15 @@ records remain shared values; their own constructors define their semantics."
           result))
        ((bytevector? value)
         (bytevector-copy value))
+       ((vector? value)
+        (or (hashq-ref seen value)
+            (let ((result (make-vector (vector-length value))))
+              (hashq-set! seen value result)
+              (let loop ((index 0))
+                (when (< index (vector-length value))
+                  (vector-set! result index (copy (vector-ref value index)))
+                  (loop (+ index 1))))
+              result)))
        ((pair? value)
         (or (hashq-ref seen value)
             (let ((result (cons #f #f)))

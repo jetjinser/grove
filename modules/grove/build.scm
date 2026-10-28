@@ -14,7 +14,10 @@
 (define* (make-cached-renderer procedure #:key (configuration '()) render-changed inputs)
 "Declare PROCEDURE cacheable for project use.
 
-CONFIGURATION is data or a model-to-data procedure included in cache identity.
+CONFIGURATION is acyclic Scheme data or a model-to-data procedure returning
+such data, included in cache identity. Supported values are booleans,
+characters, numbers, symbols, keywords, strings, bytevectors, pairs,
+and vectors; opaque objects and cyclic structures are rejected.
 INPUTS, when supplied, is a no-argument procedure returning additional paths
 to track, or a list of paths when the dependencies are fixed. These paths
 trigger project-level invalidation; each artifact's source list declares which
@@ -27,6 +30,10 @@ renderer procedure runs on each build because procedure identity cannot be
 persisted safely."
   (unless (procedure? procedure)
     (error "cached renderer requires a procedure" procedure))
+  (unless (or (procedure? configuration)
+              (renderer-cache-configuration? configuration))
+    (error "renderer configuration must be acyclic Scheme data"
+           configuration))
   (unless (or (not render-changed) (procedure? render-changed))
     (error "incremental renderer must be a procedure or #f" render-changed))
   (unless (or (not inputs)

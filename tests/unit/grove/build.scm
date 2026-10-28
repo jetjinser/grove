@@ -54,6 +54,16 @@
 (test-error "cached renderers require procedures" #t
   (make-cached-renderer #f))
 
+(test-error "cached renderer configuration rejects opaque values" #t
+  (make-cached-renderer (lambda (_) '())
+    #:configuration (make-hash-table)))
+
+(test-error "cached renderer configuration rejects cycles" #t
+  (let ((configuration (cons 'cycle '())))
+    (set-cdr! configuration configuration)
+    (make-cached-renderer (lambda (_) '())
+      #:configuration configuration)))
+
 (test-equal "default renderer configuration is empty data"
   '(())
   (renderer-configurations
@@ -97,6 +107,20 @@
   (test-equal "cached renderers snapshot declarative cache configuration"
     '(((theme . "light")))
     (renderer-configurations #f (list renderer))))
+
+(let* ((configuration (vector (string-copy "light") '(contrast . high)))
+       (renderer
+        (make-cached-renderer (lambda (_) '())
+          #:configuration configuration)))
+  (string-set! (vector-ref configuration 0) 0 #\X)
+  (test-equal "cached renderers snapshot vector cache configuration"
+    (list (vector "light" '(contrast . high)))
+    (renderer-configurations #f (list renderer))))
+
+(test-error "model-derived renderer configuration must be serializable data" #t
+  (renderer-configurations #f
+    (list (make-cached-renderer (lambda (_) '())
+            #:configuration (lambda (_) (make-hash-table))))))
 
 (define render-calls 0)
 (define (plain-renderer model)
