@@ -58,11 +58,7 @@ identity cannot be persisted safely."
   "Apply RENDERERS to MODEL in order and concatenate their artifact lists.
 This invokes rendering only; it does not collect inputs, cache results, or
 write artifacts. Every renderer must return a list of artifacts."
-  (unless (and (list? renderers)
-               (every (lambda (renderer)
-                        (or (procedure-accepts-arguments? renderer 1)
-                            (cached-renderer? renderer)))
-                      renderers))
+  (unless (renderer-list? renderers)
     (error "render-model requires one-argument renderers or cached renderers"
            renderers))
   (append-map

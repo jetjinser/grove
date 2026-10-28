@@ -261,11 +261,7 @@ input port, and output port by BROWSE-PROJECT."
     (error "project source reader must accept one argument" read-source))
   (unless (procedure-accepts-arguments? analyze 1)
     (error "project analyzer must accept one argument" analyze))
-  (unless (and (list? renderers)
-               (every (lambda (renderer)
-                        (or (procedure-accepts-arguments? renderer 1)
-                            (cached-renderer? renderer)))
-                      renderers))
+  (unless (renderer-list? renderers)
     (error "project renderers must accept one argument or be cached renderers"
            renderers))
   (unless (and (list? pipelines)

@@ -4,6 +4,7 @@
 
 (define-module (grove private renderer)
   #:use-module (grove private fingerprint)
+  #:use-module (grove private procedure)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:export (%make-cached-renderer
@@ -12,6 +13,7 @@
             cached-renderer-procedure
             cached-renderer-render-changed
             cached-renderer-dependencies
+            renderer-list?
             renderer-configurations))
 
 (define-record-type <cached-renderer>
@@ -21,6 +23,13 @@
   (procedure cached-renderer-procedure)
   (render-changed cached-renderer-render-changed)
   (dependencies cached-renderer-dependencies))
+
+(define (renderer-list? renderers)
+  (and (list? renderers)
+       (every (lambda (renderer)
+                (or (procedure-accepts-arguments? renderer 1)
+                    (cached-renderer? renderer)))
+              renderers)))
 
 (define (renderer-configurations model renderers)
   ;; Keep peer configurations in order. A plain renderer contributes #f only
