@@ -16,7 +16,9 @@
 
 CONFIGURATION is data or a model-to-data procedure included in cache identity.
 INPUTS, when supplied, is a no-argument procedure returning additional paths
-to track, or a list of paths when the dependencies are fixed. RENDER-CHANGED,
+to track, or a list of paths when the dependencies are fixed. These paths
+trigger project-level invalidation; each artifact's source list declares which
+inputs affect that output and enables safe per-artifact reuse. RENDER-CHANGED,
 when supplied, receives the model, changed source
 paths, dirty artifact paths, and this renderer's previous artifacts. It must
 return the renderer's complete current artifact list, or #f to request a full

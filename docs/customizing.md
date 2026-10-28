@@ -128,6 +128,16 @@ same project code, declared and materialized paths, input bytes, and version
 produce the same bytes. Grove verifies stored-byte integrity but cannot verify
 external tool determinism.
 
+Renderer `#:inputs` make those files part of the project's change set and
+invalidate cached renderer output when they change. If the renderer has
+`#:render-changed`, its callback receives those changed paths for selective
+work. For reuse at artifact granularity, also pass each output's actual
+dependencies as the optional source list to `make-artifact` or
+`make-byte-artifact`. These per-artifact paths let Grove identify which outputs
+are dirty. Omitting the list means dependencies are unknown, so that artifact
+cannot be safely reused after project changes; an explicit empty list declares
+that it depends on no files.
+
 ## Three renderer entry points
 
 | Function | Returns | Use when |
