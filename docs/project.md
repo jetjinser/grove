@@ -108,6 +108,18 @@ Use `build-project` when a Scheme host only needs the resulting artifact list;
 use `build-project/report` when it also needs source changes, affected
 artifacts, or cache status. `check-project` returns the same report shape but
 does not read or write published output state.
+
+The `#:analyze` callback receives a `project-context`. Its
+`project-context-inputs` are the ordered collected paths paired with the values
+returned by `#:read-source`; inspect them with `project-input-path` and
+`project-input-value`. `project-context-prepared-sources` contains paths
+returned by `#:prepare`, which Grove tracks but does not pass through
+`#:read-source`. `project-context-extra-sources` contains the paths declared by
+`#:extra-sources`; they participate in invalidation and preview watching, but
+are not content inputs. In a `make-site-project`, prepared paths are also added
+to the assembled site's source list; extra sources stay project dependencies
+unless the analyzer deliberately includes them in its own model.
+
 `project-with-options` returns a project copy with an output-directory override,
 additional tracked inputs, or a cache setting; the original project is unchanged.
 Project constructors snapshot declared path strings and list containers.
