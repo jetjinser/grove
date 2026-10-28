@@ -210,6 +210,15 @@
     (content->text
       (evaluate-document "@section{@title{Group}@paragraph{Body.}}")))
 
+(test-error "sections require one non-empty direct title" #t
+  (evaluate-document "@section{@paragraph{Body.}}"))
+(test-error "sections reject an empty direct title" #t
+  (evaluate-document "@section{@title{}}"))
+(test-error "subtrees require one non-empty direct title" #t
+  (evaluate-document "@subtree{@paragraph{Body.}}"))
+(test-error "subtrees reject an empty direct title" #t
+  (evaluate-document "@subtree{@title{}}"))
+
 (let ((document
         (evaluate-document
           "@use-commands{proto}@title{Root}@section{@title{Group}@paragraph{Body.}}")))

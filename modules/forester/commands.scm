@@ -107,54 +107,11 @@ page and must be a valid anchor ID."
 (define-public (taxon value)
   (topic-element 'taxon value))
 
-(define*-public (subtree #:key [id #f] [anchor #f] [open? #t] [style #f] . arguments)
-  (unless (boolean? open?)
-    (error "Forester subtree #:open? must be a boolean" open?))
-  ;;     Guile's rest argument contains keyword arguments as well.
-  (let* ([body   (command-body arguments)]
-         [titles (filter (lambda (element)
-                            (and (content-element? element)
-                                 (eq? (content-element-kind element) 'title)))
-                         body)])
-    (when (and id
-               (or (not (non-empty-string? id))
-                   (string-index id #\#)))
-      (error "Forester subtree ID must be a non-empty string without #" id))
-    (when anchor
-      (checked-anchor-id anchor))
-    (match titles
-      [(title-element)
-       (define title-text
-         (string-trim-both
-           (content-verbatim-string
-             (ir:content-element-children/raw title-element))))
-       (when (string-null? title-text)
-         (error "Forester subtree title cannot be empty"))
-       (make-content-element
-         'subtree (decode-flow (remove (cut eq? <> title-element) body))
-         #:style style
-         #:properties
-         `((title . ,title-text)
-           (open? . ,open?)
-           ,@(if id `((tree-id . ,id)) '())
-           ,@(cond (anchor `((anchor . ,anchor)))
-                   (id `((anchor . ,id)))
-                   (else '())))
-         #:flow-kind 'block)]
-      [_ (error "Forester subtree requires exactly one direct @title"
-                (length titles))])))
-
-
-(define*-public (section #:key (style #f) . arguments)
-  "Group content structurally without an addressable tree ID.
-
-A section renders as a nested heading and body but gets no route and no
-anchor; use @subtree with #:id when the group must be linked."
-  (let* ((body (command-body arguments))
-         (titles (filter (lambda (element)
-                           (and (content-element? element)
-                                (eq? (content-element-kind element) 'title)))
-                         body)))
+(define (extract-titled-body kind body)
+  (let ((titles (filter (lambda (element)
+                          (and (content-element? element)
+                               (eq? (content-element-kind element) 'title)))
+                        body)))
     (match titles
       [(title-element)
        (let ((title-text
@@ -162,14 +119,52 @@ anchor; use @subtree with #:id when the group must be linked."
                  (content-verbatim-string
                    (ir:content-element-children/raw title-element)))))
          (when (string-null? title-text)
-           (error "Forester section title cannot be empty"))
-         (make-content-element
-           'section (decode-flow (remove (cut eq? <> title-element) body))
-           #:style style
-           #:properties `((title . ,title-text))
-           #:flow-kind 'block))]
-      [_ (error "Forester section requires exactly one direct @title"
+           (error (format #f "Forester ~a title cannot be empty" kind)))
+         (values title-text (remove (cut eq? <> title-element) body)))]
+      [_ (error (format #f "Forester ~a requires exactly one direct @title" kind)
                 (length titles))])))
+
+(define*-public (subtree #:key [id #f] [anchor #f] [open? #t] [style #f] . arguments)
+  (unless (boolean? open?)
+    (error "Forester subtree #:open? must be a boolean" open?))
+  ;;     Guile's rest argument contains keyword arguments as well.
+  (let ([body (command-body arguments)])
+    (when (and id
+               (or (not (non-empty-string? id))
+                   (string-index id #\#)))
+      (error "Forester subtree ID must be a non-empty string without #" id))
+    (when anchor
+      (checked-anchor-id anchor))
+    (call-with-values
+      (lambda () (extract-titled-body "subtree" body))
+      (lambda (title-text body)
+        (make-content-element
+          'subtree (decode-flow body)
+          #:style style
+          #:properties
+          `((title . ,title-text)
+            (open? . ,open?)
+            ,@(if id `((tree-id . ,id)) '())
+            ,@(cond (anchor `((anchor . ,anchor)))
+                    (id `((anchor . ,id)))
+                    (else '())))
+          #:flow-kind 'block)))))
+
+
+(define*-public (section #:key (style #f) . arguments)
+  "Group content structurally without an addressable tree ID.
+
+A section renders as a nested heading and body but gets no route and no
+anchor; use @subtree with #:id when the group must be linked."
+  (let ((body (command-body arguments)))
+    (call-with-values
+      (lambda () (extract-titled-body "section" body))
+      (lambda (title-text body)
+        (make-content-element
+          'section (decode-flow body)
+          #:style style
+          #:properties `((title . ,title-text))
+          #:flow-kind 'block)))))
 (define*-public (transclude id #:key (style #f) (anchor #f))
   (unless (non-empty-string? id)
     (error "Forester transclusion target must be a non-empty tree ID" id))
