@@ -46,7 +46,10 @@
   "Build HTML routes from page and index artifact paths.
 
 URL-PREFIX is raw absolute path text beginning and ending with /. Grove
-encodes it together with each artifact path when constructing URLs."
+encodes it together with each artifact path when constructing URLs. PAGE-PATH
+must return the same path for a page ID under the same project state; renderers
+may evaluate it repeatedly while validating routes, resolving links, and
+building cache identities."
   (unless (procedure? page-path)
     (error "HTML page path requires a procedure" page-path))
   (unless (artifact-path? index-path)
