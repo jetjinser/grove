@@ -66,6 +66,11 @@
   (html-attributes:merge-html-attributes
     '((id . "tree-1")) '((id . "author-id"))))
 
+(test-equal "later style IDs replace earlier style IDs"
+  '((id . "later"))
+  (html-attributes:merge-html-attributes
+    '() '((id . "earlier") (id . "later"))))
+
 (test-error "HTML style merge rejects duplicate renderer-owned attributes" #t
   (html-attributes:merge-html-attributes
     '((class . "first") (class . "second")) '()))

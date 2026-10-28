@@ -61,7 +61,12 @@ that a style cannot replace a renderer-owned ID."
         (cond
           ((not existing) (append attributes (list addition)))
           ((eq? name 'id)
-           (error "HTML style cannot replace a renderer-owned ID" (cdr existing) value))
+           (if (assq name original)
+               (error "HTML style cannot replace a renderer-owned ID"
+                      (cdr existing) value)
+               (map (lambda (attribute)
+                      (if (eq? (car attribute) name) addition attribute))
+                    attributes)))
           ((eq? name 'class)
            (map (lambda (attribute)
                   (if (eq? (car attribute) name)
