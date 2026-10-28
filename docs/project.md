@@ -319,6 +319,11 @@ every build. Opaque render rules need a stable
 For the default HTML renderer installed by `make-forester-project`, pass this
 as `#:html-rules-id`; use `#:extra-sources` for files those rules read.
 
+The same `#:inputs` keyword has a different role on asset pipelines: there it
+is a fixed set of files made available through the pipeline's input lookup.
+Renderer inputs declare files to watch and invalidate on; pipeline inputs also
+define which paths the pipeline procedure may materialize.
+
 Asset pipelines fingerprint the project file, its load-time inputs, declared
 files, and Scheme files loaded while the pipeline runs. A self-contained
 pipeline can omit `#:inputs`. Set its `#:version` when behavior depends on
