@@ -32,6 +32,15 @@ Scheme-datum graph. Import the constructors from the format modules:
         (make-graph-renderer)))
 ```
 
+The public renderer APIs have three levels. `site->html`, `site->text`,
+`site->gemtext`, and `site->graph` return in-memory format values for callers
+that need to inspect or further transform a projection. `render-html`,
+`render-text`, `render-gemtext`, `render-rss`, `render-sitemap`, and
+`render-graph` return Grove artifact lists without writing them. Use
+`make-*-renderer` to adapt output to the project renderer contract and its
+cache rules. RSS and sitemap expose no separate `site->*` projection; their
+direct `render-*` functions already return the feed or sitemap artifacts.
+
 The normal Forester project always includes HTML. `#:additional-renderers`
 adds peer formats and projections; a `make-site-project` instead receives the
 complete renderer list through `#:renderers`. A shared `make-site-settings`
