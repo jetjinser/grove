@@ -31,6 +31,11 @@
 
 (test-begin "forester site")
 
+(test-assert "module dependency projection stays internal"
+  (not (module-variable
+         (module-public-interface (resolve-module '(forester site)))
+         'module-paths)))
+
 (let* ((phases '())
        (page (make-site-page "measured" "Measured"
                             (evaluate-document "A paragraph.")))

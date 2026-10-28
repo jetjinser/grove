@@ -47,7 +47,6 @@
             term-definition-conflicts
             undefined-term-mentions
             source-paths
-            module-paths
             page-source-paths))
 
 (define (id-member-set ids)

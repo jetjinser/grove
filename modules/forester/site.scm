@@ -43,7 +43,6 @@
                context-pages
                used-codepoints
                source-paths
-               module-paths
                page-source-paths
                term-definition-relation
                term-mention-relation
