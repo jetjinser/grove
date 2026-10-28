@@ -3,7 +3,7 @@
 (use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math expression) (grove math private polynomial)
              (grove math types) (grove math context) (grove relation)
              (grove math derivation)
-             (grove math polynomial contract)
+             (grove math private polynomial-contract)
              ((grove math semantic) #:prefix ◆:)
              (tests unit grove polynomial-oracle) (tests unit grove cartesian-fixtures)
              (srfi srfi-1) (srfi srfi-64))

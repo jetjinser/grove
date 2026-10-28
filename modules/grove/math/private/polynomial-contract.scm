@@ -1,7 +1,7 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(define-module (grove math polynomial contract)
+(define-module (grove math private polynomial-contract)
   #:use-module (srfi srfi-9)
   #:export (math-derivative-evidence? make-math-derivative-evidence
             math-derivative-evidence-case math-derivative-evidence-expression

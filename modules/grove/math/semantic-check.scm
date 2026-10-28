@@ -13,7 +13,7 @@
   #:use-module (grove math verification)
   #:use-module (grove math term)
   #:use-module (grove math types)
-  #:use-module (grove math polynomial contract)
+  #:use-module (grove math private polynomial-contract)
   #:use-module (ice-9 match)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
