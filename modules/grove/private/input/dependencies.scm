@@ -8,7 +8,7 @@
   #:use-module (grove private module-load)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (runtime-inputs input-fingerprint normalize-input-path
+  #:export (framework-inputs input-fingerprint normalize-input-path
             current-input-fingerprints record-module-inputs!
             current-input-trace call-with-input-trace trace-inputs depend-on! disable-cache!))
 
@@ -117,7 +117,7 @@
   (let ((trace (current-input-trace)))
     (when trace (hash-set! trace 'uncached #t))))
 
-(define (runtime-inputs)
+(define (framework-inputs)
   ;; Include the package's complete source/data and compiled trees. This also
   ;; observes added/removed modules and compile-time include-text inputs, without
   ;; changing the fingerprint as documents load additional framework modules.

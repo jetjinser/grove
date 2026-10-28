@@ -92,7 +92,7 @@ Return the internal analysis record used by the build pipeline."
                (make-input-cache-context
                  (project-cache? project)
                  (append prepared-sources (project-extra-sources project)
-                         (runtime-inputs)))))
+                         (framework-inputs)))))
            (inputs
              (parameterize ((current-input-cache input-cache-context))
                (map (lambda (path)
