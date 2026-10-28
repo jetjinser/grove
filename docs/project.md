@@ -217,12 +217,14 @@ CLI exit codes are 0 for success, 1 for execution failure, and 2 for invalid
 arguments. Summaries use stdout; diagnostics use stderr.
 
 Artifacts carry relative paths, text or bytes, and optional source dependencies.
-Validation rejects duplicate, reserved, and conflicting output paths. Writing
-preserves unchanged files and removes obsolete manifest-owned artifacts; other
-files remain untouched. The configured output root may be a symlink, but
-artifact parent directories beneath it may not: Grove refuses to write through
-or clean stale outputs through a symlinked parent. Writing is not transactional
-across the directory.
+Validation rejects duplicate and conflicting output paths. Grove keeps its
+build metadata outside the deployable output directory, so names such as
+`.grove-artifacts` remain available to project artifacts. Writing preserves
+unchanged files and removes obsolete manifest-owned artifacts; other files
+remain untouched. The configured output root may be a symlink, but artifact
+parent directories beneath it may not: Grove refuses to write through or clean
+stale outputs through a symlinked parent. Writing is not transactional across
+the directory.
 
 A site declares its start tree once with
 `(make-site-project #:home ID ...)`. HTML routes
