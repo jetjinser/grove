@@ -15,6 +15,7 @@
   #:use-module (forester render text routes)
   #:use-module (forester private backmatter)
   #:use-module (forester private render labels)
+  #:use-module (forester private render cache)
   #:use-module (forester private render text-options)
   #:use-module (forester private render text-output)
   #:use-module (forester private entity-uri)
@@ -345,9 +346,7 @@ when caching cannot be identified safely, otherwise a cached renderer."
   (let ((render (lambda (forest)
                   (render-text forest #:options options)))
         (effective-cache?
-          (and cache?
-               (or (eq? rules empty-render-rules)
-                   (and rules-id #t)))))
+          (renderer-cacheable? rules rules-id cache?)))
     (if (not effective-cache?)
         render
         (make-cached-renderer render

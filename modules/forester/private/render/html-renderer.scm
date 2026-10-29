@@ -14,6 +14,7 @@
   #:use-module (forester private render artifact)
   #:use-module (forester private render anchors)
   #:use-module (forester private render labels)
+  #:use-module (forester private render cache)
   #:use-module ((forester private render html-document) #:prefix document:)
   #:use-module (forester private translations)
   #:use-module (forester render context)
@@ -348,10 +349,7 @@ when caching cannot be identified safely, otherwise a cached renderer."
           (og-image-alt (html-options-og-image-alt options))
           (hreflang? (html-options-hreflang? options))
           (language-switcher? (html-options-language-switcher? options))
-          (effective-cache?
-            (and cache?
-                 (or (eq? rules empty-render-rules)
-                     (and rules-id #t)))))
+          (effective-cache? (renderer-cacheable? rules rules-id cache?)))
       (validate-rules-id rules-id)
       (set! rules-id (snapshot-data rules-id))
       (unless (boolean? cache?)

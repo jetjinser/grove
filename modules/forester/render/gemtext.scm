@@ -15,6 +15,7 @@
   #:use-module (forester render text routes)
   #:use-module (forester private backmatter)
   #:use-module (forester private render labels)
+  #:use-module (forester private render cache)
   #:use-module (forester private render text-options)
   #:use-module (forester private render text-output)
   #:use-module (forester private entity-uri)
@@ -390,10 +391,7 @@ when caching cannot be identified safely, otherwise a cached renderer."
          (locale (gemtext-options-locale options))
          (messages (gemtext-options-messages options))
          (rules (gemtext-options-rules options))
-         (effective-cache?
-           (and cache?
-                (or (eq? rules empty-render-rules)
-                    (and rules-id #t)))))
+         (effective-cache? (renderer-cacheable? rules rules-id cache?)))
   (validate-rules-id rules-id)
   (set! rules-id (snapshot-data rules-id))
   (unless (boolean? cache?)
