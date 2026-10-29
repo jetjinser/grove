@@ -1008,7 +1008,9 @@
       (make-html-options
         #:routes (make-html-routes
                    #:home-page "algebra"
-                   #:page-path (lambda (_id) "index.html"))))))
+                   #:page-path (lambda (_id) "index.html")))))
+  (test-error "HTML options reject parent traversal in MathJax paths" #t
+    (make-html-options #:mathjax-src "../mathjax.js")))
 
 (let* ((html (render-test-html (make-forest (make-site (list algebra limits)))))
        (limits-html (assoc-ref html "limits")))

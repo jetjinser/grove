@@ -3,15 +3,9 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester private render html-page)
-  #:use-module (grove private alist)
-  #:use-module ((grove private artifact) #:prefix out:)
   #:use-module ((grove private ir) #:prefix ir:)
-  #:use-module (grove render)
-  #:use-module (grove private fingerprint)
   #:use-module (grove private html-attributes)
   #:use-module (grove i18n)
-  #:use-module (grove private string-fun)
-  #:use-module (forester private render artifact)
   #:use-module (forester private render anchors)
   #:use-module (forester private render labels)
   #:use-module ((forester private render html-document) #:prefix document:)
@@ -20,9 +14,7 @@
   #:use-module (forester render site)
   #:use-module (forester site)
   #:use-module (grove ir)
-  #:use-module (grove output)
   #:use-module (grove private render html)
-  #:use-module (grove private snapshot)
   #:use-module (grove private uri)
   #:use-module (grove render html style)
   #:use-module (grove render rules)
@@ -43,8 +35,6 @@
   #:use-module (srfi srfi-9)
   #:export (page-html
             check-html-input
-            default-mathjax-src
-            validate-mathjax-source
             presentation-title-decoration-procedure
             presentation-metadata-items-procedure))
 
@@ -531,9 +521,6 @@ top-level taxon element; pages without one contribute nothing."
                '()))
       ,label))
 
-(define default-mathjax-src
-  "https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js")
-
 (define (local-asset-url routes source)
   (call-with-values
     (lambda () (split-uri-suffix source))
@@ -543,15 +530,6 @@ top-level taxon element; pages without one contribute nothing."
             (uri-encode-path path)
             (html-asset-url routes path))
         suffix))))
-
-(define (validate-mathjax-source source)
-  (unless (or (not source)
-              (and (non-empty-string? source)
-                   (or (external-url? source)
-                       (artifact-path? source))))
-    (error "MathJax source must be a URL, relative artifact path, or #f"
-           source))
-  source)
 
 (define (describes-sxml page context)
   (let ((uris (or (assq-ref (site-page-metadata page) 'describes) '())))
@@ -740,7 +718,7 @@ to the lane, and an in-place numbered marker links to it."
                       '()
                       (list backmatter-fetch-script))))))
 
-(define (check-html-input forest style routes mathjax-src)
+(define (check-html-input forest style routes)
   (unless (forest? forest)
     (error "Forester HTML renderer requires a forest" forest))
   (unless (html-style? style)
@@ -749,5 +727,4 @@ to the lane, and an in-place numbered marker links to it."
     (error "Forester HTML renderer requires HTML routes" routes))
   (unless (find-page forest (html-home-page routes))
     (error "configured HTML home page was not found" (html-home-page routes)))
-  (html-route-table routes (map site-page-id (pages forest)))
-  (validate-mathjax-source mathjax-src))
+  (html-route-table routes (map site-page-id (pages forest))))

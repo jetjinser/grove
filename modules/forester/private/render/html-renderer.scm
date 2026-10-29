@@ -92,6 +92,18 @@
   (hreflang? html-options-hreflang?)
   (language-switcher? html-options-language-switcher?))
 
+(define default-mathjax-src
+  "https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js")
+
+(define (validate-mathjax-source source)
+  (unless (or (not source)
+              (and (non-empty-string? source)
+                   (or (external-url? source)
+                       (artifact-path? source))))
+    (error "MathJax source must be a URL, relative artifact path, or #f"
+           source))
+  source)
+
 (define (valid-side-lane? kinds)
   (and (list? kinds)
        (every symbol? kinds)
@@ -122,7 +134,7 @@
          (side-lane (html-options-side-lane options))
          (rules (html-presentation-rules presentation))
          (context (make-html-render-context forest routes options)))
-    (check-html-input forest style routes mathjax-src)
+    (check-html-input forest style routes)
     (lambda (page inline-stylesheets?)
       (page-html forest page style routes mathjax-src backmatter
                  reference-taxon-id inline-stylesheets? highlighters
