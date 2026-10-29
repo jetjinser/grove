@@ -31,6 +31,15 @@
 
 (test-begin "forester terminal browser")
 
+(test-error "browser constructors reject an empty start ID" #t
+  (make-forest-browser #:start ""))
+(test-error "browser constructors reject a non-string start ID" #t
+  (make-forest-browser #:start 42))
+(test-error "direct browser calls require an input port" #t
+  (browse-forest forest #:input 42))
+(test-error "direct browser calls require an output port" #t
+  (browse-forest forest #:output 42))
+
 (let ((text (browse-output forest "q\n")))
   (test-assert "browser starts at the site home page"
     (string-contains text "Algebra & limits"))

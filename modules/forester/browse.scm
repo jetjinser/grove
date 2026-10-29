@@ -177,10 +177,21 @@
   (format output "~%[n] follow  b back  h home  xN expand  q quit > ")
   (force-output output))
 
+(define (check-browser-start start)
+  (unless (or (not start)
+              (and (string? start) (> (string-length start) 0)))
+    (error "Forester browser start must be a non-empty page ID or #f" start))
+  start)
+
 (define* (browse-forest forest #:key start
                         (input (current-input-port))
                         (output (current-output-port)))
   "Browse FOREST in the terminal, starting at START or the site home page."
+  (check-browser-start start)
+  (unless (input-port? input)
+    (error "terminal browser input must be an input port" input))
+  (unless (output-port? output)
+    (error "terminal browser output must be an output port" output))
   (unless (forest? forest)
     (error "terminal browser requires a forest" forest))
   (let* ((pages (pages forest))
@@ -238,5 +249,6 @@
 (define* (make-forest-browser #:key start)
   "Return a project browse callback over a Forest.
 The callback accepts a Forest and its input and output ports."
+  (check-browser-start start)
   (lambda (forest input output)
     (browse-forest forest #:start start #:input input #:output output)))
