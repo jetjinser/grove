@@ -383,6 +383,19 @@
            sitemap
            (string-append "<loc>" site-url "/guide.html</loc>")))))
 
+(let* ((site-url "https://例え.テスト")
+       (html (assoc-ref (site->html forest
+                                    #:options
+                                    (make-html-options
+                                      #:routes routes
+                                      #:mathjax-src #f
+                                      #:site-url site-url))
+                        "guide")))
+  (test-assert "HTML canonical URLs preserve the origin IRI"
+    (string-contains
+      html
+      "<link rel=\"canonical\" href=\"https://例え.テスト/guide.html\"")))
+
 (let* ((settings (make-site-settings #:site-url "https://example.org"
                                      #:default-locale "EN-us"))
        (html (assoc-ref (site->html forest

@@ -161,11 +161,11 @@ those trees' frontmatter."
   (or (find-page forest id)
       (error "unknown forest page" id)))
 
-(define (describing-pages forest uri)
-  "Return pages that declare they describe URI, in site order."
+(define (describing-pages forest iri)
+  "Return pages that declare they describe IRI, in site order."
   (pages-with-ids
     forest
-    (described-entity-page-ids (described-entity-relation forest) uri)))
+    (described-entity-page-ids (described-entity-relation forest) iri)))
 
 (define (subtree-definitions forest)
   (composition:composition-subtree-definitions (composition forest)))

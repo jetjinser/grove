@@ -68,6 +68,25 @@
            (string-contains content
                             "<link>https://example.org/index.html</link>")))))
 
+(let* ((origin "https://例え.テスト")
+       (settings (make-site-settings #:site-url origin))
+       (artifacts
+        (render-model forest
+          (list (make-sitemap-renderer #:settings settings)
+                (make-rss-renderer #:settings settings))))
+       (sitemap (artifact-content (car artifacts)))
+       (rss (artifact-content (cadr artifacts))))
+  (test-equal "site settings preserve the authored origin IRI"
+    origin (site-settings-site-url settings))
+  (test-assert "sitemap maps a Unicode origin host to IDNA ASCII"
+    (and (string-contains sitemap
+                          "https://xn--r8jz45g.xn--zckzah/")
+         (not (string-contains sitemap "例え.テスト"))))
+  (test-assert "RSS maps a Unicode origin host to IDNA ASCII"
+    (and (string-contains rss
+                          "https://xn--r8jz45g.xn--zckzah/index.html")
+         (not (string-contains rss "例え.テスト")))))
+
 (let ((forest-without-home
         (make-forest
           (make-site (site-pages (site forest)) #:title "Test"))))

@@ -32,6 +32,7 @@
 ;; Guile and Grove's own packages form the default development environment.
 (define guile (specification->package "guile"))
 (define libunistring (specification->package "libunistring"))
+(define libidn2 (specification->package "libidn2"))
 (define guile-srfi-275
   (primitive-load
    (string-append (dirname (canonicalize-path (current-filename)))
@@ -307,7 +308,7 @@ Grove's highlighter consumes.")
 
 (packages->manifest
  (append
-  (list blue faster-minikanren grove-highlights guile libunistring
+  (list blue faster-minikanren grove-highlights guile libunistring libidn2
         guile-srfi-275
         grove-glibc-locales)
   (map specification->package

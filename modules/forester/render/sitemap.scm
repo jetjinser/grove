@@ -129,7 +129,7 @@ values override them; ROUTES determine the absolute page URLs in the sitemap."
                                            routes default-locale)))
     (set! routes (validate-site-home-route
                    forest (resolve-site-routes forest routes)))
-    (let* ((base (web-base-url site-url))
+    (let* ((base (web-base-url (web-origin-uri site-url)))
            (route-table
              (html-route-table routes (map site-page-id (pages forest))))
            (groups (derive-translation-groups (pages forest)))

@@ -3,9 +3,15 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (forester private web)
-  #:use-module (web uri)
+  #:use-module (ice-9 popen)
+  #:use-module (ice-9 rdelim)
+  #:use-module (srfi :275 iri)
+  #:use-module (srfi :275 normalize)
+  #:use-module (srfi :275 path)
+  #:use-module (srfi :275 uri)
   #:use-module (srfi srfi-13)
   #:export (web-origin?
+            web-origin-uri
             external-url?
             web-base-url
             web-absolute-route-url
@@ -17,23 +23,66 @@
            (string-prefix-ci? "http://" value)
            (string-prefix? "//" value))))
 
-(define (web-origin? url)
+(define (parse-web-origin url)
   (and (string? url)
        (catch #t
          (lambda ()
-           (let* ((uri (string->uri url))
-                  (scheme (and uri (uri? uri) (uri-scheme uri)))
-                  (host (and uri (uri? uri) (uri-host uri)))
-                  (path (and uri (uri? uri) (uri-path uri))))
-             (and scheme
-                  (member (string-downcase (symbol->string scheme))
-                          '("http" "https"))
+           (let* ((iri (string->iri url))
+                  (scheme (and iri (iri-scheme iri)))
+                  (host (and iri (iri-host iri)))
+                  (path (and iri (iri-path iri))))
+             (and iri
+                  (non-relative-iri? iri)
+                  (or (string-ci=? scheme "http")
+                      (string-ci=? scheme "https"))
                   (and (string? host) (not (string-null? host)))
-                  (not (uri-userinfo uri))
-                  (or (not path) (string-null? path) (string=? path "/"))
-                  (not (uri-query uri))
-                  (not (uri-fragment uri)))))
+                  (not (iri-user iri))
+                  (or (not path)
+                      (let ((path (path->string path)))
+                        (or (string-null? path) (string=? path "/"))))
+                  (not (iri-query iri))
+                  (not (iri-fragment iri))
+                  iri)))
          (lambda _ #f))))
+
+(define (web-origin? url)
+  (and (parse-web-origin url) #t))
+
+(define (idna-to-ascii host)
+  (let* ((port (open-pipe* OPEN_READ "idn2" "--quiet" "--tr46nt"
+                           "--usestd3asciirules" "--" host))
+         (result (read-line port))
+         (status (close-pipe port)))
+    (unless (and (status:exit-val status)
+                 (= (status:exit-val status) 0)
+                 (string? result)
+                 (not (eof-object? result)))
+      (error "Cannot convert HTTP IRI host to an IDNA domain" host))
+    result))
+
+(define (web-origin-uri url)
+  "Return an ASCII URI for the HTTP(S) origin IRI URL.
+
+The host is converted with IDNA UTS #46 non-transitional processing; other
+IRI components use SRFI-275's generic UTF-8 percent-encoding mapping."
+  (let* ((iri (parse-web-origin url))
+         (host (and iri (iri-host iri))))
+    (unless iri
+      (error "Expected an absolute HTTP(S) origin IRI" url))
+    (if (string-every (lambda (character)
+                        (< (char->integer character) 128))
+                      host)
+        url
+        (let* ((ascii-host (idna-to-ascii host))
+               (uri (iri->uri (update-iri-host iri ascii-host)))
+               (serialized (uri->string uri))
+               (original-scheme-end (string-index url #\:))
+               (serialized-scheme-end (string-index serialized #\:)))
+          ;; SRFI-275 lowercases schemes while mapping to URI. Preserve the
+          ;; author's scheme spelling while converting only the host.
+          (string-append
+            (substring url 0 (1+ original-scheme-end))
+            (substring serialized (1+ serialized-scheme-end)))))))
 
 (define (web-base-url url)
   (let ((end (string-length url)))

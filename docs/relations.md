@@ -146,7 +146,7 @@ their internal relation values are not exposed as Forest accessors.
 `(node-id page-id parent-id kind position properties text character-count codepoint-count plain-text?)`.
 `(page-relation forest)` stores one row per page:
 `(page-id title metadata)`. `(described-entity-relation forest)` stores one
-`(page-id uri)` row for each `@describes` declaration. The `nodeo`, `pageo`,
+`(page-id iri)` row for each `@describes` declaration. The `nodeo`, `pageo`,
 and `described-entityo` goals query these rows; `node-propertyo` and
 `page-metadatao` query the corresponding alists.
 
@@ -201,8 +201,8 @@ reference occurrence order and duplicates. Use the relation goals when these
 values need to join with other facts or participate in a custom query.
 
 Use `described-entityo` in relational queries, or
-`(describing-pages forest uri)` to get matching page records in site order.
-Multiple pages may describe the same external entity; URI strings are compared
+`(describing-pages forest iri)` to get matching page records in site order.
+Multiple pages may describe the same external entity; IRI strings are compared
 exactly.
 
 Joining described entities with page data through the page ID keeps entity
@@ -213,7 +213,7 @@ matching composable with other page facts and content queries:
       (page-data (page-relation forest)))
   (run* (page-id title)
     (described-entityo entities
-      (uri "doi:10.1146/annurev.fluid.29.1.123")
+      (iri "doi:10.1146/annurev.fluid.29.1.123")
       (page-id page-id))
     (pageo page-data
       (page-id page-id)

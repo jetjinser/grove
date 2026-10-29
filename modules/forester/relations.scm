@@ -51,9 +51,9 @@
 (define-relation-schema make-page-relation pageo
   (page-id title metadata))
 
-;; Rows are (page-id uri): a tree's declared subject entities.
+;; Rows are (page-id iri): a tree's declared subject entities.
 (define-relation-schema make-described-entity-relation described-entityo
-  (page-id uri))
+  (page-id iri))
 
 ;; Rows are (node-id page-id parent-id kind position properties text
 ;; character-count codepoint-count plain-text?).

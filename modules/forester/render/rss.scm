@@ -168,7 +168,7 @@ values override them; ROUTES names the HTML page locations used in feed links."
                    forest (resolve-site-routes forest routes)))
     (unless (html-home-page routes)
       (error "RSS renderer requires a site home page; set the site's #:home or HTML routes #:home-page"))
-    (let* ((base (web-base-url site-url))
+    (let* ((base (web-base-url (web-origin-uri site-url)))
            (site (site forest))
            (home-url (web-absolute-route-url base (html-index-url routes)))
            (items

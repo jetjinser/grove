@@ -72,9 +72,11 @@ rejecting userinfo, and requiring a host for HTTP(S). Both the Forester page
 reader and `make-forest` enforce this contract, including for programmatically
 assembled Grove site values. It preserves the spelling and compares values
 exactly; it does not normalize equivalent spellings. HTTP(S) links retain the
-IRI form for the browser to process. This does not imply that Grove's other URL
-fields or its network clients accept IRI strings, and it does not add an IDNA
-implementation to Grove.
+IRI form for the browser to process. Forester's shared `site-url` is also an
+HTTP(S) origin IRI: HTML retains it, while RSS and sitemap convert its host to
+IDNA ASCII and map IRI characters to URI form at their output boundaries. This
+does not make local routes or filesystem paths into IRIs, nor does it add
+network fetching.
 
 ## RDF is a projection, not Grove's relation model
 

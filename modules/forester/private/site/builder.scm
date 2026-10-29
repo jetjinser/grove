@@ -319,7 +319,7 @@ constructor when a Grove site is already in memory."
              (make-described-entity-relation
                (append-map
                  (lambda (page)
-                   (map (lambda (uri) (list (site-page-id page) uri))
+                   (map (lambda (iri) (list (site-page-id page) iri))
                         (or (assq-ref (site-page-metadata page) 'describes) '())))
                  pages))))
          (content-node-state

@@ -215,7 +215,7 @@
     '(("first" "First") ("second" "Second"))
     (run* (id title)
       (described-entityo (described-entity-relation forest)
-        (uri doi) (page-id id))
+        (iri doi) (page-id id))
       (pageo (page-relation forest)
         (page-id id) (title title)))))
 

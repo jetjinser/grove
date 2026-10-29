@@ -9,6 +9,7 @@
 
 (define* (make-grove blue guile faster-minikanren grove-highlights libunistring
                      guile-gcrypt guile-ssh guile-ts coreutils guile-srfi-275
+                     libidn2
                      #:key
                      (version "0-unstable-2026-10-10")
                      (source
@@ -166,11 +167,15 @@
                                            "/bin")
                             (string-append
                              #$(this-package-input "coreutils")
+                             "/bin")
+                            (string-append
+                             #$(this-package-input "libidn2")
                              "/bin")))))))))
     (native-inputs (list blue guile))
     (inputs
      (append
-      (list guile faster-minikanren grove-highlights libunistring guile-srfi-275)
+      (list guile faster-minikanren grove-highlights libunistring guile-srfi-275
+            libidn2)
       (map specification->package
            (list "coreutils" "guile-gcrypt" "guile-ssh" "guile-ts"))))
     (synopsis "Static site generator for executable, forester-style notes")
