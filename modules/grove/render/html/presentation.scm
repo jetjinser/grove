@@ -238,19 +238,17 @@ METADATA-ITEMS map non-empty page IDs to static SXML child lists."
                 (append result (list entry)))))
         base overlay))
 
-(define (html-presentation-title-decoration presentation page-id)
-  (let ((entry (and page-id
-                    (assoc page-id
-                           (html-presentation-title-decorations/raw
-                             presentation)))))
+(define (page-sxml-fragments entries page-id)
+  (let ((entry (and page-id (assoc page-id entries))))
     (if entry (snapshot-data (cdr entry)) '())))
 
+(define (html-presentation-title-decoration presentation page-id)
+  (page-sxml-fragments
+    (html-presentation-title-decorations/raw presentation) page-id))
+
 (define (html-presentation-metadata-items presentation page-id)
-  (let ((entry (and page-id
-                    (assoc page-id
-                           (html-presentation-metadata-item-map/raw
-                             presentation)))))
-    (if entry (snapshot-data (cdr entry)) '())))
+  (page-sxml-fragments
+    (html-presentation-metadata-item-map/raw presentation) page-id))
 
 (define empty-html-presentation (make-html-presentation))
 
