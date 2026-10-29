@@ -45,7 +45,7 @@
   (let ((locale (render-context-ref context 'locale-object)))
     (if locale (format-date locale text #:style 'long) text)))
 
-(define (hreflang-links forest page routes context)
+(define (hreflang-links page routes context)
   (let ((group (page-translation-group
                  page (render-context-ref context 'translation-groups))))
     (if (or (not group) (< (length group) 2))
@@ -66,7 +66,7 @@
                                          routes (site-page-id default))))))
                 '()))))))
 
-(define (alternate-og-locales forest page context)
+(define (alternate-og-locales page context)
   (let ((group (page-translation-group
                  page (render-context-ref context 'translation-groups))))
     (if (not group)
@@ -81,7 +81,7 @@
                     (loop (cdr rest) (cons (page-locale other) acc))
                     (loop (cdr rest) acc))))))))
 
-(define (language-switcher-sxml forest page routes context)
+(define (language-switcher-sxml page routes context)
   (let ((group (page-translation-group
                  page (render-context-ref context 'translation-groups))))
     (if (or (not group) (< (length group) 2))
@@ -363,8 +363,7 @@ top-level taxon element; pages without one contribute nothing."
   ;;     in the citing body, where it was authored.
   (let ((outline (tree-outline-sxml
                    forest (site-page-id page)
-                   #:base-url (html-page-url routes (site-page-id page))
-                   #:context context)))
+                   #:base-url (html-page-url routes (site-page-id page)))))
     (tree-block-sxml
       "backmatter"
       (site-page-id page) (site-page-title page) url
@@ -467,8 +466,7 @@ top-level taxon element; pages without one contribute nothing."
     sections))
 
 (define* (tree-outline-sxml forest id
-                            #:key (base-url "") (title-decoration #f)
-                            (context #f))
+                            #:key (base-url "") (title-decoration #f))
   ;;     The tree's own subtree/transclusion outline as nested list
   ;;     items.  With the default BASE-URL the links are same-page
   ;;     fragments (the page's table of contents); pass a page URL to
@@ -505,8 +503,7 @@ top-level taxon element; pages without one contribute nothing."
 
 (define* (table-of-contents-sxml forest page #:key (title-decoration #f) (context #f))
   (let ((items (tree-outline-sxml forest (site-page-id page)
-                                  #:title-decoration title-decoration
-                                  #:context context)))
+                                  #:title-decoration title-decoration)))
     (if (null? items) '()
         (list `(nav (@ (class "table-of-contents")
                        (aria-label ,(interface-message 'nav-contents context)))
@@ -574,7 +571,7 @@ top-level taxon element; pages without one contribute nothing."
   ;;     marker and the lane item share the sequence number.
   (let ((count 0) (items '()))
     (case-lambda
-      ((message element children)
+      ((message children)
        (case message
          ((put!)
           (set! count (+ count 1))
@@ -590,7 +587,7 @@ to the lane, and an in-place numbered marker links to it."
   (map (lambda (kind)
          (cons kind
                (lambda (element children)
-                 (let ((n (collector 'put! element children)))
+                 (let ((n (collector 'put! children)))
                    `(sup (@ (class "margin-ref")
                             (id ,(string-append "margin-ref-"
                                                 (number->string n))))
@@ -643,13 +640,13 @@ to the lane, and an in-place numbered marker links to it."
              #:messages (render-context-ref context 'messages)))
          (labels (localized-backmatter-labels context))
          (head (if (render-context-ref context 'hreflang?)
-                   (append head (hreflang-links forest page routes context))
+                   (append head (hreflang-links page routes context))
                    head))
          (language-nav (if (render-context-ref context 'language-switcher?)
-                           (language-switcher-sxml forest page routes context)
+                           (language-switcher-sxml page routes context)
                            '()))
          (og-locales (if (render-context-ref context 'hreflang?)
-                         (alternate-og-locales forest page context)
+                         (alternate-og-locales page context)
                          '()))
          (page-image (assq-ref (site-page-metadata page) 'og-image))
          (page-image-alt (assq-ref (site-page-metadata page) 'og-image-alt))
