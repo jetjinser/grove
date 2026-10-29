@@ -165,6 +165,13 @@ tree-N position anchors; both are known limitations of global anchors."
                            entry))
                      metadata)))))))
 (define* (make-forest site #:key (timings #f))
+  "Analyze a Grove SITE into a Forester Forest.
+
+This extracts addressable subtrees, validates composition and authored links,
+and builds the Forest's ordered page and relation indexes. TIMINGS, when
+supplied, receives each analysis phase and its duration in seconds. Use
+MAKE-FORESTER-PROJECT for the usual file-reading and build lifecycle; use this
+constructor when a Grove site is already in memory."
   (define (report-phase phase thunk)
     (let ((report (or timings
                       (and (current-analysis-timings)

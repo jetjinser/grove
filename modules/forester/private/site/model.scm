@@ -75,4 +75,7 @@
   (query-page-ids query-page-ids))
 
 (define (pages forest)
+  "Return FOREST's pages in stable site order, including extracted subtrees.
+
+The returned list is independent of the Forest's stored page list."
   (snapshot-data (forest-pages/raw forest)))

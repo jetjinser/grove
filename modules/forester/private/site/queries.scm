@@ -153,6 +153,7 @@ those trees' frontmatter."
   (page-topic-elements page 'tag))
 
 (define (find-page forest id)
+  "Return the Forest page with ID, or #f when it is absent."
   (hash-ref (page-index forest) id))
 
 (define (require-page forest id)
@@ -170,6 +171,10 @@ those trees' frontmatter."
   (composition:composition-subtree-definitions (composition forest)))
 
 (define (links forest id)
+  "Return outgoing authored link target IDs in occurrence order.
+
+Repeated links remain repeated; use BACKLINKS when the desired result is a
+unique page list. Transclusions are not authored links."
   (map reference-target-page-id (outgoing-references forest id)))
 
 ;; Relation queries solve through miniKanren, so the same rows would be
@@ -391,6 +396,11 @@ pages that only exist inside another article's DOM."
         (term-mention-relation forest)))))
 
 (define (source-paths forest)
+  "Return the ordered source dependency closure for the whole Forest.
+
+This is the underlying Grove site's SITE-SOURCE-PATHS projection. Use
+PAGE-SOURCE-PATHS when an artifact depends on only one page and its Forester
+composition or query context."
   (site-source-paths (site forest)))
 
 (define (module-paths forest)
