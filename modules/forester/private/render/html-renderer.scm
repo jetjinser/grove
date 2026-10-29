@@ -6,7 +6,7 @@
   #:use-module (grove private alist)
   #:use-module ((grove private artifact) #:prefix out:)
   #:use-module ((grove private ir) #:prefix ir:)
-  #:use-module (grove build)
+  #:use-module (grove render)
   #:use-module (grove private fingerprint)
   #:use-module (grove private html-attributes)
   #:use-module (grove i18n)

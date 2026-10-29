@@ -8,7 +8,7 @@
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-64)
   #:use-module (grove ir)
-  #:use-module (grove build)
+  #:use-module (grove render)
   #:use-module (grove output)
   #:use-module (grove project)
   #:use-module (grove private project model)

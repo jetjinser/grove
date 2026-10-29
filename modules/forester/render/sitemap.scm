@@ -4,7 +4,7 @@
 
 (define-module (forester render sitemap)
   #:use-module (grove i18n)
-  #:use-module (grove build)
+  #:use-module (grove render)
   #:use-module (grove private string-fun)
   #:use-module (forester private render-routes)
   #:use-module (forester private translations)

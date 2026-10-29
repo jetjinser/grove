@@ -4,7 +4,7 @@
 (define-module (examples hackable-math extension)
   #:use-module (forester site)
   #:use-module (gcrypt hash)
-  #:use-module (grove build)
+  #:use-module (grove render)
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove render context)

@@ -2,7 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit grove project-check)
-  #:use-module (grove build)
+  #:use-module (grove render)
   #:use-module (grove private build-state)
   #:use-module (grove output)
   #:use-module (grove private cache-dir)

@@ -5,7 +5,7 @@
 (define-module (forester render rss)
   #:use-module (grove i18n)
   #:use-module (forester private render-routes)
-  #:use-module (grove build)
+  #:use-module (grove render)
   #:use-module (forester render site)
   #:use-module (forester site)
   #:use-module (forester private web)

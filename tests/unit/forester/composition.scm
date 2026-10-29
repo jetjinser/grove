@@ -13,7 +13,7 @@
   #:use-module (forester composition)
   #:use-module (forester relations)
   #:use-module (forester site)
-  #:use-module (grove build)
+  #:use-module (grove render)
   #:use-module (grove ir)
   #:use-module (grove render html routes)
   #:use-module (grove output)

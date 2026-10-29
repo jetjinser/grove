@@ -9,7 +9,7 @@
   #:use-module (language scribble spec)
   #:use-module (forester commands)
   #:use-module (forester site)
-  #:use-module (grove build)
+  #:use-module (grove render)
   #:use-module (grove private renderer)
   #:use-module (grove ir)
   #:use-module (grove ir plain-text)

@@ -4,7 +4,7 @@
 
 (define-module (forester render text)
   #:use-module ((grove private ir) #:prefix ir:)
-  #:use-module (grove build)
+  #:use-module (grove render)
   #:use-module (forester private render anchors)
   #:use-module (forester site)
   #:use-module (grove ir)

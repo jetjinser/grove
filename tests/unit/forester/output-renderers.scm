@@ -13,7 +13,7 @@
   #:use-module (forester render sitemap)
   #:use-module (forester render text routes)
   #:use-module (forester site)
-  #:use-module (grove build)
+  #:use-module (grove render)
   #:use-module (grove output)
   #:use-module (grove render html routes)
   #:use-module (grove site)

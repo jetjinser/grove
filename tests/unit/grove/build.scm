@@ -4,18 +4,18 @@
 
 (define-module (tests unit grove build)
   #:use-module (srfi srfi-64)
-  #:use-module (grove build)
+  #:use-module (grove render)
   #:use-module (grove private renderer)
   #:use-module (grove private project renderers)
   #:use-module (grove private build-state)
   #:use-module (grove output)
   #:use-module (grove project))
 
-(test-begin "grove build")
+(test-begin "grove renderer")
 
 (test-assert "cached renderer representation stays private"
   (not (module-variable
-         (module-public-interface (resolve-module '(grove build)))
+         (module-public-interface (resolve-module '(grove render)))
          'cached-renderer?)))
 
 (test-equal "render-model applies ordinary renderers in order"
@@ -207,4 +207,4 @@
   (let ((result (run-render-cache '())))
     (list render-calls (artifact-content (car (car result))))))
 
-(test-end "grove build")
+(test-end "grove renderer")

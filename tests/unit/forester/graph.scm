@@ -5,7 +5,7 @@
 (define-module (tests unit forester graph)
   #:use-module (forester render graph)
   #:use-module (forester site)
-  #:use-module (grove build)
+  #:use-module (grove render)
   #:use-module (grove ir)
   #:use-module (grove output)
   #:use-module (grove site)

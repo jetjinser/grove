@@ -26,7 +26,7 @@ the work; drop lower only when you need to replace part of its behavior.
 | Build an arbitrary file-based model | `(grove project)` → `make-project` | custom collection, reading, analysis, artifacts, or execution options are needed |
 | Validate a project without publishing | `(grove project)` → `check-project` | use `build-project` to publish outputs or `build-project/report` to inspect source changes and cache status |
 | Load a project file from a Scheme host | `(grove project load)` → `call-with-loaded-project` | the host already owns the project value; construct it with `(grove project)` |
-| Apply renderers directly to an existing model | `(grove build)` → `render-model` | input collection, caching, validation, or output writing is needed; use a project |
+| Apply renderers directly to an existing model | `(grove render)` → `render-model` | input collection, caching, validation, or output writing is needed; use a project |
 | Create a source for a project | `(grove project)` → `create-project-source`, or the `grove new` command | the project must supply its own `#:create-source` policy |
 | Collect files recursively | `(grove collect)` → `collect-directory` | Forester can accept an ordered `#:collect-sources` callback while retaining its defaults; custom site projects can use the same option |
 | Handle project failures in a Scheme host | `(grove project diagnostic)` for structured errors and Grove's formatter | custom work needs to add a stage or path; use `call-with-project-stage` |

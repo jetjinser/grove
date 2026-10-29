@@ -4,7 +4,7 @@
 
 (define-module (grove private project renderers)
   #:use-module ((grove private artifact) #:prefix out:)
-  #:use-module (grove build)
+  #:use-module (grove render)
   #:use-module (grove output)
   #:use-module (grove private build-state)
   #:use-module (grove private fingerprint)

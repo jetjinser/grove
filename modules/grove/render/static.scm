@@ -5,7 +5,7 @@
 (define-module (grove render static)
   #:use-module ((grove private artifact) #:prefix out:)
   #:use-module (grove collect)
-  #:use-module (grove build)
+  #:use-module (grove render)
   #:use-module (grove output)
   #:use-module (ice-9 binary-ports)
   #:use-module (rnrs bytevectors)

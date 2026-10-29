@@ -18,7 +18,7 @@
   #:use-module (forester site)
   #:use-module (forester input scribble)
   #:use-module ((forester private trees) #:prefix tree-pass:)
-  #:use-module (grove build)
+  #:use-module (grove render)
   #:use-module (grove ir)
   #:use-module (grove render html)
   #:use-module (grove render html element)

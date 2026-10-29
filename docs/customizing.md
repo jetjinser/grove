@@ -187,7 +187,7 @@ All of them take one options value:
 (make-html-renderer #:options (make-html-options ...))
 ```
 
-For direct composition without a project build, `(grove build)` exports
+For direct composition without a project build, `(grove render)` exports
 `render-model`: it applies a list of renderer values or ordinary renderer
 procedures to one model and concatenates their artifact lists in order. It
 does not collect inputs, cache results, or write files.

@@ -1,7 +1,7 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(use-modules (grove highlight) (grove ir) (grove build) (grove output)
+(use-modules (grove highlight) (grove ir) (grove render) (grove output)
              (grove render html) (grove render text) (grove render html routes)
              (grove private renderer)
              (grove style) (grove style html) (grove style html element)

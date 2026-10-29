@@ -67,7 +67,7 @@
     (write-file (string-append root "/sources/input.txt") "input")
     (write-file script "(use-modules (tests unit grove subprocess))\n(exit (cli-entry (cdr (command-line))))\n")
     (write-file config
-      "(use-modules (grove project) (grove build) (grove output) (ice-9 textual-ports))
+      "(use-modules (grove project) (grove render) (grove output) (ice-9 textual-ports))
 (make-project
   #:source-directory \"sources\"
   #:read-source (lambda (path) (call-with-input-file path get-string-all))

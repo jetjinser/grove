@@ -16,7 +16,7 @@
   #:use-module (forester render site)
   #:use-module (forester site)
   #:use-module (forester style html)
-  #:use-module (grove build)
+  #:use-module (grove render)
   #:use-module (grove highlight)
   #:use-module (grove private renderer)
   #:use-module (grove ir)

@@ -27,7 +27,7 @@
               "@title{Shared}\n\nShared corpus content.\n")
   (write-file (string-append worktree "/project.scm")
     (string-append
-      "(use-modules (grove project) (grove build) (grove output)\n"
+      "(use-modules (grove project) (grove render) (grove output)\n"
       "             (grove project site) (grove site) (grove input scribble)\n"
       "             (forester input scribble) (forester site) (forester commands)\n"
       "             (grove ir) (system base language) (language scribble spec)\n"

@@ -4,7 +4,7 @@
 
 (define-module (forester render gemtext)
   #:use-module ((grove private ir) #:prefix ir:)
-  #:use-module (grove build)
+  #:use-module (grove render)
   #:use-module (grove ir)
   #:use-module (grove private snapshot)
   #:use-module (grove private string-fun)

@@ -208,7 +208,7 @@
     (write-file config
       (format #f
         "(add-to-load-path \"modules\")
-(use-modules (grove project) (grove build) (grove output) (grove pipeline)
+(use-modules (grove project) (grove render) (grove output) (grove pipeline)
              (grove input) (probe helper)
              (ice-9 ftw) (ice-9 textual-ports) (srfi srfi-13) (rnrs bytevectors))
 (unless (file-exists? \".cache\") (mkdir \".cache\"))

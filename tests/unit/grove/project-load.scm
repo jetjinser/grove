@@ -32,7 +32,7 @@
 
 (define (write-project result)
   (write-file config
-    (format #f "(use-modules (grove project) (grove build) (grove output) (ice-9 textual-ports))
+    (format #f "(use-modules (grove project) (grove render) (grove output) (ice-9 textual-ports))
 (define private-project-binding 'private)
 (make-project
   #:source-directory \"sources\"
@@ -43,7 +43,7 @@
 
 (define (write-pipeline-project)
   (write-file pipeline-config
-    "(use-modules (grove project) (grove build) (grove output) (grove pipeline) (ice-9 textual-ports))
+    "(use-modules (grove project) (grove render) (grove output) (grove pipeline) (ice-9 textual-ports))
 (define pipeline-environment (current-module))
 (define pipeline-output \"unset\")
 (make-project
@@ -64,7 +64,7 @@
 
 (define (write-load-input-project)
   (write-file load-config
-    "(use-modules (grove input) (grove project) (grove build) (grove output) (ice-9 textual-ports))
+    "(use-modules (grove input) (grove project) (grove render) (grove output) (ice-9 textual-ports))
 (define configured-value
   (call-with-input-file (depend-on! \"load-input.txt\") get-string-all))
 (make-project
