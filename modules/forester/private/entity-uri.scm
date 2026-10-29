@@ -4,9 +4,12 @@
 
 (define-module (forester private entity-uri)
   #:use-module (grove private string-fun)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:use-module (web uri)
-  #:export (absolute-entity-uri? entity-uri-href))
+  #:export (absolute-entity-uri?
+            valid-entity-uri-list?
+            entity-uri-href))
 
 (define (one-of? character characters)
   (and (string-index characters character) #t))
@@ -74,6 +77,12 @@
 (define (absolute-entity-uri? value)
   "Return true for a syntactically valid ASCII absolute URI."
   (and (parse-absolute-uri value) #t))
+
+(define (valid-entity-uri-list? values)
+  "Return true for a list of distinct, syntactically valid entity URIs."
+  (and (list? values)
+       (every absolute-entity-uri? values)
+       (= (length values) (length (delete-duplicates values string=?)))))
 
 (define (entity-uri-href value)
   "Return a useful browser URL for an entity URI, or #f if unsupported."

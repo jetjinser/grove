@@ -139,16 +139,10 @@ tree-N position anchors; both are known limitations of global anchors."
          (locale (assq-ref metadata 'locale))
          (describes-entry (assq 'describes metadata)))
     (when describes-entry
-      (let ((describes (cdr describes-entry)))
-        (unless (and (list? describes)
-                     (every absolute-entity-uri? describes))
-          (error (format #f
-                   "Forester page describes values must be absolute URIs (~a)"
-                   (or (site-page-source page) (site-page-id page)))))
-        (when (not (= (length describes)
-                      (length (delete-duplicates describes string=?))))
-          (error (format #f "Forester page repeats a describes URI (~a)"
-                         (or (site-page-source page) (site-page-id page)))))))
+      (unless (valid-entity-uri-list? (cdr describes-entry))
+        (error (format #f
+                 "Forester page describes values must be distinct absolute URIs (~a)"
+                 (or (site-page-source page) (site-page-id page))))))
     (if (not locale)
         page
         (let ((canonical
