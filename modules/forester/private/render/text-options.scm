@@ -46,18 +46,8 @@
              ((gemtext) "Gemtext")
              (else (error "unknown text renderer format" format))))
          (route-table (resolve-text-route-table route-label forest routes))
-         (site (site forest))
-         (format-options
-           (case format
-             ((text)
-              (list (site-title site) (site-description site)
-                    (text-index-path routes) backmatter reference-taxon-id
-                    rules-id))
-             ((gemtext)
-              (list (text-index-path routes) backmatter reference-taxon-id
-                    rules-id (site-title site) (site-description site))))))
-    ;; Preserve each renderer's existing cache key field order.
-    (append
-      (list format prefix route-table)
-      format-options
-      (interface-cache-identity locale messages))))
+         (site (site forest)))
+    (list format prefix route-table
+          (site-title site) (site-description site)
+          (text-index-path routes) backmatter reference-taxon-id rules-id
+          (interface-cache-identity locale messages))))
