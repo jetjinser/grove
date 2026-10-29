@@ -22,7 +22,7 @@ justify a distinct type.
 | Content style | optional class name and renderer-specific properties | `merge-content-style` joins names and appends properties; the empty style is the unit | content elements and format-specific renderers |
 | Content transform | ordinary procedure: document → document | `compose-content-transforms` applies procedures left to right; `identity` is the unit | composition checks the document at every stage |
 | Render rules | typed map from content kind to procedure | `compose-render-rules` layers any number of sets left to right; the empty set is the unit, `next` explicitly reaches the fallback | HTML, text, and gemtext interpreters |
-| HTML presentation | typed product of style, rules, head, navigation, and page fragments | `compose-html-presentations` combines any number of layers left to right; the empty presentation is the unit | HTML renderer |
+| HTML presentation | typed product of style, rules, head, home link, navigation, and page fragments | `compose-html-presentations` combines any number of layers left to right; the empty presentation is the unit | HTML renderer |
 | Site outputs | ordinary renderer procedures or cached renderer values | ordered renderer list | project build |
 | Render context | typed wrapper around an association list | `render-context-with` overlays keys; present `#f` remains distinct from absence | rules and renderers |
 | Asset pipelines | typed producer with name, version, inputs, and procedure | ordered independent producers; each producer returns an artifact list | build pipeline with content-addressed caching |
