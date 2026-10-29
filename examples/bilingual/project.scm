@@ -16,7 +16,6 @@
              (grove style html))
 
 (define examples-directory (dirname (current-filename)))
-(define output-directory "build")
 
 (define source-directory (string-append examples-directory "/plants"))
 (define module-directory (string-append examples-directory "/modules"))
@@ -68,7 +67,6 @@
       #:messages interface-messages)
     #:additional-renderers
     (list (make-text-renderer
-            #:options (make-text-options #:prefix "text")))
-    #:output-directory output-directory))
+            #:options (make-text-options #:prefix "text")))))
 
 bilingual-project

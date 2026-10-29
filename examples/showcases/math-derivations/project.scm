@@ -3,7 +3,6 @@
 
 (use-modules (ice-9 ftw))
 (define example-directory (dirname (current-filename)))
-(define output-directory "build")
 
 (primitive-load
   (string-append example-directory "/../../common/forester-showcase.scm"))
@@ -11,5 +10,4 @@
   #:title "Checked mathematical notes"
   #:home-page "vector-analysis"
   #:description "Vector identities and scalar calculus with replayable steps."
-  #:site-url "https://math.example"
-  #:output-directory output-directory)
+  #:site-url "https://math.example")

@@ -21,7 +21,6 @@
              (grove style html))
 
 (define examples-directory (dirname (current-filename)))
-(define output-directory "build")
 
 (define source-directory (string-append examples-directory "/plants"))
 (define module-directory (string-append examples-directory "/modules"))
@@ -74,7 +73,6 @@
       (list (make-rss-renderer #:settings notes-settings #:routes notes-routes)
             (make-sitemap-renderer #:settings notes-settings #:routes notes-routes)
             (make-graph-renderer #:path "forest-graph.scm")))
-    #:browse (make-forest-browser)
-    #:output-directory output-directory))
+    #:browse (make-forest-browser)))
 
 notes-project

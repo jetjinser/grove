@@ -20,8 +20,7 @@
              (grove style html))
 
 (define* (make-forester-showcase directory
-                                 #:key title description site-url home-page
-                                 output-directory)
+                                 #:key title description site-url home-page)
   (let* ((source-directory (string-append directory "/plants"))
          (module-directory (string-append directory "/modules"))
          (stylesheet-path (string-append directory "/style.css"))
@@ -59,6 +58,5 @@
                      #:options (make-text-options #:prefix "text")))
               (list (make-rss-renderer #:settings settings #:routes routes)
                     (make-sitemap-renderer #:settings settings #:routes routes)
-                    (make-graph-renderer #:path "forest-graph.scm")))
-             #:output-directory output-directory)))
+                    (make-graph-renderer #:path "forest-graph.scm"))))))
     project))
