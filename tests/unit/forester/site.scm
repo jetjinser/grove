@@ -751,6 +751,13 @@
               (make-content-document '())
               #:metadata '((describes . ("relative-id"))))))))
 
+(test-error "forest construction rejects non-list described URI metadata" #t
+  (make-forest
+    (make-site
+      (list (make-site-page "direct" "Direct"
+              (make-content-document '())
+              #:metadata '((describes . #f)))))))
+
 (test-error "forest construction rejects duplicate direct described URIs" #t
   (make-forest
     (make-site
