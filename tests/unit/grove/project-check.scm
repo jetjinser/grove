@@ -51,6 +51,14 @@
   (call-with-project-stage 'read "" (lambda () 'unreachable)))
 (test-error "project stage requires a thunk" #t
   (call-with-project-stage 'read #f #f))
+(let ((error (catch 'grove-project-error
+               (lambda ()
+                 (call-with-project-stage 'read #f
+                   (lambda () (throw 'custom-project-failure 'detail))))
+               (lambda (key error) error))))
+  (test-assert "project stages retain non-error Scheme throw keys"
+    (and (project-error? error)
+         (eq? (project-error-key error) 'custom-project-failure))))
 (dynamic-wind
   (lambda ()
     (setenv "XDG_CACHE_HOME" (string-append root "/.cache"))
@@ -178,7 +186,7 @@
 (let* ((message (string-append (make-string 900 #\x) "END-OF-DIAGNOSTIC"))
        (error (catch 'grove-project-error
                 (lambda () (call-with-project-stage 'read "broken.plant"
-                             (lambda () (throw 'misc-error #f "~a" (list message) #f))))
+                             (lambda () (error "~a" message))))
                 (lambda (key error) error))))
   (define (printed debug?)
     (call-with-output-string
@@ -190,5 +198,8 @@
            (string-contains text "--debug")
            (not (string-contains text "END-OF-DIAGNOSTIC")))))
   (test-assert "debug diagnostics retain the complete original message"
-    (string-contains (printed #t) "END-OF-DIAGNOSTIC")))
+    (string-contains (printed #t) "END-OF-DIAGNOSTIC"))
+  (test-assert "debug diagnostics include Scheme source context"
+    (and (string-contains (printed #t) "ice-9/boot-9.scm")
+         (string-contains (printed #t) "scm-error"))))
 (test-end "project checks")

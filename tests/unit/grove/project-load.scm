@@ -12,6 +12,9 @@
 
 (define root (format #f "/tmp/grove-load-test-~a" (getpid)))
 (define config (string-append root "/project.scm"))
+(define phase-config (string-append root "/phase-project.scm"))
+(define compile-marker (string-append root "/compile-phase"))
+(define runtime-marker (string-append root "/runtime-phase"))
 (define load-config (string-append root "/load-input-project.scm"))
 (define load-dependency (string-append root "/load-input.txt"))
 (define load-output (string-append root "/load-output/result.txt"))
@@ -118,6 +121,18 @@
     (mkdir (string-append root "/sources"))
     (write-file (string-append root "/sources/input.txt") "input")
     (write-project "one")
+    (write-file phase-config
+      (format #f "(use-modules (grove project) (grove output))
+(eval-when (compile)
+  (call-with-output-file ~s (lambda (port) (display \"compile\" port))))
+(eval-when (load eval)
+  (call-with-output-file ~s (lambda (port) (display \"runtime\" port))))
+(unless (file-exists? ~s)
+  (error \"compile phase did not run before project evaluation\"))
+(make-project #:collect-sources (lambda () '())
+              #:read-source (lambda (_) #f)
+              #:output-directory \"phase-output\")\n"
+              compile-marker runtime-marker compile-marker))
     (write-file load-dependency "before")
     (write-load-input-project)
     (mkdir (string-append root "/pipeline-sources"))
@@ -135,6 +150,11 @@
     (test-assert "loader restores caller module" (eq? environment (current-module)))
     (test-assert "project definitions do not leak into caller"
       (not (module-defined? environment 'private-project-binding)))
+    (call-with-loaded-project phase-config (lambda (project) (check-project project)))
+    (test-equal "project compile forms run before project evaluation" "compile"
+      (call-with-input-file compile-marker get-string-all))
+    (test-equal "project runtime forms run when the project is loaded" "runtime"
+      (call-with-input-file runtime-marker get-string-all))
     (let ((initial
             (call-with-loaded-project load-config
               (lambda (project) (build-project/report project)))))

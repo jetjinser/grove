@@ -360,13 +360,23 @@
         (car (run "new" "--project" config))))
     (test-equal "generic creator receives the command arguments"
       "#f:#f\n" (cadr (run "new" "--project" config)))
-    (write-file config "(throw 'misc-error #f \"~A\" (list (make-string 2000 #\\x)) #f)\n")
+    (write-file config
+      "(use-modules (grove project))
+(make-project
+  #:collect-sources (lambda () (error \"~a\" (make-string 2000 #\\x)))
+  #:read-source (lambda (_) #f)
+  #:output-directory \"output\")\n")
     (let ((short (run "build" "--project" config))
           (debug (run "build" "--project" config "--debug")))
       (test-equal "project evaluation errors exit with status 1" 1 (car short))
       (test-assert "default diagnostics remain bounded"
         (< (string-length (without-loader-notes (caddr short))) 1000))
-      (test-assert "debug includes the full diagnostic" (> (string-length (caddr debug)) 2000))))
+      (test-assert "debug includes the full diagnostic" (> (string-length (caddr debug)) 2000))
+      (test-assert "debug identifies the project callback source"
+        (and (string-contains (caddr debug) config)
+             (string-contains (caddr debug) "make-string 2000")))
+      (test-assert "redirected debug output contains no ANSI colors"
+        (not (string-contains (caddr debug) "\x1b[")))))
   (lambda () (system* "rm" "-rf" root)))
 (test-subprocess-coverage '("grove/cli.scm" "grove/project/new.scm" "grove/private/cli/progress.scm"))
 (test-end "grove CLI")

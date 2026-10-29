@@ -10,7 +10,9 @@
   #:use-module (grove private fingerprint)
   #:use-module (grove private input cache)
   #:use-module (grove private input dependencies)
+  #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-1)
+  #:use-module (system base compile)
   #:export (call-with-loaded-project))
 
 (define (project-load-key root paths)
@@ -28,16 +30,37 @@
             (lambda (left right) (string<? (car left) (car right))))))
     (scheme-datum-fingerprint entries)))
 
-(define (read-project path)
+(define (read-project path trace)
   (save-module-excursion
     (lambda ()
       (let ((environment (make-fresh-user-module)))
         (set-current-module environment)
-        (let ((value (primitive-load path)))
-          (record-module-inputs! environment)
-          (unless (project? value)
-            (error "project file must return a Grove project" value))
-          value)))))
+        (let* ((tmpdir (getenv "TMPDIR"))
+               (directory
+                (if (and tmpdir (> (string-length tmpdir) 0)
+                         (absolute-file-name? tmpdir))
+                    tmpdir
+                    "/tmp"))
+               (template (string-append directory "/grove-project-XXXXXX"))
+               (port (mkstemp! (string-copy template)))
+               (compiled-path (port-filename port)))
+          (close-port port)
+          (dynamic-wind
+            (lambda () #t)
+            (lambda ()
+              ;; Compile before observing project imports, so compiler
+              ;; implementation modules do not become project dependencies.
+              (compile-file path #:output-file compiled-path
+                            #:env environment)
+              (call-with-input-trace trace
+                (lambda ()
+                  (let ((value (load-compiled compiled-path)))
+                    (record-module-inputs! environment)
+                    (unless (project? value)
+                      (error "project file must return a Grove project" value))
+                    value))))
+            (lambda ()
+              (false-if-exception (delete-file compiled-path)))))))))
 
 (define* (call-with-loaded-project filename procedure
                                    #:key (output-directory #f))
@@ -73,8 +96,7 @@ OUTPUT-DIRECTORY, when supplied, is resolved relative to the caller's directory.
                (started (get-internal-real-time))
                (project (call-with-project-stage 'load path
                           (lambda ()
-                            (call-with-input-trace trace
-                              (lambda () (read-project path))))))
+                            (read-project path trace))))
                (_ (current-project-key
                     (project-load-key (canonicalize-path (getcwd))
                                       (trace-inputs trace))))
