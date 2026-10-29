@@ -120,6 +120,8 @@ of `(forester site)`. It stores each reference occurrence as a four-column
 row: `(source-page-id local-reference-id target-page-id label)`. Its
 low-level incoming and outgoing queries return complete occurrence rows; its
 other helpers provide backlinks, common backlinks, and transitive reachability.
+Projection helpers require relations with the row arity declared for that
+schema and reject other arities at the API boundary.
 Use `(forester site)` when the operation should return page or reference
 records and preserve site ordering. Forest-level `outgoing-references` and
 `incoming-references` return typed values recognized by `reference?`; their

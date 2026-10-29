@@ -26,6 +26,11 @@
     ("d" "ref-1" "b" "B"))
   (incoming-reference-rows references "b"))
 
+(test-error "incoming reference rows reject a relation with the wrong schema"
+  #t
+  (incoming-reference-rows (make-relation '(("a" "b" "label")) #:arity 3)
+                           "b"))
+
 (test-equal "outgoing row queries preserve relation order"
   '(("a" "ref-1" "b" "B")
     ("a" "ref-2" "b" "Another B")
@@ -50,6 +55,8 @@
 
 (test-error "topic page queries reject unsupported content kinds" #t
   (topic-page-ids (make-content-node-relation '()) "topic" 'category))
+(test-error "topic page queries reject a relation with the wrong schema" #t
+  (topic-page-ids (make-relation '(("page" "title")) #:arity 2) "topic"))
 
 (test-equal "a self-link does not make its page reachable from itself"
   '()
@@ -190,6 +197,10 @@
   '(("glossary" "term-loom" "loom")
     ("ch01" "term-loom" "织机"))
   (term-definition-rows definitions "term-loom"))
+(test-error "term definition queries reject a relation with the wrong schema"
+  #t
+  (term-definition-rows (make-relation '(("term" "page")) #:arity 2)
+                        "term"))
 
 (test-equal "term-definitiono composes with other relation goals"
   '(("glossary" "term-loom" "loom")
@@ -218,6 +229,14 @@
 (test-equal "undefined mentions drop defined terms and group pages"
   '(("term-ghost" ("ch02" "ch03")))
   (undefined-term-mentions definitions mentions))
+(test-error "undefined mention queries reject a malformed definition relation"
+  #t
+  (undefined-term-mentions (make-relation '(("term" "page")) #:arity 2)
+                           mentions))
+(test-error "undefined mention queries reject a malformed mention relation"
+  #t
+  (undefined-term-mentions definitions
+    (make-relation '(("term" "page")) #:arity 2)))
 
 (test-equal "term-mentiono composes with other relation goals"
   '(("ch02" #f) ("ch03" #f))

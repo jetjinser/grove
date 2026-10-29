@@ -75,6 +75,13 @@
 (define-relation-schema make-term-mention-relation term-mentiono
   (term-id source-page-id resolved?))
 
+(define (require-relation-schema relation arity who)
+  (unless (relation? relation)
+    (error "~a requires a relation value" who relation))
+  (unless (= (relation-arity relation) arity)
+    (error "~a requires a relation with ~a columns" who arity))
+  relation)
+
 (defrel (list-membero value values)
   (conde
     ((fresh (tail)
@@ -109,6 +116,7 @@
     (== `(,key . ,value) entry)))
 
 (define (described-entity-page-ids relation uri)
+  (require-relation-schema relation 2 'described-entity-page-ids)
   (delete-duplicates
     (map car (relation-index-rows relation 1 uri))
     string=?))
@@ -197,6 +205,7 @@
 (define* (topic-page-ids relation topic-id #:optional kind)
   (unless (or (not kind) (memq kind '(tag taxon)))
     (error "topic page kind must be 'tag, 'taxon, or #f" kind))
+  (require-relation-schema relation 10 'topic-page-ids)
   (delete-duplicates
     (if kind
         (run* (page-id)
@@ -212,9 +221,11 @@
     equal?))
 
 (define (incoming-reference-rows relation target-page-id)
+  (require-relation-schema relation 4 'incoming-reference-rows)
   (relation-index-rows relation 2 target-page-id))
 
 (define (outgoing-reference-rows relation source-page-id)
+  (require-relation-schema relation 4 'outgoing-reference-rows)
   (relation-index-rows relation 0 source-page-id))
 
 (define (backlink-page-ids relation target-page-id)
@@ -236,6 +247,7 @@
 ;; in document order of collection. The relation's term-id column is
 ;; the query key and projects out of the rows.
 (define (term-definition-rows relation term-id)
+  (require-relation-schema relation 4 'term-definition-rows)
   (map cdr (relation-index-rows relation 0 term-id)))
 
 ;; Terms whose defining occurrences disagree: more than one defining
@@ -247,6 +259,7 @@
   (define (conflict? entries)
     (or (> (length (delete-duplicates (map car entries) string=?)) 1)
         (> (length (delete-duplicates (map cadr entries) string=?)) 1)))
+  (require-relation-schema relation 4 'term-definition-conflicts)
   (let ((by-term (make-hash-table)))
     (for-each
       (lambda (row)
@@ -268,6 +281,8 @@
 ;; unresolved marked mentions both stay out of this report, sorted by
 ;; term-id.
 (define (undefined-term-mentions definition-relation mention-relation)
+  (require-relation-schema definition-relation 4 'undefined-term-mentions)
+  (require-relation-schema mention-relation 3 'undefined-term-mentions)
   (let ((defined (make-hash-table)))
     (for-each
       (lambda (row) (hash-set! defined (car row) #t))
