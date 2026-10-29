@@ -28,7 +28,6 @@
 (define example-directory (dirname (current-filename)))
 (define quote-directory (string-append example-directory "/quotes"))
 (define catalog-css-path (string-append example-directory "/style.css"))
-(define output-directory "build")
 
 (define (read-quote path)
   (string-trim-both
@@ -101,7 +100,6 @@
     #:extra-sources (list catalog-css-path)
     #:read-source read-quote
     #:analyze analyze-catalog
-    #:renderers (list render-catalog-html render-catalog-text)
-    #:output-directory output-directory))
+    #:renderers (list render-catalog-html render-catalog-text)))
 
 catalog-project

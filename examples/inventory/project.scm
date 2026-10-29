@@ -27,7 +27,6 @@
 (define data-directory (string-append example-directory "/data"))
 (define products-path (string-append data-directory "/products.csv"))
 (define categories-path (string-append data-directory "/categories.txt"))
-(define output-directory "build")
 
 (define (read-product-file path)
   (let ((lines (call-with-input-file path
@@ -117,7 +116,6 @@
     #:prepare (lambda () (list categories-path))
     #:read-source read-product-file
     #:analyze analyze-inventory
-    #:renderers (list render-summary-csv render-scheme-data)
-    #:output-directory output-directory))
+    #:renderers (list render-summary-csv render-scheme-data)))
 
 project
