@@ -174,8 +174,11 @@ validate and snapshot a supplied `#:location`;
 `content-with-source-location` applies the same contract when attaching a
 location to text or an element. Given a document or nested content sequence,
 it recursively annotates each contained content value while preserving the
-sequence shape. Documents have no location field of their own. Elements also
-accept `#:location` in `make-content-element`; `source-location` is reserved
+sequence shape. When text has no explicit `source`, annotation also uses the
+location's `file` as its text source; an existing source is preserved. Elements
+keep their explicit source separate from their location. Documents have no
+location field; elements accept `#:location` in `make-content-element`.
+`source-location` is reserved
 and cannot be stored as an ordinary element property. Use
 `content-source-location` to read either kind uniformly. It returns `#f` for
 strings, layout nodes, and documents. Non-content Scheme values pass through

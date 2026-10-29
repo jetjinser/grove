@@ -389,8 +389,10 @@ other values are rejected. SOURCE is an optional filesystem path."
   "Attach a source start alist with file, one-based line and column fields.
 Raw strings become located text values. For a document, attach the location to
 each top-level content value. Nested content sequences retain their shape and
-are annotated recursively. Other Scheme values pass through unchanged so
-source annotation can wrap arbitrary Scribble expressions."
+are annotated recursively. For text without an explicit source, LOCATION's
+file is also recorded as its source; an existing text source is preserved.
+Other Scheme values pass through unchanged so source annotation can wrap
+arbitrary Scribble expressions."
   (unless (valid-source-location? location)
     (error "content source location must be a source-location alist" location))
   (cond
