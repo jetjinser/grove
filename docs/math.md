@@ -360,6 +360,14 @@ mix this independent checker API into its exports. For example:
    (φ:check-polynomial-derivative "x^3+2*x" 'x "3*x^2+2"))
 ```
 
+For a custom `RuleSpec` created with `make-math-rule-spec` from
+`(grove math rule)`, call `math-polynomial-check-rule-spec` directly. It checks
+the specification as a universal identity in the same scalar theory without
+registering the rule. This is useful for validating authored rule data before
+running it through a relational extension. Symbolic denominators require a
+matching declared `nonzero` premise; opaque guards do not extend the checker's
+proof domain.
+
 Its domain is scalar polynomials over the rationals, including division by a
 nonzero rational constant. Expression-valued denominators, functions, vectors,
 spatial rules and algorithm-wide correctness proofs are unsupported. The
