@@ -65,6 +65,21 @@
     (map (lambda (group)
            (cons (car group) (map site-page-id (cdr group))))
          groups))
+  (test-error "translation grouping requires site pages"
+    #t
+    (derive-translation-groups '(not-a-page)))
+  (test-error "translation grouping rejects non-string keys"
+    #t
+    (derive-translation-groups
+      (list (make-site-page "invalid-translation" "Invalid"
+              (make-content-document '())
+              #:metadata '((translation . 42))))))
+  (test-error "translation grouping rejects empty keys"
+    #t
+    (derive-translation-groups
+      (list (make-site-page "empty-translation" "Empty"
+              (make-content-document '())
+              #:metadata '((translation . ""))))))
   (test-equal "site render context derives translation groups by default"
     groups
     (render-context-ref (make-site-render-context forest)

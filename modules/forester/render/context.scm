@@ -21,12 +21,16 @@
 ;; renderers can use the same helper when they need a site render context.
 
 (define (derive-translation-groups pages)
+  (unless (and (list? pages) (every site-page? pages))
+    (error "translation groups require a list of site pages" pages))
   (let ((groups (make-hash-table))
         (keys '()))
     (for-each
       (lambda (page)
         (let ((key (assq-ref (site-page-metadata page) 'translation)))
           (when key
+            (unless (non-empty-string? key)
+              (error "translation keys must be non-empty strings" key))
             (let ((group (hash-ref groups key #f)))
               (if group
                   (hash-set! groups key (cons page group))
