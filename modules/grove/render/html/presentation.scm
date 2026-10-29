@@ -5,6 +5,7 @@
 (define-module (grove render html presentation)
   #:use-module (grove private alist)
   #:use-module (grove private html-attributes)
+  #:use-module (grove private html-tag)
   #:use-module (grove style html)
   #:use-module (grove style html element)
   #:use-module (grove render rules)
@@ -81,9 +82,8 @@
        (unique-symbol-key-alist? attributes)))
 
 (define (valid-html-tag? tag)
-  (catch #t
-    (lambda () (make-html-tag tag) #t)
-    (lambda _ #f)))
+  (and (symbol? tag)
+       (valid-html-tag-name? (symbol->string tag))))
 
 (define (static-sxml-tag? tag)
   (or (memq tag '(*text* *entity* comment PI))

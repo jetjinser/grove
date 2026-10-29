@@ -4,8 +4,8 @@
 
 (define-module (grove style html element)
   #:use-module (grove private html-attributes)
+  #:use-module (grove private html-tag)
   #:use-module (grove private snapshot)
-  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:export (make-html-attributes
             html-attributes?
@@ -36,17 +36,9 @@
 (define (html-tag-name tag)
   (snapshot-data (html-tag-name/raw tag)))
 
-(define (html-tag-name? name)
-  (and (string? name) (> (string-length name) 0)
-       (char-alphabetic? (string-ref name 0))
-       (every (lambda (character)
-                (or (char-alphabetic? character) (char-numeric? character)
-                    (memv character '(#\- #\_ #\:))))
-              (string->list (substring name 1)))))
-
 (define (make-html-tag name)
   "Use NAME instead of the HTML renderer's default tag for a content element."
   (let ((name (if (symbol? name) (symbol->string name) name)))
-    (unless (html-tag-name? name)
+    (unless (valid-html-tag-name? name)
       (error "invalid HTML tag name" name))
     (%make-html-tag (snapshot-data name))))
