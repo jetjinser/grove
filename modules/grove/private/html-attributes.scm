@@ -5,7 +5,8 @@
 (define-module (grove private html-attributes)
   #:use-module (grove private alist)
   #:use-module (srfi srfi-1)
-  #:export (valid-html-attribute-list?))
+  #:export (valid-html-attribute-name?
+            valid-html-attribute-list?))
 
 (define (forbidden-html-attribute-name-character? character)
   (let ((code (char->integer character)))
@@ -15,7 +16,7 @@
         (<= #xfdd0 code #xfdef)
         (memv (logand code #xffff) '(#xfffe #xffff)))))
 
-(define (html-attribute-name? name)
+(define (valid-html-attribute-name? name)
   (and (symbol? name)
        (let ((characters (string->list (symbol->string name))))
          (and (pair? characters)
@@ -28,7 +29,7 @@
   (and (list? attributes)
        (every (lambda (entry)
                 (and (pair? entry)
-                     (html-attribute-name? (car entry))
+                     (valid-html-attribute-name? (car entry))
                      (string? (cdr entry))))
               attributes)
        (unique-symbol-key-alist? attributes)))

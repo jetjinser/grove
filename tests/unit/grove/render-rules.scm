@@ -374,6 +374,17 @@
 (test-error "presentation rejects malformed dotted SXML nodes" #t
   (make-html-presentation #:head (list (cons 'meta "not a child list"))))
 
+(test-error "presentation rejects invalid SXML tag names" #t
+  (make-html-presentation
+    #:head (list (list (string->symbol "section><script") "x"))))
+
+(test-error "presentation rejects invalid SXML attribute names" #t
+  (make-html-presentation
+    #:head
+    (list (list 'meta
+                (cons '@
+                      (list (list (string->symbol "name\" onload") "x")))))))
+
 (test-error "presentation rejects duplicate page IDs" #t
   (make-html-presentation
     #:metadata-items '(("page" . ((li "first")))
