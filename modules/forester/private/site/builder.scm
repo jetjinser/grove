@@ -15,6 +15,7 @@
   #:use-module (grove private project timing)
   #:use-module ((forester private trees) #:prefix tree-pass:)
   #:use-module (forester private content-index)
+  #:use-module (forester private entity-uri)
   #:use-module (forester private site model)
   #:use-module (forester private site queries)
   #:use-module ((forester composition) #:prefix composition:)
@@ -133,9 +134,20 @@ tree-N position anchors; both are known limitations of global anchors."
   "Forward analysis timing to the caller's callback when one is installed."
   ((current-analysis-timings) phase seconds))
 
-(define (normalize-page-locale page)
+(define (normalize-page-metadata page)
   (let* ((metadata (site-page-metadata page))
-         (locale (assq-ref metadata 'locale)))
+         (locale (assq-ref metadata 'locale))
+         (describes (assq-ref metadata 'describes)))
+    (when describes
+      (unless (and (list? describes)
+                   (every absolute-entity-uri? describes))
+        (error (format #f
+                 "Forester page describes values must be absolute URIs (~a)"
+                 (or (site-page-source page) (site-page-id page)))))
+      (when (not (= (length describes)
+                    (length (delete-duplicates describes string=?))))
+        (error (format #f "Forester page repeats a describes URI (~a)"
+                       (or (site-page-source page) (site-page-id page))))))
     (if (not locale)
         page
         (let ((canonical
@@ -180,7 +192,7 @@ tree-N position anchors; both are known limitations of global anchors."
     (error "forest timings callback must accept a phase and duration or be #f"
            timings))
   (set! site
-    (make-site (map normalize-page-locale (site-pages site))
+    (make-site (map normalize-page-metadata (site-pages site))
       #:title (site-title site)
       #:description (site-description site)
       #:sources (site-sources site)

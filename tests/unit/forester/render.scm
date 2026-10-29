@@ -1663,7 +1663,7 @@
 
 (let* ((page (make-site-page "paper" "A paper"
                (evaluate-document "@paragraph{A short note.}")
-               #:metadata '((describes . ("https:")))))
+               #:metadata '((describes . ("urn:example:entity")))))
        (forest (make-forest (make-site (list page))))
        (html (assoc-ref
                (site->html forest
@@ -1671,8 +1671,8 @@
                              #:routes (make-html-routes #:home-page "paper")
                              #:mathjax-src #f))
                "paper")))
-  (test-assert "HTML does not link hostless HTTP(S) entity identifiers"
-    (and (string-contains html "<code>https:</code>")
-         (not (string-contains html "href=\"https:\"")))))
+  (test-assert "HTML leaves unsupported absolute entity schemes unlinked"
+    (and (string-contains html "<code>urn:example:entity</code>")
+         (not (string-contains html "href=\"urn:example:entity\"")))))
 
 (test-end "forester renderers")

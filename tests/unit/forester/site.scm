@@ -744,6 +744,21 @@
       "@title{Bad}@describes{doi:10.1146/x}@describes{doi:10.1146/x}")
     "bad.plant"))
 
+(test-error "forest construction validates directly supplied described URIs" #t
+  (make-forest
+    (make-site
+      (list (make-site-page "direct" "Direct"
+              (make-content-document '())
+              #:metadata '((describes . ("relative-id"))))))))
+
+(test-error "forest construction rejects duplicate direct described URIs" #t
+  (make-forest
+    (make-site
+      (list (make-site-page "direct" "Direct"
+              (make-content-document '())
+              #:metadata '((describes . ("doi:10.1146/x"
+                                         "doi:10.1146/x"))))))))
+
 (test-error "updated dates cannot precede published dates" #t
   (document->tree-page "bad"
     (evaluate-document

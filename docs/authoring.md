@@ -55,6 +55,9 @@ ASCII URI syntax: percent-encode non-ASCII path data and use an ASCII
 IDNA-compatible hostname. Grove retains the declared URI for queries and
 compares it exactly, so choose one spelling consistently. Entity URIs cannot
 contain userinfo credentials. Grove does not fetch metadata from the identifier.
+The same validation applies when constructing a Forest directly from Grove
+site values; the generic `(grove site)` page constructor leaves metadata
+application-defined.
 
 ## Content
 
