@@ -33,7 +33,7 @@ the work; drop lower only when you need to replace part of its behavior.
 | Customize Gemtext output paths | `(forester render gemtext)` → `make-gemtext-routes` | use `(forester render text routes)` only when intentionally sharing a common text route value |
 | Change how content renders | the format's renderer options and `(grove render rules)` | the project needs a new output format or a different build stage |
 | Define a reusable custom HTML element command | `(grove render html element)` → `make-element` | the element needs semantic data or a non-HTML interpretation; use `(grove ir)` and add render rules as needed |
-| Construct a titled disclosure block | `(grove ir)` → `make-content-disclosure` | `#:addressable? #t` is interpreted by Forester as an anonymous subtree; see [tree composition](forester-composition.md) |
+| Construct a titled disclosure block | `(grove ir)` → `make-content-disclosure` | Forester trees use `(forester commands)` → `subtree`; see [tree composition](forester-composition.md) |
 | Rewrite content before analysis | `(grove content transform)` → `compose-content-transforms`; project constructors accept `#:transforms` | the behavior depends on the analyzed site model; use a renderer or render rule |
 | Inspect a project's selected source paths | `(grove project)` → `collect-project-sources` | the source list depends on a directory filter or custom collector; use a build report for sources after the full pipeline |
 | Localize interface text and formatting | `(grove i18n)` plus renderer `#:locale` and `#:messages`; see the [localization guide](i18n.md) | project-specific content should be translated; keep that data in the content model |
@@ -160,10 +160,9 @@ kind, source, properties, style, and flow behavior.
 property explicitly set to `#f`, matching render-context key semantics.
 `make-content-disclosure` constructs a titled block disclosure with an
 optional initial `open?` state and accepts `#:source` like other content
-elements. Its `addressable?` flag is a Forester
-integration hint: Forester converts it to an unnamed `unstable-N` subtree
-during site analysis, so the subtree can be queried or transcluded but its ID
-is unstable. Other Grove renderers keep the value as a disclosure.
+elements. It has no tree or route semantics; Forester's authoring layer owns
+those concepts. Forester recognizes the disclosure inside a math derivation
+as a subtree so the full steps can be queried or transcluded.
 Opaque extension values embedded in properties remain shared and follow their
 own type's contract.
 

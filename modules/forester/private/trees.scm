@@ -102,15 +102,17 @@
 
 (define (assign-subtree-identifiers pages)
   (let ((next-id 0))
-    (define (transform content)
+    (define (transform content parent-kind)
       (cond
         ((content-element? content)
-         (let* ((addressable-disclosure?
-                  (and (eq? (content-element-kind content) 'disclosure)
-                       (ir:content-element-property/raw content 'addressable?)))
+         ;; Compact math presentations keep Grove's generic disclosure node;
+         ;; Forester makes its derivation-step disclosure a separate tree.
+         (let* ((math-steps-disclosure?
+                  (and (eq? parent-kind 'math-derivation)
+                       (eq? (content-element-kind content) 'disclosure)))
                 (subtree? (or (eq? (content-element-kind content) 'subtree)
-                              addressable-disclosure?))
-                (kind (if addressable-disclosure? 'subtree
+                              math-steps-disclosure?))
+                (kind (if math-steps-disclosure? 'subtree
                           (content-element-kind content)))
                 (explicit-id
                   (and subtree?
@@ -121,11 +123,13 @@
                            (let ((id next-id))
                              (set! next-id (1+ next-id))
                              (format #f "unstable-~a" id))))))
-                (children (map transform (ir:content-element-children/raw content)))
+                (children
+                  (map (lambda (child)
+                         (transform child (content-element-kind content)))
+                       (ir:content-element-children/raw content)))
                 (properties
                   (filter (lambda (entry)
-                            (not (memq (car entry)
-                                       '(tree-id addressable?))))
+                            (not (eq? (car entry) 'tree-id)))
                           (ir:content-element-properties/raw content))))
            (make-content-element
              kind children
@@ -138,14 +142,15 @@
              #:flow-kind (content-element-flow-kind content))))
         ((content-document? content)
          (make-content-document
-           (map transform (ir:content-document-children/raw content))
+           (map (lambda (child) (transform child #f))
+                (ir:content-document-children/raw content))
            #:source (ir:content-document-source/raw content)))
         (else content)))
     (map (lambda (page)
            (make-site-page
              (site-page-id page)
              (site-page-title page)
-             (transform (site-page-document page))
+             (transform (site-page-document page) #f)
              #:source (site-page-source page)
              #:metadata (site-page-metadata page)))
          pages)))

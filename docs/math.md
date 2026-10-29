@@ -334,9 +334,10 @@ cannot change the registered rule or its verification behavior. Relation and
 matcher procedures remain shared extension code.
 
 Derivation commands can show the result alone, a compact view, or the full
-steps. Long step lists are presented in a collapsible subtree. If a rule cannot
-apply or a required premise is missing, `#:on-error 'show` displays the
-calculation diagnostic in the article. Authored Formula expressions retain
+steps. Long step lists appear in a collapsed disclosure; Forester exposes that
+disclosure as an unnamed subtree. If a rule cannot apply or a required premise
+is missing, `#:on-error 'show` displays the calculation diagnostic in the
+article. Authored Formula expressions retain
 source locations through parsing and computation where possible, so diagnostics
 can point back to the relevant source text.
 

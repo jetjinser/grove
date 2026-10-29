@@ -80,21 +80,29 @@
            (string-contains collapsed-html
                             "<details><summary><h2 class=\"forest-tree-title\"><span>Collapsed</span>")
            (string-contains collapsed-html "Hidden until opened."))))
-  (test-assert "host promotes addressable disclosures to indexed subtrees"
+  (test-assert "host promotes math derivation disclosures to indexed subtrees"
     (let* ((page
              (make-site-page
                "addressable" "Addressable"
                (make-content-document
-                 (list (make-content-disclosure
-                         "Generated steps"
-                         (list (make-content-element
-                                 'paragraph '("Step content.")))
-                         #:open? #f #:addressable? #t)))))
+                 (list (make-content-disclosure "Ordinary disclosure" '())
+                       (make-content-element
+                         'math-derivation
+                         (list (make-content-disclosure
+                                 "Generated steps"
+                                 (list (make-content-element
+                                         'paragraph '("Step content.")))
+                                 #:open? #f)))))))
            (forest (make-forest (make-site (list page))))
            (rendered (assoc-ref
                        (render-test-html forest #:mathjax-src #f)
                        "addressable")))
-      (and (require-page forest "unstable-0")
+      (and (eq? 'disclosure
+                (content-element-kind
+                  (car (content-document-children
+                         (site-page-document
+                           (require-page forest "addressable"))))))
+           (require-page forest "unstable-0")
            (string-contains rendered "class=\"forest-tree-block inline-subtree\"")
            (string-contains rendered
                             "data-tree-id=\"unstable-0\" id=\"unstable-0\"")

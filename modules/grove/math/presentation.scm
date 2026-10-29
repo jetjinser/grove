@@ -74,7 +74,7 @@
                   (make-content-disclosure
                     (format #f "Derivation (~a step~:p)"
                             (length (math-derivation-steps certificate)))
-                    full-content #:open? #f #:addressable? #t))
+                    full-content #:open? #f))
             #:flow-kind 'block)))))
 
 (define* (math-derivation->content certificate #:key (view 'compact))

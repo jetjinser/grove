@@ -39,7 +39,7 @@
     (and (eq? (content-element-kind steps) 'disclosure)
          (string-prefix? "Derivation ("
                          (content-element-property steps 'title))
-         (content-element-property steps 'addressable?)
+         (not (content-element-has-property? steps 'addressable?))
          (not (content-element-property steps 'open?)))))
 (let ((compact (html (display-report 'compact)))
       (full (html (display-report 'full)))

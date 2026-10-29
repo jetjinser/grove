@@ -244,22 +244,15 @@ KIND; it defaults to inline and can be set to block for flow normalization."
     (content-element-source element) (content-element-location/raw element)
     (content-element-flow-kind element)))
 
-(define* (make-content-disclosure title children #:key (open? #t)
-                                  (addressable? #f) (style #f)
+(define* (make-content-disclosure title children #:key (open? #t) (style #f)
                                   (source #f) (location #f))
-  "Make a titled block disclosure.
-
-Forester promotes a disclosure with ADDRESSABLE? set to #t to an anonymous
-subtree during site analysis. Other Grove renderers treat it as a disclosure."
+  "Make a titled block disclosure."
   (unless (non-empty-string? title)
     (error "content disclosure requires a non-empty title" title))
   (unless (boolean? open?)
     (error "content disclosure open? must be a boolean" open?))
-  (unless (boolean? addressable?)
-    (error "content disclosure addressable? must be a boolean" addressable?))
   (make-content-element 'disclosure children
-    #:properties `((title . ,title) (open? . ,open?)
-                   (addressable? . ,addressable?))
+    #:properties `((title . ,title) (open? . ,open?))
     #:source source
     #:style style
     #:location location
