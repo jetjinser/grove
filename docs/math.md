@@ -352,7 +352,12 @@ independently computed derivative. Import `(grove math semantic-check)` for
 these checks and their typed evidence values. Evidence constructors and
 accessors belong to this module, so extensions inspecting or validating a
 checker result have one explicit import. The calculation Pipeline does not
-mix this independent checker API into its exports. For example:
+mix this independent checker API into its exports. Formula exposes thin
+`check-polynomial-*` adapters for article text and
+`polynomial-check->content` for rendering their results; these delegate to the
+typed checker rather than defining another checker API. Use those adapters in
+articles, and import `(grove math semantic-check)` when Scheme code needs typed
+evidence. For example:
 
 ```scheme
 @(φ:polynomial-check->content (φ:check-polynomial-rule 'add-commutative))
