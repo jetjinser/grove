@@ -15,7 +15,7 @@
             add subtract negate multiply divide power dot cross
             sin cos exp log prime function-partial
             grad divergence curl laplacian group styled
-            derivative partial-expression antiderivative-expression poisson-particular
+            derivative-expression partial-expression antiderivative-expression poisson-particular
             call components
             derive derive->content rewrite search simplify calculate normalize expand collect
             check-chain check-polynomial-rule check-polynomial-derivation
@@ -89,7 +89,7 @@
   (lambda* (input #:key (variant 'normal))
     (semantic:styled (read input) #:variant variant)))
 
-(define-public (derivative input coordinate)
+(define-public (derivative-expression input coordinate)
   (semantic:derivative (read input) (read coordinate)))
 (define-public (partial-expression input coordinate)
   (semantic:partial (read input) (read coordinate)))

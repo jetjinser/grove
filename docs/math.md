@@ -25,8 +25,8 @@ Article commands accept semantic expressions, and Formula helpers wrap the
 same semantic operations for text input.
 
 Formula helpers distinguish constructing an expression from calculating it:
-`derivative` constructs a symbolic expression, while `differentiate` returns a
-calculation report; `derive` also returns a structured report, while
+`derivative-expression` constructs a symbolic expression, while `differentiate`
+returns a calculation report; `derive` also returns a structured report, while
 `derive->content` adapts that report for Scheme-authored content. Article writers
 use `@derive` for rendered derivations. `partial-expression` pairs with
 `partial`, and `antiderivative-expression` pairs with `antiderivative`. Likewise,
@@ -121,7 +121,7 @@ form so each authored line is one step in the chain.
 In Scheme, `φ:read` returns a Semantic value that can be composed with
 constructors such as `φ:add` or passed to calculations. `φ:term` deliberately
 unwraps that value to the underlying Scheme term for inspection or lower-level
-relations. Expression constructors such as `φ:derivative` return Semantic
+relations. Expression constructors such as `φ:derivative-expression` return Semantic
 values; calculation helpers such as `φ:differentiate` and `φ:derive` return
 structured reports, while `φ:derive->content` returns Grove content:
 
@@ -129,7 +129,7 @@ structured reports, while `φ:derive->content` returns Grove content:
 (use-modules ((grove math formula) #:prefix φ:))
 
 (define expression (φ:read "x^3 + 2*x"))
-(define symbolic-derivative (φ:derivative expression "x"))
+(define symbolic-derivative (φ:derivative-expression expression "x"))
 (define report
   (φ:differentiate expression "x" #:assumptions '("coordinate(x)")))
 (φ:term symbolic-derivative) ; inspect the underlying Scheme term

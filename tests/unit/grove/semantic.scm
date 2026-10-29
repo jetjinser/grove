@@ -51,7 +51,7 @@
   '(curl (curl (var E))) (math-value-term (φ:curl (φ:curl "E"))))
 (test-equal "a formal derivative has explicit operands"
   '(differentiate (^ (var x) (num "3")) (var x))
-  (math-value-term (φ:derivative (φ:power "x" "3") "x")))
+  (math-value-term (φ:derivative-expression (φ:power "x" "3") "x")))
 (let* ((value (φ:group "x+x"))
        (copy (math-value-with-properties value '((variant . normal)))))
   (test-equal "presentation preferences do not change mathematical identity"

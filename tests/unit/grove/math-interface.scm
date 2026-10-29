@@ -19,6 +19,10 @@
 (define polynomial (φ:read (φ:power "x" "3") "+" (φ:multiply "2" "x")))
 
 (test-begin "unified mathematical writing interface")
+(test-assert "Formula names symbolic derivative construction explicitly"
+  (let ((interface (module-public-interface (resolve-module '(grove math formula)))))
+    (and (module-variable interface 'derivative-expression)
+         (not (module-variable interface 'derivative)))))
 (let ((name (list->string (map integer->char '(101 804 768)))))
   (test-equal "Semantic variables and Formula use the same composed identifier"
     (math-value-term (semantic:variable name))
@@ -60,7 +64,7 @@
                (φ:search (φ:add polynomial "0") polynomial #:rules '(add-zero) #:max-depth 1 #:max-results 1))))
     (test-assert "object-based authored chains use the same verifier"
       (math-verification-valid? (φ:check-chain
-        (list (φ:derivative "x" "x") (semantic:constant 1)))))))
+        (list (φ:derivative-expression "x" "x") (semantic:constant 1)))))))
 (let ((rendered (html (document:math (φ:add "x" "x")))))
   (test-assert "direct display leaves the author's expression unchanged"
     (and (string-contains rendered "<mi>x</mi><mo>+</mo><mi>x</mi>")
@@ -108,7 +112,7 @@
   "@with-assumptions[\"scalar(x)\"]{\n"
   "@differentiate[\"x\" p]\n"
   "@search-derive[p]{@φ:add[p \"0\"]}\n"
-  "@check-derive{\n@φ:derivative{x}{x}\n1\n}\n}")))))
+  "@check-derive{\n@φ:derivative-expression{x}{x}\n1\n}\n}")))))
   (test-assert "an article defines its formula once for display and computation"
     (and (string-contains rendered "<msup>")
          (string-contains rendered "data-rule=\"differentiate-power\"")
@@ -120,7 +124,7 @@
     (string-contains rendered "semantic.plant:3:")))
 (let ((rendered (html (page (string-append imports
   "@check-derive[#:assumptions \"scalar(x)\" #:on-error 'show]{\n"
-  "@φ:derivative{x}{x}\n\n"
+  "@φ:derivative-expression{x}{x}\n\n"
   "  2\n}")))))
   (test-assert "object-based handwritten chains retain target line and indentation"
     (string-contains rendered "semantic.plant:5:3")))
