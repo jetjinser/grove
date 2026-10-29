@@ -88,6 +88,9 @@
                   (and (exact-integer? (cdr column)) (positive? (cdr column))))))))
 
 (define* (make-content-text value #:key (source #f) (location #f))
+  "Make a text node from string VALUE.
+SOURCE is an optional filesystem path; LOCATION is an optional source-start
+alist with file, line, and column fields. Both are copied into the node."
   (unless (string? value)
     (error "content text must be a string" value))
   (check-content-source 'text source)
@@ -208,6 +211,7 @@ KIND; it defaults to inline and can be set to block for flow normalization."
           (content-element-flow-kind element)))))
 
 (define (content-element-block? element)
+  "Return whether ELEMENT has block flow, independently of its semantic kind."
   (eq? (content-element-flow-kind element) 'block))
 
 (define (content-element-property element key)
@@ -362,6 +366,9 @@ values."
               properties)))
 
 (define* (make-content-document children #:key (source #f))
+  "Make a document from a proper list of content children.
+Raw strings become text nodes and nested documents are spliced into CHILDREN;
+other values are rejected. SOURCE is an optional filesystem path."
   (unless (list? children)
     (error "content children must be a proper list" 'document children))
   (check-content-source 'document source)
