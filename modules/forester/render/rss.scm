@@ -155,6 +155,10 @@
                             (language
                               (and (site-settings? settings)
                                    (site-settings-default-locale settings))))
+  "Render FOREST as one RSS artifact.
+
+SETTINGS supplies shared site URL and default locale values. Explicit keyword
+values override them; ROUTES names the HTML page locations used in feed links."
   (unless (forest? forest)
     (error "Forester RSS renderer requires a forest" forest))
   (let-values (((site-url feed-path routes stylesheet-url stylesheet-type language)

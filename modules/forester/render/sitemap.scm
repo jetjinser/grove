@@ -118,6 +118,10 @@
                                 (default-locale
                                   (and (site-settings? settings)
                                        (site-settings-default-locale settings))))
+  "Render FOREST as one sitemap artifact.
+
+SETTINGS supplies shared site URL and default locale values. Explicit keyword
+values override them; ROUTES determine the absolute page URLs in the sitemap."
   (unless (forest? forest)
     (error "Forester sitemap renderer requires a forest" forest))
   (let-values (((site-url sitemap-path routes default-locale)

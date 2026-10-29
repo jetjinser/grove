@@ -282,6 +282,11 @@ this value with #:options."
     #:messages (html-options-messages options)))
 
 (define* (site->html forest #:key (options (make-html-options)))
+  "Return an ordered alist mapping each page ID to its rendered HTML string.
+
+OPTIONS configures the same site presentation used by RENDER-HTML. This
+projection omits shared style artifacts; use RENDER-HTML for a complete
+artifact list or MAKE-HTML-RENDERER in a project."
   (let* ((_ (require-html-options options "site->html"))
          (routes (resolve-site-routes forest (html-options-routes options)))
          (render-page (make-html-page-renderer forest options routes)))
@@ -290,6 +295,10 @@ this value with #:options."
                  (render-page page #t)))
          (pages forest))))
 (define* (render-html forest #:key (options (make-html-options)))
+  "Render FOREST to its complete HTML artifact list.
+
+OPTIONS selects routes, presentation, styles, localization, and other HTML
+behavior. Use MAKE-HTML-RENDERER to add the output to a project lifecycle."
   (let* ((_ (require-html-options options "render-html"))
          (presentation (html-options-presentation options))
          (style (html-presentation-style presentation))
@@ -312,6 +321,11 @@ this value with #:options."
 (define* (make-html-renderer #:key (options (make-html-options))
                             (rules-id #f)
                             (cache? #t))
+  "Construct a project renderer that produces HTML artifacts for a Forest.
+
+OPTIONS supplies HTML behavior. CACHE? defaults to enabled; custom rendering
+RULES need a stable RULES-ID for safe caching. The result is a plain procedure
+when caching cannot be identified safely, otherwise a cached renderer."
     (let* ((_ (require-html-options options "make-html-renderer"))
           (presentation (html-options-presentation options))
           (presentation-data presentation)

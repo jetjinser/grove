@@ -349,6 +349,11 @@ default. Paths are validated by MAKE-TEXT-ROUTES."
     %make-gemtext-options))
 
 (define* (site->gemtext forest #:key (options (make-gemtext-options)))
+  "Return Gemtext pages as an ordered alist of page IDs and strings.
+
+The aggregate index is stored under the symbol INDEX. OPTIONS configures
+routes and Gemtext rendering. Use RENDER-GEMTEXT for artifacts or
+MAKE-GEMTEXT-RENDERER in a project."
   (let* ((_ (require-gemtext-options options "site->gemtext"))
          (routes (gemtext-options-routes options))
          (render-page (make-gemtext-page-renderer forest options)))
@@ -357,6 +362,10 @@ default. Paths are validated by MAKE-TEXT-ROUTES."
       render-page)))
 
 (define* (render-gemtext forest #:key (options (make-gemtext-options)))
+  "Render FOREST to its complete Gemtext artifact list, including the index.
+
+OPTIONS configures routes and Gemtext rendering. Use MAKE-GEMTEXT-RENDERER to
+add the output to a project lifecycle."
   (let* ((_ (require-gemtext-options options "render-gemtext"))
          (prefix (gemtext-options-prefix options))
          (routes (gemtext-options-routes options))
@@ -368,6 +377,11 @@ default. Paths are validated by MAKE-TEXT-ROUTES."
 (define* (make-gemtext-renderer #:key (options (make-gemtext-options))
                                (rules-id #f)
                                (cache? #t))
+  "Construct a project renderer that produces Gemtext artifacts for a Forest.
+
+OPTIONS supplies Gemtext behavior. CACHE? defaults to enabled; custom rendering
+RULES need a stable RULES-ID for safe caching. The result is a plain procedure
+when caching cannot be identified safely, otherwise a cached renderer."
   (let* ((_ (require-gemtext-options options "make-gemtext-renderer"))
          (prefix (gemtext-options-prefix options))
          (routes (gemtext-options-routes options))

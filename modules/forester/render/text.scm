@@ -297,6 +297,11 @@
     %make-text-options))
 
 (define* (site->text forest #:key (options (make-text-options)))
+  "Return text pages as an ordered alist of page IDs and strings.
+
+The aggregate index is stored under the symbol INDEX. OPTIONS configures
+routes and text rendering. Use RENDER-TEXT for artifacts or
+MAKE-TEXT-RENDERER in a project."
   (let* ((_ (require-text-options options "site->text"))
          (routes (text-options-routes options))
          (render-page (make-text-page-renderer forest options)))
@@ -305,6 +310,10 @@
       render-page)))
 
 (define* (render-text forest #:key (options (make-text-options)))
+  "Render FOREST to its complete text artifact list, including the index.
+
+OPTIONS configures routes and text rendering. Use MAKE-TEXT-RENDERER to add
+the output to a project lifecycle."
   (let* ((_ (require-text-options options "render-text"))
          (prefix (text-options-prefix options))
          (routes (text-options-routes options))
@@ -316,6 +325,11 @@
 (define* (make-text-renderer #:key (options (make-text-options))
                             (rules-id #f)
                             (cache? #t))
+  "Construct a project renderer that produces text artifacts for a Forest.
+
+OPTIONS supplies text behavior. CACHE? defaults to enabled; custom rendering
+RULES need a stable RULES-ID for safe caching. The result is a plain procedure
+when caching cannot be identified safely, otherwise a cached renderer."
   (let* ((_ (require-text-options options "make-text-renderer"))
          (prefix (text-options-prefix options))
          (routes (text-options-routes options))

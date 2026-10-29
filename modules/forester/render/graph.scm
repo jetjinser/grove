@@ -30,6 +30,7 @@
     (target-tree . ,(composition:transclusion-target-tree-id transclusion))))
 
 (define (site->graph forest)
+  "Return FOREST's page, reference, subtree, and transclusion graph as data."
   (unless (forest? forest)
     (error "Forester graph renderer requires a forest" forest))
   (let ((pages (pages forest)))
@@ -57,6 +58,7 @@
             pages)))))
 
 (define* (render-graph forest #:key (path "forest-graph.scm"))
+  "Render FOREST's graph as one Scheme-datum artifact at PATH."
   (unless (forest? forest)
     (error "Forester graph renderer requires a forest" forest))
   (unless (artifact-path? path)
@@ -69,6 +71,7 @@
     (list (make-artifact path content #:sources (source-paths forest)))))
 
 (define* (make-graph-renderer #:key (path "forest-graph.scm"))
+  "Construct a cached project renderer that writes the graph artifact at PATH."
   (unless (artifact-path? path)
     (error "Forester graph path must be a relative artifact path" path))
   (set! path (string-copy path))
