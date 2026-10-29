@@ -183,23 +183,4 @@
           6 pipeline-runs))))
   (lambda ()
     (system* "rm" "-rf" root)))
-(let* ((message (string-append (make-string 900 #\x) "END-OF-DIAGNOSTIC"))
-       (error (catch 'grove-project-error
-                (lambda () (call-with-project-stage 'read "broken.plant"
-                             (lambda () (error "~a" message))))
-                (lambda (key error) error))))
-  (define (printed debug?)
-    (call-with-output-string
-      (lambda (port)
-        (parameterize ((current-error-port port)) (print-project-error error debug?)))))
-  (test-assert "ordinary diagnostics keep the source path and truncate long errors"
-    (let ((text (printed #f)))
-      (and (string-contains text "broken.plant")
-           (string-contains text "--debug")
-           (not (string-contains text "END-OF-DIAGNOSTIC")))))
-  (test-assert "debug diagnostics retain the complete original message"
-    (string-contains (printed #t) "END-OF-DIAGNOSTIC"))
-  (test-assert "debug diagnostics include Scheme source context"
-    (and (string-contains (printed #t) "ice-9/boot-9.scm")
-         (string-contains (printed #t) "scm-error"))))
 (test-end "project checks")

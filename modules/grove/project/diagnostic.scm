@@ -8,6 +8,7 @@
   #:use-module (ice-9 exceptions)
   #:use-module (ice-9 format)
   #:use-module (ice-9 rdelim)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (system vm debug)
   #:use-module (system vm frame)
@@ -62,13 +63,13 @@
   (or (and (file-exists? file) file)
       (%search-load-path file)))
 
-(define (source-context path line)
+(define (source-context path line radius)
   (and path
        (false-if-exception
         (call-with-input-file path
           (lambda (port)
-            (let ((first (max 1 (- line 2)))
-                  (last (+ line 2)))
+            (let ((first (max 1 (- line radius)))
+                  (last (+ line radius)))
               (let loop ((number 1) (lines '()))
                 (cond
                  ((> number last) (reverse lines))
@@ -81,7 +82,53 @@
                                   (cons (cons number text) lines)
                                   lines)))))))))))))
 
-(define (display-frame-source port frame index)
+(define (source-line-window text column)
+  (let* ((length (string-length text))
+         (limit 120)
+         (focus (and column (max 0 (1- column))))
+         (start (if (> length limit)
+                    (if (and focus (> focus limit))
+                        (min (- length limit) (max 0 (- focus (quotient limit 2))))
+                        0)
+                    0))
+         (end (min length (+ start limit))))
+    (string-append (if (> start 0) "…" "")
+                   (substring text start end)
+                   (if (< end length) "…" ""))))
+
+(define (display-source-context port path line radius column)
+  (let ((context (source-context path line radius)))
+    (when context
+      (for-each
+       (lambda (entry)
+         (let ((number (car entry))
+               (text (cdr entry)))
+           (format port "    ~a ~4d | "
+                   (if (= number line) ">" " ") number)
+           (display-colored port (if (= number line) "1;31" "2")
+             (source-line-window text (and (= number line) column)))
+           (newline port)))
+       context))))
+
+(define (path-under? path root)
+  (and root (string-prefix? (string-append root "/") path)))
+
+(define (source-root relative-path levels)
+  (let ((path (%search-load-path relative-path)))
+    (and path
+         (let loop ((path path) (levels levels))
+           (if (zero? levels)
+               path
+               (loop (dirname path) (1- levels)))))))
+
+(define (internal-source-file? file)
+  (let ((path (or (source-path file) file)))
+    (or (path-under? path
+          (source-root "grove/project/diagnostic.scm" 2))
+        (path-under? path
+          (source-root "ice-9/boot-9.scm" 2)))))
+
+(define (display-frame-source port frame index show-context?)
   (let* ((source (frame-source frame))
          (call (false-if-exception
                 (format #f "~@y"
@@ -96,27 +143,49 @@
                (column (caddr source))
                (path (source-path file)))
           (format port " at ~a:~d~@[:~d~]~%"
-                  file line column)
-          (when path
-            (for-each
-             (lambda (entry)
-               (let ((number (car entry))
-                     (text (cdr entry)))
-                 (format port "    ~a ~4d | "
-                         (if (= number line) ">" " ") number)
-                 (display-colored port (if (= number line) "1;31" "2") text)
-                 (newline port)))
-             (source-context path line))))
+                  (or path file) line column)
+          (when (and path show-context?)
+            (display-source-context port path line 2 column)))
         (newline port))))
 
+(define (stack-frames stack)
+  (let loop ((index 0) (frame (stack-ref stack 0)) (frames '()))
+    (if frame
+        (loop (1+ index) (frame-previous frame)
+              (cons (cons index frame) frames))
+        frames)))
+
+(define (project-source-frame stack)
+  (find (lambda (indexed-frame)
+          (let ((source (frame-source (cdr indexed-frame))))
+            (and source
+                 (let ((file (car source)))
+                   (not (internal-source-file? file))))))
+        (stack-frames stack)))
+
 (define (display-source-backtrace stack port)
-  (define (walk index frame)
-    (when frame
-      ;; Print callers before their callees, as Guile's backtrace does.
-      (walk (1+ index) (frame-previous frame))
-      (display-frame-source port frame index)))
-  (walk 0 (stack-ref stack 0))
+  (for-each
+   (lambda (indexed-frame)
+     (let* ((index (car indexed-frame))
+            (frame (cdr indexed-frame))
+            (source (frame-source frame)))
+       (display-frame-source port frame index
+         (or (not source)
+             (not (internal-source-file? (car source)))))))
+   (stack-frames stack))
   (newline port))
+
+(define (display-project-source port stack)
+  (let ((indexed-frame (and stack (project-source-frame stack))))
+    (when indexed-frame
+      (let* ((source (frame-source (cdr indexed-frame)))
+             (file (car source))
+             (line (cadr source))
+             (column (caddr source))
+             (path (source-path file)))
+        (format port "  --> ~a:~d~@[:~d~]~%" (or path file) line column)
+        (when path
+          (display-source-context port path line 1 column))))))
 
 (define (call-with-project-stage stage path thunk)
   "Attach execution context without flattening the original exception.
@@ -183,6 +252,7 @@ procedure. Invalid context is rejected before THUNK runs."
             (display-source-backtrace (project-error-stack error) port))
           (display message port))
         (begin
+          (display-project-source port (project-error-stack error))
           (display (string-take message (min 700 (string-length message))) port)
           (when (> (string-length message) 700)
             (display "\n… use --debug for the full diagnostic.\n" port))))))

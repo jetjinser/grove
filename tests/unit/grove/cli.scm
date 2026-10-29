@@ -13,6 +13,8 @@
 
 (define root (mkdtemp "/tmp/grove-cli-test-XXXXXX"))
 (define test-module-directory (string-append root "/modules"))
+(define diagnostic-extension
+  (string-append test-module-directory "/diagnostic-extension.scm"))
 (define script (string-append root "/entry.scm"))
 (define config (string-append root "/project.scm"))
 (define out (string-append root "/stdout"))
@@ -53,6 +55,14 @@
     (setenv "XDG_CACHE_HOME" (string-append root "/cache"))
     (prepare-subprocess root)
     (mkdir test-module-directory)
+    (write-file diagnostic-extension
+      "(define-module (diagnostic-extension) #:export (fail))\n(define (fail) (error \"extension failure\"))\n")
+    (unless (zero? (system* "guild" "compile"
+                            "-L" test-module-directory
+                            "-o" (string-append test-module-directory
+                                                 "/diagnostic-extension.go")
+                            diagnostic-extension))
+      (error "could not compile the diagnostic extension test module"))
     (mkdir (string-append test-module-directory "/grove"))
     (let ((mock-ssh (string-append test-module-directory "/grove/ssh.scm")))
       (write-file mock-ssh
@@ -218,7 +228,9 @@
     (let ((result (run "build" "--project" (string-append root "/missing.scm"))))
       (test-equal "missing project exits with status 1" 1 (car result))
       (test-assert "missing project identifies loading stage"
-        (string-contains (caddr result) "load failed")))
+        (string-contains (caddr result) "load failed"))
+      (test-assert "missing project does not invent a source location"
+        (not (string-contains (caddr result) "  --> "))))
     (let* ((cache-directory (grove-cache-directory
                               (string-append root "/output")))
            (paths (list (string-append root "/output/page.txt")
@@ -361,22 +373,42 @@
     (test-equal "generic creator receives the command arguments"
       "#f:#f\n" (cadr (run "new" "--project" config)))
     (write-file config
-      "(use-modules (grove project))
-(make-project
-  #:collect-sources (lambda () (error \"~a\" (make-string 2000 #\\x)))
-  #:read-source (lambda (_) #f)
-  #:output-directory \"output\")\n")
+      (string-append
+        "(use-modules (grove project))\n"
+        "(make-project #:collect-sources (lambda () (begin (error \"~a\" (make-string 2000 #\\x))"
+        (make-string 3000 (integer->char 32))
+        "))\n  #:read-source (lambda (_) #f)\n  #:output-directory \"output\")\n"))
     (let ((short (run "build" "--project" config))
           (debug (run "build" "--project" config "--debug")))
       (test-equal "project evaluation errors exit with status 1" 1 (car short))
       (test-assert "default diagnostics remain bounded"
-        (< (string-length (without-loader-notes (caddr short))) 1000))
+        (< (string-length (without-loader-notes (caddr short))) 1500))
+      (test-assert "default diagnostics identify the project callback source"
+        (and (string-contains (caddr short) config)
+             (string-contains (caddr short) "make-string 2000")))
       (test-assert "debug includes the full diagnostic" (> (string-length (caddr debug)) 2000))
       (test-assert "debug identifies the project callback source"
         (and (string-contains (caddr debug) config)
              (string-contains (caddr debug) "make-string 2000")))
+      (test-assert "debug keeps internal frames compact"
+        (not (string-contains (caddr debug) "make-env* env")))
       (test-assert "redirected debug output contains no ANSI colors"
-        (not (string-contains (caddr debug) "\x1b[")))))
+        (not (string-contains (caddr debug) "\x1b["))))
+    (write-file config
+      "(use-modules (grove project) (diagnostic-extension))
+(make-project
+  #:collect-sources (lambda () (fail))
+  #:read-source (lambda (_) #f)
+  #:output-directory \"output\")\n")
+    (let ((short (run "build" "--project" config))
+          (debug (run "build" "--project" config "--debug")))
+      (test-equal "extension failures exit with status 1" 1 (car short))
+      (test-assert "default diagnostics identify the extension source"
+        (and (string-contains (caddr short) diagnostic-extension)
+             (string-contains (caddr short) "error \"extension failure\"")))
+      (test-assert "debug includes extension source context"
+        (and (string-contains (caddr debug) diagnostic-extension)
+             (string-contains (caddr debug) "error \"extension failure\"")))))
   (lambda () (system* "rm" "-rf" root)))
 (test-subprocess-coverage '("grove/cli.scm" "grove/project/new.scm" "grove/private/cli/progress.scm"))
 (test-end "grove CLI")
