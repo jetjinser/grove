@@ -317,6 +317,7 @@ the value again.
 - [renderer-rules.md](renderer-rules.md) — rules, composition, `next`.
 - [render-context.md](render-context.md) — context roles and their lifecycle
   boundaries.
-- [site-outputs.md](site-outputs.md) — sitemap, RSS, graph, and renderer composition.
+- [site-outputs.md](site-outputs.md) — model-driven renderers, artifact
+  publication, and file-driven asset pipelines.
 - [project.md](project.md) — project options, cache, CLI.
 - [composition.md](composition.md) — the algebra behind the layers.
