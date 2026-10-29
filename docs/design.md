@@ -65,8 +65,9 @@ and asset pipelines.
 
 [Resource identity and RDF projection](resource-identity-rdf.md) explores
 IRI-based identity and RDF projection for Grove's relations. It records the
-tested Flora mapping, current design direction, and the remaining identity and
-vocabulary decisions without committing to a public API.
+tested Flora mapping from a 2026-10-26 corpus snapshot, current design
+direction, and the remaining identity and vocabulary decisions without
+committing to a public API.
 
 ## Testing
 

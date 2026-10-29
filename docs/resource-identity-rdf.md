@@ -172,22 +172,23 @@ the relation mapping does not expand into a general metadata schema.
 
 ## What the Flora experiment establishes
 
-A temporary Scheme prototype read Flora's analyzed model and joined each
-indexed link occurrence to its source content node. On all 1,789 pages, all
-4,600 references matched one-for-one in order; target IDs and visible labels
-agreed. The join recovered 1,873 fragment-bearing links. All 8 transclusions
-also preserved target tree, source anchor, and per-page order. This establishes
-that the current analyzed model has enough information for a lossless
-occurrence projection when both relations are joined; neither relation alone
-is sufficient.
+In the 2026-10-26 experiment, a temporary Scheme prototype read Flora's
+analyzed model and joined each indexed link occurrence to its source content
+node. In that snapshot, all 4,600 references across 1,789 pages matched
+one-for-one in order; target IDs and visible labels agreed. The join recovered
+1,873 fragment-bearing links. All 8 transclusions also preserved target tree,
+source anchor, and per-page order. This establishes that the analyzed model in
+that snapshot had enough information for a lossless occurrence projection
+when both relations are joined; neither relation alone is sufficient. These
+corpus counts describe that experiment, not Flora's current size.
 
-The candidate graph used current HTML routes as page IRIs and DCMI
+The candidate graph used that build's HTML routes as page IRIs and DCMI
 `references`/`subject` for direct edges, with blank-node records for occurrence
 details and a local `transcludes` predicate. Its 4,600 link occurrences
 collapsed to 1,866 distinct direct reference triples, showing why an
-occurrence layer is needed. Current routes work as snapshot page IRIs,
-including generated `unstable-*` routes, but those names can change when routes
-or generated IDs change.
+occurrence layer is needed. The routes in that export worked as snapshot page
+IRIs, including generated `unstable-*` routes, but those names can change when
+routes or generated IDs change.
 
 The graph was emitted as N-Triples, serialized to Turtle with Serd from the
 project's pinned Guix channel, parsed back to N-Triples, normalized, and
