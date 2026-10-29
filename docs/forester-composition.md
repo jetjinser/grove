@@ -292,6 +292,16 @@ HTML presentation properties. Frontmatter commands extract data rather than
 rendering styled elements; computation commands returning several elements
 can be placed inside a styled subtree.
 
+The properties list is open: Grove's HTML renderer interprets its HTML
+attribute and tag markers, while a custom renderer may interpret its own
+markers through `content-style-properties`. Prefer ordinary Scheme data for
+custom markers, such as a namespaced symbol or alist. Grove's input cache can
+preserve data and its built-in style markers, but an unknown record or
+procedure in a style property makes that source's read result uncacheable.
+That is a safe fallback rather than a rendering restriction: use opaque
+objects when their identity or behavior is part of the extension, and accept
+that those pages will be evaluated again on the next build.
+
 ## Custom elements
 
 `(grove render html element)` defines HTML element vocabularies without adding
