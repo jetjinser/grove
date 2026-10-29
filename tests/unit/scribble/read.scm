@@ -48,6 +48,9 @@
 (test-error "content sequence flattening rejects non-content values" #t
   (flatten-content-sequence '("valid" 42)))
 
+(test-error "flow decoding rejects non-content values at its boundary" #t
+  (decode-flow '("valid" 42)))
+
 (define (substring-count text substring)
   (let loop ((start 0) (count 0))
     (let ((position (string-contains text substring start)))

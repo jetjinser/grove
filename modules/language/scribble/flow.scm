@@ -106,6 +106,8 @@ block elements flush the current paragraph."
                           (content-with-source-location paragraph location)
                           paragraph)
                       output))))))
+  (unless (content-sequence? values)
+    (error "decode-flow requires a sequence of content values" values))
   (let loop ((events (append-map flow-events values))
              (pending '())
              (newlines 0)
