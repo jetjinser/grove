@@ -178,6 +178,10 @@ Pass the custom style alone to replace the default, or `(make-html-style)` to
 omit stylesheets entirely. File-backed CSS artifacts should list their source
 paths as dependencies, as in the showcase builder. When only that CSS source
 changes, Grove refreshes the stylesheet artifact and reuses the page artifacts.
+The built-in HTML renderer publishes all artifacts in the style. A custom HTML
+renderer can append `(html-style-artifacts style)` to its artifact list; it
+returns the stylesheet artifacts followed by any extra assets from
+`make-html-style #:assets`.
 
 ### Element styles
 
