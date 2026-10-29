@@ -202,6 +202,10 @@ tree-N position anchors; both are known limitations of global anchors."
                   (tree-pass:assign-unique-occurrence-anchors pages)))
          (pages (measure 'equation-numbers
                   (tree-pass:assign-equation-numbers pages)))
+         ;;     Validate page IDs and HOME against the expanded page set.
+         ;;     Keep FOREST's Site on the original root pages; synthetic
+         ;;     subtree pages belong to the Forest index and must not become
+         ;;     standalone entries in aggregate outputs.
          (_ (make-site pages
                        #:title (site-title site)
                        #:description (site-description site)
