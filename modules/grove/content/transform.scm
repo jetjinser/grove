@@ -25,6 +25,9 @@
                             result)))
 
 (define (compose-content-transforms . transforms)
+  "Compose document transforms left to right; no transforms is identity.
+Each transform must accept and return a Content document. The returned
+procedure checks its input and every intermediate result."
   (unless (every (lambda (transform)
                    (procedure-accepts-arguments? transform 1))
                  transforms)

@@ -227,6 +227,9 @@ inside that root, every artifact parent must be an ordinary directory. Return
       (remove-empty-artifact-directories directory stale-path))))
 
 (define (write-artifacts directory artifacts)
+  "Validate and publish ARTIFACTS under DIRECTORY.
+Stale files are removed only when they were recorded in Grove's artifact
+manifest; unrelated files in the output directory are left alone."
   (validate-artifacts artifacts)
   (ensure-directory directory)
   ;; A configured output root may itself be a symlink. Resolve it once, then

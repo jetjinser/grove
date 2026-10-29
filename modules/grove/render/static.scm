@@ -37,6 +37,9 @@
       (lambda () (close-port port)))))
 
 (define* (make-static-assets-renderer #:key source-directory (prefix #f))
+  "Make a cached renderer that publishes files below SOURCE-DIRECTORY.
+PREFIX, when supplied, is added to each source's relative artifact path.
+The renderer tracks the collected files so changes and removals update output."
   (unless (and (string? source-directory) (file-is-directory? source-directory))
     (error "static asset source directory must exist" source-directory))
   (unless (or (not prefix) (artifact-path? prefix))

@@ -35,6 +35,10 @@
   (snapshot-data (math-value-requirements/raw value)))
 
 (define* (make-math-value term #:key (origin #f) (properties '()) (declarations '()) (requirements '()))
+  "Construct a Semantic value for mathematical TERM.
+ORIGIN carries optional source provenance; PROPERTIES carry presentation
+data; DECLARATIONS and REQUIREMENTS attach mathematical facts. Domain premises
+implied by TERM are included automatically in the resulting requirements."
   (unless (math-term? term) (error "expected a mathematical term" term))
   (unless (or (not origin) (math-origin? origin))
     (error "expected a mathematical source origin" origin))
@@ -49,6 +53,8 @@
       (delete-duplicates (append requirements (math-domain-premises term)) equal?))))
 
 (define (math-value-with-properties value properties)
+  "Return VALUE with replacement presentation PROPERTIES.
+Its term, origin, declarations, and domain requirements are preserved."
   (unless (math-value? value) (error "expected a mathematical expression" value))
   (make-math-value (math-value-term/raw value) #:origin (math-value-origin value)
     #:properties properties #:declarations (math-value-declarations/raw value)
