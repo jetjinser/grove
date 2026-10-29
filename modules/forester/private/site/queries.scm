@@ -6,7 +6,7 @@
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove private snapshot)
   #:use-module (grove ir)
-  #:use-module (grove render plain-text)
+  #:use-module (grove ir plain-text)
   #:use-module (grove site)
   #:use-module (forester private site model)
   #:use-module ((forester private trees) #:prefix tree-pass:)

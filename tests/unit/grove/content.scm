@@ -13,7 +13,7 @@
   #:use-module ((grove render html attributes) #:prefix html-attributes:)
   #:use-module (grove render html routes)
   #:use-module (grove render text)
-  #:use-module (grove render plain-text)
+  #:use-module (grove ir plain-text)
   #:use-module (grove render rules)
   #:use-module (grove site))
 

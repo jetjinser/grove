@@ -28,7 +28,7 @@
   #:use-module (grove render rules)
   #:use-module (grove render context)
   #:use-module (grove render html presentation)
-  #:use-module (grove render plain-text)
+  #:use-module (grove ir plain-text)
   #:use-module (grove highlight)
   #:use-module (grove render html routes)
   #:use-module (grove site)

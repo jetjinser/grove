@@ -9,7 +9,7 @@
   #:use-module (grove private html-style)
   #:use-module (grove private string-fun)
   #:use-module (grove ir)
-  #:use-module (grove render plain-text)
+  #:use-module (grove ir plain-text)
   #:use-module (grove site)
   #:use-module (grove private relation)
   #:use-module (grove private project timing)

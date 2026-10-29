@@ -2,8 +2,8 @@
 ;;;
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(define-module (grove render plain-text)
-  #:use-module (grove private render plain-text)
+(define-module (grove ir plain-text)
+  #:use-module (grove private ir plain-text)
   #:export (content->plain-text))
 
 (define (content->plain-text content)

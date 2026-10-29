@@ -2,7 +2,7 @@
 ;;;
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(define-module (grove private render plain-text)
+(define-module (grove private ir plain-text)
   #:use-module (grove ir)
   #:use-module (ice-9 format)
   #:use-module (srfi srfi-1)

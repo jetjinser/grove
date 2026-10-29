@@ -197,7 +197,7 @@ recognizes layout kind `'newline` as a line or paragraph boundary, while other
 layout kinds have no built-in kind-specific behavior and carry textual content.
 Most content extensions do not need to construct layout nodes directly.
 Text has two intentionally different projections. Use
-`(grove render plain-text)` for a readable projection of a content value
+`(grove ir plain-text)` for a readable projection of a content value
 without document-level formatting, including human-oriented notation for
 structured math. It does not preserve all content semantics and is not a
 serialization format.
