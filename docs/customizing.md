@@ -56,9 +56,11 @@ ID must resolve to the same artifact path. Renderers may evaluate them more
 than once while validating paths, building links, and computing cache identity.
 
 HTML, RSS, and sitemap renderers infer the home page from the site when the
-routes omit it. For lower-level integrations that need to derive a routes value
-with an explicit home page while preserving its other settings, use
-`html-routes-with-home-page` from `(grove render html routes)`.
+routes omit it. RSS requires a home page because its channel link targets the
+HTML index; a site without `#:home` must provide `#:home-page` in its routes.
+Sitemap can list a site without a home. For lower-level integrations that need
+to derive a routes value with an explicit home page while preserving its other
+settings, use `html-routes-with-home-page` from `(grove render html routes)`.
 
 Each renderer has its own artifact-cache identity. A plain procedure, a
 built-in renderer configured with `#:cache? #f`, or one with opaque rules and
