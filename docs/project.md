@@ -390,8 +390,11 @@ the pipeline artifacts' source dependencies. Since a cache hit skips the
 procedure, a newly appearing file is not discovered by itself; when output
 depends on a changing set of files, track a manifest whose contents describe
 that set. Pipeline artifacts and build reports retain declared and discovered
-file inputs and loaded Scheme dependencies, so cache invalidation and
-affected-artifact reporting use the same dependency set.
+file inputs and loaded Scheme dependencies. Every artifact from one pipeline
+receives the same union of pipeline-wide dependencies and artifact-level
+`#:sources`; this keeps affected-artifact reporting conservative. Split
+outputs with independent dependencies into separate pipelines when their
+affected-artifact reporting should remain independent.
 Each value in a project's `#:pipelines` list runs independently: a pipeline
 cannot read another pipeline's output. Put a multi-step conversion in one
 pipeline procedure when later steps consume earlier results.

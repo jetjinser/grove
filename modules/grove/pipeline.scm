@@ -25,9 +25,12 @@
 PROCEDURE is called with an input lookup. The lookup accepts only declared
 INPUTS, which must have unique paths, and returns a materialized path. The
 procedure returns a list of Grove artifacts, which may be empty. Their source
-dependencies are combined with the pipeline's declared inputs and files read
-through the input tracker. VERSION distinguishes behavior depending on state
-Grove cannot track, such as an external toolchain."
+dependencies are unioned across the pipeline: each returned artifact receives
+the declared inputs, tracked runtime reads, and every artifact's source list.
+This makes affected-artifact reporting conservative across the pipeline;
+split outputs into separate pipelines when they have independent dependencies.
+VERSION distinguishes behavior depending on state Grove cannot track, such as
+an external toolchain."
   (unless (non-empty-string? name)
     (error "asset pipeline requires a name" name))
   (unless (string? version)

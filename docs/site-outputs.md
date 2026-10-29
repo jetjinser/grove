@@ -97,5 +97,10 @@ become inline output markup. A pipeline procedure receives an input lookup,
 which resolves each unique declared `#:inputs` path to a materialized path,
 and returns a list of Grove artifacts, which may be empty. Grove
 validates their paths and contents and attaches the pipeline's declared and
-runtime-read dependencies. See the
+runtime-read dependencies to every artifact returned by that pipeline. This
+is a conservative pipeline-wide dependency set: artifact `#:sources` also
+contribute to the union, so one output may be marked affected when a file was
+declared by another output. Split outputs into separate pipelines when they
+have independent inputs and should have independent affected-artifact
+reporting. See the
 [customization guide](customizing.md) for examples.
