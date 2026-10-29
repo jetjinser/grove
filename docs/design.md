@@ -52,8 +52,8 @@ contexts are separated from build, reader, and math state.
 
 ## Site outputs
 
-[Site outputs](site-outputs.md) defines the renderer projection layer for
-sitemap, RSS, and graph.
+[Site outputs](site-outputs.md) defines model-driven renderers, artifact
+publication, and file-driven asset pipelines.
 
 ## Composition model
 
