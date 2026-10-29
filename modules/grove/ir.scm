@@ -111,6 +111,11 @@
   (snapshot-data (content-layout-source/raw content)))
 
 (define* (make-content-layout kind raw #:key (source #f))
+  "Construct a layout fragment with symbol KIND and textual RAW content.
+
+Layout fragments represent source formatting rather than prose. The Scribble
+flow decoder treats KIND 'newline as a line/paragraph boundary; for other
+kinds, the kind itself has no built-in meaning. SOURCE records provenance."
   (unless (symbol? kind)
     (error "content layout kind must be a symbol" kind))
   (unless (string? raw)
