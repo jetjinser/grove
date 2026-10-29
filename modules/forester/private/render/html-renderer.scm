@@ -24,7 +24,7 @@
   #:use-module (grove private render html)
   #:use-module (grove private snapshot)
   #:use-module (grove private uri)
-  #:use-module (grove render html attributes)
+  #:use-module (grove render html style)
   #:use-module (grove render rules)
   #:use-module (grove render context)
   #:use-module (grove render html presentation)

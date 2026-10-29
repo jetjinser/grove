@@ -6,7 +6,7 @@
   #:use-module (grove private procedure)
   #:use-module (grove i18n)
   #:use-module ((grove private ir) #:prefix ir:)
-  #:use-module (grove private html-style)
+  #:use-module (grove render html style)
   #:use-module (grove private string-fun)
   #:use-module (grove ir)
   #:use-module (grove ir plain-text)

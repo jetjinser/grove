@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit grove content)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-64)
   #:use-module (grove render html element)
   #:use-module (grove ir)
@@ -10,7 +11,7 @@
   #:use-module (grove style html)
   #:use-module (grove style html element)
   #:use-module (grove render html)
-  #:use-module ((grove render html attributes) #:prefix html-attributes:)
+  #:use-module ((grove render html style) #:prefix html-attributes:)
   #:use-module (grove render html routes)
   #:use-module (grove render text)
   #:use-module (grove ir plain-text)
@@ -65,6 +66,26 @@
          (not (module-variable site-html 'make-html-tag))
          (module-variable element-html 'make-html-attributes)
          (module-variable element-html 'make-html-tag))))
+
+(test-assert "HTML content-style interpretation is a public renderer API"
+  (let ((interface
+          (module-public-interface
+            (resolve-module '(grove render html style)))))
+    (every (lambda (name) (module-variable interface name))
+      '(content-style-html-attributes content-style-html-tag-name
+        content-style-html-void? merge-html-attributes))))
+
+(test-equal "HTML style interpretation uses the rightmost tag marker"
+  "span"
+  (html-attributes:content-style-html-tag-name
+    (make-content-style #f
+      (list (make-html-tag 'aside) (make-html-tag 'span)))))
+
+(test-assert "HTML style interpretation exposes custom-element voidness"
+  (let* ((wbr (make-element #:tag 'wbr #:void? #t))
+         (element (wbr)))
+    (html-attributes:content-style-html-void?
+      (content-element-style element))))
 
 (test-equal "content styles expose scoped HTML attributes"
   '((class . "note") (id . "page-term") (href . "#page-term"))

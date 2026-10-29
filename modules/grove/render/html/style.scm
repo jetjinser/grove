@@ -2,14 +2,17 @@
 ;;;
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(define-module (grove render html attributes)
+(define-module (grove render html style)
   #:use-module (grove private html-attributes)
+  #:use-module (grove private html-style)
   #:use-module (grove style)
   #:use-module (grove style html element)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:export (content-style-html-attributes
-            merge-html-attributes))
+            merge-html-attributes)
+  #:re-export (content-style-html-tag-name
+               content-style-html-void?))
 
 (define* (content-style-html-attributes style #:optional (id-prefix ""))
   "Return STYLE's HTML attributes, scoping IDs and local fragment links by ID-PREFIX."

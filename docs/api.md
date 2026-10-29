@@ -221,13 +221,15 @@ custom element should flush the current paragraph during `decode-flow`.
 `content->sxml` applies a content element's HTML style automatically when a
 render rule returns one root element. A custom HTML renderer assembling its
 own root can use `content-style-html-attributes` from
-`(grove render html attributes)` to apply the same class, attributes, and
-scoped IDs; `merge-html-attributes`
-combines them with renderer-owned attributes while protecting renderer-owned
-IDs. These helpers are for custom SXML assembly; ordinary render rules do not
-need to call them. Use `sxml->html` from `(grove render html)` to serialize the
-result: it applies HTML void-element and raw-text rules that a generic XML
-serializer does not.
+`(grove render html style)` to apply the same class, attributes, and
+scoped IDs. The same module exposes `content-style-html-tag-name` and
+`content-style-html-void?` so an alternate HTML renderer can reuse Grove's
+tag precedence and custom-element void semantics. `merge-html-attributes`
+combines style attributes with renderer-owned attributes while protecting
+renderer-owned IDs. These helpers are for custom SXML assembly; ordinary
+render rules do not need to call them. Use `sxml->html` from
+`(grove render html)` to serialize the result: it applies HTML void-element
+and raw-text rules that a generic XML serializer does not.
 
 Artifacts use the same ownership rule: `make-artifact` and
 `make-byte-artifact` snapshot their path, content, and optional `#:sources`

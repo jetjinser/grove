@@ -8,7 +8,7 @@
   #:use-module (grove private string-fun)
   #:use-module (grove render context)
   #:use-module (grove render html)
-  #:use-module (grove render html attributes)
+  #:use-module (grove render html style)
   #:use-module (grove render html routes)
   #:use-module (grove style html)
   #:use-module (forester private render labels)
