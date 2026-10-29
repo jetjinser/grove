@@ -335,4 +335,10 @@ source changes or cache status are needed."
       (build-report-artifacts report))))
 
 (define* (build-project project #:key (progress (lambda (stage path) #t)))
+  "Build PROJECT and return its complete artifact list.
+
+This publishes artifacts in the project's output directory and updates build
+state. PROGRESS receives a stage symbol and its detail, as for
+BUILD-PROJECT/REPORT. Use BUILD-PROJECT/REPORT to inspect source changes,
+affected artifacts, or cache status."
   (build-report-artifacts (build-project/report project #:progress progress)))

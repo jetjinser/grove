@@ -298,7 +298,12 @@ input port, and output port by BROWSE-PROJECT."
                                (extra-sources '())
                                (cache? (and (project? project)
                                             (project-cache? project))))
-  "Copy PROJECT with execution options and additional tracked source paths."
+  "Copy PROJECT with output, cache, or dependency options.
+
+All lifecycle callbacks and renderers are retained. OUTPUT-DIRECTORY and
+CACHE? replace the corresponding project settings. EXTRA-SOURCES are appended
+to the existing tracked dependencies, with duplicate paths removed while
+preserving their first occurrence. The original project is unchanged."
   (unless (project? project)
     (error "project options require a Grove project" project))
   (unless (filesystem-path-list? extra-sources)
