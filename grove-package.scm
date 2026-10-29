@@ -8,7 +8,7 @@
 ;;; modules and installs a CLI wrapper with the dependency paths it sees.
 
 (define* (make-grove blue guile faster-minikanren grove-highlights libunistring
-                     guile-gcrypt guile-ssh guile-ts coreutils
+                     guile-gcrypt guile-ssh guile-ts coreutils guile-srfi-275
                      #:key
                      (version "0-unstable-2026-10-10")
                      (source
@@ -83,6 +83,7 @@
                       #$(this-package-input "guile-faster-minikanren"))
                      (ts #$(this-package-input "guile-ts"))
                      (highlights #$(this-package-input "grove-highlights"))
+                     (srfi275 #$(this-package-input "guile-srfi-275"))
                      (ssh #$(this-package-input "guile-ssh"))
                      (site (lambda (out)
                              (string-append out "/share/guile/site/"
@@ -90,7 +91,7 @@
                      (ccache (lambda (out)
                                (string-append out "/lib/guile/" effective
                                               "/site-ccache")))
-                     (outs (list gcrypt minikanren ts highlights ssh)))
+                     (outs (list gcrypt minikanren ts highlights ssh srfi275)))
                 (setenv "GUILE_LOAD_PATH"
                         (string-join (map site outs) ":"))
                 (setenv "GUILE_LOAD_COMPILED_PATH"
@@ -169,7 +170,7 @@
     (native-inputs (list blue guile))
     (inputs
      (append
-      (list guile faster-minikanren grove-highlights libunistring)
+      (list guile faster-minikanren grove-highlights libunistring guile-srfi-275)
       (map specification->package
            (list "coreutils" "guile-gcrypt" "guile-ssh" "guile-ts"))))
     (synopsis "Static site generator for executable, forester-style notes")

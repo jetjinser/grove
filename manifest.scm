@@ -32,6 +32,10 @@
 ;; Guile and Grove's own packages form the default development environment.
 (define guile (specification->package "guile"))
 (define libunistring (specification->package "libunistring"))
+(define guile-srfi-275
+  (primitive-load
+   (string-append (dirname (canonicalize-path (current-filename)))
+                  "/srfi-275/guix.scm")))
 
 ;; Guix's glibc-locales package installs locale data under lib/locale, but
 ;; does not expose GUIX_LOCPATH as a search path.  A pure shell therefore
@@ -304,6 +308,7 @@ Grove's highlighter consumes.")
 (packages->manifest
  (append
   (list blue faster-minikanren grove-highlights guile libunistring
+        guile-srfi-275
         grove-glibc-locales)
   (map specification->package
        (list ;;     /bin/sh and env for subprocess-spawning code under a

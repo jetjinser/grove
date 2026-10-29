@@ -19,4 +19,5 @@
             (specification->package "guile-gcrypt")
             (specification->package "guile-ssh")
             (specification->package "guile-ts")
-            (specification->package "coreutils"))
+            (specification->package "coreutils")
+            guile-srfi-275)

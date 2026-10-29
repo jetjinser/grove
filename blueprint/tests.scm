@@ -29,6 +29,7 @@
     "unit/grove/render-rules.scm"
     "unit/grove/render-context.scm"
     "unit/forester/browse.scm"
+    "unit/forester/entity-uri.scm"
     "unit/grove/cli-progress.scm"
     "unit/grove/math.scm"
     "unit/grove/differentiation.scm"

@@ -6,7 +6,8 @@
   #:use-module (grove private string-fun)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:use-module (web uri)
+  #:use-module (srfi :275 path)
+  #:use-module (srfi :275 uri)
   #:export (absolute-entity-uri?
             distinct-entity-uri-list?
             valid-entity-uri-list?
@@ -50,9 +51,10 @@
     (lambda ()
       (let ((uri (and (string? value) (string->uri value))))
         (and uri
-             (not (uri-userinfo uri))
+             (non-relative-uri? uri)
+             (not (uri-user uri))
              (valid-component?
-               (uri-path uri)
+               (path->string (uri-path uri))
                (lambda (character)
                  (or (pchar? character) (char=? character #\/))))
              (valid-component?
@@ -67,7 +69,7 @@
                  (or (pchar? character)
                      (char=? character #\/)
                      (char=? character #\?))))
-             (let ((scheme (symbol->string (uri-scheme uri))))
+             (let ((scheme (uri-scheme uri)))
                (or (not (or (string-ci=? scheme "http")
                             (string-ci=? scheme "https")))
                    (and (string? (uri-host uri))
@@ -95,15 +97,16 @@
   "Return a useful browser URL for an entity URI, or #f if unsupported."
   (let ((uri (parse-absolute-uri value)))
     (and uri
-         (let ((scheme (symbol->string (uri-scheme uri))))
+         (let ((scheme (uri-scheme uri)))
            (cond
             ((or (string-ci=? scheme "http")
                  (string-ci=? scheme "https"))
              value)
             ((and (string-ci=? scheme "doi")
-                  (string? (uri-path uri))
-                  (not (string=? (uri-path uri) ""))
+                  (string? (path->string (uri-path uri)))
+                  (not (string=? (path->string (uri-path uri)) ""))
                   (not (uri-query uri))
                   (not (uri-fragment uri)))
-             (string-append "https://doi.org/" (uri-path uri)))
+             (string-append "https://doi.org/"
+                            (path->string (uri-path uri))))
             (else #f))))))
