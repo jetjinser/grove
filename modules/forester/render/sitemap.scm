@@ -162,7 +162,8 @@ corresponding SETTINGS defaults."
                  (list 'sitemap sitemap-path site-url default-locale
                        (html-index-url routes)
                        (html-route-table routes
-                                         (map site-page-id (pages forest))))))))
+                                         (map site-page-id (pages forest)))
+                       (web-idna-cache-identity))))))
       (make-cached-renderer
         (lambda (forest)
           (render-sitemap forest #:site-url site-url

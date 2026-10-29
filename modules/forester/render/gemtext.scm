@@ -404,9 +404,11 @@ when caching cannot be identified safely, otherwise a cached renderer."
         (make-cached-renderer render
           #:configuration
           (lambda (forest)
-            (text-renderer-cache-identity
-              'gemtext forest prefix routes backmatter reference-taxon-id
-              rules-id locale messages))
+            (append
+              (text-renderer-cache-identity
+                'gemtext forest prefix routes backmatter reference-taxon-id
+                rules-id locale messages)
+              (list (web-idna-cache-identity))))
           #:render-changed
           (lambda (forest changed _dirty-paths old-artifacts)
             (render-gemtext-changed forest options changed old-artifacts)))))))

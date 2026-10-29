@@ -13,6 +13,7 @@
   #:use-module (forester render sitemap)
   #:use-module (forester render text routes)
   #:use-module (forester site)
+  #:use-module (grove private renderer)
   #:use-module (grove render)
   #:use-module (grove output)
   #:use-module (grove render html routes)
@@ -35,6 +36,38 @@
       #:home "guide-en")))
 
 (test-begin "Forester output renderers")
+
+(let* ((root (string-append "/tmp/forester-idna-cache-test-"
+                            (number->string (getpid))))
+       (bin (string-append root "/bin"))
+       (idn2 (string-append bin "/idn2"))
+       (old-path (getenv "PATH"))
+       (renderers
+        (list (make-gemtext-renderer)
+              (make-rss-renderer #:site-url "https://example.org")
+              (make-sitemap-renderer #:site-url "https://example.org")))
+       (before #f)
+       (after #f))
+  (define (write-idn2 version)
+    (call-with-output-file idn2
+      (lambda (port)
+        (format port "#!/bin/sh\necho 'idn2 ~a'\n" version)))
+    (chmod idn2 #o755))
+  (mkdir root)
+  (mkdir bin)
+  (dynamic-wind
+    (lambda ()
+      (setenv "PATH" (string-append bin ":" (or old-path ""))))
+    (lambda ()
+      (write-idn2 "test-version-1")
+      (set! before (renderer-configurations forest renderers))
+      (write-idn2 "test-version-2")
+      (set! after (renderer-configurations forest renderers))
+      (test-assert "IDNA implementation changes invalidate web renderer identities"
+        (not (equal? before after))))
+    (lambda ()
+      (if old-path (setenv "PATH" old-path) (unsetenv "PATH"))
+      (system* "rm" "-rf" root))))
 
 (test-equal "translation groups use association-list data"
   (list (cons "guide" (list (car (pages forest)) (cadr (pages forest)))))

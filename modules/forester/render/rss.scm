@@ -208,7 +208,8 @@ SETTINGS defaults."
                  (list 'rss feed-path site-url stylesheet-url stylesheet-type
                        language (html-index-url routes)
                        (html-route-table routes
-                                         (map site-page-id (pages forest))))))))
+                                         (map site-page-id (pages forest)))
+                       (web-idna-cache-identity))))))
       (make-cached-renderer
         (lambda (forest)
           (render-rss forest #:site-url site-url #:feed-path feed-path

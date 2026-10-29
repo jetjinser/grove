@@ -13,6 +13,7 @@
   #:export (web-origin?
             web-origin-uri
             web-iri-uri
+            web-idna-cache-identity
             external-url?
             web-base-url
             web-absolute-route-url
@@ -60,6 +61,26 @@
                  (not (eof-object? result)))
       (error "Cannot convert HTTP IRI host to an IDNA domain" host))
     result))
+
+(define (web-idna-cache-identity)
+  "Return a stable cache component for the IDNA implementation in PATH.
+
+The executable's version also identifies the linked libidn2 implementation
+in the supported Guix package. If idn2 is unavailable, retain a sentinel so
+ASCII-only rendering remains usable; Unicode host conversion will report its
+own actionable failure when requested."
+  (let ((port (false-if-exception
+                (open-pipe* OPEN_READ "idn2" "--version"))))
+    (if (not port)
+        '(idn2 unavailable)
+        (let* ((version (read-line port))
+               (status (close-pipe port)))
+          (if (and (status:exit-val status)
+                   (= (status:exit-val status) 0)
+                   (string? version)
+                   (not (eof-object? version)))
+              (list 'idn2 version)
+              '(idn2 unavailable))))))
 
 (define (web-iri-uri value)
   "Map an IRI to an ASCII URI for a network URL output boundary.
