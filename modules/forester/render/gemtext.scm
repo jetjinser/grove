@@ -5,9 +5,7 @@
 (define-module (forester render gemtext)
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (grove build)
-  #:use-module (forester private render artifact)
   #:use-module (grove ir)
-  #:use-module (grove output)
   #:use-module (grove private snapshot)
   #:use-module (grove private string-fun)
   #:use-module (grove private render text)
@@ -18,11 +16,9 @@
   #:use-module (forester private backmatter)
   #:use-module (forester private render labels)
   #:use-module (forester private render text-options)
-  #:use-module (forester private render-routes)
+  #:use-module (forester private render text-output)
   #:use-module (forester private entity-uri)
-  #:use-module (forester render context)
   #:use-module (grove i18n)
-  #:use-module (forester i18n)
   #:use-module (forester site)
   #:use-module (grove site)
   #:use-module (srfi srfi-1)
@@ -309,56 +305,32 @@ default. Paths are validated by MAKE-TEXT-ROUTES."
   (messages gemtext-options-messages)
   (rules gemtext-options-rules))
 
-(define (output-path prefix path)
-  (if prefix (string-append prefix "/" path) path))
-
 (define (require-gemtext-options options who)
   (unless (gemtext-options? options)
     (error (string-append who " requires Gemtext options") options))
   options)
 
 (define (make-gemtext-page-renderer forest options)
-  (let* ((routes (gemtext-options-routes options))
-         (backmatter (gemtext-options-backmatter options))
-         (reference-taxon-id (gemtext-options-reference-taxon-id options))
-         (locale (gemtext-options-locale options))
-         (messages (gemtext-options-messages options))
-         (rules (compose-render-rules bilingual-text-rules
-                                      (gemtext-options-rules options))))
-    (unless (forest? forest)
-      (error "Forester Gemtext renderer requires a forest" forest))
-    (resolve-text-route-table "Gemtext" forest routes)
-    (let* ((context
-             (make-site-render-context forest
-                                       #:routes routes
-                                       #:locale locale
-                                       #:messages messages))
-           (backmatter-labels (localized-backmatter-labels context)))
-      (lambda (page)
+  (let ((routes (gemtext-options-routes options))
+        (backmatter (gemtext-options-backmatter options))
+        (reference-taxon-id (gemtext-options-reference-taxon-id options)))
+    (make-forester-text-page-renderer
+      "Gemtext" forest routes
+      (gemtext-options-locale options)
+      (gemtext-options-messages options)
+      (gemtext-options-rules options)
+      (lambda (page context backmatter-labels rules)
         (page->gemtext forest routes page backmatter backmatter-labels
                        reference-taxon-id rules context)))))
 
 (define (render-gemtext-changed forest options changed old-artifacts)
   (let* ((prefix (gemtext-options-prefix options))
          (routes (gemtext-options-routes options))
-         (render-page (make-gemtext-page-renderer forest options))
-         (index-artifact
-           (reuse-artifact
-             (output-path prefix (text-index-path routes))
-             (source-paths forest) old-artifacts changed
-             (lambda () (index->gemtext forest routes))))
-         (page-artifacts
-           (map (lambda (page)
-                  (let* ((path
-                           (output-path
-                             prefix
-                             (text-page-path routes (site-page-id page))))
-                         (sources (page-source-paths
-                                    forest (site-page-id page))))
-                    (reuse-artifact path sources old-artifacts changed
-                      (lambda () (render-page page)))))
-                (pages forest))))
-    (cons index-artifact page-artifacts)))
+         (render-page (make-gemtext-page-renderer forest options)))
+    (render-text-output-changed
+      forest prefix routes changed old-artifacts
+      (lambda () (index->gemtext forest routes))
+      render-page)))
 
 (define* (make-gemtext-options #:key
                                (prefix #f)
@@ -380,29 +352,18 @@ default. Paths are validated by MAKE-TEXT-ROUTES."
   (let* ((_ (require-gemtext-options options "site->gemtext"))
          (routes (gemtext-options-routes options))
          (render-page (make-gemtext-page-renderer forest options)))
-    (cons (cons 'index (index->gemtext forest routes))
-          (map (lambda (page)
-                 (cons (site-page-id page)
-                       (render-page page)))
-               (pages forest)))))
+    (site->text-output forest routes
+      (lambda () (index->gemtext forest routes))
+      render-page)))
 
 (define* (render-gemtext forest #:key (options (make-gemtext-options)))
   (let* ((_ (require-gemtext-options options "render-gemtext"))
          (prefix (gemtext-options-prefix options))
          (routes (gemtext-options-routes options))
          (render-page (make-gemtext-page-renderer forest options)))
-    (let ((artifacts
-            (cons (make-artifact (text-index-path routes)
-                                 (index->gemtext forest routes)
-                                 #:sources (source-paths forest))
-                  (map (lambda (page)
-                         (make-artifact
-                           (text-page-path routes (site-page-id page))
-                           (render-page page)
-                           #:sources (page-source-paths
-                                       forest (site-page-id page))))
-                       (pages forest)))))
-      (if prefix (prefix-artifacts prefix artifacts) artifacts))))
+    (render-text-output forest prefix routes
+      (lambda () (index->gemtext forest routes))
+      render-page)))
 
 (define* (make-gemtext-renderer #:key (options (make-gemtext-options))
                                (rules-id #f)
