@@ -107,7 +107,7 @@
                                   path value)))
                        value))
                    (elements-of-kind elements 'describes))))
-    (unless (valid-entity-uri-list? uris)
+    (unless (distinct-entity-uri-list? uris)
       (error (format #f "Forester page ~a repeats a describes URI" path)))
     uris))
 
