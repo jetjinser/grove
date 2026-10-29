@@ -351,13 +351,17 @@ step and its recorded path, or compare a computed polynomial derivative with an
 independently computed derivative. Import `(grove math semantic-check)` for
 these checks and their typed evidence values. Evidence constructors and
 accessors belong to this module, so extensions inspecting or validating a
-checker result have one explicit import. The calculation API does not
-mix this independent checker API into its exports. Formula exposes thin
-`check-polynomial-*` adapters for article text and
-`polynomial-check->content` for rendering their results; these delegate to the
-typed checker rather than defining another checker API. Use those adapters in
-articles, and import `(grove math semantic-check)` when Scheme code needs typed
-evidence. For example:
+checker result have one explicit import. The calculation API does not mix this
+independent checker API into its exports. Formula exposes these helpers under
+the same `φ:` prefix for use in articles: `check-polynomial-step`,
+`check-polynomial-derivative`, and `check-polynomial-antiderivative` parse
+formula strings before calling the typed checker; `check-polynomial-rule` and
+`check-polynomial-derivation` delegate values directly.
+`polynomial-check->content` adapts the typed result to Content IR through the
+presentation layer. These are conveniences, not a second checker API. Import
+`(grove math semantic-check)` when Scheme code needs typed evidence or works
+directly with Semantic values, and `(grove math presentation)` when it only
+needs report/check presentation. For example:
 
 ```scheme
 @(φ:polynomial-check->content (φ:check-polynomial-rule 'add-commutative))
