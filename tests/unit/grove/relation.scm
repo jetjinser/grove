@@ -48,6 +48,12 @@
 
 (test-error "relation arity must be positive" #t
   (make-relation '() #:arity 0))
+(test-error "empty relations require an explicit arity" #t
+  (make-relation '()))
+
+(test-equal "non-empty relations infer unary arity"
+  1
+  (relation-arity (make-relation '((only)))))
 
 (let* ((source (string-copy "source"))
        (target (string-copy "target"))
@@ -142,8 +148,7 @@
         (make-relation
           '((page-a page-b #f)
             (page-a page-c introduction)
-            (page-b page-c #f))
-          #:arity 3)))
+            (page-b page-c #f)))))
   (test-equal "n-ary relations record their arity and join columns"
     '((page-a introduction) (page-b #f))
     (run* (source fragment)
@@ -157,7 +162,7 @@
     (run* (source target fragment)
       (relationo references source target fragment))))
 
-(test-equal "empty relations require and retain an explicit non-default arity"
+(test-equal "empty relations retain their declared arity"
   '(1 ())
   (let ((empty (make-relation '() #:arity 1)))
     (list (relation-arity empty)
@@ -167,6 +172,9 @@
 (test-error "relation constructor rejects rows with inconsistent arity"
   #t
   (make-relation '((first second) (only-first))))
+(test-error "explicit relation arity is checked against non-empty facts"
+  #t
+  (make-relation '((only)) #:arity 2))
 
 (test-equal "relation goals compose through a shared logic variable"
   '(beta gamma)

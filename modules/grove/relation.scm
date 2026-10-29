@@ -35,6 +35,8 @@
   (facts relation-facts/raw)
   (indexes %relation-indexes))
 
+(define omitted-arity (list 'omitted-arity))
+
 (define (relation-facts relation)
   (snapshot-data (relation-facts/raw relation)))
 
@@ -82,13 +84,20 @@
                  valid?))))
            (else #t)))))))
 
-(define* (make-relation facts #:key (arity 2))
+(define* (make-relation facts #:key (arity omitted-arity))
+  (unless (list? facts)
+    (error "relation facts must be a list of rows" facts))
+  (when (eq? arity omitted-arity)
+    (unless (pair? facts)
+      (error "an empty relation requires an explicit #:arity" facts))
+    (unless (list? (car facts))
+      (error "relation facts must be rows with a common arity" facts))
+    (set! arity (length (car facts))))
   (unless (and (exact-integer? arity) (positive? arity))
     (error "relation arity must be a positive integer" arity))
-  (unless (and (list? facts)
-               (every (lambda (fact)
-                        (and (list? fact) (= (length fact) arity)))
-                      facts))
+  (unless (every (lambda (fact)
+                   (and (list? fact) (= (length fact) arity)))
+                 facts)
     (error "relation facts must be a list of rows matching the relation arity"
            arity facts))
   (unless (every (lambda (fact) (every finite-vector-free-term? fact)) facts)
