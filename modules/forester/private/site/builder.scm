@@ -17,7 +17,7 @@
   #:use-module (forester private content-index)
   #:use-module (forester private entity-uri)
   #:use-module (forester private site model)
-  #:use-module (forester private site queries)
+  #:use-module (forester private site resolve)
   #:use-module ((forester composition) #:prefix composition:)
   #:use-module (forester relations)
   #:use-module (grove relation dsl)
