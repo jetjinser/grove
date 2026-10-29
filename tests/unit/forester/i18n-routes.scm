@@ -407,20 +407,24 @@
                                      #:default-locale "en"))
        (rss-direct
         (car (render-rss forest #:settings settings
+                         #:routes routes
                          #:site-url "https://rss.example"
                          #:language "fr")))
        (rss-renderer
         (car (render-model forest
                (list (make-rss-renderer #:settings settings
+                                        #:routes routes
                                         #:site-url "https://rss.example"
                                         #:language "fr")))))
        (sitemap-direct
         (car (render-sitemap forest #:settings settings
+                             #:routes routes
                              #:site-url "https://map.example"
                              #:default-locale "zh-Hans")))
        (sitemap-renderer
         (car (render-model forest
                (list (make-sitemap-renderer #:settings settings
+                                            #:routes routes
                                             #:site-url "https://map.example"
                                             #:default-locale "zh-Hans"))))))
   (test-equal "RSS direct and cached entry points honor renderer overrides"
@@ -437,7 +441,7 @@
                           "https://map.example/")
          (string-contains
            (artifact-content sitemap-renderer)
-           "hreflang=\"x-default\" href=\"https://map.example/guide-zh.html\""))))
+           "hreflang=\"x-default\" href=\"https://map.example/guide-zh.zh-Hans.html\""))))
 
 (let* ((settings (make-site-settings #:site-url "https://example.org"
                                      #:default-locale "zh-CN"))

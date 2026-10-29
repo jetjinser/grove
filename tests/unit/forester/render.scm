@@ -1056,7 +1056,7 @@
        (feed
          (artifact-content
            (car (render-rss
-                  (make-forest (make-site (list page)))
+                  (make-forest (make-site (list page) #:home "preview"))
                   #:site-url "https://notes.example")))))
   (test-assert "RSS fallback descriptions omit text-target markup"
     (and (string-contains feed "Details")
@@ -1067,7 +1067,8 @@
          (not (string-contains feed "`x + 1`")))))
 
 (let* ((forest (make-forest (make-site (list algebra limits)
-                                       #:title "Linked Notes")))
+                                       #:title "Linked Notes"
+                                       #:home "algebra")))
        (routes (make-html-routes
                  #:home-page "algebra"
                  #:page-path
@@ -1093,7 +1094,8 @@
          (not (string-contains
                 sitemap "https://notes.example/published/notes/algebra.html")))))
 
-(let* ((forest (make-forest (make-site (list algebra limits))))
+(let* ((forest (make-forest (make-site (list algebra limits)
+                                       #:home "algebra")))
        (feed (artifact-content
                (car (render-rss forest #:site-url "https://notes.example"))))
        (styled-feed
@@ -1134,7 +1136,7 @@
        (feed
          (artifact-content
            (car (render-rss
-                  (make-forest (make-site pages))
+                  (make-forest (make-site pages #:home "newer"))
                   #:site-url "https://notes.example"))))
        (newer-position (string-contains feed "<title>Newer</title>"))
        (older-position (string-contains feed "<title>Older</title>"))
@@ -1151,7 +1153,8 @@
           (list (make-site-page
                   "invalid-published" "Invalid published date"
                   (make-content-document '())
-                  #:metadata '((published . "2026-02-31"))))))
+                  #:metadata '((published . "2026-02-31")))
+          #:home "invalid-published")))
       #:site-url "https://notes.example"))
   (test-error "RSS rejects an invalid updated date in a constructed forest"
     #t
@@ -1161,7 +1164,8 @@
           (list (make-site-page
                   "invalid-updated" "Invalid updated date"
                   (make-content-document '())
-                  #:metadata '((updated . "2026-99-01"))))))
+                  #:metadata '((updated . "2026-99-01")))
+          #:home "invalid-updated")))
       #:site-url "https://notes.example")))
 
 (let* ((forest
@@ -1635,7 +1639,8 @@
     (term-definition-conflicts forest)))
 
 
-(let* ((forest (make-forest (make-site (list algebra limits))))
+(let* ((forest (make-forest (make-site (list algebra limits)
+                                       #:home "algebra")))
        (feed (artifact-content
                (car (render-rss forest #:site-url "https://notes.example"
                                 #:language "zh-Hans")))))

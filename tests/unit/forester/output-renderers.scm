@@ -68,6 +68,19 @@
            (string-contains content
                             "<link>https://example.org/index.html</link>")))))
 
+(let ((forest-without-home
+        (make-forest
+          (make-site (site-pages (site forest)) #:title "Test"))))
+  (test-error "RSS renderer requires a site home page"
+    #t
+    (render-rss forest-without-home #:site-url "https://example.org"))
+  (test-assert "sitemap renders actual pages without requiring a home"
+    (string-contains
+      (artifact-content
+        (car (render-sitemap forest-without-home
+                             #:site-url "https://example.org")))
+      "https://example.org/guide-en.html")))
+
 (let* ((artifacts
         (render-model forest
           (list (make-sitemap-renderer #:site-url "HTTPS://example.org")

@@ -62,9 +62,12 @@ options can override `#:locale`, `#:default-locale`, and `#:site-url` locally.
 
 When routes omit a home page, HTML, RSS, and sitemap renderers infer it from the
 analyzed site's `#:home`. You do not need to repeat the home tree ID in each
-renderer. A home page set in routes must exist in the analyzed site. If a
-project customizes page paths, pass the same route value to HTML, RSS, and
-sitemap so their canonical links agree.
+renderer. RSS needs a home page because its channel link points to the site's
+HTML index; set the site's `#:home` or the shared routes' `#:home-page`. A
+sitemap can render a site without a home because it lists the actual page
+routes. A home page set in routes must exist in the analyzed site. If a project
+customizes page paths, pass the same route value to HTML, RSS, and sitemap so
+their canonical links agree.
 
 Gemtext uses `.gmi` page and index paths by default. Use
 `make-gemtext-routes` to change one path while retaining the other Gemtext
