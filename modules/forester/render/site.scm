@@ -31,8 +31,9 @@
 SITE-URL, when supplied, is an absolute HTTP(S) origin with no credentials,
 non-root path, query, or fragment. Put any deployment path prefix in the shared
 HTML routes.
-DEFAULT-LOCALE is the language used for x-default alternates and the feed
-language. Renderer-specific keyword values override these shared defaults. A
+DEFAULT-LOCALE supplies the HTML interface language, x-default alternate
+language, and RSS feed language unless a renderer-specific locale overrides
+it. Renderer-specific keyword values override these shared defaults. A
 settings value may omit SITE-URL, but sitemap and RSS renderers still require
 an origin."
   (unless (or (not site-url) (web-origin? site-url))
