@@ -37,8 +37,15 @@ guix time-machine -C channels.scm -- shell -m manifest.scm
 blue grove build --project examples/linked-notes/project.scm --output /tmp/grove-preview
 ```
 
-The development manifest supplies Grove's build and test dependencies. The
-standalone Guix package is constructed separately through `grove-package.scm`.
+The development manifest supplies Grove's build and test dependencies. Build
+the standalone Grove package directly with the repository's Guix entry point:
+
+```sh
+guix time-machine -C channels.scm -- build -f guix.scm
+```
+
+`grove-package.scm` contains the reusable package factory used by that entry
+point.
 
 Build the linked-notes example:
 
