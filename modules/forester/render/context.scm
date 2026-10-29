@@ -64,7 +64,10 @@
                                    (language-switcher? #t)
                                    (og-image #f)
                                    (og-image-alt #f)
-                                   (locale #f)
+                                   (locale
+                                     (and (site-settings? settings)
+                                          (site-settings-default-locale
+                                            settings)))
                                    (messages default-message-catalog)
                                    (translation-groups
                                      (and (forest? forest)
@@ -72,8 +75,11 @@
                                             (pages forest)))))
   "Build the site-level render context for FOREST.
 
-LOCALE and MESSAGES are resolved once, here, so renderers no longer read
-dynamic locale or message parameters."
+SETTINGS supplies default site URL and locale values. LOCALE,
+DEFAULT-LOCALE, and SITE-URL override them when supplied. LOCALE chooses the
+interface language; DEFAULT-LOCALE is used for page-language fallbacks.
+LOCALE and MESSAGES are resolved here, so renderers no longer read dynamic
+locale or message parameters."
   (unless (forest? forest)
     (error "render context requires a forest" forest))
   (unless (or (not settings) (site-settings? settings))

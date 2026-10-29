@@ -13,6 +13,7 @@
   #:use-module (forester render sitemap)
   #:use-module (forester render text)
   #:use-module (forester render text routes)
+  #:use-module (forester render site)
   #:use-module (forester site)
   #:use-module (forester style html)
   #:use-module (grove build)
@@ -50,7 +51,14 @@
                                    (make-content-document '())
                                    #:metadata
                                    `((translation . ,(string-copy "guide"))))))))
-       (groups (derive-translation-groups (pages forest))))
+       (groups (derive-translation-groups (pages forest)))
+       (settings (make-site-settings #:site-url "https://example.org"
+                                     #:default-locale "zh-CN"))
+       (settings-context
+         (make-site-render-context forest #:settings settings))
+       (overridden-context
+         (make-site-render-context forest #:settings settings
+                                   #:locale "fr" #:default-locale "en")))
   (test-equal "translation groups follow first occurrence and site page order"
     '(("guide" "guide-en" "guide-zh")
       ("notes" "notes"))
@@ -71,6 +79,19 @@
     (render-context-ref
       (make-site-render-context forest #:translation-groups groups)
       'translation-groups))
+  (test-equal "site settings supply the interface locale by default"
+    "zh-Hans"
+    (render-context-ref settings-context 'locale))
+  (test-equal "site settings supply the page default locale"
+    "zh-Hans"
+    (render-context-ref settings-context 'default-locale))
+  (test-equal "explicit context locales override site settings"
+    '("fr" "en")
+    (list (render-context-ref overridden-context 'locale)
+          (render-context-ref overridden-context 'default-locale)))
+  (test-equal "site settings supply the site URL by default"
+    "https://example.org"
+    (render-context-ref settings-context 'site-url))
   (test-error "site context rejects malformed translation groups"
     #t
     (make-site-render-context forest #:translation-groups '((42 . ()))))
