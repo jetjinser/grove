@@ -51,7 +51,7 @@ the work; drop lower only when you need to replace part of its behavior.
 | Write or extend math | `(grove math formula)` for text-based writing and calculations; `(grove math semantic)` for typed values; `(grove math notation)` for display layout; see the [Math reference](math.md) | inspect results with `(grove math report)` and `(grove math diagnostic)`; verify or audit derivations with `(grove math verification)` and `(grove math audit)`; compose passes with `(grove math pass)` or query rule relations |
 | Independently check exact polynomial claims | `(grove math semantic-check)` → `math-polynomial-check-rule-spec`, `math-polynomial-check-derivation`, `math-polynomial-check-derivative` | use `(grove math verification)` to replay registered rewrite steps; the polynomial checker covers a separate, smaller semantic domain |
 | Present math reports as Grove content | `(grove math presentation)` → `math-completed-report->content`, `math-verification->content`, `math-derivation->content` | Formula's `derive->content` is the short path when text input and its default presentation are sufficient |
-| Inspect mathematical source positions and derivation origins | `(grove math provenance)` → `math-origin-location`, `math-origin-locations`, `math-location-file/line/column` | diagnostics and derivation records retain provenance; this module interprets it without requiring the calculation Pipeline |
+| Inspect mathematical source positions and derivation origins | `(grove math provenance)` → `math-origin-location`, `math-origin-locations`, `math-location-file/line/column` | diagnostics and derivation records retain provenance; this module interprets it without requiring the calculation API |
 | Scope mathematical assumptions in Scheme | `(grove math context)` → `with-math-assumptions`, `math-assumptions` | article commands use `@with-assumptions`; individual calculations accept `#:assumptions` |
 | Inspect or transform symbolic math terms | `(grove math term)` → `math-term?`, `math-term->source`, `math-term-size`, and operand-path operations; see the [Math reference](math.md) | ordinary writing and calculations should stay with Formula or Semantic values |
 | Construct and check proof evidence | `(grove math derivation)` for candidate chains; `(grove math verification)` to replay them; `(grove math proof)` for explicit proof trees | combine replay, contract checks, and proof elaboration with `(grove math audit)` |
@@ -138,7 +138,7 @@ interpreters accept render rules and context; stock renderers use private
 dispatch details for tree traversal and format-specific behavior.
 
 For math, Formula is the writing-oriented facade and Semantic constructors
-are the typed extension surface. `(grove math pipeline)` is the procedural
+are the typed extension surface. `(grove math calculation)` is the procedural
 calculation facade: it also re-exports the report, diagnostic, derivation,
 verification, and audit accessors used to inspect its results. Import
 `(grove math provenance)` for source locations and derivation origins; import

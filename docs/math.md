@@ -45,12 +45,12 @@ the domain calculation stages.
 Import `(grove math semantic)`, `(grove math formula)`, and
 `(grove math notation)` with the respective prefixes. The
 [math-derivations example](../examples/showcases/math-derivations/project.scm)
-shows executable usage. For direct control, `(grove math pipeline)` runs the
+shows executable usage. For direct control, `(grove math calculation)` runs the
 same calculations on Semantic values and returns structured reports with
 results, diagnostics, derivations, and audit evidence; its checkers return
 structured verification results. Formula is the convenient text-reading and
-article-writing facade; use the pipeline when code needs to inspect or compose
-those results. The pipeline module re-exports the report, diagnostic,
+article-writing facade; use the calculation API when code needs to inspect or
+compose those results. The calculation module re-exports report, diagnostic,
 derivation, verification, and audit accessors used to inspect those results.
 Use `(grove math provenance)` to inspect source locations and the origins
 attached to derivation steps and diagnostics. For direct presentation, import
@@ -351,7 +351,7 @@ step and its recorded path, or compare a computed polynomial derivative with an
 independently computed derivative. Import `(grove math semantic-check)` for
 these checks and their typed evidence values. Evidence constructors and
 accessors belong to this module, so extensions inspecting or validating a
-checker result have one explicit import. The calculation Pipeline does not
+checker result have one explicit import. The calculation API does not
 mix this independent checker API into its exports. Formula exposes thin
 `check-polynomial-*` adapters for article text and
 `polynomial-check->content` for rendering their results; these delegate to the

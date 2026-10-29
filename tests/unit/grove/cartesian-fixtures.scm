@@ -2,7 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 (define-module (tests unit grove cartesian-fixtures)
   #:use-module ((grove math formula) #:prefix φ:)
-  #:use-module (grove math pipeline)
+  #:use-module (grove math calculation)
   #:use-module (grove math context)
   #:use-module (tests unit grove polynomial-oracle)
   #:use-module ((grove math semantic) #:prefix ◆:)

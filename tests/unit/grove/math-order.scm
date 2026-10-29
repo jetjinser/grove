@@ -1,6 +1,6 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
-(use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math pass) (grove math rewrite)
+(use-modules ((grove math formula) #:prefix φ:) (grove math calculation) (grove math pass) (grove math rewrite)
              (grove math context) (tests unit grove cartesian-fixtures)
              (srfi srfi-64))
 (test-begin "bounded innermost execution")

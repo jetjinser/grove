@@ -1,7 +1,7 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-(use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (tests unit grove polynomial-oracle)
+(use-modules ((grove math formula) #:prefix φ:) (grove math calculation) (tests unit grove polynomial-oracle)
              (srfi srfi-1) (srfi srfi-64))
 
 ;; Keep composed partial checks in their own suite so each independent oracle

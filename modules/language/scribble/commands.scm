@@ -7,7 +7,7 @@
   #:use-module (grove ir)
   #:use-module (ice-9 optargs)
   #:use-module (language scribble command)
-  #:use-module (grove math pipeline)
+  #:use-module (grove math calculation)
   #:use-module (grove math presentation)
   #:use-module (grove math context)
   #:use-module (grove math private source)

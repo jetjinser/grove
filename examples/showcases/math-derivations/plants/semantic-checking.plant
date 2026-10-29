@@ -3,7 +3,7 @@
 
 @use-commands{math-derivations}
 @use-modules[((grove math formula) #:prefix φ:)
-             (grove math pipeline)
+             (grove math calculation)
              (grove math presentation)
              ((grove math term) #:select (math-term->source))]
 @title{Independent checks for polynomial math}

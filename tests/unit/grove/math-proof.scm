@@ -4,7 +4,7 @@
 (use-modules (grove math proof)
              ((grove math formula) #:prefix φ:)
              (grove math derivation)
-             (grove math pipeline)
+             (grove math calculation)
              (grove math rewrite)
              (grove math term)
              ((grove math semantic) #:prefix ◆:)

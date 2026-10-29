@@ -14,7 +14,7 @@
   #:use-module (grove math rewrite)
   #:use-module (grove math types)
   #:use-module ((grove math notation) #:prefix notation:)
-  #:use-module (grove math pipeline)
+  #:use-module (grove math calculation)
   #:use-module (grove math presentation)
   #:use-module (grove math provenance)
   #:use-module ((grove math derivation)
@@ -36,7 +36,7 @@
   (map math-diagnostic-code (math-verification-diagnostics verification)))
 
 (define (run-math-tests)
-  (test-begin "grove math pipeline")
+  (test-begin "grove math calculation")
   (let* ((tokens (tokenize-math "curl(curl(E))"))
          (expression (parse-math "curl(curl(E))")))
     (test-equal "lexer records tokens with source spans"
@@ -71,39 +71,39 @@
       #t (math-report-result notation)))
   (test-assert "report-to-notation helper is not a second public bridge"
     (not (module-variable
-           (module-public-interface (resolve-module '(grove math pipeline)))
+           (module-public-interface (resolve-module '(grove math calculation)))
            'math-report-result->notation)))
   (test-assert "calculation presentation belongs to its public module"
     (module-variable
       (module-public-interface (resolve-module '(grove math presentation)))
       'math-completed-report->content))
-  (test-assert "calculation pipeline does not export presentation helpers"
+  (test-assert "calculation API does not export presentation helpers"
     (not (module-variable
-           (module-public-interface (resolve-module '(grove math pipeline)))
+           (module-public-interface (resolve-module '(grove math calculation)))
            'math-completed-report->content)))
   (test-assert "math provenance has a dedicated public interface"
     (module-variable
       (module-public-interface (resolve-module '(grove math provenance)))
       'math-origin-location))
-  (test-assert "calculation pipeline does not export provenance inspection"
+  (test-assert "calculation API does not export provenance inspection"
     (not (module-variable
-           (module-public-interface (resolve-module '(grove math pipeline)))
+           (module-public-interface (resolve-module '(grove math calculation)))
            'math-origin-location)))
   (test-assert "independent polynomial checks belong to semantic-check"
     (module-variable
       (module-public-interface (resolve-module '(grove math semantic-check)))
       'math-polynomial-check-derivative))
-  (test-assert "calculation pipeline does not export semantic-check evidence"
+  (test-assert "calculation API does not export semantic-check evidence"
     (not (module-variable
-           (module-public-interface (resolve-module '(grove math pipeline)))
+           (module-public-interface (resolve-module '(grove math calculation)))
            'math-polynomial-check-derivative)))
   (test-assert "assumption scopes belong to the context module"
     (module-variable
       (module-public-interface (resolve-module '(grove math context)))
       'with-math-assumptions))
-  (test-assert "calculation pipeline does not export context parameters"
+  (test-assert "calculation API does not export context parameters"
     (not (module-variable
-           (module-public-interface (resolve-module '(grove math pipeline)))
+           (module-public-interface (resolve-module '(grove math calculation)))
            'with-math-assumptions)))
   (test-equal "underscore tokenizes as a script marker between identifiers"
     '(identifier subscript identifier eof)
@@ -682,6 +682,6 @@
         (test-equal "diagnostic source notation preserves mathematical structure"
           term (φ:term (math-term->source term)))))
     '("zero(vector)" "div(E)=0" "-(x + y)" "x^2" "1 * (x + 0)"))
-  (test-end "grove math pipeline"))
+  (test-end "grove math calculation"))
 
 (run-math-tests)

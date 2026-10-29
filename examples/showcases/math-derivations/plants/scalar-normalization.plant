@@ -2,7 +2,7 @@
 @; SPDX-License-Identifier: CC0-1.0
 
 @use-commands{math-derivations}
-@use-modules[((grove math formula) #:prefix φ:) (grove math pipeline)
+@use-modules[((grove math formula) #:prefix φ:) (grove math calculation)
              (grove math presentation)
              ((grove math semantic) #:prefix ◆:)]
 @title{Scalar normalization}

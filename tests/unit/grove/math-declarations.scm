@@ -2,7 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (use-modules ((grove math formula) #:prefix φ:) ((grove math semantic) #:prefix ◆:)
-             (grove math expression) (grove math pipeline) (grove math types)
+             (grove math expression) (grove math calculation) (grove math types)
              (grove math context)
              (grove render html) (language scribble spec) (system base language)
              (srfi srfi-64) (srfi srfi-13))

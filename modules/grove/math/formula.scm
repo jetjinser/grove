@@ -5,7 +5,7 @@
   #:use-module (grove ir)
   #:use-module ((grove math private formula-reader) #:prefix reader:)
   #:use-module ((grove math semantic) #:prefix semantic:)
-  #:use-module ((grove math pipeline) #:prefix core:)
+  #:use-module ((grove math calculation) #:prefix core:)
   #:use-module ((grove math semantic-check) #:prefix check:)
   #:use-module ((grove math presentation) #:prefix presentation:)
   #:use-module (grove math expression)

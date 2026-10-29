@@ -1,6 +1,6 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
-(use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math expression) (grove math layout)
+(use-modules ((grove math formula) #:prefix φ:) (grove math calculation) (grove math expression) (grove math layout)
              ((grove math semantic) #:prefix ◆:) (grove ir) (grove render html)
              (tests unit grove polynomial-oracle) (srfi srfi-1) (srfi srfi-64))
 (test-begin "shared ordinary and partial function calculus")

@@ -6,7 +6,7 @@
              ((grove math notation) #:prefix notation:)
              ((grove math private notation) #:prefix core:)
              ((language scribble commands) #:prefix document:)
-             (grove math pipeline) (grove math context) (grove math expression)
+             (grove math calculation) (grove math context) (grove math expression)
              (grove math layout)
              (grove render html) (grove render text) (grove ir)
              (language scribble spec) (language scribble parser) (system base language)
@@ -15,7 +15,7 @@
 (define (html value) (sxml->html (content->sxml value)))
 (define (page source)
   (scribble-evaluate-document (open-input-string source) (default-environment scribble) "semantic.plant"))
-(define imports "@use-modules[((grove math semantic) #:prefix semantic:) ((grove math formula) #:prefix φ:) ((grove math notation) #:prefix notation:) (grove math pipeline)]\n")
+(define imports "@use-modules[((grove math semantic) #:prefix semantic:) ((grove math formula) #:prefix φ:) ((grove math notation) #:prefix notation:) (grove math calculation)]\n")
 (define polynomial (φ:read (φ:power "x" "3") "+" (φ:multiply "2" "x")))
 
 (test-begin "unified mathematical writing interface")

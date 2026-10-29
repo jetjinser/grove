@@ -1,4 +1,4 @@
-(use-modules (grove math pipeline) (grove math rewrite) (grove math rule)
+(use-modules (grove math calculation) (grove math rewrite) (grove math rule)
              (grove math context) (grove math types) (grove relation)
              (tests unit grove polynomial-oracle)
              ((grove math semantic) #:prefix ◆:) (srfi srfi-1) (srfi srfi-64))

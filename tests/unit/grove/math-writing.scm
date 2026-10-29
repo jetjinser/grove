@@ -3,7 +3,7 @@
 
 (use-modules (grove render html) (language scribble spec) (system base language)
              (srfi srfi-13) (srfi srfi-64))
-(define imports "@use-modules[(grove math pipeline) ((grove math formula) #:prefix φ:) ((grove math semantic) #:prefix semantic:)]\n")
+(define imports "@use-modules[(grove math calculation) ((grove math formula) #:prefix φ:) ((grove math semantic) #:prefix semantic:)]\n")
 (define (article source)
   (scribble-evaluate-document (open-input-string (string-append imports source))
     (default-environment scribble) "writing.plant"))

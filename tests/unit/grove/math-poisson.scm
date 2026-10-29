@@ -1,6 +1,6 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
-(use-modules ((grove math formula) #:prefix φ:) (grove math pipeline) (grove math context) (grove math types) (grove relation)
+(use-modules ((grove math formula) #:prefix φ:) (grove math calculation) (grove math context) (grove math types) (grove relation)
              (tests unit grove polynomial-oracle) (tests unit grove cartesian-fixtures)
              ((grove math semantic) #:prefix ◆:) (srfi srfi-1) (srfi srfi-64))
 (test-begin "independent polynomial Poisson verification")

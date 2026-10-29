@@ -3,7 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (use-modules ((grove math formula) #:prefix φ:)
-             (grove math pipeline)
+             (grove math calculation)
              (grove math rewrite)
              (grove math rule)
              (grove math semantic-check)
