@@ -217,15 +217,16 @@ defaults to the project's source directory."
                        (analyze (lambda (context) context))
                        (renderers '())
                        (pipelines '())
-                       output-directory
+                       (output-directory "build")
                        (cache? #t)
                        (browse #f)
                        (create-source #f))
   "Construct a project build lifecycle.
 
-Provide SOURCE-DIRECTORY or COLLECT-SOURCES, READ-SOURCE, and
-OUTPUT-DIRECTORY. When COLLECT-SOURCES is absent, Grove recursively collects
-regular files from SOURCE-DIRECTORY using SOURCE-FILTER on each basename.
+Provide SOURCE-DIRECTORY or COLLECT-SOURCES and READ-SOURCE. OUTPUT-DIRECTORY
+defaults to \"build\". When COLLECT-SOURCES is absent, Grove recursively
+collects regular files from SOURCE-DIRECTORY using SOURCE-FILTER on each
+basename.
 When supplied, COLLECT-SOURCES determines the ordered source path list instead;
 SOURCE-DIRECTORY may still be supplied as the default destination for
 CREATE-PROJECT-SOURCE. PREPARE returns paths tracked before reading; they are

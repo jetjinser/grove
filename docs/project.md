@@ -37,6 +37,8 @@ Its `#:transforms` run once per page in list order before analysis, and each
 must return a Content IR document.
 The higher-level `make-forester-project` supplies HTML and accepts peer outputs
 through `#:additional-renderers`.
+All three project constructors default the output directory to `build/`; set
+`#:output-directory` when a project needs a different destination.
 
 ## Smallest Forester site
 

@@ -28,7 +28,7 @@
                             (transforms '())
                             (renderers '())
                             (pipelines '())
-                            output-directory
+                            (output-directory "build")
                             (cache? #t)
                             (home #f)
                             (browse #f)
@@ -38,8 +38,9 @@
 
 READ-PAGE constructs each page. ANALYZE receives the assembled Site and may
 return any project model. Provide SOURCE-DIRECTORY or COLLECT-SOURCES, along
-with READ-PAGE and OUTPUT-DIRECTORY. When both source options are supplied,
-COLLECT-SOURCES determines the inputs and SOURCE-DIRECTORY remains available
+with READ-PAGE. OUTPUT-DIRECTORY defaults to \"build\". When both source
+options are supplied, COLLECT-SOURCES determines the inputs and
+SOURCE-DIRECTORY remains available
 as the default source-creation destination. PREPARE returns tracked paths not
 read as pages; EXTRA-SOURCES declares fixed project dependencies, also not
 read as pages or added to the site's source list. Include an extra source in

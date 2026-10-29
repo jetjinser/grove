@@ -89,6 +89,11 @@
                   #:analyze (lambda (model . options) model)
                   #:renderers (list (lambda* (model #:optional (context #f)) '()))
                   #:output-directory (string-append project-root "/flexible-callbacks"))))
+(test-equal "generic projects default their output directory to build"
+  "build"
+  (project-output-directory
+    (make-project #:collect-sources (lambda () '())
+                  #:read-source (lambda (_) #f))))
 (test-error "project constructors reject browsers with insufficient arity" #t
   (make-project #:collect-sources (lambda () '())
                 #:read-source (lambda (_) #f)
@@ -324,6 +329,12 @@
                  #:output-directory "output")))
   (test-equal "generic site projects require an explicit renderer set"
     '() (project-renderers project)))
+
+(test-equal "site projects default their output directory to build"
+  "build"
+  (project-output-directory
+    (make-site-project #:source-directory "sources"
+                       #:read-page (lambda (_) #f))))
 
 (define duplicate-pipelines
   (list (make-asset-pipeline
