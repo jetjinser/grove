@@ -18,7 +18,7 @@
   #:use-module (forester private render cache)
   #:use-module (forester private render text-options)
   #:use-module (forester private render text-output)
-  #:use-module (forester private entity-uri)
+  #:use-module (forester private entity-iri)
   #:use-module (grove i18n)
   #:use-module (forester site)
   #:use-module (grove site)
@@ -58,17 +58,17 @@ default. Paths are validated by MAKE-TEXT-ROUTES."
     "\n"))
 
 (define (describes-gemtext page context)
-  (let ((uris (or (assq-ref (site-page-metadata page) 'describes) '())))
-    (if (null? uris)
+  (let ((iris (or (assq-ref (site-page-metadata page) 'describes) '())))
+    (if (null? iris)
         ""
         (string-append
           "\n" (title-line (interface-message 'describes context))
           (string-concatenate
-            (map (lambda (uri)
-                   (let ((href (entity-uri-href uri)))
-                     (if href (link-line href uri)
-                         (string-append uri "\n"))))
-                 uris))))))
+            (map (lambda (iri)
+                   (let ((href (entity-iri-href iri)))
+                     (if href (link-line href iri)
+                         (string-append iri "\n"))))
+                 iris))))))
 
 (define (uri-scheme? value)
   (let ((colon (string-index value #\:)))

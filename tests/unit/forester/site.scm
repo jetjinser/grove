@@ -676,7 +676,7 @@
                   @describes{doi:10.1146/annurev.fluid.29.1.123}
                   @paragraph{A useful paper.}")
                "roache.plant")))
-  (test-equal "describes frontmatter is retained as URI metadata"
+  (test-equal "describes frontmatter is retained as IRI metadata"
     '("doi:10.1146/annurev.fluid.29.1.123")
     (assq-ref (site-page-metadata page) 'describes))
   (test-equal "describes frontmatter is removed from rendered body"
@@ -684,14 +684,14 @@
     (map content-element-kind
          (content-document-children (site-page-document page)))))
 
-(test-equal "describes accepts percent-encoded Unicode URI paths"
-  '("https://example.test/%E8%B3%87%E6%96%99")
+(test-equal "describes preserves Unicode IRI spelling"
+  '("https://例え.テスト/资料?q=é#章")
   (assq-ref
     (site-page-metadata
-      (document->tree-page "encoded"
+      (document->tree-page "unicode"
         (evaluate-document
-          "@title{Encoded}@describes{https://example.test/%E8%B3%87%E6%96%99}")
-        "encoded.plant"))
+          "@title{Unicode}@describes{https://例え.テスト/资料?q=é#章}")
+        "unicode.plant"))
     'describes))
 
 (test-equal "describes accepts an ASCII IDNA hostname"
@@ -704,21 +704,11 @@
         "idna.plant"))
     'describes))
 
-(test-error "describes requires an absolute URI" #t
+(test-error "describes requires an absolute IRI" #t
   (document->tree-page "bad"
     (evaluate-document "@title{Bad}@describes{relative-id}") "bad.plant"))
 
-(test-error "describes requires ASCII URI encoding" #t
-  (document->tree-page "bad"
-    (evaluate-document "@title{Bad}@describes{https://example.test/资料}")
-    "bad.plant"))
-
-(test-error "describes requires an ASCII IDNA hostname" #t
-  (document->tree-page "bad"
-    (evaluate-document "@title{Bad}@describes{https://例え.テスト/}")
-    "bad.plant"))
-
-(test-error "describes rejects URI spaces" #t
+(test-error "describes rejects spaces in an IRI" #t
   (document->tree-page "bad"
     (evaluate-document "@title{Bad}@describes{https://example.test/a b}")
     "bad.plant"))
@@ -728,37 +718,37 @@
     (evaluate-document "@title{Bad}@describes{https://example.test/a%ZZ}")
     "bad.plant"))
 
-(test-error "describes requires a host for HTTP(S) URIs" #t
+(test-error "describes requires a host for HTTP(S) IRIs" #t
   (document->tree-page "bad"
     (evaluate-document "@title{Bad}@describes{https:}") "bad.plant"))
 
-(test-error "describes rejects credentials in entity URIs" #t
+(test-error "describes rejects credentials in entity IRIs" #t
   (document->tree-page "bad"
     (evaluate-document
       "@title{Bad}@describes{https://writer:secret@example.test/entity}")
     "bad.plant"))
 
-(test-error "describes rejects duplicate URI declarations on one page" #t
+(test-error "describes rejects duplicate IRI declarations on one page" #t
   (document->tree-page "bad"
     (evaluate-document
       "@title{Bad}@describes{doi:10.1146/x}@describes{doi:10.1146/x}")
     "bad.plant"))
 
-(test-error "forest construction validates directly supplied described URIs" #t
+(test-error "forest construction validates directly supplied described IRIs" #t
   (make-forest
     (make-site
       (list (make-site-page "direct" "Direct"
               (make-content-document '())
               #:metadata '((describes . ("relative-id"))))))))
 
-(test-error "forest construction rejects non-list described URI metadata" #t
+(test-error "forest construction rejects non-list described IRI metadata" #t
   (make-forest
     (make-site
       (list (make-site-page "direct" "Direct"
               (make-content-document '())
               #:metadata '((describes . #f)))))))
 
-(test-error "forest construction rejects duplicate direct described URIs" #t
+(test-error "forest construction rejects duplicate direct described IRIs" #t
   (make-forest
     (make-site
       (list (make-site-page "direct" "Direct"

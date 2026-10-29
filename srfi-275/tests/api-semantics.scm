@@ -10,6 +10,11 @@
   (unless condition
     (error "SRFI 275 API contract failed" name)))
 
+(define (raises? thunk)
+  (catch #t
+    (lambda () (thunk) #f)
+    (lambda _ #t)))
+
 (check "path equality preserves absolute versus relative"
        (not (path=? (string->path "a/b")
                     (string->path "/a/b"))))
@@ -34,3 +39,18 @@
        (string=? "https://例え.テスト/资料?q=é#章"
                  (iri->string
                   (string->iri "https://例え.テスト/资料?q=é#章"))))
+
+(check "URI parser requires percent-encoded non-ASCII data"
+       (raises? (lambda () (string->uri "https://example.org/资料"))))
+(check "IRI-to-URI percent-encodes a Unicode path as UTF-8"
+       (string=? "https://example.org/%E8%B5%84%E6%96%99"
+                 (uri->string
+                  (iri->uri (string->iri "https://example.org/资料")))))
+(check "generic IRI-to-URI mapping does not perform IDNA"
+       (string=? "https://%E4%BE%8B%E3%81%88.%E3%83%86%E3%82%B9%E3%83%88/"
+                 (uri->string
+                  (iri->uri (string->iri "https://例え.テスト/")))))
+(check "IRI-to-URI encodes supplementary-plane characters as UTF-8"
+       (string=? "https://example.org/%F0%9F%98%80"
+                 (uri->string
+                  (iri->uri (string->iri "https://example.org/😀")))))

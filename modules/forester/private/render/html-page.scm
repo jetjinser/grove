@@ -25,7 +25,7 @@
   #:use-module (grove render html routes)
   #:use-module (grove site)
   #:use-module (forester private backmatter)
-  #:use-module (forester private entity-uri)
+  #:use-module (forester private entity-iri)
   #:use-module (forester private render-routes)
   #:use-module (forester private web)
   #:use-module (forester relations)
@@ -529,19 +529,19 @@ top-level taxon element; pages without one contribute nothing."
         suffix))))
 
 (define (describes-sxml page context)
-  (let ((uris (or (assq-ref (site-page-metadata page) 'describes) '())))
-    (if (null? uris)
+  (let ((iris (or (assq-ref (site-page-metadata page) 'describes) '())))
+    (if (null? iris)
         '()
         (list
           `(section (@ (class "describes"))
              (h2 ,(interface-message 'describes context))
              (ul
-               ,@(map (lambda (uri)
-                        (let ((href (entity-uri-href uri)))
+               ,@(map (lambda (iri)
+                        (let ((href (entity-iri-href iri)))
                           `(li ,(if href
-                                    `(a (@ (href ,href)) (code ,uri))
-                                    `(code ,uri)))))
-                      uris)))))))
+                                    `(a (@ (href ,href)) (code ,iri))
+                                    `(code ,iri)))))
+                      iris)))))))
 
 (define (content-has-tex-math? content)
   (cond

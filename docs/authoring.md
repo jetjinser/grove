@@ -32,7 +32,7 @@ Grove owns versus what a project supplies. Commands use `@name{body}` or
 | `@og-image-alt{...}` | Alternative text for `@og-image`; defaults to the page title. |
 | `@published{YYYY-MM-DD}` | Valid Gregorian publication date. |
 | `@updated{YYYY-MM-DD}` | Valid Gregorian update date; must not precede `@published`. |
-| `@describes{absolute-uri}` | External entity this tree describes; repeat for multiple entities. |
+| `@describes{absolute-iri}` | External entity this tree describes; repeat for multiple entities. |
 | `@taxon["chapter"]` | One classification per page, rendered above the title. |
 | `@tag["i18n"]` | Additional labels; repeat as needed. |
 | `@locale["zh-Hans"]` | Page language and direction. |
@@ -47,17 +47,18 @@ digits, and hyphens; Grove stores them in lowercase.
 
 `@describes` records an external entity identity, separate from the page's
 own URL and from ordinary links. For example, a literature page can declare
-`@describes{doi:10.1146/annurev.fluid.29.1.123}`. The declared URI is the
-entity identity; its scheme guides link presentation. Grove links HTTP(S) URIs
-directly and presents DOI URIs through `https://doi.org/`. Other absolute URIs
-remain visible as identifiers without an assumed resolver. Values must use
-ASCII URI syntax: percent-encode non-ASCII path data and use an ASCII
-IDNA-compatible hostname. Grove retains the declared URI for queries and
-compares it exactly, so choose one spelling consistently. Entity URIs cannot
-contain userinfo credentials. Grove does not fetch metadata from the identifier.
-The same validation applies when constructing a Forest directly from Grove
-site values; the generic `(grove site)` page constructor leaves metadata
-application-defined.
+`@describes{doi:10.1146/annurev.fluid.29.1.123}` or a Unicode IRI such as
+`@describes{https://例え.テスト/资料}`. Grove retains the authored IRI spelling
+for queries and compares declarations exactly, so equivalent spellings such
+as Unicode and percent-encoded forms are distinct; choose one spelling
+consistently. Grove links HTTP(S) IRIs directly and presents DOI IRIs through
+`https://doi.org/`. Other absolute IRIs remain visible as identifiers without
+an assumed resolver. Values must be valid absolute IRIs, cannot contain
+userinfo credentials, and HTTP(S) values require a host. Browsers handle the
+Unicode-to-network URL conversion for HTTP(S) links. Grove does not fetch
+metadata from the identifier. The same validation applies when constructing a
+Forest directly from Grove site values; the generic `(grove site)` page
+constructor leaves metadata application-defined.
 
 ## Content
 

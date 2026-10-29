@@ -15,7 +15,7 @@
   #:use-module (grove private project timing)
   #:use-module ((forester private trees) #:prefix tree-pass:)
   #:use-module (forester private content-index)
-  #:use-module (forester private entity-uri)
+  #:use-module (forester private entity-iri)
   #:use-module (forester private site model)
   #:use-module (forester private site resolve)
   #:use-module ((forester composition) #:prefix composition:)
@@ -139,9 +139,9 @@ tree-N position anchors; both are known limitations of global anchors."
          (locale (assq-ref metadata 'locale))
          (describes-entry (assq 'describes metadata)))
     (when describes-entry
-      (unless (valid-entity-uri-list? (cdr describes-entry))
+      (unless (valid-entity-iri-list? (cdr describes-entry))
         (error (format #f
-                 "Forester page describes values must be distinct absolute URIs (~a)"
+                 "Forester page describes values must be distinct absolute IRIs (~a)"
                  (or (site-page-source page) (site-page-id page))))))
     (if (not locale)
         page

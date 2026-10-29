@@ -4,7 +4,7 @@
 
 (define-module (forester input scribble)
   #:use-module ((grove private ir) #:prefix ir:)
-  #:use-module (forester private entity-uri)
+  #:use-module (forester private entity-iri)
   #:use-module (grove i18n)
   #:use-module (grove ir)
   #:use-module (grove private procedure)
@@ -92,24 +92,24 @@
     (and (pair? taxa) (car taxa))))
 
 (define (describes-metadata elements path)
-  (let ((uris (map (lambda (element)
+  (let ((iris (map (lambda (element)
                      (let ((value
-                             (string-trim-both
-                               (content-verbatim-string
-                                 (ir:content-element-children/raw element)))))
+                            (string-trim-both
+                              (content-verbatim-string
+                                (ir:content-element-children/raw element)))))
                        (unless (non-empty-string? value)
                          (error (format #f
-                                  "Forester page describes URI cannot be empty in ~a"
+                                  "Forester page describes IRI cannot be empty in ~a"
                                   path)))
-                       (unless (absolute-entity-uri? value)
+                       (unless (absolute-entity-iri? value)
                          (error (format #f
-                                  "Forester page describes value must be an ASCII absolute URI without credentials (HTTP(S) requires a host) in ~a: ~a"
+                                  "Forester page describes value must be an absolute IRI without credentials (HTTP(S) requires a host) in ~a: ~a"
                                   path value)))
                        value))
                    (elements-of-kind elements 'describes))))
-    (unless (distinct-entity-uri-list? uris)
-      (error (format #f "Forester page ~a repeats a describes URI" path)))
-    uris))
+    (unless (distinct-entity-iri-list? iris)
+      (error (format #f "Forester page ~a repeats a describes IRI" path)))
+    iris))
 
 (define* (document->tree-page id document source #:key title (metadata '()))
   "Extract a tree's direct frontmatter, retaining topic nodes as queryable IR.

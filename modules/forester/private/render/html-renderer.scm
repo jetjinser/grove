@@ -34,7 +34,7 @@
   #:use-module (grove render html routes)
   #:use-module (grove site)
   #:use-module (forester private backmatter)
-  #:use-module (forester private entity-uri)
+  #:use-module (forester private entity-iri)
   #:use-module (forester private render-routes)
   #:use-module (forester private web)
   #:use-module (forester relations)

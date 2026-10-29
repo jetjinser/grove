@@ -29,7 +29,7 @@
     "unit/grove/render-rules.scm"
     "unit/grove/render-context.scm"
     "unit/forester/browse.scm"
-    "unit/forester/entity-uri.scm"
+    "unit/forester/entity-iri.scm"
     "unit/grove/cli-progress.scm"
     "unit/grove/math.scm"
     "unit/grove/differentiation.scm"
@@ -129,7 +129,11 @@
 
 (define test-options
   #%~(list
-       #:load-path (list #%?srcdir)
+       ;; SRFI-275 is an in-tree standalone library and a runtime package
+       ;; dependency. Load its checkout source here so `blue check` also
+       ;; validates the worktree version without relying on an installed copy.
+       #:load-path (list #%?srcdir
+                         (string-append #%?srcdir "/../srfi-275/lib"))
        #:load-compiled-path (list #%?builddir)
        #:enable-coverage? (->bool (getenv "GROVE_TESTS_ENABLE_COVERAGE"))
        #:cov-filter-globs '("grove/*" "forester/*" "language/scribble/*")

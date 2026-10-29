@@ -66,16 +66,15 @@ survive route changes should be able to supply a separate stable identity.
 Using the canonical URL is already coherent for published pages and is the
 smaller default; only the stronger persistence guarantee needs another policy.
 
-The current `@describes` implementation is narrower than this candidate model:
-it stores the authored value as a string and validates it with Guile's
-`(web uri)` parser plus ASCII URI-component checks, requiring a scheme and a
-host for HTTP(S). Both the Forester page reader and `make-forest` enforce this
-contract, including for programmatically assembled Grove site values. It
-preserves the spelling and compares values exactly. This is not a complete IRI
-parser or a normalization policy: encode non-ASCII path data as URI escapes
-and internationalized hostnames as ASCII IDNA names. The authoring API
-continues to describe these values as URIs until Grove adopts one consistent
-IRI contract.
+The current `@describes` implementation stores the authored value as a string
+and validates it with the SRFI-275 IRI parser, requiring an absolute IRI,
+rejecting userinfo, and requiring a host for HTTP(S). Both the Forester page
+reader and `make-forest` enforce this contract, including for programmatically
+assembled Grove site values. It preserves the spelling and compares values
+exactly; it does not normalize equivalent spellings. HTTP(S) links retain the
+IRI form for the browser to process. This does not imply that Grove's other URL
+fields or its network clients accept IRI strings, and it does not add an IDNA
+implementation to Grove.
 
 ## RDF is a projection, not Grove's relation model
 

@@ -18,7 +18,7 @@
   #:use-module (forester private render cache)
   #:use-module (forester private render text-options)
   #:use-module (forester private render text-output)
-  #:use-module (forester private entity-uri)
+  #:use-module (forester private entity-iri)
   #:use-module (grove i18n)
   #:use-module (grove site)
   #:use-module (srfi srfi-1)
@@ -91,15 +91,15 @@
   (string-append title "\n" (make-string (string-length title) #\=) "\n"))
 
 (define (describes-text page context)
-  (let ((uris (or (assq-ref (site-page-metadata page) 'describes) '())))
-    (if (null? uris)
+  (let ((iris (or (assq-ref (site-page-metadata page) 'describes) '())))
+    (if (null? iris)
         ""
         (string-append
           "\n" (interface-message 'describes context) ":\n"
           (string-concatenate
-            (map (lambda (uri)
-                   (string-append "- " (or (entity-uri-href uri) uri) "\n"))
-                 uris))))))
+            (map (lambda (iri)
+                   (string-append "- " (or (entity-iri-href iri) iri) "\n"))
+                 iris))))))
 
 (define (page-reference routes from-path page)
   (string-append (site-page-title page)

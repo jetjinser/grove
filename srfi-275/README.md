@@ -31,6 +31,14 @@ The library targets Guile 3.0 and can be used from a checkout by setting
 (display (iri->string (normalize-iri address)))
 ```
 
+Use `string->iri` / `iri->string` when accepting or preserving Unicode
+identifiers. `string->uri` / `uri->string` implement RFC 3986 URI syntax, where
+non-ASCII data must already be percent-encoded. `iri->uri` applies the
+generic RFC 3987 mapping by UTF-8 percent-encoding non-ASCII characters; it
+does not convert internationalized host names to IDNA ASCII. A network
+client may need scheme-specific URL handling for a Unicode host name, so do
+not assume the result of `iri->uri` is ready for DNS resolution.
+
 Run the upstream conformance suite and Guile module-contract checks with
 `make check`. The standalone Guix package can be built from this directory
 with `guix time-machine -C ../channels.scm -- build -f guix.scm`; it installs
@@ -42,7 +50,7 @@ The port passes the upstream parsing, escaping, setter, path, resolution,
 relativization, and normalization tests on Guile 3.0.9 and 3.0.11. Additional
 tests verify native module separation, Guile's R6RS aggregate import mapping,
 and loading from the installed Guix development profile. Grove consumes the
-URI API for Forester entity-URI validation; this integration does not make
+IRI API for Forester entity-IRI validation; this integration does not make
 Grove part of the library contract.
 
 The port retains the reference implementation's distinction between URI and
