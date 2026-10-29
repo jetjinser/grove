@@ -73,9 +73,10 @@ text, or gemtext entry point builds one site-level context for that render pass
 and derives page contexts from it with `render-context-with`. Separate
 renderer entry points build their own contexts from their options. A custom
 renderer can build a context explicitly when it needs the shared Forester
-helpers. `#:settings` supplies shared site URL and default-locale values;
-`#:site-url`, `#:default-locale`, and `#:locale` override them. The settings'
-default locale also supplies the interface locale unless `#:locale` is given.
+helpers. `#:settings` supplies a shared site origin IRI and default-locale
+value; `#:site-url`, `#:default-locale`, and `#:locale` override them. The
+settings' default locale also supplies the interface locale unless `#:locale`
+is given.
 Translation groups are an association list from unique, non-empty
 string keys to lists of site pages; they are derived from the forest by default
 and can be supplied explicitly when a project needs a different index. Locale

@@ -115,10 +115,10 @@
     (list-membero entry metadata)
     (== `(,key . ,value) entry)))
 
-(define (described-entity-page-ids relation uri)
+(define (described-entity-page-ids relation iri)
   (require-relation-schema relation 2 'described-entity-page-ids)
   (delete-duplicates
-    (map car (relation-index-rows relation 1 uri))
+    (map car (relation-index-rows relation 1 iri))
     string=?))
 
 (defrel (paragrapho relation node-id)

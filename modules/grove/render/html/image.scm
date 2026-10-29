@@ -37,7 +37,10 @@
   (snapshot-data (image-variant-url/raw variant)))
 
 (define (make-image-variant type url)
-  "Construct an image source variant from its MIME TYPE and URL."
+  "Construct an image source variant from its MIME TYPE and URL reference.
+
+The URL is emitted into HTML `srcset` as supplied; Grove does not resolve or
+fetch it."
   (unless (non-empty-string? type)
     (error "image variant type must be a non-empty MIME type" type))
   (unless (non-empty-string? url)

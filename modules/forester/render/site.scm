@@ -30,9 +30,9 @@
 
 SITE-URL, when supplied, is an absolute HTTP(S) origin IRI with no credentials,
 non-root path, query, or fragment. Unicode domain names are accepted. HTML
-retains their IRI spelling; RSS and sitemap map the host to IDNA ASCII and
-percent-encode non-ASCII IRI components. Put any deployment path prefix in the
-shared HTML routes.
+retains its spelling; RSS and sitemap map a Unicode host to IDNA ASCII. Route
+paths are encoded separately by the shared HTML routes. Put any deployment
+path prefix in those routes.
 DEFAULT-LOCALE supplies the HTML interface language, x-default alternate
 language, and RSS feed language unless a renderer-specific locale overrides
 it. Renderer-specific keyword values override these shared defaults. A

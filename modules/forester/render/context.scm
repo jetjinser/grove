@@ -93,7 +93,7 @@ locale or message parameters."
            hreflang? language-switcher?))
   (set! locale (validate-interface-options locale messages))
   (unless (or (not site-url) (web-origin? site-url))
-    (error "render context site URL must be an absolute HTTP(S) origin or #f"
+    (error "render context site URL must be an absolute HTTP(S) origin IRI or #f"
            site-url))
   (unless (or (not og-image) (non-empty-string? og-image))
     (error "render context Open Graph image must be a non-empty string or #f"

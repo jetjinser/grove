@@ -91,7 +91,7 @@
   (set! site-url (or site-url
                      (and settings (site-settings-site-url settings))))
   (unless (web-origin? site-url)
-    (error "Forester RSS renderer requires an absolute HTTP(S) origin"
+    (error "Forester RSS renderer requires an absolute HTTP(S) origin IRI"
            site-url))
   (unless (artifact-path? feed-path)
     (error "RSS feed path must be a relative artifact path" feed-path))
@@ -191,7 +191,7 @@ values override them; ROUTES names the HTML page locations used in feed links."
   "Construct a cached RSS renderer.
 
 Provide SITE-URL directly or through SETTINGS; at least one must contain an
-absolute HTTP(S) origin. Put a deployment path prefix in ROUTES,
+absolute HTTP(S) origin IRI. Put a deployment path prefix in ROUTES,
 not SITE-URL. Explicit SITE-URL and LANGUAGE values override the corresponding
 SETTINGS defaults."
   (let-values (((site-url feed-path routes stylesheet-url stylesheet-type language)

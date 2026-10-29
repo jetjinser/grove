@@ -5,9 +5,13 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # Resource identity and RDF projection
 
-This is a design study, not a public API commitment. It asks whether IRI can
-provide one clear naming layer for Grove's local pages and external entities,
-and whether RDF is a faithful projection of Grove's relations.
+The RDF projection and page-identity policy in this document remain design
+studies, not public API commitments. A narrower IRI convention is implemented:
+Forester stores described entities as absolute IRI strings and accepts an
+HTTP(S) origin IRI for site output. The modules that emit particular formats
+handle any URI conversion they require. This document asks whether RDF is a
+faithful projection of Grove's relations and whether published page routes
+should serve as page identities.
 
 ## The useful unification
 
@@ -71,12 +75,12 @@ and validates it with the SRFI-275 IRI parser, requiring an absolute IRI,
 rejecting userinfo, and requiring a host for HTTP(S). Both the Forester page
 reader and `make-forest` enforce this contract, including for programmatically
 assembled Grove site values. It preserves the spelling and compares values
-exactly; it does not normalize equivalent spellings. HTTP(S) links retain the
-IRI form for the browser to process. Forester's shared `site-url` is also an
-HTTP(S) origin IRI: HTML retains it, while RSS and sitemap convert its host to
-IDNA ASCII and map IRI characters to URI form at their output boundaries. This
-does not make local routes or filesystem paths into IRIs, nor does it add
-network fetching.
+exactly; it does not normalize equivalent spellings. HTML HTTP(S) links retain
+the IRI form for the browser to process; Gemtext maps link targets to ASCII
+URI form. Forester's shared `site-url` is also an HTTP(S) origin IRI: HTML
+retains it, while RSS and sitemap convert its host to IDNA ASCII and emit
+percent-encoded route paths. This does not make local routes or filesystem
+paths into IRIs, nor does it add network fetching.
 
 ## RDF is a projection, not Grove's relation model
 
@@ -211,13 +215,12 @@ records for occurrence details, and a distinct Grove `transcludes` predicate.
 a separate model-level check. These are export choices, not replacements for
 Grove relations or settled API commitments.
 
-Before introducing an IRI record or changing `@describes`, settle the page
-identity policy and the comparison contract. A string-only IRI convention may
-be enough for authored identifiers; a parsed IRI value is justified when
-Grove itself needs validation, relative-reference resolution, or URI
-conversion. SRFI 275 is a useful Scheme design reference and reached final
-status on 2026-10-15; its standardization does not by itself settle Grove's
-resource-identity policy or commit Grove to its API.
+Forester currently stores these values as strings rather than introducing a
+Grove-wide IRI record. It parses authored absolute IRIs where it needs to
+validate them, and applies format-specific conversion at output boundaries.
+Relative-reference resolution or a shared parsed representation would need a
+separate use case; SRFI 275's standardization does not by itself require Grove
+to expose another public abstraction.
 
 ## References
 

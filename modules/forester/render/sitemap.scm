@@ -96,7 +96,7 @@
   (set! site-url (or site-url
                      (and settings (site-settings-site-url settings))))
   (unless (web-origin? site-url)
-    (error "Forester sitemap renderer requires an absolute HTTP(S) origin"
+    (error "Forester sitemap renderer requires an absolute HTTP(S) origin IRI"
            site-url))
   (unless (artifact-path? sitemap-path)
     (error "Sitemap path must be a relative artifact path" sitemap-path))
@@ -147,7 +147,7 @@ values override them; ROUTES determine the absolute page URLs in the sitemap."
   "Construct a cached sitemap renderer.
 
 Provide SITE-URL directly or through SETTINGS; at least one must contain an
-absolute HTTP(S) origin. Put a deployment path prefix in ROUTES,
+absolute HTTP(S) origin IRI. Put a deployment path prefix in ROUTES,
 not SITE-URL. Explicit SITE-URL and DEFAULT-LOCALE values override the
 corresponding SETTINGS defaults."
   (let-values (((site-url sitemap-path routes default-locale)

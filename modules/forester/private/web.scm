@@ -12,6 +12,7 @@
   #:use-module (srfi srfi-13)
   #:export (web-origin?
             web-origin-uri
+            web-iri-uri
             external-url?
             web-base-url
             web-absolute-route-url
@@ -60,6 +61,37 @@
       (error "Cannot convert HTTP IRI host to an IDNA domain" host))
     result))
 
+(define (web-iri-uri value)
+  "Map an IRI to an ASCII URI for a network URL output boundary.
+
+Unicode DNS hosts use IDNA; the remaining IRI components use SRFI-275's
+generic UTF-8 percent-encoding mapping."
+  (let* ((iri (and (string? value)
+                   (catch #t
+                     (lambda () (string->iri value))
+                     (lambda _ #f))))
+         (host (and iri (iri-host iri))))
+    (unless iri
+      (error "Expected a valid IRI to map to a URI" value))
+    (let* ((ascii-host
+             (and host
+                  (not (string-every (lambda (character)
+                                       (< (char->integer character) 128))
+                                     host))
+                  (idna-to-ascii host)))
+           (uri (iri->uri (if ascii-host
+                              (update-iri-host iri ascii-host)
+                              iri)))
+           (serialized (uri->string uri))
+           (original-scheme-end (string-index value #\:))
+           (serialized-scheme-end (string-index serialized #\:)))
+      (if (and original-scheme-end serialized-scheme-end)
+          ;; Preserve scheme spelling while applying the IRI-to-URI mapping.
+          (string-append
+            (substring value 0 (1+ original-scheme-end))
+            (substring serialized (1+ serialized-scheme-end)))
+          serialized))))
+
 (define (web-origin-uri url)
   "Return an ASCII URI for the HTTP(S) origin IRI URL.
 
@@ -73,16 +105,7 @@ IRI components use SRFI-275's generic UTF-8 percent-encoding mapping."
                         (< (char->integer character) 128))
                       host)
         url
-        (let* ((ascii-host (idna-to-ascii host))
-               (uri (iri->uri (update-iri-host iri ascii-host)))
-               (serialized (uri->string uri))
-               (original-scheme-end (string-index url #\:))
-               (serialized-scheme-end (string-index serialized #\:)))
-          ;; SRFI-275 lowercases schemes while mapping to URI. Preserve the
-          ;; author's scheme spelling while converting only the host.
-          (string-append
-            (substring url 0 (1+ original-scheme-end))
-            (substring serialized (1+ serialized-scheme-end)))))))
+        (web-iri-uri url))))
 
 (define (web-base-url url)
   (let ((end (string-length url)))

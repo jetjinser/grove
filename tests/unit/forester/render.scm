@@ -277,6 +277,20 @@
   (test-assert "Gemtext preserves arbitrary absolute URI schemes for assets"
     (string-contains page "=> http://images.example/pic.png Remote image")))
 
+(let* ((source
+         (make-site-page "source" "Source"
+           (make-content-document
+             (list (make-content-element 'paragraph
+                     (list (make-content-element 'image '("Unicode image")
+                             #:properties
+                             '((source . "资料/图像.png")))))))))
+       (forest (make-forest (make-site (list source))))
+       (page (cdr (assoc "source" (site->gemtext forest)))))
+  (test-assert "Gemtext percent-encodes Unicode local asset path segments"
+    (string-contains
+      page
+      "=> %E8%B5%84%E6%96%99/%E5%9B%BE%E5%83%8F.png Unicode image")))
+
 (let* ((page
          (make-site-page "literal" "Literal syntax"
            (make-content-document
@@ -1693,10 +1707,15 @@
                  #:options (make-html-options
                              #:routes (make-html-routes #:home-page "paper")
                              #:mathjax-src #f))
-               "paper")))
+               "paper"))
+       (gemtext (assoc-ref (site->gemtext forest) "paper")))
   (test-assert "HTML preserves a Unicode described IRI as a link"
     (and (string-contains html "href=\"https://例え.テスト/资料?q=é#章\"")
-         (string-contains html "https://例え.テスト/资料?q=é#章"))))
+         (string-contains html "https://例え.テスト/资料?q=é#章")))
+  (test-assert "Gemtext maps a described IRI to an ASCII URI link"
+    (string-contains
+      gemtext
+      "=> https://xn--r8jz45g.xn--zckzah/%E8%B5%84%E6%96%99?q=%C3%A9#%E7%AB%A0 https://例え.テスト/资料?q=é#章")))
 
 (let* ((page (make-site-page "paper" "A paper"
                (evaluate-document "@paragraph{A short note.}")

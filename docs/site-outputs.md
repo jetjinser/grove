@@ -53,10 +53,12 @@ options override those defaults locally, so omit per-renderer overrides when
 the outputs should stay aligned.
 `#:site-url` is an absolute HTTP(S) origin IRI; Unicode domain names are
 accepted. HTML keeps the IRI spelling in canonical and Open Graph URLs. RSS and
-sitemap output interoperable URI forms, using IDNA ASCII for the domain and
-percent-encoding where required. Put a deployment path prefix in the shared
-HTML routes' `#:url-prefix` so generated HTML links and absolute feed, sitemap,
-and canonical URLs agree. `make-site-settings` may omit the origin
+sitemap use an IDNA ASCII domain; route paths are encoded by the shared HTML
+routes. Gemtext link lines use URI references, so external IRIs are mapped to
+ASCII URI form while displayed labels retain their readable text. Put a
+deployment path prefix in the shared HTML routes' `#:url-prefix` so generated
+HTML links and absolute feed, sitemap, and canonical URLs agree.
+`make-site-settings` may omit the origin
 when only the locale is shared; RSS and sitemap still require an origin,
 supplied through the shared settings or directly to either renderer with
 `#:site-url`. RSS `#:language` and sitemap `#:default-locale` can likewise

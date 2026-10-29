@@ -19,6 +19,7 @@
   #:use-module (forester private render text-options)
   #:use-module (forester private render text-output)
   #:use-module (forester private entity-iri)
+  #:use-module (forester private web)
   #:use-module (grove i18n)
   #:use-module (forester site)
   #:use-module (grove site)
@@ -66,7 +67,7 @@ default. Paths are validated by MAKE-TEXT-ROUTES."
           (string-concatenate
             (map (lambda (iri)
                    (let ((href (entity-iri-href iri)))
-                     (if href (link-line href iri)
+                     (if href (link-line (web-iri-uri href) iri)
                          (string-append iri "\n"))))
                  iris))))))
 
@@ -91,7 +92,7 @@ default. Paths are validated by MAKE-TEXT-ROUTES."
 
 (define (asset-url routes page source)
   (if (uri-scheme? source)
-      source
+      (web-iri-uri source)
       (call-with-values
         (lambda () (split-uri-suffix source))
         (lambda (path suffix)

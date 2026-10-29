@@ -41,15 +41,27 @@ provide materialized paths to its procedure.
 
 HTML routes distinguish output paths from URLs. `#:page-path` and
 `#:index-path` choose artifact paths relative to the project's output
-directory. `#:url-prefix` is added to links emitted by the renderers; it does
-not move artifacts into a matching subdirectory. Set the project output
-directory to choose where files are written, and reuse the same routes for
-HTML, RSS, and sitemap so their links agree. Set the absolute HTTP(S) origin
-with `#:site-url` (scheme and authority, optionally followed by `/`). Put a
+directory. `#:url-prefix` is a site-path prefix added to links emitted by the
+renderers; it does not move artifacts into a matching subdirectory. Set the
+project output directory to choose where files are written, and reuse the same
+routes for HTML, RSS, and sitemap so their links agree. Set the absolute
+HTTP(S) origin IRI with `#:site-url` (scheme and authority, optionally
+followed by `/`); Unicode domain names are accepted. HTML preserves the IRI
+spelling, while RSS and sitemap use an IDNA ASCII domain. Put a
 deployment path such as `/notes/` in the shared routes' `#:url-prefix`; this
 keeps HTML links and absolute RSS, sitemap, and canonical URLs aligned. A URL
 prefix is a site path, so it cannot start with `//` (which would select another
 authority). The origin cannot include credentials, a query, or a fragment.
+
+Keep URL values distinct from these routes. A URL prefix is a site path, while
+page and index paths are artifact paths. Forester's `#:og-image` accepts an
+external HTTP(S) URL/IRI, a root-relative path, or a project-relative asset;
+the latter uses the HTML routes. `#:mathjax-src` accepts an external HTTP(S)
+or protocol-relative URL, or a local artifact path encoded under those routes.
+RSS `#:stylesheet-url` is emitted as the XML stylesheet reference after XML
+attribute escaping, and image-variant URLs are emitted into HTML `srcset` as
+supplied. Grove does not fetch these resources or apply one global
+URL-normalization policy.
 
 Route callbacks must be deterministic for a fixed project state: the same page
 ID must resolve to the same artifact path. Renderers may evaluate them more

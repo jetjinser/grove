@@ -251,7 +251,7 @@ this value with #:options."
                default-locale))
       (set! default-locale (locale-tag (make-locale default-locale))))
     (unless (or (not site-url) (web-origin? site-url))
-      (error "HTML site URL must be an absolute HTTP(S) origin or #f"
+      (error "HTML site URL must be an absolute HTTP(S) origin IRI or #f"
              site-url))
     (unless (or (not og-image) (non-empty-string? og-image))
       (error "HTML Open Graph image must be a non-empty string or #f"

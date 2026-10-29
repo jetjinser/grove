@@ -69,23 +69,27 @@
                             "<link>https://example.org/index.html</link>")))))
 
 (let* ((origin "https://例え.テスト")
+       (routes (make-html-routes #:index-path "首页.html"
+                                 #:url-prefix "/出版/"))
        (settings (make-site-settings #:site-url origin))
        (artifacts
         (render-model forest
-          (list (make-sitemap-renderer #:settings settings)
-                (make-rss-renderer #:settings settings))))
+          (list (make-sitemap-renderer #:settings settings #:routes routes)
+                (make-rss-renderer #:settings settings #:routes routes))))
        (sitemap (artifact-content (car artifacts)))
        (rss (artifact-content (cadr artifacts))))
   (test-equal "site settings preserve the authored origin IRI"
     origin (site-settings-site-url settings))
   (test-assert "sitemap maps a Unicode origin host to IDNA ASCII"
     (and (string-contains sitemap
-                          "https://xn--r8jz45g.xn--zckzah/")
-         (not (string-contains sitemap "例え.テスト"))))
+                          "https://xn--r8jz45g.xn--zckzah/%E5%87%BA%E7%89%88/guide-zh.html")
+         (not (string-contains sitemap "例え.テスト"))
+         (not (string-contains sitemap "出版"))))
   (test-assert "RSS maps a Unicode origin host to IDNA ASCII"
     (and (string-contains rss
-                          "https://xn--r8jz45g.xn--zckzah/index.html")
-         (not (string-contains rss "例え.テスト")))))
+                          "https://xn--r8jz45g.xn--zckzah/%E5%87%BA%E7%89%88/%E9%A6%96%E9%A1%B5.html")
+         (not (string-contains rss "例え.テスト"))
+         (not (string-contains rss "出版")))))
 
 (let ((forest-without-home
         (make-forest

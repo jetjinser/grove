@@ -28,7 +28,7 @@ Grove owns versus what a project supplies. Commands use `@name{body}` or
 | --- | --- |
 | `@title{...}` | Page, section, or subtree title; each requires exactly one direct title. |
 | `@summary{...}` | Description used by `<meta>`, Open Graph, and feeds. |
-| `@og-image{assets/cover.png}` | Open Graph image; external HTTP(S) URLs pass through, relative paths use the site origin and HTML route prefix. |
+| `@og-image{assets/cover.png}` | Open Graph image; external HTTP(S) URL/IRI values pass through, relative paths use the site origin and HTML routes. |
 | `@og-image-alt{...}` | Alternative text for `@og-image`; defaults to the page title. |
 | `@published{YYYY-MM-DD}` | Valid Gregorian publication date. |
 | `@updated{YYYY-MM-DD}` | Valid Gregorian update date; must not precede `@published`. |
@@ -45,7 +45,7 @@ the top makes the source readable and lets tools find it quickly. A second
 commands must start and end with a letter or digit and contain only letters,
 digits, and hyphens; Grove stores them in lowercase.
 
-`@describes` records an external entity identity, separate from the page's
+`@describes` records an external entity IRI, separate from the page's
 own URL and from ordinary links. For example, a literature page can declare
 `@describes{doi:10.1146/annurev.fluid.29.1.123}` or a Unicode IRI such as
 `@describes{https://例え.テスト/资料}`. Grove retains the authored IRI spelling
@@ -54,11 +54,11 @@ as Unicode and percent-encoded forms are distinct; choose one spelling
 consistently. Grove links HTTP(S) IRIs directly and presents DOI IRIs through
 `https://doi.org/`. Other absolute IRIs remain visible as identifiers without
 an assumed resolver. Values must be valid absolute IRIs, cannot contain
-userinfo credentials, and HTTP(S) values require a host. Browsers handle the
-Unicode-to-network URL conversion for HTTP(S) links. Grove does not fetch
-metadata from the identifier. The same validation applies when constructing a
-Forest directly from Grove site values; the generic `(grove site)` page
-constructor leaves metadata application-defined.
+userinfo credentials, and HTTP(S) values require a host. HTML keeps HTTP(S)
+IRIs for the browser to process; Gemtext converts link targets to ASCII URI
+form. Grove does not fetch metadata from the identifier. The same validation
+applies when constructing a Forest directly from Grove site values; the
+generic `(grove site)` page constructor leaves metadata application-defined.
 
 ## Content
 
