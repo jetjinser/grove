@@ -174,10 +174,13 @@
     (native-inputs (list blue guile))
     (inputs
      (append
-      (list guile faster-minikanren grove-highlights libunistring guile-srfi-275
+      (list guile faster-minikanren grove-highlights libunistring
             libidn2)
       (map specification->package
            (list "coreutils" "guile-gcrypt" "guile-ssh" "guile-ts"))))
+    ;; Project files and extensions can import SRFI 275 directly, and Grove's
+    ;; own Forester IRI support uses it at runtime.
+    (propagated-inputs (list guile-srfi-275))
     (synopsis "Static site generator for executable, forester-style notes")
     (description
        "Grove renders Scribble-style trees into connected sites. Analysis
