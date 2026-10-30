@@ -360,8 +360,9 @@ polynomial equations using its own exact sparse-polynomial normalizer. The
 checker can validate the registered scalar laws, check an individual rewrite
 step and its recorded path, compare a computed polynomial derivative or
 partial derivative with an independently computed derivative, or check
-polynomial antiderivatives and Poisson particular solutions. The Poisson
-checker verifies `Δu = source` and Grove's selected-axis zero-value and
+whether two scalar polynomial expressions have the same exact meaning. It can
+also check polynomial antiderivatives and Poisson particular solutions. The
+Poisson checker verifies `Δu = source` and Grove's selected-axis zero-value and
 zero-first-derivative normalization. Import `(grove math semantic-check)` for
 these checks and their typed evidence values. Evidence constructors and
 accessors belong to this module, so extensions inspecting or validating a
@@ -371,7 +372,13 @@ the same `φ:` prefix for use in articles: `check-polynomial-step`,
 `check-polynomial-derivative`, `check-polynomial-antiderivative`, and
 `check-polynomial-poisson` parse
 formula strings before calling the typed checker; `check-polynomial-rule` and
-`check-polynomial-derivation` delegate values directly.
+`check-polynomial-derivation` delegate values directly. The
+`check-polynomial-equation` helper independently compares two polynomial
+expressions without using the residual derivation. It returns
+`semantically-checked` for equal polynomial meanings, `rejected` for unequal
+meanings, and `unsupported` when either side lies outside the checker domain.
+This result checks the equation itself, unlike a generic calculation audit,
+which checks evidence about how a derivation proceeded.
 `polynomial-check->content` adapts the typed result to Content IR through the
 presentation layer. These are conveniences, not a second checker API. Import
 `(grove math semantic-check)` when Scheme code needs typed evidence or works

@@ -7,6 +7,7 @@
              (grove math rewrite)
              (grove math rule)
              (grove math semantic-check)
+             ((grove math semantic) #:prefix ◆:)
              (grove math derivation)
              (ice-9 match)
              (grove ir)
@@ -15,6 +16,7 @@
              (srfi srfi-64))
 
 (test-begin "independent scalar-polynomial semantic checker")
+(define basis (◆:space 'x 'y 'z))
 
 (test-assert "exact sparse polynomials collect and multiply independently"
   (math-polynomial-equivalent?
@@ -26,6 +28,31 @@
   (not (math-polynomial-equivalent? (φ:term "x/x") (φ:term "1"))))
 (test-assert "normalization limits report unsupported instead of expanding without bound"
   (not (math-polynomial-normal-form (φ:term "(x+y)^65"))))
+(test-eq "independent equation checker proves equal polynomial meanings"
+  'semantically-checked
+  (math-semantic-check-status
+    (φ:check-polynomial-equation "(x+y)^2" "x^2+2*x*y+y^2")))
+(test-eq "independent equation checker rejects unequal polynomial meanings"
+  'rejected
+  (math-semantic-check-status (φ:check-polynomial-equation "x" "0")))
+(test-eq "independent equation checker leaves non-polynomial equations unsupported"
+  'unsupported
+  (math-semantic-check-status (φ:check-polynomial-equation "sin(x)" "x")))
+(test-eq "independent equation checker leaves expression denominators unsupported"
+  'unsupported
+  (math-semantic-check-status (φ:check-polynomial-equation "x/x" "1")))
+(let* ((check (φ:check-polynomial-equation "x+y" "y+x"))
+       (evidence (math-semantic-check-subject check))
+       (forged (make-math-equation-evidence
+                 (math-equation-evidence-left evidence)
+                 (math-equation-evidence-right evidence)
+                 '() (math-equation-evidence-right-normal-form evidence))))
+  (test-eq "equation checker rejects forged normal-form evidence"
+    'rejected (math-semantic-check-status (math-check-equation-evidence forged))))
+(test-eq "independent true-equation result agrees with residual reduction"
+  'complete (math-report-status (φ:check-equation "x-x" "0" #:assumptions (list basis))))
+(test-eq "independent false-equation result agrees with nonzero residual"
+  'unproven (math-report-status (φ:check-equation "x" "0" #:assumptions (list basis))))
 
 (define (schema-metavariables term)
   (match term

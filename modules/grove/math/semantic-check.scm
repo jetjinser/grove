@@ -32,7 +32,11 @@
                math-poisson-evidence? make-math-poisson-evidence
                math-poisson-evidence-expression math-poisson-evidence-axes
                math-poisson-evidence-coordinate math-poisson-evidence-input
-               math-poisson-evidence-result)
+               math-poisson-evidence-result
+               math-equation-evidence? make-math-equation-evidence
+               math-equation-evidence-left math-equation-evidence-right
+               math-equation-evidence-left-normal-form
+               math-equation-evidence-right-normal-form)
   #:export (math-semantic-check? math-semantic-check-status
             math-semantic-check-valid? math-semantic-check-subject
             math-semantic-check-diagnostics
@@ -40,8 +44,9 @@
             math-polynomial-check-step
             math-polynomial-check-derivation math-polynomial-check-derivative
             math-polynomial-check-antiderivative math-polynomial-check-poisson
+            math-polynomial-check-equation
             math-check-derivative-evidence math-check-antiderivative-evidence
-            math-check-poisson-evidence))
+            math-check-poisson-evidence math-check-equation-evidence))
 
 (define-record-type <math-semantic-check>
   (%make-math-semantic-check status subject diagnostics)
@@ -735,3 +740,47 @@ zero-value and zero-first-derivative anchor used to choose one solution."
       (else
        (math-check-poisson-evidence
          (make-math-poisson-evidence expression axes coordinate input output))))))
+
+(define (check-equation-evidence/internal evidence)
+  (let* ((left (and (math-equation-evidence? evidence)
+                    (math-equation-evidence-left evidence)))
+         (right (and (math-equation-evidence? evidence)
+                     (math-equation-evidence-right evidence)))
+         (left-normal-form (and left (math-polynomial-normal-form left)))
+         (right-normal-form (and right (math-polynomial-normal-form right)))
+         (claimed-left (and (math-equation-evidence? evidence)
+                            (math-equation-evidence-left-normal-form evidence)))
+         (claimed-right (and (math-equation-evidence? evidence)
+                             (math-equation-evidence-right-normal-form evidence))))
+    (cond
+      ((not (math-equation-evidence? evidence))
+       (semantic-check 'rejected evidence "expected polynomial equation evidence"))
+      ((not (and left-normal-form right-normal-form
+                 (equal? claimed-left left-normal-form)
+                 (equal? claimed-right right-normal-form)))
+       (semantic-check 'rejected evidence "malformed polynomial equation evidence"))
+      ((equal? left-normal-form right-normal-form)
+       (semantic-check 'semantically-checked evidence #f))
+      (else
+       (semantic-check 'rejected evidence
+         "the two expressions have different exact polynomial meanings")))))
+
+(define (math-check-equation-evidence evidence)
+  "Independently verify the exact polynomial meanings recorded for an equation."
+  (catch #t
+    (lambda () (check-equation-evidence/internal evidence))
+    (lambda _
+      (semantic-check 'rejected evidence "malformed polynomial equation evidence"))))
+
+(define (math-polynomial-check-equation left right)
+  "Check whether two supported scalar polynomial expressions are identical."
+  (let ((left-normal-form (math-polynomial-normal-form left))
+        (right-normal-form (math-polynomial-normal-form right)))
+    (cond
+      ((or (not left-normal-form) (not right-normal-form))
+       (semantic-check 'unsupported (list left right)
+         "one or both sides are outside the exact scalar-polynomial checker"))
+      (else
+       (math-check-equation-evidence
+         (make-math-equation-evidence
+           left right left-normal-form right-normal-form))))))

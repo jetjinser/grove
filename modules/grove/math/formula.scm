@@ -20,7 +20,7 @@
             derive derive->content rewrite search simplify calculate normalize expand collect
             check-chain check-polynomial-rule check-polynomial-derivation
             check-polynomial-step check-polynomial-derivative check-polynomial-antiderivative
-            check-polynomial-poisson
+            check-polynomial-poisson check-polynomial-equation
             polynomial-check->content antiderivative
             compute check-equation solve-poisson differentiate partial))
 
@@ -240,6 +240,11 @@
       (check:math-polynomial-check-poisson
         (math-value-term (read expression)) (or axes '()) axis
         (math-value-term (read result))))))
+
+(define-public (check-polynomial-equation left right)
+  (check:math-polynomial-check-equation
+    (math-value-term (read left))
+    (math-value-term (read right))))
 
 (define-public compute
   (lambda* (source #:key (assumptions '()) (max-steps 256) (max-term-size 8192))

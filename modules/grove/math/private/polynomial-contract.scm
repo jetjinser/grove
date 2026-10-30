@@ -16,7 +16,11 @@
             math-poisson-evidence? make-math-poisson-evidence
             math-poisson-evidence-expression math-poisson-evidence-axes
             math-poisson-evidence-coordinate math-poisson-evidence-input
-            math-poisson-evidence-result))
+            math-poisson-evidence-result
+            math-equation-evidence? make-math-equation-evidence
+            math-equation-evidence-left math-equation-evidence-right
+            math-equation-evidence-left-normal-form
+            math-equation-evidence-right-normal-form))
 
 ;; This is algorithm-contract evidence, not an equality derivation. Its data
 ;; shapes mirror the recursive program cases and can be checked independently.
@@ -53,3 +57,11 @@
   (coordinate math-poisson-evidence-coordinate)
   (input math-poisson-evidence-input)
   (result math-poisson-evidence-result))
+
+(define-record-type <math-equation-evidence>
+  (make-math-equation-evidence left right left-normal-form right-normal-form)
+  math-equation-evidence?
+  (left math-equation-evidence-left)
+  (right math-equation-evidence-right)
+  (left-normal-form math-equation-evidence-left-normal-form)
+  (right-normal-form math-equation-evidence-right-normal-form))
