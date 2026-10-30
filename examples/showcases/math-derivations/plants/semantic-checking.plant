@@ -4,12 +4,13 @@
 @use-commands{math-derivations}
 @use-modules[((grove math formula) #:prefix φ:)
              (grove math calculation)
+             (grove math audit)
              (grove math presentation)
              ((grove math term) #:select (math-term->source))]
 @title{Independent checks for polynomial math}
-@summary{A small semantic checker checks registered scalar-polynomial schemas, replays a derivative certificate, and verifies its exact result independently.}
+@summary{Independent exact checks cover scalar-polynomial rules and calculus, Cartesian vector operators, and replayed calculation certificates.}
 
-@paragraph{Grove's ordinary derivation verifier replays registered rules. The checks below use a separate exact rational-polynomial normalizer. Its supported scope is intentionally narrower: scalar polynomials, with division only by nonzero rational constants.}
+@paragraph{Grove's ordinary derivation verifier replays registered rules. The checks below use a separate exact rational-polynomial normalizer. It checks scalar-polynomial rules and calculus, plus explicit three-dimensional Cartesian operators over polynomial components. It does not cover arbitrary functions, curvilinear coordinates, or expression-valued quotient domains.}
 
 @subtree[#:id "semantic-checking-checking-general-scalar-laws"]{
   @title{Checking general scalar laws}
@@ -50,10 +51,26 @@
 
 }
 
+@subtree[#:id "semantic-checking-checking-cartesian-operators"]{
+  @title{Checking Cartesian vector calculus}
+  @paragraph{The independent checker can also verify a concrete result for grad, div, curl, or scalar and componentwise vector Laplacians. This example checks curl in the declared right-handed coordinate order.}
+  @(φ:polynomial-check->content
+     (φ:check-polynomial-cartesian 'curl
+       "components(x*y,y*z,z*x)" "components(-y,-z,-x)"))
+  @(let* ((report
+            (φ:compute "curl(components(x*y,y*z,z*x))"
+              #:assumptions "space(x,y,z)"))
+          (audit (math-report-audit report)))
+     (φ:polynomial-check->content
+       (math-calculation-audit-contract audit)))
+}
+
 @subtree[#:id "semantic-checking-unsupported-claims-stay-visible"]{
   @title{Unsupported claims stay visible}
   @(φ:polynomial-check->content
      (φ:check-polynomial-derivative "sin(x)" "x" "cos(x)"))
-  @paragraph{An unsupported result is not accepted as a proof. Function differentiation, vector calculus, and expression-valued quotient domains remain outside this checker.}
+  @(φ:polynomial-check->content
+     (φ:check-polynomial-cartesian 'grad "sin(x)" "components(cos(x),0,0)"))
+  @paragraph{An unsupported result is not accepted as a proof. Function differentiation, curvilinear coordinates, and expression-valued quotient domains remain outside this checker.}
 
 }
