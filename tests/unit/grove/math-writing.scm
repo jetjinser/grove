@@ -62,8 +62,12 @@
             "@differentiate[\"x\" source]\n"
             "@math[(math-report-result (φ:differentiate source \"x\"))]\n"
             "}\n"
-            "@(format #f \"outside reason: ~a\" (math-report-reason (φ:differentiate source \"x\")))"))))
+            "@(let ((report (φ:differentiate source \"x\")))\n"
+            "  (format #f \"outside reason: ~a; diagnostic: ~a\"\n"
+            "    (math-report-reason report)\n"
+            "    (math-diagnostic-message (car (math-report-diagnostics report)))))"))))
   (test-assert "a local assumption scope is shared by article commands and Formula calls, then ends"
     (and (string-contains output "data-rule=\"differentiate-power\"")
-         (string-contains output "outside reason: type-error"))))
+         (string-contains output "outside reason: missing-premise")
+         (string-contains output "explicitly declared independent coordinate"))))
 (test-end "mathematical article workflows")

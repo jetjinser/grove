@@ -210,8 +210,14 @@
   '("opaque(x)" "x^y" "x^-1"))
 (test-equal "vector coordinates cannot be differentiated as scalar polynomials"
   'type-error (math-report-reason (φ:differentiate "E" "E" #:assumptions '("vector(E)"))))
-(test-equal "undeclared variables are diagnosed" 'type-error
-  (math-report-reason (φ:differentiate "x" "x")))
+(let* ((report (φ:differentiate "x" "x"))
+       (diagnostic (car (math-report-diagnostics report))))
+  (test-equal "an undeclared differentiation coordinate is a missing premise"
+    'missing-premise (math-report-reason report))
+  (test-equal "the diagnostic names the required independent coordinate"
+    '((coordinate (var x))) (math-diagnostic-premises diagnostic))
+  (test-equal "the diagnostic has the missing-premise code"
+    'missing-premise (math-diagnostic-code diagnostic)))
 (test-equal "expansion budget is enforced" 'step-limit
   (math-report-reason (φ:differentiate "x^3" "x" #:assumptions facts #:max-steps 0)))
 (test-equal "term-size budget is enforced" 'term-size-limit
