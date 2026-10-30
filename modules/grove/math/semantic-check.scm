@@ -278,7 +278,7 @@
          "the replayed derivative chain has an incorrect polynomial result")))))
 
 (define (math-polynomial-check-derivation certificate)
-  "Check a rewrite chain, or replay and independently check a polynomial derivative."
+  "Check a rewrite chain, or replay and independently check scalar calculus contracts."
   (unless (math-derivation? certificate)
     (error "expected a math derivation" certificate))
   (let ((terms (math-derivation-terms certificate))
@@ -292,6 +292,10 @@
       ((match (car terms) (('differentiate _ ('var _)) #t) (_ #f))
        (match (car terms)
          (('differentiate expression ('var variable))
+          (check-polynomial-derivative-derivation certificate expression variable terms))))
+      ((match (car terms) (('partial _ ('var _)) #t) (_ #f))
+       (match (car terms)
+         (('partial expression ('var variable))
           (check-polynomial-derivative-derivation certificate expression variable terms))))
       ((match (car terms) (('antiderivative _ ('var _)) #t) (_ #f))
        (match (car terms)

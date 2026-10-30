@@ -138,9 +138,10 @@
                       (max-steps 128) (max-term-size 2048))
   "Compute a scalar partial derivative, then simplify in a separate pass.
 Declared unknown function derivatives remain explicit partial terms."
-  (derivative-report 'partial (map math-rewrite-rule-name math-partial-rules)
-    source variable assumptions
-    (lambda (expression coordinate facts) '()) max-steps max-term-size))
+  (audit-calculus-report
+    (derivative-report 'partial (map math-rewrite-rule-name math-partial-rules)
+      source variable assumptions
+      (lambda (expression coordinate facts) '()) max-steps max-term-size)))
 
 (define* (math-rewrite source #:key (assumptions '()) (rules #f)
                         (max-steps 32) (max-term-size 2048))

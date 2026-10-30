@@ -6,8 +6,10 @@
              (language scribble spec) (language scribble parser) (system base language))
 (test-begin "polynomial calculus composition and writing interface")
 (let* ((derivative (φ:differentiate "x^3+2*x" "x" #:assumptions (list basis)))
+       (partial (φ:partial "x^3+2*x*y" "x" #:assumptions (list basis)))
        (primitive (φ:antiderivative "x^3+2*x" "x" #:assumptions (list basis)))
        (derivative-audit (math-report-audit derivative))
+       (partial-audit (math-report-audit partial))
        (primitive-audit (math-report-audit primitive)))
   (test-assert "derivative report exposes separate replay, contract, and proof outcomes"
     (and (math-calculation-audit? derivative-audit)
@@ -16,11 +18,25 @@
               (math-calculation-audit-contract-status derivative-audit))
          (eq? 'unsupported (math-calculation-audit-proof-status derivative-audit))
          (pair? (math-calculation-audit-proof-errors derivative-audit))))
+  (test-assert "partial report exposes the same audit layers and polynomial contract"
+    (and (math-calculation-audit? partial-audit)
+         (math-calculation-audit-replay-valid? partial-audit)
+         (eq? 'semantically-checked
+              (math-calculation-audit-contract-status partial-audit))
+         (eq? 'unsupported (math-calculation-audit-proof-status partial-audit))))
   (test-assert "primitive report exposes the same three audit layers"
     (and (math-calculation-audit-replay-valid? primitive-audit)
          (eq? 'semantically-checked
               (math-calculation-audit-contract-status primitive-audit))
          (eq? 'unsupported (math-calculation-audit-proof-status primitive-audit)))))
+(let* ((report (φ:partial "f(x,y)" "x"
+                 #:assumptions ' ("coordinate(x); coordinate(y); function(f,scalar,scalar,scalar); differentiable(f)")))
+       (audit (math-report-audit report)))
+  (test-assert "symbolic function partials keep replay evidence without overclaiming polynomial semantics"
+    (and (math-report-finished? report)
+         (math-calculation-audit? audit)
+         (math-calculation-audit-replay-valid? audit)
+         (eq? 'unsupported (math-calculation-audit-contract-status audit)))))
 (let* ((report (φ:differentiate "x^3+2*x" "x" #:assumptions (list basis)))
        (certificate (math-report-derivation report))
        (terms (math-derivation-terms certificate))

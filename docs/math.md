@@ -89,7 +89,9 @@ one, for inspection. Successful `@check-derive` output says that each step
 replays with the selected rules and assumptions. Successful `@check-equation`
 output says that the residual reduced to zero under supported rules and
 assumptions. These checks do not validate the author's assumptions or an
-external mathematical model.
+external mathematical model. Reports from `differentiate`, `partial`,
+`antiderivative`, and `solve-poisson` also attach a calculation audit; its
+replay, semantic-contract, and proof-tree outcomes remain separate.
 
 Use
 `math-verify-derivation` from `(grove math verification)` to
@@ -353,11 +355,11 @@ The ordinary derivation verifier replays Grove's registered rewrite relations.
 For a deliberately smaller domain, the independent semantic checker verifies
 polynomial equations using its own exact sparse-polynomial normalizer. The
 checker can validate the registered scalar laws, check an individual rewrite
-step and its recorded path, compare a computed polynomial derivative with an
-independently computed derivative, or check polynomial antiderivatives and
-Poisson particular solutions. The Poisson checker verifies `Δu = source` and
-Grove's selected-axis zero-value and zero-first-derivative normalization.
-Import `(grove math semantic-check)` for
+step and its recorded path, compare a computed polynomial derivative or
+partial derivative with an independently computed derivative, or check
+polynomial antiderivatives and Poisson particular solutions. The Poisson
+checker verifies `Δu = source` and Grove's selected-axis zero-value and
+zero-first-derivative normalization. Import `(grove math semantic-check)` for
 these checks and their typed evidence values. Evidence constructors and
 accessors belong to this module, so extensions inspecting or validating a
 checker result have one explicit import. The calculation API does not mix this
