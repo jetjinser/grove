@@ -202,8 +202,17 @@ values need to join with other facts or participate in a custom query.
 
 Use `described-entityo` in relational queries, or
 `(describing-pages forest iri)` to get matching page records in site order.
-Multiple pages may describe the same external entity; IRI strings are compared
-exactly.
+Multiple pages may describe the same external entity. Matching uses exact
+Unicode string equality, which is RDF IRI term equality; Grove does not
+normalize, percent-decode, case-fold, map to a URI, or dereference an IRI for
+this query. Thus a Unicode IRI and its percent-encoded or IDNA spelling are
+distinct terms here, even when a particular scheme or protocol treats them as
+aliases. This keeps identity comparison independent of scheme-specific
+retrieval rules, as required for RDF terms ([RFC 3987 §5.1 and §5.3.1]
+(https://www.rfc-editor.org/rfc/rfc3987.html#section-5.3.1), [RDF 1.2 Concepts]
+(https://www.w3.org/TR/rdf12-concepts/#dfn-iri-equality)). Preserve the authored
+spelling; a schema-specific resolver can interpret aliases where that is
+appropriate.
 
 Joining described entities with page data through the page ID keeps entity
 matching composable with other page facts and content queries:

@@ -219,4 +219,30 @@
       (pageo (page-relation forest)
         (page-id id) (title title)))))
 
+(let* ((spellings
+        '("https://example.org/café"
+          "https://example.org/caf%C3%A9"
+          "https://example.org/café"
+          "https://例え.テスト/entity"
+          "https://xn--r8jz45g.xn--zckzah/entity"))
+       (forest
+        (make-forest
+          (make-site
+            (map (lambda (entry)
+                   (make-site-page
+                     (car entry) (car entry) (make-content-document '())
+                     #:metadata `((describes . (,(cadr entry))))))
+                 (map (lambda (index iri)
+                        (list (string-append "iri-" (number->string index)) iri))
+                      (iota (length spellings)) spellings))))))
+  (for-each
+    (lambda (iri expected-page-id)
+      (test-equal
+        "described entity matching preserves exact IRI spelling"
+        (list expected-page-id)
+        (map site-page-id (describing-pages forest iri))))
+    spellings
+    (map (lambda (index) (string-append "iri-" (number->string index)))
+         (iota (length spellings)))))
+
 (test-end "forester site queries")

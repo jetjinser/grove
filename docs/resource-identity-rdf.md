@@ -58,11 +58,15 @@ identity, local address, retrieval route, and filesystem path.
    invent a second namespace. A project that needs identity to survive route
    changes would need a separate stable-identity policy; that is a distinct
    future choice, not a requirement for a useful local RDF view.
-5. Preserve the authored IRI spelling for display and serialization. For
-   lookup, simple string equality is a safe baseline but can miss equivalent
-   spellings. Any stronger comparison is a comparison policy, not a universal
-   rewrite: scheme-specific equivalences differ, and RFC 3987 advises keeping
-   the original form when normalization is only for comparison.
+5. Preserve the authored IRI spelling for display and serialization. Grove's
+   `@describes` lookup uses exact Unicode string equality, matching RDF IRI
+   term equality. A Unicode spelling, its percent-encoded spelling, and an
+   IDNA spelling are distinct identity terms even if a scheme-specific
+   retrieval rule treats them as aliases. RFC 3987 distinguishes comparison
+   for identity from scheme-aware comparison for retrieval and advises against
+   rewriting identifiers; any alias handling belongs at the relevant resolver
+   boundary, not in global identity matching ([RFC 3987 §5.1 and §5.3.1](https://www.rfc-editor.org/rfc/rfc3987.html#section-5.3.1),
+   [RDF 1.2 IRI equality](https://www.w3.org/TR/rdf12-concepts/#dfn-iri-equality)).
 
 The remaining design question is whether a stable page IRI should always
 follow the public canonical URL, or whether projects that need identity to

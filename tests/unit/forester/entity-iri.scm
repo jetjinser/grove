@@ -31,6 +31,13 @@
   (valid-entity-iri-list? '("doi:10.1000/182" "https://example.org/2")))
 (test-assert "rejects duplicate entity IRIs"
   (not (valid-entity-iri-list? '("doi:10.1000/182" "doi:10.1000/182"))))
+(test-assert "keeps Unicode and percent-encoded IRI spellings distinct"
+  (valid-entity-iri-list?
+    '("https://example.org/café" "https://example.org/caf%C3%A9")))
+(test-assert "keeps Unicode and IDNA host spellings distinct"
+  (valid-entity-iri-list?
+    '("https://例え.テスト/entity"
+      "https://xn--r8jz45g.xn--zckzah/entity")))
 
 (test-equal "keeps web entity IRIs as browser links"
   "https://example.org/entity/1"
