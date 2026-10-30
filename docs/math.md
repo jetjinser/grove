@@ -384,19 +384,20 @@ expressions without using the residual derivation. It returns
 meanings, and `unsupported` when either side lies outside the checker domain.
 This result checks the equation itself, unlike a generic calculation audit,
 which checks evidence about how a derivation proceeded.
-`check-polynomial-cartesian` provides the same independent check for explicit
-three-dimensional Cartesian components: `grad`, `div`, `curl`, and scalar or
-componentwise vector `laplacian`. Its `#:axes` argument is an ordered list of
-three distinct coordinate symbols (defaulting to `(x y z)`); vectors must be
-written as `components(x,y,z)`. For example,
-`(φ:check-polynomial-cartesian 'curl "components(x*y,y*z,z*x)"
-"components(-y,-z,-x)")` checks the right-handed curl formula. The checker
-only claims exact results for rational polynomials and returns `unsupported`
-for other expressions; it does not infer geometric assumptions or handle
-curvilinear coordinates. Calculation audits also use this contract when
-`compute` starts with one of these operators over explicit polynomial
-components; composed vector expressions outside that narrow shape remain
-`unsupported` at the semantic-contract layer.
+`check-polynomial-cartesian` independently compares a complete Cartesian
+scalar/vector expression with its result. Its `#:axes` argument is an ordered
+list of three distinct coordinate symbols (defaulting to `(x y z)`); vectors
+are written as `components(x,y,z)`. It supports composed gradients, divergence,
+curl, scalar or componentwise vector Laplacian, vector addition/subtraction,
+scalar/vector multiplication, division by a nonzero rational constant, and
+dot/cross products. For example,
+`(φ:check-polynomial-cartesian "div(curl(components(x^2*y,y^2*z,z^2*x)))" "0")`
+checks a composition of vector operators. The checker only claims exact results
+for rational polynomials and returns `unsupported` for functions, nonconstant
+denominators, or expressions outside this small model; it does not infer
+geometric assumptions or handle curvilinear coordinates. Calculation audits
+apply the same contract whenever a calculation contains explicit Cartesian
+vector expressions, including nested compositions.
 `polynomial-check->content` adapts the typed result to Content IR through the
 presentation layer. These are conveniences, not a second checker API. Import
 `(grove math semantic-check)` when Scheme code needs typed evidence or works
@@ -417,10 +418,11 @@ running it through a relational extension. Symbolic denominators require a
 matching declared `nonzero` premise; opaque guards do not extend the checker's
 proof domain.
 
-Its domain is scalar polynomials over the rationals, including division by a
-nonzero rational constant. The Poisson contract checker additionally takes the
-three ordered axes from a declared Cartesian `space` assumption. Expression-
-valued denominators, functions, general spatial rewrite rules and
+Scalar rule, equation, and calculus checks use rational polynomials, including
+division by a nonzero rational constant; the Cartesian checker adds the vector
+operations described above. The Poisson contract checker additionally takes
+the three ordered axes from a declared Cartesian `space` assumption.
+Expression-valued denominators, functions, general spatial rewrite rules and
 algorithm-wide correctness proofs are unsupported. The
 normalizer also has explicit expansion limits: at most 256 distinct monomials,
 total degree 64, and exponent 128. The checker relies on the correctness of its

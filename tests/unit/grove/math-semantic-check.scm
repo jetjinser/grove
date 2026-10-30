@@ -21,37 +21,76 @@
 (test-eq "Cartesian gradient is checked from explicit coordinates"
   'semantically-checked
   (math-semantic-check-status
-    (φ:check-polynomial-cartesian 'grad "x^2+y*z" "components(2*x,z,y)")))
+    (φ:check-polynomial-cartesian "grad(x^2+y*z)" "components(2*x,z,y)")))
 (test-eq "Cartesian divergence is checked independently"
   'semantically-checked
   (math-semantic-check-status
-    (φ:check-polynomial-cartesian 'div "components(x^2,y^2,z^2)" "2*x+2*y+2*z")))
+    (φ:check-polynomial-cartesian "div(components(x^2,y^2,z^2))" "2*x+2*y+2*z")))
 (test-eq "Cartesian curl uses the ordered right-handed basis"
   'semantically-checked
   (math-semantic-check-status
-    (φ:check-polynomial-cartesian 'curl "components(x*y,y*z,z*x)"
+    (φ:check-polynomial-cartesian "curl(components(x*y,y*z,z*x))"
       "components(-y,-z,-x)")))
 (test-eq "scalar Laplacian is checked componentwise"
   'semantically-checked
   (math-semantic-check-status
-    (φ:check-polynomial-cartesian 'laplacian "x^2*y^2" "2*x^2+2*y^2")))
+    (φ:check-polynomial-cartesian "laplacian(x^2*y^2)" "2*x^2+2*y^2")))
 (test-eq "vector Laplacian preserves explicit components"
   'semantically-checked
   (math-semantic-check-status
-    (φ:check-polynomial-cartesian 'laplacian
-      "components(x^2,y^2,z^2)" "components(2,2,2)")))
+    (φ:check-polynomial-cartesian "laplacian(components(x^2,y^2,z^2))"
+      "components(2,2,2)")))
 (test-eq "Cartesian checker rejects an incorrect gradient"
   'rejected
   (math-semantic-check-status
-    (φ:check-polynomial-cartesian 'grad "x^2+y*z" "components(x,z,y)")))
+    (φ:check-polynomial-cartesian "grad(x^2+y*z)" "components(x,z,y)")))
 (test-eq "Cartesian checker does not claim transcendental cases"
   'unsupported
   (math-semantic-check-status
-    (φ:check-polynomial-cartesian 'grad "sin(x)" "components(cos(x),0,0)")))
+    (φ:check-polynomial-cartesian "grad(sin(x))" "components(cos(x),0,0)")))
 (test-eq "Cartesian checker requires an ordered three-axis space"
   'rejected
   (math-semantic-check-status
-    (φ:check-polynomial-cartesian 'grad "x" "components(1,0,0)" #:axes '(x y y))))
+    (φ:check-polynomial-cartesian "grad(x)" "components(1,0,0)" #:axes '(x y y))))
+
+(test-eq "nested vector calculus is checked compositionally"
+  'semantically-checked
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian "curl(grad(x*y))" "zero(vector)")))
+(test-eq "divergence of curl is checked compositionally"
+  'semantically-checked
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian
+      "div(curl(components(x^2*y,y^2*z,z^2*x)))" "0")))
+(test-eq "vector addition composes with scalar multiplication and gradient"
+  'semantically-checked
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian
+      "grad(x*y)+components(1,2,3)" "components(y+1,x+2,3)")))
+(test-eq "dot and cross products accept composed vector expressions"
+  'semantically-checked
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian
+      "dot(cross(components(1,0,0),components(0,1,0)),components(0,0,1))" "1")))
+(test-eq "vector division by a nonzero rational constant is supported"
+  'semantically-checked
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian "components(2*x,2*y,2*z)/2"
+      "components(x,y,z)")))
+(test-eq "scalar multiplication composes with vector scaling"
+  'semantically-checked
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian
+      "2*components(x,y,z)+components(1,1,1)"
+      "components(2*x+1,2*y+1,2*z+1)")))
+(test-eq "composed Cartesian checks reject a false result"
+  'rejected
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian "curl(grad(x*y))" "components(1,1,1)")))
+(test-eq "nonconstant vector denominators remain unsupported"
+  'unsupported
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian "components(x,y,z)/x" "components(1,y/x,z/x)")))
 
 (test-assert "exact sparse polynomials collect and multiply independently"
   (math-polynomial-equivalent?

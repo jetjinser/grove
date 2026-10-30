@@ -248,9 +248,9 @@
     (math-value-term (read right))))
 
 (define-public check-polynomial-cartesian
-  (lambda* (operation expression result #:key (axes '(x y z)))
+  (lambda* (expression result #:key (axes '(x y z)))
     (check:math-polynomial-check-cartesian
-      operation (math-value-term (read expression)) axes
+      (math-value-term (read expression)) axes
       (math-value-term (read result)))))
 
 (define-public compute

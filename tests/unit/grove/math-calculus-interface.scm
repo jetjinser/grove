@@ -95,6 +95,9 @@
   '("grad(x^2+y*z)"
     "div(components(x^2,y^2,z^2))"
     "curl(components(x*y,y*z,z*x))"
+    "curl(grad(x*y))"
+    "div(curl(components(x^2*y,y^2*z,z^2*x)))"
+    "grad(x*y)+components(1,2,3)"
     "laplacian(x^2*y^2)"
     "laplacian(components(x^2,y^2,z^2))"))
 (for-each (lambda (execute)
