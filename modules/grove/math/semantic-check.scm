@@ -326,6 +326,13 @@
                (semantic-check 'semantically-checked
                  (math-semantic-check-subject check) #f))
               (else check))))))
+      ((match (car terms)
+         (((or 'grad 'div 'curl 'laplacian) _) #t)
+         (_ #f))
+       (match (car terms)
+         ((operation expression)
+          (check-cartesian-derivation certificate operation expression
+                                     (last terms) assumptions))))
       (else
        (check-polynomial-rewrite-derivation certificate terms steps assumptions)))))
 
@@ -884,3 +891,21 @@ and outputs use components(x, y, z)."
          (else
           (semantic-check 'rejected (list operation expression axes result)
             "the supplied result differs from the exact Cartesian denotation")))))))
+
+(define (check-cartesian-derivation certificate operation expression result assumptions)
+  (let* ((space (find math-space-declaration? assumptions))
+         (axes (and space (map cadr (cdr space))))
+         (replay (math-verify-derivation certificate)))
+    (cond
+      ((not (math-verification-valid? replay))
+       (semantic-check 'rejected certificate
+         (string-join (math-verification-errors replay) "; ")))
+      ((not axes)
+       (semantic-check 'unsupported certificate
+         "a declared Cartesian space is required for this operator contract"))
+      (else
+       (let ((check (math-polynomial-check-cartesian operation expression axes result)))
+         (if (math-semantic-check-valid? check)
+             (semantic-check 'semantically-checked
+               (list operation expression axes result) #f)
+             check))))))

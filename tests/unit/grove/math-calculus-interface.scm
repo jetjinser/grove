@@ -82,6 +82,21 @@
          (math-calculation-audit? audit)
          (math-calculation-audit-replay-valid? audit)
          (eq? 'semantically-checked (math-calculation-audit-contract-status audit)))))
+(for-each
+  (lambda (source)
+    (let* ((report (φ:compute source #:assumptions (list basis)))
+           (audit (math-report-audit report)))
+      (test-assert (string-append "compute independently checks Cartesian contract: " source)
+        (and (math-report-finished? report)
+             (math-calculation-audit? audit)
+             (math-calculation-audit-replay-valid? audit)
+             (eq? 'semantically-checked
+                  (math-calculation-audit-contract-status audit))))))
+  '("grad(x^2+y*z)"
+    "div(components(x^2,y^2,z^2))"
+    "curl(components(x*y,y*z,z*x))"
+    "laplacian(x^2*y^2)"
+    "laplacian(components(x^2,y^2,z^2))"))
 (for-each (lambda (execute)
             (test-equal "unsupported primitive domain cannot disappear through cancellation" 'unsupported-expression
               (math-report-reason (execute "antiderivative(1/x,x)-antiderivative(1/x,x)"

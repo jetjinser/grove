@@ -393,7 +393,10 @@ written as `components(x,y,z)`. For example,
 "components(-y,-z,-x)")` checks the right-handed curl formula. The checker
 only claims exact results for rational polynomials and returns `unsupported`
 for other expressions; it does not infer geometric assumptions or handle
-curvilinear coordinates.
+curvilinear coordinates. Calculation audits also use this contract when
+`compute` starts with one of these operators over explicit polynomial
+components; composed vector expressions outside that narrow shape remain
+`unsupported` at the semantic-contract layer.
 `polynomial-check->content` adapts the typed result to Content IR through the
 presentation layer. These are conveniences, not a second checker API. Import
 `(grove math semantic-check)` when Scheme code needs typed evidence or works
