@@ -63,6 +63,42 @@ attribute escaping, and image-variant URLs are emitted into HTML `srcset` as
 supplied. Grove does not fetch these resources or apply one global
 URL-normalization policy.
 
+## URI and IRI operations
+
+Grove includes the standalone Guile implementation of
+[SRFI 275](../srfi-275/README.md). Import its standard modules directly in
+project Scheme code and `.plant` extensions; Grove does not wrap them in a
+second URI/IRI API.
+
+```scheme
+(use-modules (srfi :275 iri)
+             (srfi :275 uri)
+             (srfi :275 normalize))
+
+(let* ((iri (string->iri "https://example.org/资料?q=概念"))
+       (uri (iri->uri iri)))
+  (list (iri-scheme iri)
+        (iri-host iri)
+        (uri->string uri)))
+;; => ("https" "example.org"
+;;     "https://example.org/%E8%B5%84%E6%96%99?q=%E6%A6%82%E5%BF%B5")
+```
+
+`string->iri` parses absolute IRIs and relative IRI references. Use
+`non-relative-iri?` when a value must have a scheme, or
+`rfc3987-absolute-iri?` when the stricter RFC 3987 absolute-IRI form is
+required. The `normalize` module provides `resolve-iri`, `relativize-iri`,
+and the normalization procedures; resolution requires an explicit base IRI.
+
+Keep these operations tied to their purpose. Grove's `@describes` relation
+compares the authored IRI strings exactly, so parsing or normalizing an IRI
+does not change that identity rule. `iri->uri` performs the generic SRFI
+conversion, but does not turn a Unicode host name into an IDNA ASCII domain;
+network output that requires that conversion must apply the appropriate
+host policy separately. Neither parsing nor conversion retrieves the
+identified resource. Scheme-specific aliasing and retrieval belong to an
+explicit resolver.
+
 Route callbacks must be deterministic for a fixed project state: the same page
 ID must resolve to the same artifact path. Renderers may evaluate them more
 than once while validating paths, building links, and computing cache identity.
