@@ -60,15 +60,15 @@
 (mkdir compiler-test-root)
 (mkdir compiler-test-bin)
 (write-tool "typst"
-  "#!/bin/sh\n[ \"$1\" = compile ] || exit 2\nprintf '%s\\n' '<svg>typst</svg>'\n")
+  "#!/bin/sh\nif [ \"$1\" = --version ]; then echo 'typst test-1'; exit 0; fi\n[ \"$1\" = compile ] || exit 2\nprintf '%s\\n' '<svg>typst</svg>'\n")
 (write-tool "latex"
   (string-append
-    "#!/bin/sh\nout=\nwhile [ $# -gt 0 ]; do\n"
+    "#!/bin/sh\nif [ \"$1\" = --version ]; then echo 'latex test-1'; exit 0; fi\nout=\nwhile [ $# -gt 0 ]; do\n"
     "  if [ \"$1\" = -output-directory ]; then shift; out=$1; fi\n"
     "  shift\ndone\n"
     "[ -n \"$out\" ] || exit 2\n: > \"$out/main.dvi\"\n"))
 (write-tool "dvisvgm"
-  "#!/bin/sh\n[ -f \"$4\" ] || exit 2\nprintf '%s\\n' '<svg>latex</svg>'\n")
+  "#!/bin/sh\nif [ \"$1\" = --version ]; then echo 'dvisvgm test-1'; exit 0; fi\n[ -f \"$4\" ] || exit 2\nprintf '%s\\n' '<svg>latex</svg>'\n")
 (write-tool "racket"
   "#!/bin/sh\nprintf '%s\\n' '<m:math xmlns:m=\"http://www.w3.org/1998/Math/MathML\"><m:mi>x</m:mi></m:math>'\n")
 (setenv "PATH"
@@ -147,7 +147,8 @@
          (make-math-asset-renderer
            #:compiler (lambda (_language _source)
                         (set! compiler-calls (+ compiler-calls 1))
-                        "<svg/>")))
+                        "<svg/>")
+           #:compiler-id "test-renderer-v1"))
        (artifacts ((cached-renderer-procedure renderer) forest)))
   (test-equal "repeated identical source shares one generated asset"
     1 (length artifacts))
@@ -156,6 +157,26 @@
   (test-assert "generated SVG artifact uses the source-derived path"
     (string-prefix? "assets/math/typst-"
       (artifact-path (car artifacts)))))
+
+(let* ((document (evaluate "@typst-math{$ x^2 $}"))
+       (forest (make-forest
+                 (make-site (list (make-site-page "math" "Math" document)))))
+       (renderer (make-math-asset-renderer #:compiler typst-source->svg))
+       (before (renderer-configurations forest (list renderer))))
+  (write-tool "typst"
+    "#!/bin/sh\nif [ \"$1\" = --version ]; then echo 'typst test-2'; exit 0; fi\n[ \"$1\" = compile ] || exit 2\nprintf '%s\\n' '<svg>typst</svg>'\n")
+  (test-assert "built-in math renderer identity tracks the Typst version"
+    (not (equal? before (renderer-configurations forest (list renderer))))))
+
+(let* ((document (evaluate "@latex-math{\\[x^2\\]}"))
+       (forest (make-forest
+                 (make-site (list (make-site-page "math" "Math" document)))))
+       (renderer (make-math-asset-renderer #:compiler latex-source->svg))
+       (before (renderer-configurations forest (list renderer))))
+  (write-tool "dvisvgm"
+    "#!/bin/sh\nif [ \"$1\" = --version ]; then echo 'dvisvgm test-2'; exit 0; fi\n[ -f \"$4\" ] || exit 2\nprintf '%s\\n' '<svg>latex</svg>'\n")
+  (test-assert "built-in math renderer identity tracks the dvisvgm version"
+    (not (equal? before (renderer-configurations forest (list renderer))))))
 
 (let* ((document
         (evaluate
@@ -192,12 +213,18 @@
 (test-error "Typst nodes reject empty source" #t
   (typst-math ""))
 (test-error "math asset renderers reject a compiler with the wrong arity" #t
-  (make-math-asset-renderer #:compiler (lambda (_source) "<svg/>")))
+  (make-math-asset-renderer
+    #:compiler (lambda () "<svg/>")
+    #:compiler-id "wrong-arity"))
+(test-error "custom math asset compilers require a stable cache ID" #t
+  (make-math-asset-renderer
+    #:compiler (lambda (_language _source) "<svg/>")))
 (test-error "SMathML HTML rules reject a compiler with the wrong arity" #t
   (make-smathml-html-rules #:compile (lambda () "<math/>")))
 (test-assert "math asset compilers may accept optional trailing arguments"
   (make-math-asset-renderer
-    #:compiler (lambda* (language source #:optional (mode #f)) "<svg/>")))
+    #:compiler (lambda* (language source #:optional (mode #f)) "<svg/>")
+    #:compiler-id "optional-compiler-v1"))
 (test-assert "SMathML compilers may accept rest arguments"
   (make-smathml-html-rules
     #:compile (lambda (source . options) "<math/>")))

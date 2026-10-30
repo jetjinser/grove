@@ -18,3 +18,8 @@ minimal LaTeX kernel plus `amsmath` and `dvisvgm`.
 `nix develop .#integrations` provides Typst, `racket-minimal`, and the LaTeX
 tools, but does not package SMathML. The Nix environment can run the Typst and
 LaTeX adapters; use the Guix integration manifest for `@smathml`.
+
+The built-in Typst and LaTeX asset adapters include their executable versions
+in the renderer cache identity. A custom compiler passed to
+`make-math-asset-renderer` must provide a stable `#:compiler-id`; include any
+external tool versions or options that can change its output.

@@ -15,6 +15,7 @@
   #:use-module (ice-9 optargs)
   #:use-module (ice-9 ftw)
   #:use-module (ice-9 popen)
+  #:use-module (ice-9 rdelim)
   #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-1)
   #:use-module (rnrs bytevectors)
@@ -109,6 +110,18 @@
       (error "external math compiler failed" program status))
     output))
 
+(define (tool-version program)
+  (let* ((pipe (open-pipe* OPEN_READ program "--version"))
+         (version (read-line pipe))
+         (status (close-pipe pipe)))
+    (unless (and (status:exit-val status)
+                 (= (status:exit-val status) 0)
+                 (string? version)
+                 (not (eof-object? version)))
+      (error "could not determine external math tool version"
+             program status version))
+    (string-trim-both version)))
+
 (define-public (typst-source->svg source)
   "Compile Typst SOURCE from the project to an SVG string."
   (unless (string? source)
@@ -183,30 +196,42 @@ output conventions."
            (math-elements (site-page-document page))))
     (pages forest)))
 
-(define (math-configuration compiler-id forest)
-  (list 'compiled-math compiler-id
-        (map (lambda (entry)
-               (let ((page (car entry)) (element (cdr entry)))
-                 (list (site-page-id page)
-                       (content-element-property element 'asset-path)
-                       (content-element-property element 'language)
-                       (content->plain-text element))))
-             (site-math forest))))
+(define (builtin-compiler-tools compiler)
+  (cond ((eq? compiler typst-source->svg) (list "typst"))
+        ((eq? compiler latex-source->svg) (list "latex" "dvisvgm"))
+        (else '())))
 
-(define* (make-math-asset-renderer #:key compiler (compiler-id "project")
+(define (math-configuration compiler compiler-id forest)
+  (let ((tools (builtin-compiler-tools compiler)))
+    (list 'compiled-math compiler-id
+          (map (lambda (tool) (cons tool (tool-version tool))) tools)
+          (map (lambda (entry)
+                 (let ((page (car entry)) (element (cdr entry)))
+                   (list (site-page-id page)
+                         (content-element-property element 'asset-path)
+                         (content-element-property element 'language)
+                         (content->plain-text element))))
+               (site-math forest)))))
+
+(define* (make-math-asset-renderer #:key compiler (compiler-id #f)
                                       (dependencies '()))
   "Return a cached renderer that turns compiled-math nodes into SVG artifacts.
 
-COMPILER maps a language symbol and source string to SVG text. Override
-COMPILER-ID when external tool versions or options can change independently
-of the project configuration. DEPENDENCIES lists additional files read by
-the compiler, such as macro packages or font configuration."
-  (unless (accepts-positional-arguments? compiler 2)
-    (error "math asset renderer compiler must accept a language and source"
+COMPILER maps a language symbol and source string to SVG text, or accepts a
+source string when it is a language-specific adapter. Override
+COMPILER-ID for custom compiler behavior that can change independently of its
+inputs. The built-in Typst and LaTeX adapters include their executable versions
+automatically. DEPENDENCIES lists additional files read by the compiler, such
+as macro packages or font configuration."
+  (unless (or (accepts-positional-arguments? compiler 1)
+              (accepts-positional-arguments? compiler 2))
+    (error "math asset renderer compiler must accept a source or language and source"
            compiler))
-  (unless (and (string? compiler-id) (not (string-null? compiler-id)))
-    (error "math asset renderer compiler ID must be a non-empty string"
-           compiler-id))
+  (unless (or (and (string? compiler-id) (not (string-null? compiler-id)))
+              (and (not compiler-id)
+                   (pair? (builtin-compiler-tools compiler))))
+    (error "custom math compilers require a non-empty compiler ID"
+           compiler-id compiler))
   (unless (and (list? dependencies)
                (every (lambda (path)
                         (and (string? path) (not (string-null? path))))
@@ -240,9 +265,12 @@ the compiler, such as macro packages or font configuration."
                                           #:sources sources)
                            artifact))
                      artifacts)
-                (let ((svg (compiler
-                             (content-element-property element 'language)
-                             (content->plain-text element))))
+                (let* ((language
+                         (content-element-property element 'language))
+                       (source (content->plain-text element))
+                       (svg (if (accepts-positional-arguments? compiler 2)
+                                (compiler language source)
+                                (compiler source))))
                   (unless (string? svg)
                     (error "math compiler must return SVG text" svg))
                   (cons (make-artifact path svg
@@ -250,7 +278,8 @@ the compiler, such as macro packages or font configuration."
                         artifacts)))))
         '()
         (site-math forest)))
-    #:configuration (lambda (forest) (math-configuration compiler-id forest))
+    #:configuration
+    (lambda (forest) (math-configuration compiler compiler-id forest))
     #:dependencies (lambda () dependencies)))
 
 (define* (make-smathml-html-rules #:key compile)
