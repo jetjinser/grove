@@ -92,7 +92,7 @@
           #:passes (if (pair? missing) '() (map attach (math-report-passes report))))))
     (math-report-with-origin (attach report) (math-value-origin (car values)))))
 
-(define (audit-calculus-report report)
+(define (audit-calculation-report report)
   (let ((certificate (math-report-derivation report)))
     (if certificate
         (make-math-report
@@ -128,7 +128,7 @@
 
 (define* (math-differentiate source variable #:key (assumptions '())
                               (max-steps 128) (max-term-size 2048))
-  (audit-calculus-report
+  (audit-calculation-report
     (derivative-report 'differentiate
       (map math-rewrite-rule-name math-differentiation-rules)
       source variable assumptions
@@ -138,7 +138,7 @@
                       (max-steps 128) (max-term-size 2048))
   "Compute a scalar partial derivative, then simplify in a separate pass.
 Declared unknown function derivatives remain explicit partial terms."
-  (audit-calculus-report
+  (audit-calculation-report
     (derivative-report 'partial (map math-rewrite-rule-name math-partial-rules)
       source variable assumptions
       (lambda (expression coordinate facts) '()) max-steps max-term-size)))
@@ -266,21 +266,22 @@ Declared unknown function derivatives remain explicit partial terms."
 (define* (math-compute source #:key (assumptions '()) (max-steps 256) (max-term-size 8192))
   "Lower Cartesian operators and component algebra, compute partials, then simplify.
 Unknown field derivatives remain explicit; no abstract field components are invented."
-  (report-with-input
-    (run-math-passes (value->term 'math-compute source) (math-assumptions assumptions)
-      (append (cartesian-passes (value->term 'math-compute source))
-              `((simplify . ,math-simplification-rules)))
-      #:name 'compute #:order 'innermost #:max-steps max-steps #:max-term-size max-term-size
-      #:validate-final
-      (lambda (term)
-        (filter-map
-          (lambda (path)
-            (let ((local (math-term-at-path term path)))
-              (and (memq (car local) '(grad div curl laplacian antiderivative poisson))
-                   (make-math-diagnostic #f #f path 'unsupported-expression '()
-                     "Cartesian computation requires explicit vector components for this operator"))))
-          (math-term-paths term))))
-    source))
+  (audit-calculation-report
+    (report-with-input
+      (run-math-passes (value->term 'math-compute source) (math-assumptions assumptions)
+        (append (cartesian-passes (value->term 'math-compute source))
+                `((simplify . ,math-simplification-rules)))
+        #:name 'compute #:order 'innermost #:max-steps max-steps #:max-term-size max-term-size
+        #:validate-final
+        (lambda (term)
+          (filter-map
+            (lambda (path)
+              (let ((local (math-term-at-path term path)))
+                (and (memq (car local) '(grad div curl laplacian antiderivative poisson))
+                     (make-math-diagnostic #f #f path 'unsupported-expression '()
+                       "Cartesian computation requires explicit vector components for this operator"))))
+            (math-term-paths term))))
+      source)))
 
 (define (polynomial-calculus-report name rule source coordinate assumptions max-steps max-term-size)
   (derivative-report name (list rule) source coordinate assumptions
@@ -293,7 +294,7 @@ Unknown field derivatives remain explicit; no abstract field components are inve
 (define* (math-antiderivative source coordinate #:key (assumptions '())
                              (max-steps 128) (max-term-size 8192))
   "Compute the exact polynomial primitive anchored at coordinate zero."
-  (audit-calculus-report
+  (audit-calculation-report
     (polynomial-calculus-report 'antiderivative 'integrate-polynomial source coordinate assumptions max-steps max-term-size)))
 
 (define* (math-solve-poisson source #:key (coordinate #f) (assumptions '())
@@ -304,7 +305,7 @@ No boundary conditions or uniqueness claim. The selected axis fixes one solution
          (basis (find math-space-declaration? facts))
          (axis (or coordinate
                    (semantic:variable (if basis (cadadr basis) 'x)))))
-    (audit-calculus-report
+    (audit-calculation-report
       (polynomial-calculus-report 'poisson 'solve-polynomial-poisson
         source axis assumptions max-steps max-term-size))))
 

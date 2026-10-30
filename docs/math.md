@@ -89,9 +89,12 @@ one, for inspection. Successful `@check-derive` output says that each step
 replays with the selected rules and assumptions. Successful `@check-equation`
 output says that the residual reduced to zero under supported rules and
 assumptions. These checks do not validate the author's assumptions or an
-external mathematical model. Reports from `differentiate`, `partial`,
-`antiderivative`, and `solve-poisson` also attach a calculation audit; its
-replay, semantic-contract, and proof-tree outcomes remain separate.
+external mathematical model. Reports from `compute`, `differentiate`,
+`partial`, `antiderivative`, and `solve-poisson` also attach a calculation
+audit; its replay, semantic-contract, and proof-tree outcomes remain separate.
+`check-equation` reports its residual outcome directly: a generic derivation
+audit would only check rewrite steps and could be semantically checked even
+when the requested equation is false.
 
 Use
 `math-verify-derivation` from `(grove math verification)` to

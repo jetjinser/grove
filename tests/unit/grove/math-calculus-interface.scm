@@ -69,7 +69,19 @@
   (test-equal "a primitive composes with differentiation" (φ:term "x^3+2*x") (math-report-final report))
   (test-equal "composed primitive uses an explicit extra pass"
     '(polynomial-calculus components partial simplify) (map math-report-name (math-report-passes report)))
-  (test-assert "composed certificate replays" (math-verification-valid? (math-verify-derivation (math-report-derivation report)))))
+  (test-assert "composed certificate replays" (math-verification-valid? (math-verify-derivation (math-report-derivation report))))
+  (test-assert "composed calculations expose audits without claiming unsupported solver contracts"
+    (let ((audit (math-report-audit report)))
+      (and (math-calculation-audit? audit)
+           (math-calculation-audit-replay-valid? audit)
+           (eq? 'unsupported (math-calculation-audit-contract-status audit))))))
+(let* ((report (φ:compute "partial(x^3,x)" #:assumptions (list basis)))
+       (audit (math-report-audit report)))
+  (test-assert "compute independently checks supported scalar polynomial steps"
+    (and (math-report-finished? report)
+         (math-calculation-audit? audit)
+         (math-calculation-audit-replay-valid? audit)
+         (eq? 'semantically-checked (math-calculation-audit-contract-status audit)))))
 (for-each (lambda (execute)
             (test-equal "unsupported primitive domain cannot disappear through cancellation" 'unsupported-expression
               (math-report-reason (execute "antiderivative(1/x,x)-antiderivative(1/x,x)"
