@@ -21,6 +21,7 @@
             check-chain check-polynomial-rule check-polynomial-derivation
             check-polynomial-step check-polynomial-derivative check-polynomial-antiderivative
             check-polynomial-poisson check-polynomial-equation
+            check-polynomial-cartesian
             polynomial-check->content antiderivative
             compute check-equation solve-poisson differentiate partial))
 
@@ -245,6 +246,12 @@
   (check:math-polynomial-check-equation
     (math-value-term (read left))
     (math-value-term (read right))))
+
+(define-public check-polynomial-cartesian
+  (lambda* (operation expression result #:key (axes '(x y z)))
+    (check:math-polynomial-check-cartesian
+      operation (math-value-term (read expression)) axes
+      (math-value-term (read result)))))
 
 (define-public compute
   (lambda* (source #:key (assumptions '()) (max-steps 256) (max-term-size 8192))

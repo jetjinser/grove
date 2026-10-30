@@ -356,7 +356,7 @@ article. Authored Formula expressions retain
 source locations through parsing and computation where possible, so diagnostics
 can point back to the relevant source text.
 
-## Independent scalar-polynomial checks
+## Independent polynomial checks
 
 The ordinary derivation verifier replays Grove's registered rewrite relations.
 For a deliberately smaller domain, the independent semantic checker verifies
@@ -384,6 +384,16 @@ expressions without using the residual derivation. It returns
 meanings, and `unsupported` when either side lies outside the checker domain.
 This result checks the equation itself, unlike a generic calculation audit,
 which checks evidence about how a derivation proceeded.
+`check-polynomial-cartesian` provides the same independent check for explicit
+three-dimensional Cartesian components: `grad`, `div`, `curl`, and scalar or
+componentwise vector `laplacian`. Its `#:axes` argument is an ordered list of
+three distinct coordinate symbols (defaulting to `(x y z)`); vectors must be
+written as `components(x,y,z)`. For example,
+`(φ:check-polynomial-cartesian 'curl "components(x*y,y*z,z*x)"
+"components(-y,-z,-x)")` checks the right-handed curl formula. The checker
+only claims exact results for rational polynomials and returns `unsupported`
+for other expressions; it does not infer geometric assumptions or handle
+curvilinear coordinates.
 `polynomial-check->content` adapts the typed result to Content IR through the
 presentation layer. These are conveniences, not a second checker API. Import
 `(grove math semantic-check)` when Scheme code needs typed evidence or works

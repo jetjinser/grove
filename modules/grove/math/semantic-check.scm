@@ -44,7 +44,7 @@
             math-polynomial-check-step
             math-polynomial-check-derivation math-polynomial-check-derivative
             math-polynomial-check-antiderivative math-polynomial-check-poisson
-            math-polynomial-check-equation
+            math-polynomial-check-equation math-polynomial-check-cartesian
             math-check-derivative-evidence math-check-antiderivative-evidence
             math-check-poisson-evidence math-check-equation-evidence))
 
@@ -784,3 +784,103 @@ zero-value and zero-first-derivative anchor used to choose one solution."
        (math-check-equation-evidence
          (make-math-equation-evidence
            left right left-normal-form right-normal-form))))))
+
+;; The Cartesian checker deliberately accepts only explicit component triples
+;; and scalar polynomials.  Its small denotational model is independent of the
+;; spatial rewrite rules and their intermediate terms.
+(define (polynomial-partial polynomial variable)
+  (canonical-polynomial
+    (filter-map
+      (lambda (entry)
+        (let* ((powers (car entry))
+               (factor (assq variable powers)))
+          (and factor
+               (cons (map (lambda (power)
+                            (if (eq? (car power) variable)
+                                (cons variable (- (cdr power) 1))
+                                power))
+                          (filter (lambda (power)
+                                    (or (not (eq? (car power) variable))
+                                        (> (cdr power) 1)))
+                            powers))
+                     (* (cdr entry) (cdr factor))))))
+      polynomial)))
+
+(define (cartesian-components term)
+  (match term
+    (('components x y z)
+     (let ((values (map math-polynomial-normal-form (list x y z))))
+       (and (every identity values) values)))
+    (_ #f)))
+
+(define (cartesian-result-value operation result)
+  (case operation
+    ((div) (math-polynomial-normal-form result))
+    ((laplacian)
+     (or (math-polynomial-normal-form result)
+         (cartesian-components result)))
+    (else (cartesian-components result))))
+
+(define (cartesian-denotation operation expression axes)
+  (let ((scalar (math-polynomial-normal-form expression))
+        (vector (cartesian-components expression)))
+    (cond
+      ((eq? operation 'grad)
+       (and scalar
+            (map (lambda (axis) (polynomial-partial scalar axis)) axes)))
+      ((eq? operation 'div)
+       (and vector
+            (fold polynomial-add '()
+              (map polynomial-partial vector axes))))
+      ((eq? operation 'curl)
+       (and vector
+            (let ((x (car vector)) (y (cadr vector)) (z (caddr vector))
+                  (a (car axes)) (b (cadr axes)) (c (caddr axes)))
+              (list
+                (polynomial-add (polynomial-partial z b)
+                                (polynomial-scale (polynomial-partial y c) -1))
+                (polynomial-add (polynomial-partial x c)
+                                (polynomial-scale (polynomial-partial z a) -1))
+                (polynomial-add (polynomial-partial y a)
+                                (polynomial-scale (polynomial-partial x b) -1))))))
+      ((eq? operation 'laplacian)
+       (cond (scalar (polynomial-laplacian scalar axes))
+             (vector (map (lambda (component)
+                            (polynomial-laplacian component axes))
+                          vector))
+             (else #f)))
+      (else #f))))
+
+(define (polynomial-laplacian polynomial axes)
+  (fold polynomial-add '()
+    (append-map
+      (lambda (axis)
+        (let ((first (polynomial-partial polynomial axis)))
+          (list (polynomial-partial first axis))))
+      axes)))
+
+(define (math-polynomial-check-cartesian operation expression axes result)
+  "Check grad, div, curl, or laplacian over explicit 3D Cartesian polynomials.
+AXES is the ordered list of three distinct coordinate symbols. Vector inputs
+and outputs use components(x, y, z)."
+  (cond
+    ((not (and (list? axes) (= (length axes) 3) (every symbol? axes)
+               (= (length (delete-duplicates axes)) 3)))
+     (semantic-check 'rejected (list operation expression axes result)
+       "Cartesian checking requires three distinct coordinate symbols"))
+    ((not (memq operation '(grad div curl laplacian)))
+     (semantic-check 'unsupported (list operation expression axes result)
+       "only grad, div, curl, and laplacian are supported"))
+    (else
+     (let ((input (cartesian-denotation operation expression axes))
+           (output (cartesian-result-value operation result)))
+       (cond
+         ((or (not input) (not output))
+          (semantic-check 'unsupported (list operation expression axes result)
+            "the expression or result is outside the explicit Cartesian polynomial checker"))
+         ((equal? input output)
+          (semantic-check 'semantically-checked
+            (list operation expression axes result) #f))
+         (else
+          (semantic-check 'rejected (list operation expression axes result)
+            "the supplied result differs from the exact Cartesian denotation")))))))

@@ -15,8 +15,43 @@
              (srfi srfi-1)
              (srfi srfi-64))
 
-(test-begin "independent scalar-polynomial semantic checker")
+(test-begin "independent polynomial semantic checker")
 (define basis (◆:space 'x 'y 'z))
+
+(test-eq "Cartesian gradient is checked from explicit coordinates"
+  'semantically-checked
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian 'grad "x^2+y*z" "components(2*x,z,y)")))
+(test-eq "Cartesian divergence is checked independently"
+  'semantically-checked
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian 'div "components(x^2,y^2,z^2)" "2*x+2*y+2*z")))
+(test-eq "Cartesian curl uses the ordered right-handed basis"
+  'semantically-checked
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian 'curl "components(x*y,y*z,z*x)"
+      "components(-y,-z,-x)")))
+(test-eq "scalar Laplacian is checked componentwise"
+  'semantically-checked
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian 'laplacian "x^2*y^2" "2*x^2+2*y^2")))
+(test-eq "vector Laplacian preserves explicit components"
+  'semantically-checked
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian 'laplacian
+      "components(x^2,y^2,z^2)" "components(2,2,2)")))
+(test-eq "Cartesian checker rejects an incorrect gradient"
+  'rejected
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian 'grad "x^2+y*z" "components(x,z,y)")))
+(test-eq "Cartesian checker does not claim transcendental cases"
+  'unsupported
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian 'grad "sin(x)" "components(cos(x),0,0)")))
+(test-eq "Cartesian checker requires an ordered three-axis space"
+  'rejected
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian 'grad "x" "components(1,0,0)" #:axes '(x y y))))
 
 (test-assert "exact sparse polynomials collect and multiply independently"
   (math-polynomial-equivalent?
@@ -301,4 +336,4 @@
   (test-equal "semantic-check subject accessors return independent data" '(sum)
     (math-semantic-check-subject check)))
 
-(test-end "independent scalar-polynomial semantic checker")
+(test-end "independent polynomial semantic checker")
