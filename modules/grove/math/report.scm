@@ -14,10 +14,10 @@
             math-report-states math-report-diagnostics math-report-passes
             math-report-finished? math-report-status math-report-unresolved
             math-report-derivation math-report-final
-            math-report-audit math-report-result))
+            math-report-audit math-report-equation-check math-report-result))
 
 (define-record-type <math-report>
-(%make-math-report name candidates reason limits states diagnostics passes audit)
+(%make-math-report name candidates reason limits states diagnostics passes audit equation-check)
   math-report?
   (name math-report-name)
   (candidates report-candidates/raw)
@@ -26,7 +26,8 @@
   (states math-report-states)
   (diagnostics report-diagnostics/raw)
   (passes report-passes/raw)
-  (audit math-report-audit))
+  (audit math-report-audit)
+  (equation-check math-report-equation-check))
 
 (define (math-report-candidates report)
   (snapshot-data (report-candidates/raw report)))
@@ -41,10 +42,12 @@
   (snapshot-data (report-passes/raw report)))
 
 (define* (make-math-report name candidates reason limits states
-                          #:key (diagnostics '()) (passes '()) (audit #f))
+                          #:key (diagnostics '()) (passes '()) (audit #f)
+                                (equation-check #f))
   "Construct a report from a symbolic NAME and REASON, derivation CANDIDATES,
 LIMITS, and a non-negative STATES count. DIAGNOSTICS and PASSES contain math
-diagnostic and report values; AUDIT is an optional opaque evidence value."
+diagnostic and report values; AUDIT and EQUATION-CHECK are optional opaque
+evidence values."
   (unless (symbol? name)
     (error "math report name must be a symbol" name))
   (unless (and (list? candidates) (every math-derivation? candidates))
@@ -62,7 +65,7 @@ diagnostic and report values; AUDIT is an optional opaque evidence value."
   (%make-math-report name (snapshot-data candidates) reason
                      (snapshot-data limits) states
                      (snapshot-data diagnostics)
-                     (snapshot-data passes) audit))
+                     (snapshot-data passes) audit equation-check))
 
 (define (math-report-finished? report)
   "Return whether calculation or search finished without diagnostics.

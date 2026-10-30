@@ -11,6 +11,7 @@
   #:use-module (grove math private strategy)
   #:use-module (grove math verification)
   #:use-module (grove math audit)
+  #:use-module ((grove math semantic-check) #:select (math-polynomial-check-equation))
   #:use-module (grove math private differentiation)
   #:use-module (grove math partial)
   #:use-module (grove math private integration)
@@ -49,7 +50,7 @@
                math-report-reason math-report-limits
                math-report-states math-report-finished? math-report-status math-report-unresolved math-report-name
                math-report-diagnostics math-report-passes math-report-derivation math-report-final
-               math-report-audit math-report-result))
+               math-report-audit math-report-equation-check math-report-result))
 
 (define (value->term who value)
   (unless (math-value? value)
@@ -63,7 +64,8 @@
             (math-term-at-path (math-derivation-step-from step) (math-derivation-step-path step))) '()))
     (math-derivation-steps candidate)))
 
-(define* (report-with-input report input #:optional (other-inputs '()) (assumptions #f))
+(define* (report-with-input report input #:optional (other-inputs '()) (assumptions #f)
+                            #:key (equation-check (math-report-equation-check report)))
   (let* ((values (map (lambda (value) (begin (value->term 'math-report value) value))
                    (cons input other-inputs)))
          (requirements (delete-duplicates (append-map math-value-requirements values) equal?))
@@ -89,7 +91,8 @@
           (if (pair? missing) 'missing-premise (math-report-reason report))
           (math-report-limits report) (if (pair? missing) 0 (math-report-states report))
           #:diagnostics (append missing (math-report-diagnostics report))
-          #:passes (if (pair? missing) '() (map attach (math-report-passes report))))))
+          #:passes (if (pair? missing) '() (map attach (math-report-passes report)))
+          #:equation-check equation-check)))
     (math-report-with-origin (attach report) (math-value-origin (car values)))))
 
 (define (audit-calculation-report report)
@@ -103,7 +106,8 @@
           (math-report-states report)
           #:diagnostics (math-report-diagnostics report)
           #:passes (math-report-passes report)
-          #:audit (math-audit-calculation certificate))
+          #:audit (math-audit-calculation certificate)
+          #:equation-check (math-report-equation-check report))
         report)))
 
 (define (derivative-report name rules source variable assumptions validate max-steps max-term-size)
@@ -338,4 +342,6 @@ A nonzero or symbolic residual is not a completed verification."
         #:name 'check-equation #:order 'innermost #:max-steps max-steps #:max-term-size max-term-size
         #:validate-final
         (lambda (term) (equation-residual-diagnostics term facts)))
-      input)))
+      input #:equation-check
+      (math-polynomial-check-equation
+        (math-value-term left) (math-value-term right)))))

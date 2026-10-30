@@ -2,9 +2,32 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 (use-modules ((grove math formula) #:prefix φ:) (grove math calculation) (tests unit grove polynomial-oracle)
              (tests unit grove cartesian-fixtures) ((grove math semantic) #:prefix ◆:)
+             (grove math semantic-check)
              (srfi srfi-1) (srfi srfi-64))
 (test-begin "equations verified by residual certificates")
 (check-equation '("(x+y)^2" "x^2+2*x*y+y^2"))
+(let* ((report (φ:check-equation "(x+y)^2" "x^2+2*x*y+y^2" #:assumptions (list basis)))
+       (check (math-report-equation-check report)))
+  (test-equal "equation report retains its independent semantic result"
+    'semantically-checked (math-semantic-check-status check))
+  (test-equal "equation report and independent polynomial checker agree"
+    'complete (math-report-status report)))
+(let* ((report (φ:check-equation "x^2" "x" #:assumptions (list basis)))
+       (check (math-report-equation-check report)))
+  (test-equal "false polynomial equation has an explicit residual failure"
+    'equation-not-proven (math-report-reason report))
+  (test-equal "false polynomial equation has a separate independent rejection"
+    'rejected (math-semantic-check-status check)))
+(let ((report (φ:check-equation "laplacian(x^2)" "2" #:assumptions (list basis))))
+  (test-equal "spatial equation reports keep scalar evidence unsupported"
+    'unsupported (math-semantic-check-status (math-report-equation-check report))))
+(let ((report (φ:check-equation "(x+y)^2" "x^2+2*x*y+y^2"
+               #:max-steps 0 #:assumptions (list basis))))
+  (test-equal "independent equation result survives residual calculation cutoff"
+    'semantically-checked
+    (math-semantic-check-status (math-report-equation-check report)))
+  (test-equal "residual calculation still reports its own cutoff"
+    'cutoff (math-report-status report)))
 (for-each (lambda (entry)
             (let ((report (φ:check-equation (car entry) (cadr entry) #:assumptions (list basis))))
               (test-equal "unverified equations are explicit" 'equation-not-proven (math-report-reason report))

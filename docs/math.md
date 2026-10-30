@@ -92,9 +92,13 @@ assumptions. These checks do not validate the author's assumptions or an
 external mathematical model. Reports from `compute`, `differentiate`,
 `partial`, `antiderivative`, and `solve-poisson` also attach a calculation
 audit; its replay, semantic-contract, and proof-tree outcomes remain separate.
-`check-equation` reports its residual outcome directly: a generic derivation
-audit would only check rewrite steps and could be semantically checked even
-when the requested equation is false.
+`check-equation` reports its residual outcome through `math-report-status` and
+also exposes an independent polynomial result through
+`math-report-equation-check`. That result can remain `semantically-checked`
+even if residual reduction hits a resource limit, or be `unsupported` for a
+spatial equation. It is separate from generic derivation audit because that
+audit checks rewrite steps and could be semantically checked even when the
+requested equation is false.
 
 Use
 `math-verify-derivation` from `(grove math verification)` to
@@ -366,9 +370,10 @@ Poisson checker verifies `Δu = source` and Grove's selected-axis zero-value and
 zero-first-derivative normalization. Import `(grove math semantic-check)` for
 these checks and their typed evidence values. Evidence constructors and
 accessors belong to this module, so extensions inspecting or validating a
-checker result have one explicit import. The calculation API does not mix this
-independent checker API into its exports. Formula exposes these helpers under
-the same `φ:` prefix for use in articles: `check-polynomial-step`,
+checker result have one explicit import. `math-report-equation-check` carries
+this result on reports from `check-equation`; the checker procedures and
+evidence types remain in `(grove math semantic-check)`. Formula exposes these
+helpers under the same `φ:` prefix for use in articles: `check-polynomial-step`,
 `check-polynomial-derivative`, `check-polynomial-antiderivative`, and
 `check-polynomial-poisson` parse
 formula strings before calling the typed checker; `check-polynomial-rule` and
