@@ -1,6 +1,7 @@
 ;;; SPDX-FileCopyrightText: 2026 Jinser Kafka <aimer@purejs.icu>
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 (use-modules ((grove math formula) #:prefix φ:) (grove math calculation) (grove math context) (grove math types) (grove relation)
+             (grove math semantic-check)
              (tests unit grove polynomial-oracle) (tests unit grove cartesian-fixtures)
              ((grove math semantic) #:prefix ◆:) (srfi srfi-1) (srfi srfi-64))
 (test-begin "independent polynomial Poisson verification")
@@ -32,6 +33,39 @@
 (test-equal "default solver axis is the first basis axis"
   (φ:term "3*x^2")
   (math-report-final (φ:solve-poisson "6" #:assumptions (list basis))))
+(let* ((report (φ:solve-poisson "6" #:assumptions (list basis)))
+       (audit (math-report-audit report)))
+  (test-assert "Poisson reports expose replay, contract, and proof audit layers"
+    (and (math-calculation-audit? audit)
+         (math-calculation-audit-replay-valid? audit)
+         (eq? 'semantically-checked
+              (math-calculation-audit-contract-status audit))
+         (eq? 'unsupported (math-calculation-audit-proof-status audit)))))
+(test-eq "independent Poisson checker validates the PDE and selected-axis anchor"
+  'semantically-checked
+  (math-semantic-check-status
+    (φ:check-polynomial-poisson "6" "3*x^2" #:assumptions (list basis))))
+(test-eq "independent Poisson checker rejects a wrong PDE solution"
+  'rejected
+  (math-semantic-check-status
+    (φ:check-polynomial-poisson "6" "2*x^2" #:assumptions (list basis))))
+(test-eq "independent Poisson checker rejects a solution with a nonzero axis anchor"
+  'rejected
+  (math-semantic-check-status
+    (φ:check-polynomial-poisson "6" "3*x^2+5" #:assumptions (list basis))))
+(let* ((check (φ:check-polynomial-poisson "6" "3*x^2" #:assumptions (list basis)))
+       (evidence (math-semantic-check-subject check))
+       (forged
+         (make-math-poisson-evidence
+           (math-poisson-evidence-expression evidence)
+           (math-poisson-evidence-axes evidence)
+           (math-poisson-evidence-coordinate evidence)
+           (math-poisson-evidence-input evidence)
+           '(((x . 2)) . 99))))
+  (test-eq "Poisson checker rejects forged typed evidence" 'rejected
+    (math-semantic-check-status (math-check-poisson-evidence forged))))
+(test-eq "Poisson checker requires a declared Cartesian space" 'rejected
+  (math-semantic-check-status (φ:check-polynomial-poisson "6" "3*x^2")))
 (test-equal "solver requires space" 'missing-premise
   (math-report-reason (φ:solve-poisson "6" #:assumptions '("coordinate(x)"))))
 (test-equal "solver coordinate must belong to its space" 'unsupported-expression

@@ -303,7 +303,9 @@ No boundary conditions or uniqueness claim. The selected axis fixes one solution
          (basis (find math-space-declaration? facts))
          (axis (or coordinate
                    (semantic:variable (if basis (cadadr basis) 'x)))))
-    (polynomial-calculus-report 'poisson 'solve-polynomial-poisson source axis assumptions max-steps max-term-size)))
+    (audit-calculus-report
+      (polynomial-calculus-report 'poisson 'solve-polynomial-poisson
+        source axis assumptions max-steps max-term-size))))
 
 (define (equation-residual-diagnostics term facts)
   (if (member term '((num "0") (zero vector) (components (num "0") (num "0") (num "0")))) '()

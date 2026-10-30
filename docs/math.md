@@ -205,7 +205,7 @@ should use Formula or Semantic values instead.
 | Partial derivative | The scalar differentiation rules, with explicit coordinate and parameter roles. Unknown multivariate functions may remain as symbolic partials. | Repeated or mixed derivatives require matching regularity assumptions; a finished symbolic result can still contain unevaluated derivatives. |
 | Vector calculus | Three-dimensional Cartesian `grad`, `div`, `curl`, and `laplacian`; three-component vector operations. | Declare the field types, ordered coordinates, and required regularity. This is not general-dimensional vector or matrix algebra. |
 | Antiderivative | Exact rational-polynomial primitives in one coordinate. | Grove selects the primitive whose value is zero at the coordinate origin; it does not return the arbitrary integration term. |
-| Poisson particular solution | One polynomial particular solution of `Δu = source` in an active Cartesian space. | Grove selects a solution along one axis and checks its residual; this is not the general solution or a boundary-value solver. |
+| Poisson particular solution | One exact rational-polynomial particular solution of `Δu = source` in a declared three-dimensional Cartesian space. | Grove selects a solution by setting its value and first derivative to zero on one coordinate axis; this is not the general solution or a boundary-value solver. |
 | Equation check | Computes and simplifies the residual between both sides. | A zero residual establishes the identity only within supported rules and supplied assumptions. A nonzero or unresolved residual is reported as unproven. |
 
 Use `@compute` for component and spatial calculations, `@antiderivative` for a
@@ -353,14 +353,18 @@ The ordinary derivation verifier replays Grove's registered rewrite relations.
 For a deliberately smaller domain, the independent semantic checker verifies
 polynomial equations using its own exact sparse-polynomial normalizer. The
 checker can validate the registered scalar laws, check an individual rewrite
-step and its recorded path, or compare a computed polynomial derivative with an
-independently computed derivative. Import `(grove math semantic-check)` for
+step and its recorded path, compare a computed polynomial derivative with an
+independently computed derivative, or check polynomial antiderivatives and
+Poisson particular solutions. The Poisson checker verifies `Δu = source` and
+Grove's selected-axis zero-value and zero-first-derivative normalization.
+Import `(grove math semantic-check)` for
 these checks and their typed evidence values. Evidence constructors and
 accessors belong to this module, so extensions inspecting or validating a
 checker result have one explicit import. The calculation API does not mix this
 independent checker API into its exports. Formula exposes these helpers under
 the same `φ:` prefix for use in articles: `check-polynomial-step`,
-`check-polynomial-derivative`, and `check-polynomial-antiderivative` parse
+`check-polynomial-derivative`, `check-polynomial-antiderivative`, and
+`check-polynomial-poisson` parse
 formula strings before calling the typed checker; `check-polynomial-rule` and
 `check-polynomial-derivation` delegate values directly.
 `polynomial-check->content` adapts the typed result to Content IR through the
@@ -384,8 +388,10 @@ matching declared `nonzero` premise; opaque guards do not extend the checker's
 proof domain.
 
 Its domain is scalar polynomials over the rationals, including division by a
-nonzero rational constant. Expression-valued denominators, functions, vectors,
-spatial rules and algorithm-wide correctness proofs are unsupported. The
+nonzero rational constant. The Poisson contract checker additionally takes the
+three ordered axes from a declared Cartesian `space` assumption. Expression-
+valued denominators, functions, general spatial rewrite rules and
+algorithm-wide correctness proofs are unsupported. The
 normalizer also has explicit expansion limits: at most 256 distinct monomials,
 total degree 64, and exponent 128. The checker relies on the correctness of its
 own small Scheme implementation; it is independently implemented from the
@@ -402,8 +408,10 @@ denotation independently. It reuses Grove's type inference to establish that
 the supplied assumptions make both terms scalar. For polynomial derivative
 certificates, the same derivation record retains the rule, path and endpoints;
 the ordinary verifier replays those steps, then the independent checker
-compares the final term with its own exact derivative. This checks a specific
-certificate, not the derivative program for all inputs. Assumptions remain
+compares the final term with its own exact derivative. For a Poisson derivation,
+the audit independently checks the final polynomial against the Laplacian
+equation and selected-axis normalization. This checks a specific certificate,
+not the underlying program for all inputs. Assumptions remain
 author-supplied inputs.
 
 These checks answer different questions, so read their results separately.

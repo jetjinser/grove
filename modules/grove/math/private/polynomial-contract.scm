@@ -12,7 +12,11 @@
             math-antiderivative-evidence? make-math-antiderivative-evidence
             math-antiderivative-evidence-expression math-antiderivative-evidence-coordinate
             math-antiderivative-evidence-input math-antiderivative-evidence-result
-            math-antiderivative-evidence-monomials math-antiderivative-evidence-derivative))
+            math-antiderivative-evidence-monomials math-antiderivative-evidence-derivative
+            math-poisson-evidence? make-math-poisson-evidence
+            math-poisson-evidence-expression math-poisson-evidence-axes
+            math-poisson-evidence-coordinate math-poisson-evidence-input
+            math-poisson-evidence-result))
 
 ;; This is algorithm-contract evidence, not an equality derivation. Its data
 ;; shapes mirror the recursive program cases and can be checked independently.
@@ -40,3 +44,12 @@
   (result math-antiderivative-evidence-result)
   (monomials math-antiderivative-evidence-monomials)
   (derivative math-antiderivative-evidence-derivative))
+
+(define-record-type <math-poisson-evidence>
+  (make-math-poisson-evidence expression axes coordinate input result)
+  math-poisson-evidence?
+  (expression math-poisson-evidence-expression)
+  (axes math-poisson-evidence-axes)
+  (coordinate math-poisson-evidence-coordinate)
+  (input math-poisson-evidence-input)
+  (result math-poisson-evidence-result))

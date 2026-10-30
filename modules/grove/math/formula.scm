@@ -20,6 +20,7 @@
             derive derive->content rewrite search simplify calculate normalize expand collect
             check-chain check-polynomial-rule check-polynomial-derivation
             check-polynomial-step check-polynomial-derivative check-polynomial-antiderivative
+            check-polynomial-poisson
             polynomial-check->content antiderivative
             compute check-equation solve-poisson differentiate partial))
 
@@ -219,6 +220,26 @@
     (check:math-polynomial-check-antiderivative
       (math-value-term (read expression)) variable
       (math-value-term (read result)))))
+
+(define-public check-polynomial-poisson
+  (lambda* (expression result #:key (coordinate #f) (assumptions '()))
+    (let* ((facts (parse-assumptions (list assumptions)))
+           (space (find (lambda (fact)
+                          (and (list? fact) (= (length fact) 4)
+                               (eq? (car fact) 'space)))
+                        facts))
+           (axes (and space (map cadr (cdr space))))
+           (coordinate-term (and coordinate
+                                 (if (symbol? coordinate) `(var ,coordinate)
+                                     (math-value-term (read coordinate)))))
+           (axis (if coordinate
+                     (and (pair? coordinate-term)
+                          (eq? (car coordinate-term) 'var)
+                          (cadr coordinate-term))
+                     (and (pair? axes) (car axes)))))
+      (check:math-polynomial-check-poisson
+        (math-value-term (read expression)) (or axes '()) axis
+        (math-value-term (read result))))))
 
 (define-public compute
   (lambda* (source #:key (assumptions '()) (max-steps 256) (max-term-size 8192))

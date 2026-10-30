@@ -6,6 +6,7 @@
   #:use-module (grove private snapshot)
   #:use-module (grove math derivation)
   #:use-module (grove math private checker-polynomial)
+  #:use-module (grove math private declaration)
   #:use-module (grove math private number)
   #:use-module (grove math private premise)
   #:use-module (grove math rule)
@@ -27,15 +28,20 @@
                math-antiderivative-evidence? make-math-antiderivative-evidence
                math-antiderivative-evidence-expression math-antiderivative-evidence-coordinate
                math-antiderivative-evidence-input math-antiderivative-evidence-result
-               math-antiderivative-evidence-monomials math-antiderivative-evidence-derivative)
+               math-antiderivative-evidence-monomials math-antiderivative-evidence-derivative
+               math-poisson-evidence? make-math-poisson-evidence
+               math-poisson-evidence-expression math-poisson-evidence-axes
+               math-poisson-evidence-coordinate math-poisson-evidence-input
+               math-poisson-evidence-result)
   #:export (math-semantic-check? math-semantic-check-status
             math-semantic-check-valid? math-semantic-check-subject
             math-semantic-check-diagnostics
             math-polynomial-check-rule math-polynomial-check-rule-spec
             math-polynomial-check-step
             math-polynomial-check-derivation math-polynomial-check-derivative
-            math-polynomial-check-antiderivative
-            math-check-derivative-evidence math-check-antiderivative-evidence))
+            math-polynomial-check-antiderivative math-polynomial-check-poisson
+            math-check-derivative-evidence math-check-antiderivative-evidence
+            math-check-poisson-evidence))
 
 (define-record-type <math-semantic-check>
   (%make-math-semantic-check status subject diagnostics)
@@ -291,6 +297,26 @@
        (match (car terms)
          (('antiderivative expression ('var variable))
           (check-polynomial-antiderivative-derivation certificate expression variable terms))))
+      ((match (car terms) (('poisson _ ('var _)) #t) (_ #f))
+       (match (car terms)
+         (('poisson expression ('var coordinate))
+          (let* ((basis (find math-space-declaration? assumptions))
+                 (axes (and basis (map cadr (cdr basis))))
+                 (replay (math-verify-derivation certificate))
+                 (check (and axes
+                             (math-polynomial-check-poisson
+                               expression axes coordinate (last terms)))))
+            (cond
+              ((not (math-verification-valid? replay))
+               (semantic-check 'rejected certificate
+                 (string-join (math-verification-errors replay) "; ")))
+              ((not check)
+               (semantic-check 'unsupported certificate
+                 "a Cartesian space is required to audit a polynomial Poisson solution"))
+              ((math-semantic-check-valid? check)
+               (semantic-check 'semantically-checked
+                 (math-semantic-check-subject check) #f))
+              (else check))))))
       (else
        (check-polynomial-rewrite-derivation certificate terms steps assumptions)))))
 
@@ -583,3 +609,125 @@
       ((math-semantic-check-valid? check)
        (semantic-check 'semantically-checked (math-semantic-check-subject check) #f))
       (else check))))
+
+(define (polynomial-normal-form->term polynomial)
+  (define (product terms)
+    (if (null? terms) '(num "1")
+        (fold (lambda (term result) `(* ,result ,term))
+              (car terms) (cdr terms))))
+  (define (monomial->term entry)
+    (let* ((powers (car entry))
+           (coefficient (cdr entry))
+           (factors
+             (map (lambda (factor)
+                    (let ((variable `(var ,(car factor))))
+                      (if (= (cdr factor) 1) variable
+                          `(^ ,variable (num ,(number->string (cdr factor)))))))
+                  powers))
+           (coefficient-term (math-number->term coefficient)))
+      (cond ((null? factors) coefficient-term)
+            ((= coefficient 1) (product factors))
+            ((= coefficient -1) `(- ,(product factors)))
+            (else (product (cons coefficient-term factors))))))
+  (if (null? polynomial) '(num "0")
+      (fold (lambda (entry result) `(+ ,result ,(monomial->term entry)))
+            (monomial->term (car polynomial)) (cdr polynomial))))
+
+(define (polynomial-at-zero polynomial coordinate)
+  (canonical-polynomial
+    (filter (lambda (entry) (not (assq coordinate (car entry)))) polynomial)))
+
+(define (poisson-laplacian result axes)
+  (let loop ((axes axes) (sum '()))
+    (if (null? axes) sum
+        (let* ((first-term (polynomial-derivative-evidence result (car axes)))
+               (first-check (and first-term (math-check-derivative-evidence first-term)))
+               (second-source
+                 (and (math-semantic-check-valid? first-check)
+                      (polynomial-normal-form->term
+                        (math-derivative-evidence-result first-term))))
+               (second-term
+                 (and second-source
+                      (polynomial-derivative-evidence second-source (car axes))))
+               (second-check
+                 (and second-term (math-check-derivative-evidence second-term))))
+          (and (math-semantic-check-valid? second-check)
+               (loop (cdr axes)
+                 (polynomial-add sum
+                   (math-derivative-evidence-result second-term))))))))
+
+(define (check-poisson-evidence/internal evidence)
+  (let* ((expression (and (math-poisson-evidence? evidence)
+                          (math-poisson-evidence-expression evidence)))
+         (axes (and (math-poisson-evidence? evidence)
+                    (math-poisson-evidence-axes evidence)))
+         (coordinate (and (math-poisson-evidence? evidence)
+                          (math-poisson-evidence-coordinate evidence)))
+         (claimed-input (and (math-poisson-evidence? evidence)
+                             (math-poisson-evidence-input evidence)))
+         (claimed-result (and (math-poisson-evidence? evidence)
+                              (math-poisson-evidence-result evidence)))
+         (input (and expression (math-polynomial-normal-form expression)))
+         (result (and (list? claimed-result)
+                      (math-polynomial-normal-form
+                        (polynomial-normal-form->term claimed-result)))))
+    (cond
+      ((not (math-poisson-evidence? evidence))
+       (semantic-check 'rejected evidence "expected polynomial Poisson evidence"))
+      ((not (and (list? axes) (= (length axes) 3)
+                 (every symbol? axes)
+                 (= (length (delete-duplicates axes)) 3)
+                 (memq coordinate axes)
+                 input result
+                 (equal? claimed-input input)
+                 (equal? claimed-result result)))
+       (semantic-check 'rejected evidence "malformed polynomial Poisson evidence"))
+      (else
+       (let ((laplacian (poisson-laplacian
+                          (polynomial-normal-form->term result) axes))
+             (first-derivative
+               (polynomial-derivative-evidence
+                 (polynomial-normal-form->term result) coordinate)))
+         (cond
+           ((or (not laplacian) (not first-derivative)
+                (not (math-semantic-check-valid?
+                       (math-check-derivative-evidence first-derivative))))
+            (semantic-check 'unsupported evidence
+              "the particular solution is outside the exact polynomial checker"))
+           ((not (equal? input laplacian))
+            (semantic-check 'rejected evidence
+              "the particular solution does not satisfy the polynomial Poisson equation"))
+           ((or (not (null? (polynomial-at-zero result coordinate)))
+                (not (null? (polynomial-at-zero
+                              (math-derivative-evidence-result first-derivative)
+                              coordinate))))
+            (semantic-check 'rejected evidence
+              "the particular solution violates the selected-axis zero-value or zero-derivative anchor"))
+           (else (semantic-check 'semantically-checked evidence #f))))))))
+
+(define (math-check-poisson-evidence evidence)
+  "Independently check a polynomial Poisson equation and its selected-axis anchor."
+  (catch #t
+    (lambda () (check-poisson-evidence/internal evidence))
+    (lambda _
+      (semantic-check 'rejected evidence "malformed polynomial Poisson contract evidence"))))
+
+(define (math-polynomial-check-poisson expression axes coordinate result)
+  "Check a polynomial particular solution of Delta u = EXPRESSION.
+AXES gives the ordered Cartesian coordinates; COORDINATE selects the
+zero-value and zero-first-derivative anchor used to choose one solution."
+  (let* ((input (math-polynomial-normal-form expression))
+         (output (math-polynomial-normal-form result)))
+    (cond
+      ((not (and (list? axes) (= (length axes) 3)
+                 (every symbol? axes)
+                 (= (length (delete-duplicates axes)) 3)
+                 (symbol? coordinate) (memq coordinate axes)))
+       (semantic-check 'rejected (list expression axes coordinate result)
+         "Poisson evidence requires three distinct axes and a selected axis in that space"))
+      ((or (not input) (not output))
+       (semantic-check 'unsupported (list expression axes coordinate result)
+         "the input or solution is outside the scalar-polynomial Poisson checker"))
+      (else
+       (math-check-poisson-evidence
+         (make-math-poisson-evidence expression axes coordinate input output))))))
