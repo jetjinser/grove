@@ -14,7 +14,7 @@
   (let* ((source (car fixture)) (report (φ:compute source #:assumptions (list basis)))
          (certificate (math-report-derivation report))
          (oracle (make-evaluator coordinates)))
-    (test-assert source (math-report-complete? report))
+    (test-assert source (math-report-finished? report))
     (test-equal "computed result" (φ:term (cadr fixture)) (math-report-final report))
     (test-equal "explicit passes" '(components partial simplify) (map math-report-name (math-report-passes report)))
     (test-assert "certificate replays" (math-verification-valid? (math-verify-derivation certificate)))
@@ -33,7 +33,7 @@
                   #:assumptions (list basis)))
          (certificate (math-report-derivation report))
          (oracle (make-evaluator coordinates)))
-    (test-assert "valid equation completes" (math-report-complete? report))
+    (test-assert "valid equation completes" (math-report-finished? report))
     (test-equal "identity residual is zero" '(num "0") (math-report-final report))
     (test-assert "equation derivation replays"
       (math-verification-valid? (math-verify-derivation certificate)))

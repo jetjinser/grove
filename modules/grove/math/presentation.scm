@@ -18,7 +18,7 @@
   #:use-module (grove math semantic-check)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
-  #:export (math-derivation->content math-completed-report->content
+  #:export (math-derivation->content math-finished-report->content
             math-report->content math-verification->content
             math-semantic-check->content))
 
@@ -106,13 +106,13 @@
       (list (make-content-element 'paragraph
               (list (format #f "Computation stopped: ~a." (math-report-reason report))) #:flow-kind 'block))))
 
-(define* (math-completed-report->content report #:key (view 'compact) (on-error 'raise))
-  "Present a completed report's derivation, or its summary when it has no
-derivation (for example, an exhaustive search that found no path). Incomplete
+(define* (math-finished-report->content report #:key (view 'compact) (on-error 'raise))
+  "Present a finished report's derivation, or its summary when it has no
+derivation (for example, an exhaustive search that found no path). Unfinished
 reports raise by default; ON-ERROR 'show presents their diagnostics instead."
   (check-view view) (check-error-mode on-error)
   (unless (math-report? report) (error "expected a math report" report))
-  (if (not (math-report-complete? report))
+  (if (not (math-report-finished? report))
       (if (eq? on-error 'show) (report-errors report)
           (error (string-join (map math-diagnostic-description (math-report-diagnostics report)) "; ")
                  (math-report-reason report)))
@@ -120,6 +120,11 @@ reports raise by default; ON-ERROR 'show presents their diagnostics instead."
         (if (not certificate)
             (math-report->content report #:view view)
             (let* ((passes (math-report-passes report))
+                   (verification-label
+                     (and (eq? (math-report-name report) 'check-equation)
+                          (list (make-content-element 'paragraph
+                                  (list "Equation checked: the residual reduced to zero under the supported rules and supplied assumptions.")
+                                  #:flow-kind 'block))))
                    (full-content
                      (if (null? passes) (list (chain-content certificate #f))
                        (append-map
@@ -127,7 +132,8 @@ reports raise by default; ON-ERROR 'show presents their diagnostics instead."
                            (list (make-content-element 'paragraph
                                    (list (string-capitalize (symbol->string (math-report-name pass)))) #:flow-kind 'block)
                                  (chain-content (math-report-derivation pass) #f))) passes))))
-              (append (list (display-certificate certificate view full-content))
+              (append (or verification-label '())
+                (list (display-certificate certificate view full-content))
                 (if (eq? (math-report-status report) 'symbolic)
                     (list (make-content-element 'paragraph
                             '("Symbolic result: unevaluated derivatives remain.") #:flow-kind 'block))
@@ -150,7 +156,7 @@ reports raise by default; ON-ERROR 'show presents their diagnostics instead."
                     (string-capitalize (symbol->string (math-report-name report)))
                     (reason-label (math-report-reason report))
                     (length (math-report-candidates report))
-                    (if (math-report-complete? report) " with these rules and assumptions" " within the search bounds")))
+                    (if (math-report-finished? report) " with these rules and assumptions" " within the search bounds")))
             #:flow-kind 'block))
     (map diagnostic-content (math-report-diagnostics report))
     (map (lambda (candidate) (math-derivation->content candidate #:view view)) (math-report-candidates report))))
@@ -159,7 +165,12 @@ reports raise by default; ON-ERROR 'show presents their diagnostics instead."
   (check-view view) (check-error-mode on-error)
   (unless (math-verification? verification) (error "expected a math verification" verification))
   (if (math-verification-valid? verification)
-      (math-derivation->content (math-verification-derivation verification) #:view view)
+      (make-content-element 'math-derivation
+        (list (make-content-element 'paragraph
+                (list "Checked derivation: every step replays using the selected rules and supplied assumptions.")
+                #:flow-kind 'block)
+              (math-derivation->content (math-verification-derivation verification) #:view view))
+        #:flow-kind 'block)
       (if (eq? on-error 'raise) (error (string-join (math-verification-errors verification) "\n"))
           (make-content-element 'math-diagnostics
             (map diagnostic-content (math-verification-diagnostics verification)) #:flow-kind 'block))))

@@ -110,7 +110,7 @@
                (terms (append terms (cdr (math-derivation-terms certificate))))
                (steps (append steps (math-derivation-steps certificate)))
                (count (+ count (math-report-states report))))
-          (if (math-report-complete? report)
+          (if (math-report-finished? report)
               (run (cdr stages) (math-report-final report) (cons report passes) terms steps count)
               (make-math-report name (list (make-math-derivation terms steps assumptions))
                 (math-report-reason report) (math-report-limits report) count

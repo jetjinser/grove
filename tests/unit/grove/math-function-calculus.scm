@@ -12,7 +12,7 @@
   (lambda (source)
     (let ((ordinary (φ:differentiate source "x" #:assumptions facts))
           (partial (φ:partial source "x" #:assumptions facts)))
-      (test-assert "ordinary function derivative completes" (math-report-complete? ordinary))
+      (test-assert "ordinary function derivative completes" (math-report-finished? ordinary))
       (test-equal "both entrances have the same normal form" (math-report-final partial) (math-report-final ordinary))
       (test-assert "ordinary certificate replays" (math-verification-valid? (math-verify-derivation (math-report-derivation ordinary))))
       (for-each (lambda (step)
@@ -24,7 +24,7 @@
 (define unary (list basis "function(h,scalar,scalar); c2(h)"))
 (let* ((first (φ:differentiate "h(x^2)" "x" #:assumptions unary))
        (second (φ:differentiate (math-report-result first) "x" #:assumptions unary)))
-  (test-assert "C2 permits differentiating the first result again" (math-report-complete? second))
+  (test-assert "C2 permits differentiating the first result again" (math-report-finished? second))
   (let ((env (cons (cons 'h (scalar '((1 3 0 0) (1 1 0 0)))) coordinates)))
     (test-equal "independent oracle checks the second composite derivative"
       (evaluate (φ:term "differentiate(differentiate(h(x^2),x),x)") env)
@@ -43,20 +43,20 @@
     (string-contains (sxml->html (content->sxml
       (make-content-element 'math (list (math-value->layout (math-report-result first)))))) "′")))
 (test-assert "C1 is sufficient for an ordinary first derivative"
-  (math-report-complete? (φ:differentiate "h(x)" "x"
+  (math-report-finished? (φ:differentiate "h(x)" "x"
     #:assumptions '("scalar(x); function(h,scalar,scalar); differentiable(h)"))))
 (test-equal "pending second derivative requires C2 before execution" 'missing-premise
   (math-report-reason (φ:differentiate "differentiate(h(x),x)" "x"
     #:assumptions (list basis "function(h,scalar,scalar); differentiable(h)"))))
 (test-assert "prime and argument-indexed notation have the same semantics"
-  (math-report-complete? (φ:check-equation "prime(h,x)" "darg(h(x),1)" #:assumptions unary)))
+  (math-report-finished? (φ:check-equation "prime(h,x)" "darg(h(x),1)" #:assumptions unary)))
 (test-assert "C2 permits differentiating an authored prime"
-  (math-report-complete? (φ:partial "prime(h,x)" "x" #:assumptions unary)))
+  (math-report-finished? (φ:partial "prime(h,x)" "x" #:assumptions unary)))
 (let* ((facts (list basis "function(h,scalar,scalar); smooth(h)"))
        (source "differentiate(differentiate(h(x),x),x)")
        (report (φ:differentiate source "x" #:assumptions facts))
        (env (cons (cons 'h (scalar '((1 3 0 0) (1 1 0 0)))) coordinates)))
-  (test-assert "smooth authorizes the third derivative" (math-report-complete? report))
+  (test-assert "smooth authorizes the third derivative" (math-report-finished? report))
   (test-equal "independent oracle checks the third derivative"
     (evaluate (φ:term "differentiate(differentiate(differentiate(h(x),x),x),x)") env)
     (evaluate (math-report-final report) env)))

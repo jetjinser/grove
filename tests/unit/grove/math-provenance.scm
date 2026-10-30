@@ -45,7 +45,7 @@
       (φ:simplify (math-report-result report) #:assumptions '("scalar(x)")))))
   (test-assert "expanded step annotations expose authored source locations"
     (string-contains (sxml->html (content->sxml
-      (car (math-completed-report->content report #:view 'full)))) "data-source=\"origins.plant:")))
+      (car (math-finished-report->content report #:view 'full)))) "data-source=\"origins.plant:")))
 (let* ((expression (φ:add (located "x" 0 0) (string-copy "y+0")))
        (result (φ:simplify expression #:assumptions '("scalar(x); scalar(y)"))))
   (test-equal "generated unlocated siblings never borrow another operand's location" #f

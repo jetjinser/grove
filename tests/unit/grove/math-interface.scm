@@ -56,7 +56,7 @@
     (test-assert "computed mathematical values are displayable"
       (string-contains (html (document:math result)) "<msup>"))
     (test-assert "computed values may be reused as input to another pass"
-      (math-report-complete? (φ:simplify result)))
+      (math-report-finished? (φ:simplify result)))
     (test-assert "the resulting certificate still independently replays"
       (math-verification-valid? (math-verify-derivation (math-report-derivation report))))
     (test-assert "the same object can participate in goal search"

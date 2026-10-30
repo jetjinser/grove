@@ -225,7 +225,7 @@
                (and step
                     (list (math-proof-step-report-theorem-status step)
                           (math-proof-step-report-status step)))))))
-    (and (math-report-complete? calculation)
+    (and (math-report-finished? calculation)
          (equal? (map status-of '(differentiate-power multiply-one normalize-scalar))
                  '((unsupported unsupported)
                    (semantically-checked checked)

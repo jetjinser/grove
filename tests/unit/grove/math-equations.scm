@@ -8,7 +8,7 @@
 (for-each (lambda (entry)
             (let ((report (φ:check-equation (car entry) (cadr entry) #:assumptions (list basis))))
               (test-equal "unverified equations are explicit" 'equation-not-proven (math-report-reason report))
-              (test-assert "nonzero residual is not success" (not (math-report-complete? report)))))
+              (test-assert "nonzero residual is not success" (not (math-report-finished? report)))))
   '(("x^2" "x") ("laplacian(x^2)" "3")))
 (test-equal "a symbolic derivative does not establish an identity" 'equation-not-proven
   (math-report-reason (φ:check-equation "partial(u,x)" "0"

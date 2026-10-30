@@ -16,7 +16,7 @@
 (test-begin "mathematical expression contracts")
 (test-error "pipeline requires a Semantic value" #t (math-simplify "x+0"))
 (test-assert "Formula facade parses then calls the Semantic pipeline"
-  (math-report-complete? (φ:simplify "x+0" #:assumptions '("scalar(x)"))))
+  (math-report-finished? (φ:simplify "x+0" #:assumptions '("scalar(x)"))))
 (test-equal "prime notation accepts a declared Semantic function value"
   '(prime (var f) (var x))
   (math-value-term
@@ -71,7 +71,7 @@
         (test-equal "unsupported operations identify the nested operand"
           '(1) (math-diagnostic-path (first-diagnostic report)))
         (test-assert "unsupported operations never count as a completed normal form"
-          (not (math-report-complete? report)))))
+          (not (math-report-finished? report)))))
     (list φ:rewrite φ:simplify φ:calculate φ:collect)))
 (test-equal "search uses the same executable vocabulary"
   'unsupported-expression
@@ -82,7 +82,7 @@
 (test-equal "supported operators still diagnose missing variable declarations as type errors"
   'type-error (math-report-reason (φ:simplify "x+0")))
 (test-assert "a supported expression with no applicable rule is a normal form"
-  (math-report-complete? (φ:simplify "x" #:assumptions '("scalar(x)"))))
+  (math-report-finished? (φ:simplify "x" #:assumptions '("scalar(x)"))))
 (test-equal "displayable non-decimal numerals do not silently become exact numbers"
   'unsupported-expression (math-report-reason (φ:calculate "Ⅲ")))
 (test-assert "type mismatch describes the actual operands"
@@ -136,7 +136,7 @@
     (test-equal "conflicting child contexts cannot silently shadow the parent"
       'type-error (math-report-reason (φ:calculate "1+1"))))
   (test-assert "the parent context remains usable after a conflicting child"
-    (math-report-complete? (φ:simplify "x+0"))))
+    (math-report-finished? (φ:simplify "x+0"))))
 (for-each
   (lambda (term)
     (test-assert "reserved operator arities reject malformed source-independent terms"

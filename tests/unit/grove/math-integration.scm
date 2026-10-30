@@ -17,7 +17,7 @@
            (certificate (math-report-derivation report))
            (result (math-report-final report))
            (index (list-index (lambda (name) (string=? (symbol->string name) coordinate)) '(x y z))))
-      (test-assert "primitive completes" (math-report-complete? report))
+      (test-assert "primitive completes" (math-report-finished? report))
       (test-equal "explicit primitive and simplification passes" '(antiderivative simplify)
         (map math-report-name (math-report-passes report)))
       (test-assert "primitive certificate replays" (math-verification-valid? (math-verify-derivation certificate)))

@@ -60,7 +60,7 @@
                                     #:assumptions (list basis "nonzero(x)")))))
   (list φ:compute φ:simplify))
 (let ((report (φ:check-equation "partial(antiderivative((x+y)^2,x),x)" "(x+y)^2" #:assumptions (list basis))))
-  (test-assert "equation checker computes embedded primitives" (math-report-complete? report)))
+  (test-assert "equation checker computes embedded primitives" (math-report-finished? report)))
 (let* ((source "@use-modules[((grove math semantic) #:prefix ◆:)]
 @(define r3 (◆:space 'x 'y 'z))
 @with-assumptions[r3]{

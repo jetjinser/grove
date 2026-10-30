@@ -45,7 +45,7 @@
   (test-equal "component domain diagnostics identify the third entry's denominator" '(2 1)
     (math-diagnostic-path (car (math-report-diagnostics report)))))
 (test-assert "explicit domain premises authorize component computations"
-  (math-report-complete? (φ:simplify "components(x,y,1/z)"
+  (math-report-finished? (φ:simplify "components(x,y,1/z)"
                            #:assumptions (list r3 "nonzero(z)"))))
 (test-equal "a bound vector cannot be reused in another basis" 'missing-premise
   (math-report-reason (φ:simplify v #:assumptions (list (◆:space 'u 'v 'w) "coordinate(x); coordinate(y); coordinate(z); parameter(a)"))))
@@ -76,7 +76,7 @@
   (lambda (fixture)
     (let* ((report (derive (located-text (car fixture)) (cadr fixture)))
            (certificate (math-report-derivation report)))
-      (test-assert (string-append "partial completes: " (car fixture)) (math-report-complete? report))
+      (test-assert (string-append "partial completes: " (car fixture)) (math-report-finished? report))
       (test-equal "partial has the expected simplified result"
         (φ:term (caddr fixture)) (math-report-final report))
       (test-assert "both partial and simplification passes are explicit"

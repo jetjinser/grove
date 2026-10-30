@@ -43,7 +43,7 @@
 @subtree[#:id "semantic-checking-checking-a-derivative-certificate"]{
   @title{Checking a derivative certificate}
 
-  @(math-completed-report->content derivative)
+  @(math-finished-report->content derivative)
   @paragraph{The same derivation record used by rewrite passes retains each rule, path, and pair of terms. The ordinary verifier replays those steps; the independent checker computes the exact polynomial derivative and compares the final term. The finite relation/schema tests exercise both variables and compound polynomial substitutions. This checks this certificate and tested instances, not the differentiation program for all inputs.}
   @(φ:polynomial-check->content
      (φ:check-polynomial-derivation (math-report-derivation derivative)))

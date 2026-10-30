@@ -14,7 +14,7 @@
     (let ((primitive (φ:antiderivative source "x" #:assumptions facts))
           (solution (φ:solve-poisson source #:assumptions facts)))
       (for-each (lambda (report)
-                  (test-assert "parameter polynomial calculus completes" (math-report-complete? report))
+                  (test-assert "parameter polynomial calculus completes" (math-report-finished? report))
                   (test-assert "parameter certificate replays" (math-verification-valid?
                     (math-verify-derivation (math-report-derivation report)))))
                 (list primitive solution))

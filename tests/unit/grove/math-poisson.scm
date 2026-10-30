@@ -11,7 +11,7 @@
            (certificate (math-report-derivation report))
            (result (math-report-final report))
            (polynomial (cdr (evaluate result coordinates))))
-      (test-assert "polynomial particular solution completes" (math-report-complete? report))
+      (test-assert "polynomial particular solution completes" (math-report-finished? report))
       (test-assert "particular solution certificate replays" (math-verification-valid? (math-verify-derivation certificate)))
       (test-equal "independent Laplacian establishes the PDE"
         (evaluate (φ:term source) coordinates) (evaluate `(laplacian ,result) coordinates))

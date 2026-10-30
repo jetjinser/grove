@@ -9,20 +9,20 @@
 @summary{Stable ordering, combined factors, explicit expansion and retained domains.}
 
 @with-assumptions["coordinate(x); coordinate(y); nonzero(x)"]{
-@(math-completed-report->content (φ:normalize "y*x+x*y"))
-@(math-completed-report->content (φ:simplify "x+2*x+x"))
-@(math-completed-report->content (φ:simplify "2*x*3*x^2"))
-@(math-completed-report->content (φ:simplify "(x+1)*x"))
-@(math-completed-report->content (φ:expand "(x+1)*(x-1)"))
+@(math-finished-report->content (φ:normalize "y*x+x*y"))
+@(math-finished-report->content (φ:simplify "x+2*x+x"))
+@(math-finished-report->content (φ:simplify "2*x*3*x^2"))
+@(math-finished-report->content (φ:simplify "(x+1)*x"))
+@(math-finished-report->content (φ:expand "(x+1)*(x-1)"))
 @differentiate["x"]{x/x^2}
 }
 
 @(define unit-report (φ:simplify "x/x" #:assumptions '("coordinate(x); nonzero(x)")))
 @(define unit (math-report-result unit-report))
 @math[unit]
-@(math-completed-report->content (φ:simplify (φ:add unit "2")
+@(math-finished-report->content (φ:simplify (φ:add unit "2")
     #:assumptions '("coordinate(x); nonzero(x)")))
-@(math-completed-report->content (φ:simplify unit #:assumptions '("coordinate(x)"))
+@(math-finished-report->content (φ:simplify unit #:assumptions '("coordinate(x)"))
     #:on-error 'show)
 
 The cancelled denominator remains a requirement of the computed value.

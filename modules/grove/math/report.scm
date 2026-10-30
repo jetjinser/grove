@@ -12,7 +12,7 @@
   #:export (make-math-report math-report? math-report-name
             math-report-candidates math-report-reason math-report-limits
             math-report-states math-report-diagnostics math-report-passes
-            math-report-complete? math-report-status math-report-unresolved
+            math-report-finished? math-report-status math-report-unresolved
             math-report-derivation math-report-final
             math-report-audit math-report-result))
 
@@ -64,7 +64,11 @@ diagnostic and report values; AUDIT is an optional opaque evidence value."
                      (snapshot-data diagnostics)
                      (snapshot-data passes) audit))
 
-(define (math-report-complete? report)
+(define (math-report-finished? report)
+  "Return whether calculation or search finished without diagnostics.
+
+This does not mean that a search found a derivation or that an equation was
+proved; inspect MATH-REPORT-STATUS for the outcome."
   (and (null? (math-report-diagnostics report))
        (memq (math-report-reason report) '(exhausted normal-form)) #t))
 
@@ -76,14 +80,15 @@ diagnostic and report values; AUDIT is an optional opaque evidence value."
     (and derivation (last (math-derivation-terms derivation)))))
 
 (define (math-report-result report)
-  "Return the completed report result as a reusable Semantic value, or #f.
+  "Return a finished report's derived result as a reusable Semantic value, or #f.
 
-Partial reports retain their final term for inspection through
-MATH-REPORT-FINAL, but do not expose it as a reusable result."
+Symbolic residuals are allowed in the result. A report without a derivation,
+or one stopped before completion, has no reusable result; inspect its final
+term, status, and diagnostics instead."
   (unless (math-report? report)
     (error "expected a math report" report))
   (let ((derivation (math-report-derivation report)))
-    (and (math-report-complete? report)
+    (and (math-report-finished? report)
          derivation
          (math-report-final report)
          (make-math-value
@@ -104,9 +109,10 @@ MATH-REPORT-FINAL, but do not expose it as a reusable result."
 
 (define (math-report-status report)
   "Classify the outcome as complete, symbolic, no-result, cutoff, unproven, or
-error. COMPLETE? describes whether the computation was exhausted; NO-RESULT
-distinguishes an exhausted report that contains no derivation."
-  (cond ((math-report-complete? report)
+error. FINISHED? describes whether the computation was exhausted; NO-RESULT
+distinguishes an exhausted report that contains no derivation. A complete
+calculation is not by itself a proof of an arbitrary mathematical claim."
+  (cond ((math-report-finished? report)
          (cond ((not (math-report-derivation report)) 'no-result)
                ((null? (math-report-unresolved report)) 'complete)
                (else 'symbolic)))

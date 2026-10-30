@@ -137,7 +137,7 @@
 (define-public derive
   (lambda* (#:key (assumptions #f) (view 'compact) (on-error 'raise)
                  (rules #f) (max-steps 32) (max-term-size 2048) #:rest source)
-    (math-completed-report->content
+    (math-finished-report->content
       (math-derive (apply φ:read (command-body source))
         #:assumptions (command-assumptions assumptions)
         #:rules rules #:max-steps max-steps #:max-term-size max-term-size)
@@ -154,7 +154,7 @@
 (define-public differentiate
   (lambda* (variable #:key (assumptions #f) (view 'compact) (on-error 'raise)
                           (max-steps 128) (max-term-size 2048) #:rest source)
-    (math-completed-report->content
+    (math-finished-report->content
       (math-differentiate (apply φ:read (command-body source)) (φ:read variable)
         #:assumptions (command-assumptions assumptions)
         #:max-steps max-steps #:max-term-size max-term-size)
@@ -164,7 +164,7 @@
   (lambda* (variable #:key (assumptions #f) (view 'compact) (on-error 'raise)
                           (max-steps 128) (max-term-size 2048) #:rest source)
     "Compute and display a partial derivative in an explicit coordinate scope."
-    (math-completed-report->content
+    (math-finished-report->content
       (math-partial (apply φ:read (command-body source)) (φ:read variable)
         #:assumptions (command-assumptions assumptions)
         #:max-steps max-steps #:max-term-size max-term-size)
@@ -209,7 +209,7 @@
   (lambda* (#:key (assumptions #f) (view 'compact) (on-error 'raise)
                  (max-steps 256) (max-term-size 8192) #:rest source)
     "Compute Cartesian components with explicit, replayable passes."
-    (math-completed-report->content
+    (math-finished-report->content
       (math-compute (apply φ:read (command-body source))
         #:assumptions (command-assumptions assumptions)
         #:max-steps max-steps #:max-term-size max-term-size)
@@ -218,7 +218,7 @@
 (define-public antiderivative
   (lambda* (coordinate #:key (assumptions #f) (view 'compact) (on-error 'raise)
                             (max-steps 128) (max-term-size 8192) #:rest source)
-    (math-completed-report->content
+    (math-finished-report->content
       (math-antiderivative (apply φ:read (command-body source)) (φ:read coordinate)
         #:assumptions (command-assumptions assumptions) #:max-steps max-steps #:max-term-size max-term-size)
       #:view view #:on-error on-error)))
@@ -226,7 +226,7 @@
 (define-public solve-poisson
   (lambda* (#:key (coordinate #f) (assumptions #f) (view 'compact) (on-error 'raise)
                  (max-steps 128) (max-term-size 8192) #:rest source)
-    (math-completed-report->content
+    (math-finished-report->content
       (math-solve-poisson (apply φ:read (command-body source))
         #:coordinate coordinate #:assumptions (command-assumptions assumptions)
         #:max-steps max-steps #:max-term-size max-term-size)
@@ -235,7 +235,7 @@
 (define-public check-equation
   (lambda* (target #:key (assumptions #f) (view 'compact) (on-error 'raise)
                         (max-steps 256) (max-term-size 8192) #:rest source)
-    (math-completed-report->content
+    (math-finished-report->content
       (math-check-equation (apply φ:read (command-body source)) (φ:read target)
         #:assumptions (command-assumptions assumptions) #:max-steps max-steps #:max-term-size max-term-size)
       #:view view #:on-error on-error)))

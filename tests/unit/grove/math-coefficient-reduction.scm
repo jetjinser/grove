@@ -18,7 +18,7 @@
 (for-each
   (lambda (source)
     (let* ((report (reduce-coefficients source)) (result (math-report-result report)))
-      (test-assert (format #f "reduction completes: ~a" source) (math-report-complete? report))
+      (test-assert (format #f "reduction completes: ~a" source) (math-report-finished? report))
       (test-assert "coefficient reduction certificate replays"
         (math-verification-valid? (math-verify-derivation (math-report-derivation report))))
       (test-equal "reduction has a stable normal form" (math-report-final report)

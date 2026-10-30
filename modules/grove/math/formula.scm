@@ -119,7 +119,7 @@
   (lambda* (source #:key (assumptions '()) (rules #f) (max-steps 32)
                    (max-term-size 2048) (view 'compact) (on-error 'raise))
     (let ((content
-            (presentation:math-completed-report->content
+            (presentation:math-finished-report->content
               (derive-report source assumptions rules max-steps max-term-size)
               #:view view #:on-error on-error)))
       (if (null? (cdr content)) (car content)

@@ -227,7 +227,7 @@
   (let* ((report (φ:differentiate "x^3+2*x" "x"
                    #:assumptions '("coordinate(x)")))
          (derivation (math-report-derivation report)))
-    (and (math-report-complete? report)
+    (and (math-report-finished? report)
          (every math-derivation-step? (math-derivation-steps derivation))
          (math-semantic-check-valid?
            (φ:check-polynomial-derivation derivation)))))

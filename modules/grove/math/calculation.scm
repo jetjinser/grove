@@ -47,7 +47,7 @@
                math-derivation-assumptions math-derivation-sources math-derivation-requirements
                math-report? math-report-candidates
                math-report-reason math-report-limits
-               math-report-states math-report-complete? math-report-status math-report-unresolved math-report-name
+               math-report-states math-report-finished? math-report-status math-report-unresolved math-report-name
                math-report-diagnostics math-report-passes math-report-derivation math-report-final
                math-report-audit math-report-result))
 
@@ -153,7 +153,7 @@ Declared unknown function derivatives remain explicit partial terms."
                        (max-steps 32) (max-term-size 2048))
   (let* ((report (math-rewrite source #:assumptions assumptions #:rules rules
                    #:max-steps max-steps #:max-term-size max-term-size))
-         (report (if (and (math-report-complete? report)
+         (report (if (and (math-report-finished? report)
                           (null? (math-derivation-steps (math-report-derivation report))))
                      (let* ((certificate (math-report-derivation report))
                             (facts (math-derivation-assumptions certificate))

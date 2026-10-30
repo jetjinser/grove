@@ -19,13 +19,13 @@
     (math-report-final (φ:compute (math-report-result report) #:assumptions facts))))
 (let ((report (φ:compute "x+partial(u,y)" #:assumptions facts)))
   (test-equal "symbolic normal form is distinguished from a concrete result" 'symbolic (math-report-status report))
-  (test-assert "symbolic normal form completes its computation" (math-report-complete? report))
+  (test-assert "symbolic normal form completes its computation" (math-report-finished? report))
   (test-equal "unresolved derivative retains its operand path" '((1)) (math-report-unresolved report))
   (test-assert "symbolic result remains reusable" (math-value? (math-report-result report)))
   (test-assert "even result-only rendering labels a symbolic result"
     (string-contains
       (string-concatenate (map (lambda (content) (sxml->html (content->sxml content)))
-                              (presentation:math-completed-report->content
+                              (presentation:math-finished-report->content
                                 report #:view 'result))) "Symbolic result")))
 (let ((report (φ:compute "x+0" #:assumptions facts #:max-steps 0)))
   (test-equal "resource cutoff is explicit" 'cutoff (math-report-status report))

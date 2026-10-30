@@ -18,7 +18,7 @@
 (for-each
   (lambda (fixture)
     (let ((report (caddr fixture)))
-      (test-assert "polynomial and symbolic partials reach normal form" (math-report-complete? report))
+      (test-assert "polynomial and symbolic partials reach normal form" (math-report-finished? report))
       (test-assert "composed partial certificates replay independently"
         (math-verification-valid? (math-verify-derivation (math-report-derivation report)))))) fixtures)
 (for-each

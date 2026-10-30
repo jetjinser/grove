@@ -42,7 +42,7 @@
   (math-value-declarations formula))
 (with-math-assumptions (list formula)
   (test-assert "an expression may explicitly provide the declarations it carries"
-    (math-report-complete? (φ:simplify formula))))
+    (math-report-finished? (φ:simplify formula))))
 (with-math-assumptions (φ:assumptions "function(v,scalar,scalar,vector);coordinate(x);parameter(a)")
   (test-equal "multiargument function signatures specify the return type" 'vector
     (math-typed-term-type (math-infer-type (current-math-assumptions) (φ:term "v(x,a)"))))

@@ -83,7 +83,7 @@
 (for-each
   (lambda (source)
     (let ((report (φ:differentiate source "x" #:assumptions '("scalar(x); positive(x)"))))
-      (test-assert "elementary derivative completes" (math-report-complete? report))
+      (test-assert "elementary derivative completes" (math-report-finished? report))
       (for-each
         (lambda (point)
           (test-assert (string-append "independent dual-number calculus oracle: " source)
@@ -102,7 +102,7 @@
   (lambda (source)
     (let ((report (φ:partial source "x"
                     #:assumptions '("coordinate(x); coordinate(y); positive(x); function(f,scalar,scalar); smooth(f)"))))
-      (test-assert "elementary partial derivative completes" (math-report-complete? report))
+      (test-assert "elementary partial derivative completes" (math-report-finished? report))
       (test-assert "elementary partial certificate independently replays"
         (math-verification-valid? (math-verify-derivation (math-report-derivation report))))
       (for-each

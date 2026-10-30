@@ -32,7 +32,7 @@
 (define report (φ:differentiate "x^3+2*x" "x" #:assumptions '("scalar(x)")))
 (define certificate (math-report-derivation report))
 (define (display-report view)
-  (car (math-completed-report->content report #:view view)))
+  (car (math-finished-report->content report #:view view)))
 (let* ((presented (display-report 'compact))
        (steps (cadr (content-element-children presented))))
   (test-assert "compact derivation steps use a collapsed subtree"
@@ -64,27 +64,36 @@
   (math-verification-valid? (math-verify-derivation certificate)))
 (test-error "invalid view fails explicitly" #t (display-report 'other))
 (test-error "invalid diagnostic mode fails explicitly" #t
-  (math-completed-report->content report #:on-error 'other))
+  (math-finished-report->content report #:on-error 'other))
 (test-assert "report presentation rejects non-report values at the API boundary"
   (string-contains
     (error-text (lambda () (math-report->content 'not-a-report)))
     "expected a math report"))
 (test-assert "completed report presentation rejects non-report values at the API boundary"
   (string-contains
-    (error-text (lambda () (math-completed-report->content 'not-a-report)))
+    (error-text (lambda () (math-finished-report->content 'not-a-report)))
     "expected a math report"))
 (let* ((no-path (φ:search "x" "y" #:assumptions '("scalar(x); scalar(y)")))
        (text (string-join
-               (map content->text (math-completed-report->content no-path))
+               (map content->text (math-finished-report->content no-path))
                "\n")))
   (test-assert "an exhausted search without a path is still presentable"
-    (and (math-report-complete? no-path)
+    (and (math-report-finished? no-path)
          (not (math-report-derivation no-path))
          (string-contains text "0 derivations found"))))
 (test-equal "an exhausted search without a path has no-result status"
   'no-result
   (math-report-status
     (φ:search "x" "y" #:assumptions '("scalar(x); scalar(y)"))))
+
+(let ((shown (content->text
+               (document "@with-assumptions[\"coordinate(x)\"]{@check-derive{differentiate(x,x)\n1}}"))))
+  (test-assert "successful hand-written derivations are explicitly identified as checked"
+    (string-contains shown "Checked derivation: every step replays")))
+(let ((shown (content->text
+               (document "@with-assumptions[\"scalar(x)\"]{@check-equation[\"0\"]{x-x}}"))))
+  (test-assert "successful equation checks state the scope of the claim"
+    (string-contains shown "Equation checked: the residual reduced to zero")))
 
 (let ((shown (html (document "@with-assumptions[\"scalar(x)\"]{\n@check-derive[#:on-error 'show]{\n  differentiate(x,x)\n\n  2\n}}"))))
   (test-assert "authored target diagnostics retain line and indentation through a scope"

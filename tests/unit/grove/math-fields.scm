@@ -122,7 +122,7 @@
   (test-equal "reused field results retain the product rule's C1 premises" 'missing-premise
     (math-report-reason (φ:simplify result #:assumptions (list r3 f e))))
   (test-assert "the original field premises authorize result reuse"
-    (math-report-complete? (φ:simplify result #:assumptions c1))))
+    (math-report-finished? (φ:simplify result #:assumptions c1))))
 (let* ((report (φ:search "differentiate(0*f(x),x)" "0"
                  #:assumptions '("coordinate(x); function(f,scalar,scalar); smooth(f)")
                  #:rules '(differentiate-product differentiate-constant differentiate-function

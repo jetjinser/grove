@@ -24,11 +24,11 @@
 
 @subtree[#:id "math-capabilities-exact-arithmetic-and-scalar-simplification"]{
   @title{Exact arithmetic and scalar simplification}
-  @(math-completed-report->content (φ:calculate "1/3+1/6"))
+  @(math-finished-report->content (φ:calculate "1/3+1/6"))
 
   @with-assumptions["scalar(x)"]{
-  @(math-completed-report->content (φ:simplify "-(-x)+0*x+x^1"))
-  @(math-completed-report->content (φ:collect "2*x+3*x"))
+  @(math-finished-report->content (φ:simplify "-(-x)+0*x+x^1"))
+  @(math-finished-report->content (φ:collect "2*x+3*x"))
   @math[(◆:styled p #:variant 'bold)]
   @◇:math{@◇:parens[p]}
   }
@@ -51,7 +51,7 @@
   @title{Bounded failure reports}
   @differentiate["x" #:assumptions "scalar(x)" #:max-steps 1 #:on-error 'show]{x^3}
   @search-derive["3*x^2" #:assumptions "scalar(x)" #:max-depth 0]{differentiate(x^3,x)}
-  @(math-completed-report->content (φ:calculate "1/0") #:on-error 'show)
+  @(math-finished-report->content (φ:calculate "1/0") #:on-error 'show)
 
   @link["polynomial-integration"]{Polynomial antiderivatives}
   @link["polynomial-poisson"]{Polynomial Poisson particular solutions}

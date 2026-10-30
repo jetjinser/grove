@@ -76,11 +76,11 @@
   (test-assert "calculation presentation belongs to its public module"
     (module-variable
       (module-public-interface (resolve-module '(grove math presentation)))
-      'math-completed-report->content))
+      'math-finished-report->content))
   (test-assert "calculation API does not export presentation helpers"
     (not (module-variable
            (module-public-interface (resolve-module '(grove math calculation)))
-           'math-completed-report->content)))
+           'math-finished-report->content)))
   (test-assert "math provenance has a dedicated public interface"
     (module-variable
       (module-public-interface (resolve-module '(grove math provenance)))
@@ -492,7 +492,7 @@
                (math-verification-valid? (math-verify-derivation candidate)))
              (math-report-candidates report)))
     (test-assert "limited report does not claim completeness"
-      (not (math-report-complete? report))))
+      (not (math-report-finished? report))))
   (test-equal "depth cutoff differs from exhausted search"
     'depth-limit
     (math-report-reason

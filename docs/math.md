@@ -60,29 +60,36 @@ when code needs only one layer. Keep the Formula prefix: its `read` helper
 would otherwise shadow Scheme's ordinary reader procedure in the importing
 module.
 
-`math-completed-report->content` presents a completed derivation when one
-exists. A complete search with no path has no derivation, so the same helper
-falls back to the report summary (including its zero-candidate result). For an
-incomplete report, it raises by default; pass `#:on-error 'show` to render its
-diagnostics instead.
+`math-finished-report->content` presents a derivation when one exists. A
+finished search with no path has no derivation, so the same helper falls back
+to the report summary (including its zero-candidate result). For an unfinished
+report, it raises by default; pass `#:on-error 'show` to render its diagnostics
+instead.
 
 Scheme code can inspect those values through `(grove math report)` and
-`(grove math diagnostic)`. `math-report-result` from `(grove math report)`
-returns a reusable Semantic value only for a complete calculation;
-`math-report-final` exposes the final term of a partial derivation for
-inspection. `math-report-complete?` means the calculation or search finished
-without diagnostics; it does not promise that a derivation was found.
-`math-report-status` classifies the outcome independently of the detailed
-`math-report-reason`:
+`(grove math diagnostic)`. `math-report-finished?` means calculation or search
+ended without diagnostics; it does not say whether a derivation was found.
+`math-report-status` is the primary outcome classification, while
+`math-report-reason` gives the detailed stopping reason:
 
 | Status | Meaning |
 | --- | --- |
-| `'complete` | The computation finished with a derivation and no unresolved symbolic derivatives. |
+| `'complete` | A derivation was produced with no unresolved symbolic derivatives. This is a completed calculation, not a general proof of a mathematical claim. |
 | `'symbolic` | The computation finished, but its reusable result still contains symbolic derivatives. |
 | `'no-result` | The search finished without finding a derivation. |
 | `'cutoff` | A resource limit stopped the computation; the available prefix is not an exhaustive result. |
 | `'unproven` | An equation check could not establish the requested identity. |
 | `'error` | The report contains a diagnostic or another unsuccessful outcome. |
+
+`math-report-result` returns a reusable Semantic value when a finished report
+has a derivation; that result may still contain symbolic derivatives. It
+returns `#f` when no derivation is available or computation stopped early.
+`math-report-final` exposes the last term of a derivation, including a partial
+one, for inspection. Successful `@check-derive` output says that each step
+replays with the selected rules and assumptions. Successful `@check-equation`
+output says that the residual reduced to zero under supported rules and
+assumptions. These checks do not validate the author's assumptions or an
+external mathematical model.
 
 Use
 `math-verify-derivation` from `(grove math verification)` to
@@ -191,16 +198,15 @@ should use Formula or Semantic values instead.
 
 ## Available calculations
 
-| Operation | What it supports |
-| --- | --- |
-| Calculate, simplify, normalize, collect, expand | Exact arithmetic and supported scalar expressions; expansion distributes products over sums. Normalization orders scalar sums and products and collects coefficients. |
-| Differentiate | Real scalar arithmetic, natural powers, quotients, `sin`, `cos`, `exp`, `log`, and declared smooth unary scalar functions. |
-| Partial derivative | The scalar differentiation rules, with explicit coordinate and parameter roles; unknown multivariate functions can remain as symbolic partials under supported regularity assumptions. |
-| Vector calculus | Ordinary three-dimensional Cartesian `grad`, `div`, `curl`, and `laplacian`, with declared fields, ordered coordinates, and regularity assumptions. |
-| Component computation | Three-component vectors and supported scalar/vector arithmetic and spatial operations in an explicit Cartesian space. |
-| Antiderivative | Exact rational polynomial primitives in one coordinate, selected to be zero at coordinate zero. |
-| Poisson particular solution | A polynomial particular solution of `Δu = source` in an active Cartesian space, selected along one axis and checked by its residual. |
-| Equation check | Computes and simplifies a residual. A zero residual certifies the equation within supported rules; nonzero or unresolved residuals are not proven. |
+| Operation | Supported scope | Conditions and meaning |
+| --- | --- | --- |
+| Calculate, simplify, normalize, collect, expand | Exact rational arithmetic and supported scalar expressions. Expansion distributes products over sums; normalization orders scalar sums and products and collects coefficients. | `calculate` is the narrow exact evaluator; these operations do not approximate unsupported functions. |
+| Differentiate | Real scalar arithmetic, natural powers, quotients, `sin`, `cos`, `exp`, `log`, and declared smooth unary scalar functions. | Variable roles and domain facts matter: for example, real `log(x)` requires `positive(x)`, and a quotient requires a nonzero denominator. |
+| Partial derivative | The scalar differentiation rules, with explicit coordinate and parameter roles. Unknown multivariate functions may remain as symbolic partials. | Repeated or mixed derivatives require matching regularity assumptions; a finished symbolic result can still contain unevaluated derivatives. |
+| Vector calculus | Three-dimensional Cartesian `grad`, `div`, `curl`, and `laplacian`; three-component vector operations. | Declare the field types, ordered coordinates, and required regularity. This is not general-dimensional vector or matrix algebra. |
+| Antiderivative | Exact rational-polynomial primitives in one coordinate. | Grove selects the primitive whose value is zero at the coordinate origin; it does not return the arbitrary integration term. |
+| Poisson particular solution | One polynomial particular solution of `Δu = source` in an active Cartesian space. | Grove selects a solution along one axis and checks its residual; this is not the general solution or a boundary-value solver. |
+| Equation check | Computes and simplifies the residual between both sides. | A zero residual establishes the identity only within supported rules and supplied assumptions. A nonzero or unresolved residual is reported as unproven. |
 
 Use `@compute` for component and spatial calculations, `@antiderivative` for a
 polynomial primitive, `@solve-poisson` for the particular Poisson solution,

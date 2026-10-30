@@ -15,7 +15,7 @@
   #:re-export (math-selected-rules math-rewrite-answers
             math-report? math-report-candidates
             math-report-reason math-report-limits
-            math-report-states math-report-complete?))
+            math-report-states math-report-finished?))
 
 (define (require-type assumptions term)
   (let ((typed (math-infer-type assumptions term)))

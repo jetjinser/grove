@@ -13,7 +13,7 @@
   (lambda (source)
     (let* ((report (φ:compute source #:assumptions facts))
            (certificate (math-report-derivation report)))
-      (test-assert "multivariate derivative completes symbolically" (math-report-complete? report))
+      (test-assert "multivariate derivative completes symbolically" (math-report-finished? report))
       (test-equal "function derivatives remain explicit" 'symbolic (math-report-status report))
       (test-assert "chain-rule certificate replays" (math-verification-valid? (math-verify-derivation certificate)))
       (for-each (lambda (step)
@@ -46,7 +46,7 @@
     (let* ((local-facts (append facts '("scalar(u); c2(u)")))
            (env (cons (cons 'u (scalar '((1 2 1 0) (3 1 2 0)))) environment))
            (report (φ:check-equation (car entry) (cadr entry) #:assumptions local-facts)))
-      (test-assert "C2 mixed derivatives establish the identity" (math-report-complete? report))
+      (test-assert "C2 mixed derivatives establish the identity" (math-report-finished? report))
       (test-assert "mixed derivative certificate replays"
         (math-verification-valid? (math-verify-derivation (math-report-derivation report))))
       (for-each (lambda (step)
@@ -71,7 +71,7 @@
   (math-report-reason (φ:check-equation "curl(grad(u))" "components(0,0,0)"
     #:assumptions (list (◆:space 'x 'y 'z) "scalar(u); differentiable(u)"))))
 (test-assert "argument symmetry does not demand C2 of the evaluated arguments"
-  (math-report-complete? (φ:check-equation "darg(darg(f(g(x,y),y),2),1)"
+  (math-report-finished? (φ:check-equation "darg(darg(f(g(x,y),y),2),1)"
     "darg(darg(f(g(x,y),y),1),2)"
     #:assumptions (list (◆:space 'x 'y 'z)
       "function(f,scalar,scalar,scalar); function(g,scalar,scalar,scalar); c2(f); differentiable(g)"))))

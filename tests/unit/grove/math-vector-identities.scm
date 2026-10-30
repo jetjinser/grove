@@ -9,7 +9,7 @@
   (lambda (source)
     (let ((report (φ:check-equation source "components(0,0,0)"
                    #:assumptions (list basis "scalar(u); scalar(v); scalar(w); c2(u); c2(v); c2(w)"))))
-      (test-assert "component calculus establishes the vector identity" (math-report-complete? report))
+      (test-assert "component calculus establishes the vector identity" (math-report-finished? report))
       (test-assert "component identity certificate replays"
         (math-verification-valid? (math-verify-derivation (math-report-derivation report))))))
   '("curl(grad(u))"

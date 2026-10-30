@@ -27,7 +27,7 @@
   (lambda (fixture)
     (let* ((report (φ:simplify (car fixture) #:assumptions facts))
            (final (math-report-final report)))
-      (test-assert "scalar simplification completes" (math-report-complete? report))
+      (test-assert "scalar simplification completes" (math-report-finished? report))
       (test-equal "canonical scalar result" (φ:term (cadr fixture)) final)
       (test-equal "simplification is idempotent" final
         (math-report-final (φ:simplify (math-report-result report) #:assumptions facts)))
@@ -120,7 +120,7 @@
   (lambda (source)
     (let ((report (φ:simplify source #:assumptions '("coordinate(x)"))))
       (test-assert "function-plus-constant normalization does not cycle"
-        (math-report-complete? report))
+        (math-report-finished? report))
       (test-equal "constants follow zero-degree function terms"
         (φ:term "sin(x)+1") (math-report-final report))
       (test-assert "function-plus-constant normal forms are idempotent"
