@@ -54,11 +54,24 @@
    [synopsis "Run Grove from this checkout"]
    [help "Run Grove's CLI in an isolated Guile process using this checkout's module paths."]
    [load-configuration-policy 'no])
-  (let* ((module-arguments
-           (append-map (lambda (path) (list "-L" path)) %load-path))
+  (let* ((directory (getcwd))
+         (absolute-path
+           (lambda (path)
+             (if (absolute-file-name? path) path
+                 (string-append directory "/" path))))
+         (root (absolute-path (dirname (current-filename))))
+         (checkout-modules (string-append root "/modules"))
+         (load-paths
+           (delete-duplicates
+             (cons checkout-modules
+               (filter (lambda (path) (not (string=? path root)))
+                 (map absolute-path %load-path)))
+             string=?))
+         (module-arguments
+           (append-map (lambda (path) (list "-L" path)) load-paths))
          (compiled-arguments
-           (append (list "-C" (string-append (dirname (current-filename)) "/build"))
-                   (append-map (lambda (path) (list "-C" path))
+           (append (list "-C" (string-append root "/build"))
+                   (append-map (lambda (path) (list "-C" (absolute-path path)))
                                %load-compiled-path)))
          (program
            (format #f "(use-modules (grove private cli)) (exit (main '~s))"
