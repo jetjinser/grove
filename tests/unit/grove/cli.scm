@@ -38,7 +38,9 @@
             "grove-test" out err "env"
             (string-append "XDG_CACHE_HOME=" root "/cache")
             "guile" "--no-auto-compile"
-            "-L" test-module-directory "-L" (dirname sources) "-L" sources
+            "-L" test-module-directory "-L" (dirname sources)
+            "-L" (string-append (dirname sources) "/srfi-275/lib")
+            "-L" sources
             "-C" (string-append (dirname sources) "/build")
             "-C" root
             "-C" test-module-directory

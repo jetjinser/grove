@@ -66,7 +66,8 @@
              "a constant parameter cannot be used as a differentiation coordinate")))
     ((and (not (math-variable-role facts coordinate))
           (not (member `(vector ,coordinate) facts))
-          (not (math-function-signature facts (cadr coordinate))))
+          (not (math-function-signature facts (cadr coordinate)))
+          (differentiable-term? expression facts))
      (list (make-math-diagnostic #f #f '(1) 'missing-premise
              (list `(coordinate ,coordinate))
              "differentiation requires an explicitly declared independent coordinate")))

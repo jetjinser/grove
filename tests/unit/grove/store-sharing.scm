@@ -69,7 +69,9 @@
         (let ((pid
                (spawn "guile"
                  (append (list "guile" "--no-auto-compile"
-                               "-L" (dirname sources) "-L" sources
+                               "-L" (dirname sources)
+                               "-L" (string-append (dirname sources) "/srfi-275/lib")
+                               "-L" sources
                                "-C" (string-append (dirname sources) "/build")
                                (string-append worktree "/entry.scm"))
                          arguments)
