@@ -398,6 +398,24 @@ denominators, or expressions outside this small model; it does not infer
 geometric assumptions or handle curvilinear coordinates. Calculation audits
 apply the same contract whenever a calculation contains explicit Cartesian
 vector expressions, including nested compositions.
+
+| Expression | Accepted operands and result |
+| --- | --- |
+| Scalar polynomial, `+`, `-`, `*`, `/`, `^` | Rational polynomials; powers use natural exponents. Division is only by a nonzero rational constant. |
+| `components(a,b,c)`, `zero(vector)` | Three scalar-polynomial components; the zero vector. |
+| Vector `+`, `-`, unary `-` | Two three-component vectors of the same ordered basis. |
+| `scalar * vector`, `vector * scalar` | A scalar polynomial scales a three-component vector. Vector-by-vector `*` is unsupported. |
+| `scalar / scalar`, `vector / scalar` | The denominator must be a nonzero rational constant. |
+| `grad`, `div`, `curl`, `laplacian` | Scalar-to-vector gradient; vector-to-scalar divergence; vector-to-vector curl; scalar or componentwise vector Laplacian. |
+| `dot`, `cross` | Two three-component vectors, producing a scalar or vector respectively. |
+| `partial`, `differentiate` | A scalar polynomial differentiated with respect to one of the three declared axes. |
+
+Expressions are limited to 4,096 term nodes, depth 128, and 256 characters per
+integer literal or identifier. Polynomial expansion is limited to 256 monomials,
+total degree 64, exponent 128, and 4,096 bits per exact coefficient. Inputs
+outside these limits return `unsupported`. Type-invalid combinations, zero
+denominators, unknown functions, and unsupported operators also return
+`unsupported` rather than being treated as proof.
 `polynomial-check->content` adapts the typed result to Content IR through the
 presentation layer. These are conveniences, not a second checker API. Import
 `(grove math semantic-check)` when Scheme code needs typed evidence or works

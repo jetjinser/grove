@@ -790,6 +790,43 @@ zero-value and zero-first-derivative anchor used to choose one solution."
 
 ;; The Cartesian checker interprets exact scalar polynomials and a bounded set
 ;; of explicit vector operations independently of the spatial rewrite rules.
+(define cartesian-expression-node-limit 4096)
+(define cartesian-expression-depth-limit 128)
+(define cartesian-number-digit-limit 256)
+(define cartesian-symbol-character-limit 256)
+(define cartesian-coefficient-bit-limit 4096)
+
+(define (cartesian-symbol-within-limits? symbol)
+  (and (symbol? symbol)
+       (<= (string-length (symbol->string symbol))
+           cartesian-symbol-character-limit)))
+
+(define (cartesian-term-within-limits? term)
+  "Validate a term with bounded traversal before recursive interpretation."
+  (let ((remaining cartesian-expression-node-limit))
+    (define (walk-children children depth)
+      (let loop ((children children))
+        (cond ((null? children) #t)
+              ((not (pair? children)) #f)
+              ((and (walk (car children) depth)
+                    (loop (cdr children))) #t)
+              (else #f))))
+    (define (walk term depth)
+      (set! remaining (- remaining 1))
+      (and (>= remaining 0)
+           (<= depth cartesian-expression-depth-limit)
+           (match term
+             (('var (? cartesian-symbol-within-limits?)) #t)
+             (('num text)
+              (and (string? text)
+                   (<= (string-length text) cartesian-number-digit-limit)))
+             (('zero 'vector) #t)
+             ((operator . operands)
+              (and (cartesian-symbol-within-limits? operator)
+                   (walk-children operands (+ depth 1))))
+             (_ #f))))
+    (walk term 0)))
+
 (define (polynomial-partial polynomial variable)
   (canonical-polynomial
     (filter-map
@@ -808,18 +845,54 @@ zero-value and zero-first-derivative anchor used to choose one solution."
                      (* (cdr entry) (cdr factor))))))
       polynomial)))
 
-(define (cartesian-components term)
+(define (cartesian-components term axes)
   (match term
     (('components x y z)
-     (let ((values (map math-polynomial-normal-form (list x y z))))
+     (let ((values
+             (map (lambda (component)
+                    (cartesian-value-scalar
+                      (cartesian-evaluate component axes)))
+               (list x y z))))
        (and (every identity values) values)))
     (_ #f)))
 
+(define (cartesian-polynomial-within-limits? polynomial)
+  (every
+    (lambda (term)
+      (let ((coefficient (cdr term)))
+        (and (rational? coefficient) (exact? coefficient)
+             (<= (integer-length (abs (numerator coefficient)))
+                 cartesian-coefficient-bit-limit)
+             (<= (integer-length (denominator coefficient))
+                 cartesian-coefficient-bit-limit))))
+    polynomial))
+
 (define (cartesian-scalar polynomial)
-  (list 'scalar polynomial))
+  (and (cartesian-polynomial-within-limits? polynomial)
+       (list 'scalar polynomial)))
 
 (define (cartesian-vector components)
-  (list 'vector components))
+  (and (= (length components) 3)
+       (every cartesian-polynomial-within-limits? components)
+       (list 'vector components)))
+
+(define (cartesian-polynomial-power polynomial exponent)
+  (let loop ((exponent exponent) (base polynomial)
+             (result (constant-polynomial 1)))
+    (cond
+      ((zero? exponent) result)
+      ((odd? exponent)
+       (let ((next (polynomial-multiply result base)))
+         (and (cartesian-polynomial-within-limits? next)
+              (if (= exponent 1)
+                  next
+                  (let ((square (polynomial-multiply base base)))
+                    (and (cartesian-polynomial-within-limits? square)
+                         (loop (quotient exponent 2) square next)))))))
+      (else
+       (let ((square (polynomial-multiply base base)))
+         (and (cartesian-polynomial-within-limits? square)
+              (loop (quotient exponent 2) square result)))))))
 
 (define (cartesian-value-scalar value)
   (match value (('scalar polynomial) polynomial) (_ #f)))
@@ -896,109 +969,129 @@ zero-value and zero-first-derivative anchor used to choose one solution."
 
 (define (cartesian-evaluate term axes)
   "Interpret exact Cartesian polynomial scalars and explicit vector operations."
-  (let ((polynomial (math-polynomial-normal-form term)))
-    (if polynomial
-        (cartesian-scalar polynomial)
-        (match term
-          (('components x y z)
-           (let ((components (cartesian-components term)))
-             (and components (cartesian-vector components))))
-          (('zero 'vector)
-           (cartesian-vector (list '() '() '())))
-          (('- operand)
-           (let ((value (cartesian-evaluate operand axes)))
-             (or (and (cartesian-value-scalar value)
+  (match term
+    (('components x y z)
+     (let ((components (cartesian-components term axes)))
+       (and components (cartesian-vector components))))
+    (('zero 'vector)
+     (cartesian-vector (list '() '() '())))
+    (('- operand)
+     (let ((value (cartesian-evaluate operand axes)))
+       (or (and (cartesian-value-scalar value)
+                (cartesian-scalar
+                  (polynomial-scale (cartesian-value-scalar value) -1)))
+           (and (cartesian-value-vector value)
+                (cartesian-vector
+                  (map (lambda (component) (polynomial-scale component -1))
+                    (cartesian-value-vector value)))))))
+    (('+ left right)
+     (let ((left (cartesian-evaluate left axes))
+           (right (cartesian-evaluate right axes)))
+       (and left right (cartesian-add left right 1))))
+    (('- left right)
+     (let ((left (cartesian-evaluate left axes))
+           (right (cartesian-evaluate right axes)))
+       (and left right (cartesian-add left right -1))))
+    (('* left right)
+     (let ((left (cartesian-evaluate left axes))
+           (right (cartesian-evaluate right axes)))
+       (and left right
+         (or (and (cartesian-value-scalar left)
+                  (cartesian-value-scalar right)
+                  (cartesian-scalar
+                    (polynomial-multiply
+                      (cartesian-value-scalar left)
+                      (cartesian-value-scalar right))))
+             (cartesian-vector-scale left right #f)
+             (cartesian-vector-scale right left #f)))))
+    (('/ numerator denominator)
+     (let ((numerator (cartesian-evaluate numerator axes))
+           (denominator (cartesian-evaluate denominator axes)))
+       (and numerator denominator
+         (or (and (cartesian-value-scalar numerator)
+                  (cartesian-value-scalar denominator)
+                  (let ((constant
+                          (polynomial-constant-value
+                            (cartesian-value-scalar denominator))))
+                    (and constant (not (zero? constant))
                       (cartesian-scalar
-                        (polynomial-scale (cartesian-value-scalar value) -1)))
-                 (and (cartesian-value-vector value)
-                      (cartesian-vector
-                        (map (lambda (component) (polynomial-scale component -1))
-                          (cartesian-value-vector value)))))))
-          (('+ left right)
-           (let ((left (cartesian-evaluate left axes))
-                 (right (cartesian-evaluate right axes)))
-             (and left right (cartesian-add left right 1))))
-          (('- left right)
-           (let ((left (cartesian-evaluate left axes))
-                 (right (cartesian-evaluate right axes)))
-             (and left right (cartesian-add left right -1))))
-          (('* left right)
-           (let ((left (cartesian-evaluate left axes))
-                 (right (cartesian-evaluate right axes)))
-             (and left right
-               (or (and (cartesian-value-scalar left)
-                        (cartesian-value-scalar right)
-                        (cartesian-scalar
-                          (polynomial-multiply
-                            (cartesian-value-scalar left)
-                            (cartesian-value-scalar right))))
-                   (cartesian-vector-scale left right #f)
-                   (cartesian-vector-scale right left #f)))))
-          (('/ numerator denominator)
-           (let ((numerator (cartesian-evaluate numerator axes))
-                 (denominator (cartesian-evaluate denominator axes)))
-             (and numerator denominator
-               (or (and (cartesian-value-scalar numerator)
-                        (cartesian-value-scalar denominator)
-                        (let ((constant
-                                (polynomial-constant-value
-                                  (cartesian-value-scalar denominator))))
-                          (and constant (not (zero? constant))
-                            (cartesian-scalar
-                              (polynomial-scale
-                                (cartesian-value-scalar numerator)
-                                (/ 1 constant))))))
-                   (cartesian-vector-scale numerator denominator #t)))))
-          (('dot left right)
-           (let ((left (cartesian-evaluate left axes))
-                 (right (cartesian-evaluate right axes)))
-             (and left right (cartesian-dot left right))))
-          (('cross left right)
-           (let ((left (cartesian-evaluate left axes))
-                 (right (cartesian-evaluate right axes)))
-             (and left right (cartesian-cross left right))))
-          (('grad expression)
-           (let* ((value (cartesian-evaluate expression axes))
-                  (scalar (cartesian-value-scalar value)))
-             (and scalar
-               (cartesian-vector
-                 (map (lambda (axis) (polynomial-partial scalar axis)) axes)))))
-          (('div expression)
-           (let* ((value (cartesian-evaluate expression axes))
-                  (vector (cartesian-value-vector value)))
-             (and vector
-               (cartesian-scalar
-                 (fold polynomial-add '()
-                   (map polynomial-partial vector axes))))))
-          (('curl expression)
-           (let* ((value (cartesian-evaluate expression axes))
-                  (vector (cartesian-value-vector value)))
-             (and vector (cartesian-vector (cartesian-curl vector axes)))))
-          (('laplacian expression)
-           (let* ((value (cartesian-evaluate expression axes))
-                  (scalar (cartesian-value-scalar value))
-                  (vector (cartesian-value-vector value)))
-             (cond (scalar (cartesian-scalar (polynomial-laplacian scalar axes)))
-                   (vector
-                    (cartesian-vector
-                      (map (lambda (component)
-                             (polynomial-laplacian component axes))
-                        vector)))
-                   (else #f))))
-          (((or 'partial 'differentiate) expression ('var coordinate))
-           (let* ((value (cartesian-evaluate expression axes))
-                  (scalar (cartesian-value-scalar value)))
-             (and scalar (memq coordinate axes)
-               (cartesian-scalar (polynomial-partial scalar coordinate)))))
-          (_ #f)))))
+                        (polynomial-scale
+                          (cartesian-value-scalar numerator)
+                          (/ 1 constant))))))
+             (cartesian-vector-scale numerator denominator #t)))))
+    (('^ base ('num exponent-text))
+     (let* ((value (cartesian-evaluate base axes))
+            (polynomial (cartesian-value-scalar value))
+            (exponent (math-natural-value exponent-text)))
+       (and polynomial exponent (<= exponent 128)
+            (let ((result
+                    (cartesian-polynomial-power polynomial exponent)))
+              (and result (cartesian-scalar result))))))
+    (('dot left right)
+     (let ((left (cartesian-evaluate left axes))
+           (right (cartesian-evaluate right axes)))
+       (and left right (cartesian-dot left right))))
+    (('cross left right)
+     (let ((left (cartesian-evaluate left axes))
+           (right (cartesian-evaluate right axes)))
+       (and left right (cartesian-cross left right))))
+    (('grad expression)
+     (let* ((value (cartesian-evaluate expression axes))
+            (scalar (cartesian-value-scalar value)))
+       (and scalar
+         (cartesian-vector
+           (map (lambda (axis) (polynomial-partial scalar axis)) axes)))))
+    (('div expression)
+     (let* ((value (cartesian-evaluate expression axes))
+            (vector (cartesian-value-vector value)))
+       (and vector
+         (cartesian-scalar
+           (fold polynomial-add '()
+             (map polynomial-partial vector axes))))))
+    (('curl expression)
+     (let* ((value (cartesian-evaluate expression axes))
+            (vector (cartesian-value-vector value)))
+       (and vector (cartesian-vector (cartesian-curl vector axes)))))
+    (('laplacian expression)
+     (let* ((value (cartesian-evaluate expression axes))
+            (scalar (cartesian-value-scalar value))
+            (vector (cartesian-value-vector value)))
+       (cond (scalar (cartesian-scalar (polynomial-laplacian scalar axes)))
+             (vector
+              (cartesian-vector
+                (map (lambda (component)
+                       (polynomial-laplacian component axes))
+                  vector)))
+             (else #f))))
+    (((or 'partial 'differentiate) expression ('var coordinate))
+     (let* ((value (cartesian-evaluate expression axes))
+            (scalar (cartesian-value-scalar value)))
+       (and scalar (memq coordinate axes)
+         (cartesian-scalar (polynomial-partial scalar coordinate)))))
+    (_ (let ((polynomial (math-polynomial-normal-form term)))
+         (and polynomial (cartesian-scalar polynomial))))))
 
 (define (cartesian-expression? term)
-  (match term
-    (('zero 'vector) #t)
-    ((operator . operands)
-     (or (memq operator '(components grad div curl laplacian dot cross))
-         (any cartesian-expression? operands)))
-    (_ #f)))
+  "Recognize Cartesian terms with bounded traversal; overflow routes to unsupported."
+  (let ((remaining cartesian-expression-node-limit))
+    (define (walk-children children depth)
+      (let loop ((children children))
+        (cond ((null? children) #f)
+              ((not (pair? children)) #f)
+              (else (or (walk (car children) depth)
+                        (loop (cdr children)))))))
+    (define (walk term depth)
+      (set! remaining (- remaining 1))
+      (cond
+        ((or (< remaining 0) (> depth cartesian-expression-depth-limit)) #t)
+        ((not (pair? term)) #f)
+        ((and (symbol? (car term))
+              (memq (car term)
+                '(components zero grad div curl laplacian dot cross))) #t)
+        ((and (symbol? (car term)) (pair? (cdr term)))
+         (walk-children (cdr term) (+ depth 1)))
+        (else #f)))
+    (walk term 0)))
 
 (define (polynomial-laplacian polynomial axes)
   (fold polynomial-add '()
@@ -1012,23 +1105,34 @@ zero-value and zero-first-derivative anchor used to choose one solution."
   "Check a composed scalar/vector expression over exact Cartesian polynomials.
 AXES is the ordered list of three distinct coordinate symbols."
   (cond
-    ((not (and (list? axes) (= (length axes) 3) (every symbol? axes)
+    ((not (and (pair? axes) (pair? (cdr axes)) (pair? (cddr axes))
+               (null? (cdddr axes))
+               (every cartesian-symbol-within-limits? axes)
                (= (length (delete-duplicates axes)) 3)))
-     (semantic-check 'rejected (list expression axes result)
+     (semantic-check 'rejected 'cartesian-axes
        "Cartesian checking requires three distinct coordinate symbols"))
+    ((not (and (cartesian-term-within-limits? expression)
+               (cartesian-term-within-limits? result)))
+     (semantic-check 'unsupported 'cartesian-expression
+       "the expression or result exceeds the Cartesian checker's structural limits"))
     (else
-     (let ((input (cartesian-evaluate expression axes))
-           (output (cartesian-evaluate result axes)))
-       (cond
-         ((or (not input) (not output))
-          (semantic-check 'unsupported (list expression axes result)
-            "the expression or result is outside the Cartesian polynomial checker"))
-         ((equal? input output)
-          (semantic-check 'semantically-checked
-            (list expression axes result) #f))
-         (else
-          (semantic-check 'rejected (list expression axes result)
-            "the supplied result differs from the exact Cartesian denotation")))))))
+     (catch 'semantic-polynomial-limit
+       (lambda ()
+         (let ((input (cartesian-evaluate expression axes))
+               (output (cartesian-evaluate result axes)))
+           (cond
+             ((or (not input) (not output))
+              (semantic-check 'unsupported (list expression axes result)
+                "the expression or result is outside the Cartesian polynomial checker"))
+             ((equal? input output)
+              (semantic-check 'semantically-checked
+                (list expression axes result) #f))
+             (else
+              (semantic-check 'rejected (list expression axes result)
+                "the supplied result differs from the exact Cartesian denotation")))))
+       (lambda _
+         (semantic-check 'unsupported (list expression axes result)
+           "the exact Cartesian polynomial expansion exceeds its limits"))))))
 
 (define (check-cartesian-derivation certificate expression result assumptions)
   (let* ((space (find math-space-declaration? assumptions))

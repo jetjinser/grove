@@ -91,6 +91,101 @@
   'unsupported
   (math-semantic-check-status
     (φ:check-polynomial-cartesian "components(x,y,z)/x" "components(1,y/x,z/x)")))
+(test-eq "scalar powers are evaluated compositionally"
+  'semantically-checked
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian "grad((x+y)^2)" "components(2*x+2*y,2*x+2*y,0)")))
+(test-eq "scalar addition, subtraction, multiplication, and negation compose"
+  'semantically-checked
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian "-(x-y)*(x+y)" "y^2-x^2")))
+(test-eq "vector subtraction and unary negation compose"
+  'semantically-checked
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian
+      "-components(x,y,z)-components(1,2,3)"
+      "components(-x-1,-y-2,-z-3)")))
+(test-eq "right scalar multiplication is supported"
+  'semantically-checked
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian "components(x,y,z)*2"
+      "components(2*x,2*y,2*z)")))
+(test-eq "scalar quotient by a nonzero rational constant is supported"
+  'semantically-checked
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian "(x+y)/2" "x/2+y/2")))
+(test-eq "zero vector has a stable exact denotation"
+  'semantically-checked
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian "zero(vector)" "components(0,0,0)")))
+(test-eq "partial and differentiate are limited to declared Cartesian axes"
+  'semantically-checked
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian "partial(x^2*y,x)" "2*x*y")))
+(test-eq "differentiate shares the scalar derivative semantics"
+  'semantically-checked
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian "differentiate(x^2*y,x)" "2*x*y")))
+(test-eq "partial derivatives outside the declared basis are unsupported"
+  'unsupported
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian "partial(x^2,t)" "0")))
+(test-eq "type-invalid vector operations remain unsupported"
+  'unsupported
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian "dot(x,components(1,0,0))" "x")))
+(test-eq "zero denominators remain outside the checker domain"
+  'unsupported
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian "components(x,y,z)/0" "zero(vector)")))
+(test-eq "powers that exceed the coefficient bit limit are unsupported"
+  'unsupported
+  (math-semantic-check-status
+    (φ:check-polynomial-cartesian "(2^128)^128" "0")))
+(test-eq "oversized numeric literals are rejected before exact parsing"
+  'unsupported
+  (math-semantic-check-status
+    (math-polynomial-check-cartesian
+      (list 'num (make-string 257 #\9)) '(x y z) '(num "0"))))
+(test-eq "oversized coordinate symbols are rejected before normalization"
+  'unsupported
+  (math-semantic-check-status
+    (math-polynomial-check-cartesian
+      (list 'var (string->symbol (make-string 257 #\x)))
+      '(x y z) '(num "0"))))
+
+(define (nested-negations count term)
+  (if (zero? count) term
+      (nested-negations (- count 1) (list '- term))))
+(test-eq "Cartesian semantic checks bound recursive expression depth"
+  'unsupported
+  (math-semantic-check-status
+    (math-polynomial-check-cartesian
+      (nested-negations 129 '(var x)) '(x y z) '(var x))))
+(test-eq "Cartesian semantic checks bound expression node count"
+  'unsupported
+  (math-semantic-check-status
+    (math-polynomial-check-cartesian
+      (let loop ((count 0) (term '(var x)))
+        (if (= count 12) term
+            (loop (+ count 1) (list '+ term term))))
+      '(x y z) '(var x))))
+(test-eq "malformed Cartesian terms return unsupported instead of raising"
+  'unsupported
+  (math-semantic-check-status
+    (math-polynomial-check-cartesian '(components . invalid) '(x y z) '(var x))))
+(test-eq "cyclic axes are rejected without traversing the expression"
+  'rejected
+  (math-semantic-check-status
+    (let ((axes (list 'x 'y 'z)))
+      (set-cdr! (cddr axes) axes)
+      (math-polynomial-check-cartesian '(var x) axes '(var x)))))
+(test-eq "cyclic term structure returns unsupported within the node budget"
+  'unsupported
+  (math-semantic-check-status
+    (let ((term (list '+ '(var x) '(var y))))
+      (set-cdr! (cddr term) (cdr term))
+      (math-polynomial-check-cartesian term '(x y z) '(var x)))))
 
 (test-assert "exact sparse polynomials collect and multiply independently"
   (math-polynomial-equivalent?
