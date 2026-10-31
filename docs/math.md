@@ -9,6 +9,10 @@ Grove math lets an article use one expression for display and computation. It
 supports a focused set of symbolic rewriting and calculus operations; it is not
 a general-purpose computer algebra system.
 
+For the design goals and a task-oriented map of what calculation, derivation,
+checking, and extension each guarantee, see [Mathematical system: purpose and
+capability map](math-design.md).
+
 ## Three interfaces
 
 Grove separates formula text, mathematical meaning, and visual layout:

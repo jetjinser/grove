@@ -69,6 +69,12 @@ tested Flora mapping from a 2026-10-26 corpus snapshot, current design
 direction, and the remaining identity and vocabulary decisions without
 committing to a public API.
 
+## Mathematical system
+
+[Mathematical system: purpose and capability map](math-design.md) describes
+Grove's math scope, the guarantees attached to writing, calculation,
+derivation, and checking, and criteria for future additions.
+
 ## Testing
 
 - `blue verify` runs `blue check`, `blue lint`, and `blue check-examples` in
