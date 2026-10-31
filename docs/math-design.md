@@ -50,6 +50,21 @@ The current system has a useful, deliberately bounded core:
   calculation audits expose different kinds of evidence. Each checker states
   a narrower domain than the language of displayable expressions.
 
+These evidence layers have intentionally different scopes. Replay checks
+whether recorded steps follow their selected rewrite rules. The independent
+semantic checker covers exact scalar-polynomial and explicit Cartesian
+polynomial contracts. Proof-tree elaboration can check supported fixed rule
+specifications and equality composition, but does not prove algorithm-wide
+correctness and can report `unsupported` for otherwise successful calculus or
+Cartesian calculations. A positive result in one layer remains useful when
+another layer is unsupported; the report keeps them separate.
+
+For example, a completed `curl(grad(x*y))` calculation can have a replay-valid
+trace and a semantically checked Cartesian contract while proof-tree
+elaboration remains unsupported. That says the calculation passed the
+evidence Grove currently provides; it does not say a general proof tree exists
+for every internal calculation step.
+
 The [Math reference](math.md#available-calculations) is authoritative for
 operation-by-operation conditions, limits, and examples. General symbolic
 integration, general ODE/PDE solving, and general matrix algebra are outside
@@ -105,3 +120,23 @@ against independently stated identities or an independent evaluator. If that
 domain benefits from verification, its checker should be introduced with a
 clear unsupported boundary. This keeps the system hackable while preserving
 the ability to explain what any built-in result means.
+
+## Decision checkpoint: proof-tree scope
+
+A public calculation audit currently combines three kinds of evidence: rule
+replay, an operation-specific semantic contract when available, and proof-tree
+elaboration when its fixed rule theory supports the steps. A tested Cartesian
+calculation can complete with valid replay and a `semantically-checked`
+Cartesian contract while proof-tree elaboration reports `unsupported`. The
+calculation and its semantic contract still have positive evidence; the
+general proof-tree layer simply does not cover every internal algorithm step.
+
+Recommendation: keep these layers separate and keep proof-tree coverage
+bounded to its explicit RuleSpec theory for now. Extend proof trees into
+Cartesian calculation only when an author task needs to compose vector
+identities as proof objects, rather than calculate a result and check its
+Cartesian contract. That extension would need an explicit typed vector proof
+theory and its own semantic checker, not a status-label adjustment. The
+scalar-polynomial step checker now classifies a well-typed vector context as
+`unsupported` and reserves `rejected` for malformed, ill-typed, or contradicted
+evidence within its contract.

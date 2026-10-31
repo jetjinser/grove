@@ -198,10 +198,14 @@
       ((or (not local-from) (not local-to))
        (semantic-check 'rejected (list from to rule-name path)
          "the recorded operand path does not exist in both terms"))
-      ((or (not (scalar-term? assumptions from))
-           (not (scalar-term? assumptions to)))
+      ((or (not (math-infer-type assumptions from))
+           (not (math-infer-type assumptions to)))
        (semantic-check 'rejected (list from to rule-name path)
-         "the whole rewrite is not a declared scalar expression"))
+         "the whole rewrite contains an ill-typed expression"))
+      ((not (and (scalar-term? assumptions from)
+                 (scalar-term? assumptions to)))
+       (semantic-check 'unsupported (list from to rule-name path)
+         "the scalar-polynomial step checker does not support this expression type"))
       (else
        (let* ((bindings (math-rule-spec-match spec local-from))
               (expected (and bindings

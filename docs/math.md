@@ -481,6 +481,13 @@ them into one boolean: callers can choose which evidence their application
 requires, and an unsupported result does not contradict positive evidence from
 another layer.
 
+For example, a Cartesian calculation can have a replay-valid trace and a
+`semantically-checked` Cartesian contract while proof-tree elaboration is
+`unsupported`. That means the proof-tree layer does not cover every internal
+spatial calculation step; it does not invalidate the other evidence. A
+well-typed expression outside a checker's domain should be reported as
+`unsupported`; malformed or ill-typed evidence can be `rejected`.
+
 ## Display notation
 
 Notation lowers to MathML and is not parsed back into a Semantic expression.

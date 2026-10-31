@@ -100,6 +100,14 @@
     "grad(x*y)+components(1,2,3)"
     "laplacian(x^2*y^2)"
     "laplacian(components(x^2,y^2,z^2))"))
+(let* ((report (φ:compute "curl(grad(x*y))" #:assumptions (list basis)))
+       (audit (math-report-audit report)))
+  (test-equal "Cartesian computation exposes each evidence layer independently"
+    '(complete #t semantically-checked unsupported)
+    (list (math-report-status report)
+          (math-calculation-audit-replay-valid? audit)
+          (math-calculation-audit-contract-status audit)
+          (math-calculation-audit-proof-status audit))))
 (for-each (lambda (execute)
             (test-equal "unsupported primitive domain cannot disappear through cancellation" 'unsupported-expression
               (math-report-reason (execute "antiderivative(1/x,x)-antiderivative(1/x,x)"

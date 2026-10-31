@@ -348,6 +348,16 @@
     (not (math-semantic-check-valid?
            (φ:check-polynomial-step "x+0" "x" 'add-zero '(0)
              #:assumptions '("scalar(x)")))))
+  (test-eq "scalar-polynomial step checking reports a well-typed vector context as unsupported"
+    'unsupported
+    (math-semantic-check-status
+      (φ:check-polynomial-step "components(x+0,y,z)" "components(x,y,z)"
+        'add-zero '(0) #:assumptions '("scalar(x); scalar(y); scalar(z)"))))
+  (test-eq "scalar-polynomial step checking rejects an ill-typed context"
+    'rejected
+    (math-semantic-check-status
+      (φ:check-polynomial-step "x+0" "x" 'add-zero '()
+        #:assumptions '("vector(x)"))))
   (test-assert "scalar law cannot certify a vector rewrite"
     (not (math-semantic-check-valid?
            (φ:check-polynomial-step "E+0" "E" 'add-zero '()
