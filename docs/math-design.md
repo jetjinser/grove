@@ -121,7 +121,7 @@ domain benefits from verification, its checker should be introduced with a
 clear unsupported boundary. This keeps the system hackable while preserving
 the ability to explain what any built-in result means.
 
-## Decision checkpoint: proof-tree scope
+## Decision: keep proof-tree scope bounded
 
 A public calculation audit currently combines three kinds of evidence: rule
 replay, an operation-specific semantic contract when available, and proof-tree
@@ -131,12 +131,11 @@ Cartesian contract while proof-tree elaboration reports `unsupported`. The
 calculation and its semantic contract still have positive evidence; the
 general proof-tree layer simply does not cover every internal algorithm step.
 
-Recommendation: keep these layers separate and keep proof-tree coverage
-bounded to its explicit RuleSpec theory for now. Extend proof trees into
-Cartesian calculation only when an author task needs to compose vector
-identities as proof objects, rather than calculate a result and check its
-Cartesian contract. That extension would need an explicit typed vector proof
-theory and its own semantic checker, not a status-label adjustment. The
-scalar-polynomial step checker now classifies a well-typed vector context as
-`unsupported` and reserves `rejected` for malformed, ill-typed, or contradicted
-evidence within its contract.
+Keep these layers separate and keep proof-tree coverage bounded to its explicit
+RuleSpec theory. Reconsider Cartesian proof trees when an author task needs to
+compose vector identities as proof objects, rather than calculate a result and
+check its Cartesian contract. That extension would need an explicit typed
+vector proof theory and its own semantic checker, not a status-label
+adjustment. The scalar-polynomial step checker classifies a well-typed vector
+context as `unsupported` and reserves `rejected` for malformed, ill-typed, or
+contradicted evidence within its contract.
