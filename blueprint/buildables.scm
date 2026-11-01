@@ -115,7 +115,8 @@
                                 (+ 1 (string-length filename))))
             (required? (error "missing Grove runtime dependency" module))
             (else #f))))
-      (append '("gcrypt/hash" "faster-minikanren/mk-guile" "ts"
+      (append '("gcrypt/hash" "faster-minikanren/mk-guile"
+                "srfi/:275/iri" "ts"
                 "grove/highlight/languages")
               (if guile-ssh? '("ssh/session") '())))
     string=?))

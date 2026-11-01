@@ -48,6 +48,7 @@
             }))
             guile-gcrypt
             guile-quickcheck
+            self'.packages.guile-srfi-275
             self'.packages.blue
             self'.packages.faster-minikanren
             self'.packages.guile-ts
@@ -91,6 +92,7 @@
               src = self;
               blue = self'.packages.blue;
               faster-minikanren = self'.packages.faster-minikanren;
+              guile-srfi-275 = self'.packages.guile-srfi-275;
               guile-ts = self'.packages.guile-ts;
               grove-highlights = self'.packages.grove-highlights;
             };

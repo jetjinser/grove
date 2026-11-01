@@ -11,6 +11,7 @@
   coreutils,
   guile-gcrypt,
   faster-minikanren,
+  guile-srfi-275,
   guile-ts,
   grove-highlights,
   guile-ssh,
@@ -21,6 +22,7 @@ let
   guile-modules = [
     guile-gcrypt
     faster-minikanren
+    guile-srfi-275
     guile-ts
     grove-highlights
     guile-ssh
