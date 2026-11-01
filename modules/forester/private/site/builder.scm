@@ -194,11 +194,12 @@ constructor when a Grove site is already in memory."
     (error "forest timings callback must accept a phase and duration or be #f"
            timings))
   (set! site
-    (make-site (map normalize-page-metadata (site-pages site))
-      #:title (site-title site)
-      #:description (site-description site)
-      #:sources (site-sources site)
-      #:home (site-home site)))
+    (measure 'page-normalization
+      (make-site (map normalize-page-metadata (site-pages site))
+        #:title (site-title site)
+        #:description (site-description site)
+        #:sources (site-sources site)
+        #:home (site-home site))))
   (let* ((root-pages
            (measure 'identify-trees
              (tree-pass:assign-subtree-identifiers
@@ -219,10 +220,12 @@ constructor when a Grove site is already in memory."
                        #:sources (site-sources site)
                        #:home (site-home site)))
          (page-index (make-hash-table))
-         (_ (for-each (lambda (page)
-                        (hash-set! page-index (site-page-id page) page))
-                      pages))
-         (_ (ensure-unique-anchor-ids pages))
+         (_ (measure 'page-index-setup
+              (for-each (lambda (page)
+                          (hash-set! page-index (site-page-id page) page))
+                        pages)))
+         (_ (measure 'anchor-validation
+              (ensure-unique-anchor-ids pages)))
          (reference-facts
            (measure 'references (append-map
              (lambda (source-page)
@@ -383,41 +386,44 @@ constructor when a Grove site is already in memory."
                            (tree-pass:element-kind? 'query-link)
                            #:postorder? #t)))))
                  pages))))
-         (_ (for-each
-              (lambda (source-page)
-                (let ((source-id (site-page-id source-page))
-                      (source-path
-                        (or (site-page-source source-page) "<unknown source>")))
-                  (for-each
-                    (lambda (element)
-                      (let ((fragment
-                              (ir:content-element-property/raw element 'fragment))
-                            (target-page-id
-                              (ir:content-element-property/raw element 'target)))
-                        (when (and fragment
-                                   (not (member fragment
-                                                (hash-ref anchor-index
-                                                          target-page-id '())
-                                                string=?)))
-                          (format (current-warning-port)
-                            "warning: fragment ~s does not resolve in page ~a (link authored in ~a at ~a)\n"
-                            fragment target-page-id source-id source-path))))
-                    (tree-pass:walk-owned-content
-                      (site-page-document source-page)
-                      (tree-pass:element-kind? 'link) #:postorder? #t))))
-              pages))
-         (_ (validate-tree-cycles! pages
-              (lambda (page)
-                (composition:composition-target-ids
-                  composition (site-page-id page))))))
+         (_ (measure 'fragment-validation
+              (for-each
+                (lambda (source-page)
+                  (let ((source-id (site-page-id source-page))
+                        (source-path
+                          (or (site-page-source source-page) "<unknown source>")))
+                    (for-each
+                      (lambda (element)
+                        (let ((fragment
+                                (ir:content-element-property/raw element 'fragment))
+                              (target-page-id
+                                (ir:content-element-property/raw element 'target)))
+                          (when (and fragment
+                                     (not (member fragment
+                                                  (hash-ref anchor-index
+                                                            target-page-id '())
+                                                  string=?)))
+                            (format (current-warning-port)
+                              "warning: fragment ~s does not resolve in page ~a (link authored in ~a at ~a)\n"
+                              fragment target-page-id source-id source-path))))
+                      (tree-pass:walk-owned-content
+                        (site-page-document source-page)
+                        (tree-pass:element-kind? 'link) #:postorder? #t))))
+                pages)))
+         (_ (measure 'tree-cycle-validation
+              (validate-tree-cycles! pages
+                (lambda (page)
+                  (composition:composition-target-ids
+                    composition (site-page-id page)))))))
     ;;     Force every column index while still single-threaded: page
     ;;     rendering reads them in parallel and a concurrent force would
     ;;     race inside the promise.
-    (for-each
-      warm-relation-indexes!
-      (list reference-relation page-relation described-entity-relation
-            term-definition-relation term-mention-relation
-            (car content-node-state)))
+    (measure 'relation-index-warmup
+      (for-each
+        warm-relation-indexes!
+        (list reference-relation page-relation described-entity-relation
+              term-definition-relation term-mention-relation
+              (car content-node-state))))
     (measure 'queries (resolve-forest-queries
       (%make-forest site pages
                     reference-relation composition page-index page-relation

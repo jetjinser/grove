@@ -7,6 +7,7 @@
   #:use-module (ice-9 format)
   #:use-module (ice-9 rdelim)
   #:use-module (ice-9 textual-ports)
+  #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
   #:use-module (srfi srfi-14)
   #:re-export (current-input-cache-timings)
@@ -30,6 +31,28 @@
               fresh-count (format-duration fresh))
       port)))
 
+(define cache-detail-labels
+  '((local-dependency-fingerprints . "local dependency fingerprints")
+    (entry-read . "entry read")
+    (entry-validation-and-unpack . "entry validation and unpack")))
+
+(define (report-cache-detail port timings)
+  (let ((parts
+          (filter-map
+            (lambda (entry)
+              (let* ((kind (car entry))
+                     (seconds (hash-ref timings (list 'detail kind) 0))
+                     (count (hash-ref timings (list 'detail-count kind) 0)))
+                (and (> seconds 0)
+                     (format #f "~a ~a/~a"
+                       (assq-ref cache-detail-labels kind)
+                       (format-duration seconds) count))))
+            cache-detail-labels)))
+    (when (pair? parts)
+      (print-cli-status "Profile"
+        (string-append "input cache stages: " (string-join parts ", "))
+        port))))
+
 (define (peak-rss-mib)
   "The process's high-water resident set in MiB, from VmHWM - the
 whole process lifetime, no sampling needed."
@@ -49,7 +72,8 @@ whole process lifetime, no sampling needed."
 
 (define (report-profile port timings)
   (when timings
-    (report-input-cache-timings port timings))
+    (report-input-cache-timings port timings)
+    (report-cache-detail port timings))
   (let ((rss (peak-rss-mib)))
     (when rss
       (print-cli-status "Profile"

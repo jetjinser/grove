@@ -275,6 +275,18 @@
         (hash-set! timings (list 'count kind)
                    (+ 1 (hash-ref timings (list 'count kind) 0))))
       value)
+    (define (timed-part kind thunk)
+      (if (not timings)
+          (thunk)
+          (let ((part-started (get-internal-real-time)))
+            (let ((value (thunk)))
+              (hash-set! timings (list 'detail kind)
+                (+ (/ (- (get-internal-real-time) part-started)
+                      internal-time-units-per-second)
+                   (hash-ref timings (list 'detail kind) 0)))
+              (hash-set! timings (list 'detail-count kind)
+                (+ 1 (hash-ref timings (list 'detail-count kind) 0)))
+              value))))
     (if (not context)
         (timed 'fresh (read-document))
         (let* ((directory (input-cache-context-directory context))
@@ -320,11 +332,13 @@
                                 (not (hash-ref seen file)))
                               dependencies)))
                   (local-snapshot
-                    (map (lambda (file)
-                           (let ((key (normalize-input-path file)))
-                             (list (normalize-input-path key)
-                                   (input-fingerprint file))))
-                         local-paths))
+                    (timed-part 'local-dependency-fingerprints
+                      (lambda ()
+                        (map (lambda (file)
+                               (let ((key (normalize-input-path file)))
+                                 (list (normalize-input-path key)
+                                       (input-fingerprint file))))
+                             local-paths))))
                   (snapshot (append page-snapshot shared-snapshot
                                     local-snapshot))
                   (identity (list reader (version) (setlocale LC_CTYPE)
@@ -333,29 +347,33 @@
                   (entry-path (and (input-cache-context-enabled? context)
                                    (string-append directory "/"
                                                   (entry-key path))))
-                  (entry (and reuse? (read-entry entry-path)))
-                  (hit (catch #t
+                  (entry (and reuse?
+                              (timed-part 'entry-read
+                                (lambda () (read-entry entry-path)))))
+                  (hit (timed-part 'entry-validation-and-unpack
                          (lambda ()
-                           (match entry
-                             ((stored extra reusable? document)
-                              (let ((checked
-                                      (and (equal? stored identity)
-                                           reusable?
-                                           (every (lambda (input)
-                                                    (match input
-                                                      ((file digest)
-                                                       (equal? digest (input-fingerprint file)))
-                                                      (_ #f))) extra)
-                                           (begin (register (map car extra))
-                                                  (unpack document)))))
-                                (when (and timings (not checked) (pair? entry))
-                                  (format (current-error-port)
-                                    "Profile cache miss diagnosis: ~a\n"
-                                    (or (first-identity-difference stored identity)
-                                        "dependency fingerprints changed")))
-                                checked))
-                             (_ #f)))
-                         (lambda _ #f))))
+                           (catch #t
+                             (lambda ()
+                               (match entry
+                                 ((stored extra reusable? document)
+                                  (let ((checked
+                                          (and (equal? stored identity)
+                                               reusable?
+                                               (every (lambda (input)
+                                                        (match input
+                                                          ((file digest)
+                                                           (equal? digest (input-fingerprint file)))
+                                                          (_ #f))) extra)
+                                               (begin (register (map car extra))
+                                                      (unpack document)))))
+                                    (when (and timings (not checked) (pair? entry))
+                                      (format (current-error-port)
+                                        "Profile cache miss diagnosis: ~a\n"
+                                        (or (first-identity-difference stored identity)
+                                            "dependency fingerprints changed")))
+                                    checked))
+                                 (_ #f)))
+                             (lambda _ #f))))))
              (if (content-document? hit)
                  (begin (report 'hit) (timed 'reused hit))
                  (let* ((trace (make-hash-table))

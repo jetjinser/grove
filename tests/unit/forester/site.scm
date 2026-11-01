@@ -108,10 +108,12 @@
   (test-equal "timing observation preserves the page"
     "Measured" (site-page-title (require-page forest "measured")))
   (test-equal "forest timings follow analysis order"
-    '(identify-trees extract-trees occurrence-anchors equation-numbers
+    '(page-normalization identify-trees extract-trees occurrence-anchors
+      equation-numbers page-index-setup anchor-validation
       references transclusions reference-index term-definitions page-index
       described-entities
-      content composition anchors term-mentions queries)
+      content composition anchors term-mentions fragment-validation
+      tree-cycle-validation relation-index-warmup queries)
     (map car (reverse phases)))
   (test-assert "forest timings report nonnegative seconds"
     (every (lambda (entry) (>= (cdr entry) 0)) phases)))
@@ -125,10 +127,12 @@
                             (set! phases (cons (cons phase seconds) phases)))))
            (make-forest (make-site (list page))))))
   (test-equal "analysis timings flow through the parameter hook"
-    '(identify-trees extract-trees occurrence-anchors equation-numbers
+    '(page-normalization identify-trees extract-trees occurrence-anchors
+      equation-numbers page-index-setup anchor-validation
       references transclusions reference-index term-definitions page-index
       described-entities
-      content composition anchors term-mentions queries)
+      content composition anchors term-mentions fragment-validation
+      tree-cycle-validation relation-index-warmup queries)
     (map car (reverse phases))))
 
 (test-error "HTML routes reject an empty home page ID" #t
