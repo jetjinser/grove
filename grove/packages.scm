@@ -8,7 +8,9 @@
   #:export (grove))
 
 (define grove-source-root
-  (dirname (dirname (canonicalize-path (current-filename)))))
+  (dirname (dirname
+            (canonicalize-path
+             (search-path %load-path "grove/packages.scm")))))
 
 ;; Keep the package factory and its pinned dependencies in the same source
 ;; tree as Grove, so a Guix channel can expose the exact package recipe.
