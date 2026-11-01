@@ -11,7 +11,8 @@
   #:use-module (grove output)
   #:use-module (srfi srfi-1)
   #:export (render-model
-            make-cached-renderer))
+            make-cached-renderer
+            define-cached-renderer))
 
 (define* (make-cached-renderer procedure #:key (configuration '()) render-changed dependencies)
 "Declare PROCEDURE cacheable for project use.
@@ -55,6 +56,10 @@ each build because procedure identity cannot be persisted safely."
   (%make-cached-renderer
     (if (procedure? configuration) configuration (snapshot-data configuration))
     procedure render-changed dependencies))
+
+(define-syntax-rule (define-cached-renderer name argument ...)
+  (define name
+    (make-cached-renderer argument ...)))
 
 (define (render-model model renderers)
   "Apply RENDERERS to MODEL in order and concatenate their artifact lists.

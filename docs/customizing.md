@@ -196,9 +196,19 @@ compose those steps in one pipeline procedure.
 
 Plain renderer procedures run on every build. For artifact reuse, wrap one with
 `make-cached-renderer`, declare external files with `#:dependencies`, and
-describe untracked output-affecting state with `#:configuration`. An asset
-pipeline may omit `#:inputs` when it reads no project files; add `#:version`
-when toolchain or environment state can change its output. See
+describe untracked output-affecting state with `#:configuration`. When binding
+a named renderer, `define-cached-renderer` defines it directly and forwards the
+same procedure and keyword arguments:
+
+```scheme
+(define-cached-renderer summary-renderer
+  (lambda (forest)
+    (list (make-artifact "summary.txt" (site-title (site forest)))))
+  #:configuration '(summary-renderer 1))
+```
+
+An asset pipeline may omit `#:inputs` when it reads no project files; add
+`#:version` when toolchain or environment state can change its output. See
 [site outputs](site-outputs.md)
 for the cache identity and dependency rules. Pipeline reuse assumes that the
 same project code, declared and materialized paths, input bytes, and version

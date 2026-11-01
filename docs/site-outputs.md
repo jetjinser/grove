@@ -81,7 +81,9 @@ default; `make-text-routes` defaults to `.txt` for the plain-text renderer.
 An extension can use a plain procedure from the analyzed model to an artifact
 list; plain procedures rerun on each build. Wrap it with
 `make-cached-renderer` to reuse artifacts, declaring configuration Grove cannot
-infer. Built-in renderers include their settings in cache identity. The HTML,
+infer. Use `define-cached-renderer` when binding the cache-aware value to a
+name; it forwards the same procedure and keyword options. Built-in renderers
+include their settings in cache identity. The HTML,
 text, and Gemtext factories return cache-aware renderer values when caching is
 enabled and either no custom rules are supplied or they have a stable
 `#:rules-id`; otherwise they return plain procedures. Other built-in renderer

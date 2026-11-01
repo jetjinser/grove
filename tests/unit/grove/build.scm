@@ -29,6 +29,18 @@
   '()
   (render-model 'model '()))
 
+(define-cached-renderer named-cached-renderer
+  (lambda (model) (list (make-artifact "named" model)))
+  #:configuration 'named)
+
+(test-equal "define-cached-renderer binds a named cached renderer"
+  '("named")
+  (map artifact-path (render-model "content" (list named-cached-renderer))))
+
+(test-equal "define-cached-renderer forwards cache options"
+  '(named)
+  (renderer-configurations #f (list named-cached-renderer)))
+
 (test-error "render-model requires a renderer list" #t
   (render-model 'model #f))
 

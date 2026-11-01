@@ -81,8 +81,9 @@ require Grove's Content IR. See the
 [project reference](project.md) for callback contracts and examples.
 
 For renderer extensions, a plain procedure from model to artifact list is the
-default and runs on each build. Wrap it with `make-cached-renderer` to reuse
-artifacts; provide fixed unique `#:dependencies` paths or a collector
+default and runs on each build. Wrap it with `make-cached-renderer`, or bind
+it directly with `define-cached-renderer`, to reuse artifacts; provide fixed
+unique `#:dependencies` paths or a collector
 returning unique paths, and `#:configuration` for state Grove cannot observe
 through the model and tracked project files. Configuration must be acyclic
 Scheme data composed of booleans, characters, numbers, symbols, keywords,
