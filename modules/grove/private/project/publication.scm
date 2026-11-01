@@ -29,10 +29,23 @@
       (write-build-state state-path state-temp-path sources artifacts
                          owners identity)
       (prune)
-      ;; Inputs can change while outputs are being rendered. Invalidate the
-      ;; just-written state so a later build cannot reuse unseen source bytes.
-      (when (any (lambda (entry)
-                  (not (equal? (cadr entry)
-                               (fingerprint (car entry)))))
-                (append sources earlier-sources))
+      ;; Inputs can change during analysis or rendering. Compare the initial
+      ;; snapshot with the analyzed source fingerprints, then check those
+      ;; analyzed fingerprints again after output. This lets cache lookups
+      ;; share one dependency observation without letting a drifting build
+      ;; publish reusable state.
+      (when (or
+              (any (lambda (entry)
+                     (let ((source
+                             (find (lambda (source)
+                                     (string=? (car source) (car entry)))
+                                   sources)))
+                       (not (equal? (cadr entry)
+                                    (if source (cadr source)
+                                        (fingerprint (car entry)))))))
+                   earlier-sources)
+              (any (lambda (entry)
+                     (not (equal? (cadr entry)
+                                  (fingerprint (car entry)))))
+                   sources))
         (delete-file state-path)))))

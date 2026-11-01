@@ -19,6 +19,9 @@
             current-input-cache-timings
             input-cache-dependencies input-cache-summary input-cache-disabled? prune-input-cache!
             register-input-dependencies!
+            input-cache-dependency-fingerprint
+            record-input-cache-dependencies!
+            input-cache-fingerprint-snapshot
             cached-document))
 
 ;; A build scopes this parameter; checks and standalone reads never reuse results.
@@ -26,14 +29,15 @@
 
 (define-record-type <input-cache-context>
   (%make-input-cache-context enabled? directory shared shared-snapshot
-                             statuses globals)
+                             statuses globals fingerprints)
   input-cache-context?
   (enabled? input-cache-context-enabled?)
   (directory input-cache-context-directory)
   (shared input-cache-context-shared)
   (shared-snapshot input-cache-context-shared-snapshot)
   (statuses input-cache-context-statuses)
-  (globals input-cache-context-globals))
+  (globals input-cache-context-globals)
+  (fingerprints input-cache-context-fingerprints))
 
 ;; Set by the project loader: a content digest of the project file and
 ;; its load-time inputs. Document and asset-pipeline cache keys derive
@@ -80,6 +84,7 @@
                (every filesystem-path-string? dependencies))
     (error "input cache dependencies must be a list of paths" dependencies))
   (let* ((globals (make-hash-table))
+         (fingerprints (make-hash-table))
          (shared-snapshot
            (and enabled?
                 (let ((seen (make-hash-table)))
@@ -92,6 +97,13 @@
                                (list path (normalize-input-path key)
                                      (input-fingerprint path))))))
                     dependencies)))))
+    ;; The shared snapshot is the build's initial view of declared inputs.
+    ;; Dynamic dependencies discovered by document reads join this table.
+    ;; Cache entries often repeat the same module dependency set, so lookup
+    ;; verifies each path once here and publication checks the snapshot again.
+    (for-each (lambda (entry)
+                (hash-set! fingerprints (cadr entry) (caddr entry)))
+              (or shared-snapshot '()))
     (for-each (lambda (path) (hash-set! globals path #t)) dependencies)
     ;;     Dependency collection remains active when reuse is disabled.
     ;;     The document cache lives in the per-user shared store, not
@@ -100,7 +112,44 @@
     (%make-input-cache-context
       enabled? (and enabled?
                     (string-append (grove-store-directory) "/input-cache"))
-      dependencies shared-snapshot (make-hash-table) globals)))
+      dependencies shared-snapshot (make-hash-table) globals fingerprints)))
+
+(define (input-cache-dependency-fingerprint context path)
+  "Return PATH's fingerprint from the input cache's build snapshot.
+
+Observe each dependency once during analysis. The first observation joins
+the snapshot; publication later compares that baseline with the analyzed
+sources and checks the analyzed sources again after writing."
+  (let* ((key (normalize-input-path path))
+         (fingerprints (input-cache-context-fingerprints context))
+         (entry (hash-get-handle fingerprints key)))
+    (if entry
+        (cdr entry)
+        (let ((fingerprint (input-fingerprint path)))
+          (hash-set! fingerprints key fingerprint)
+          fingerprint))))
+
+(define (record-input-cache-dependencies! context dependencies)
+  "Add recorded (PATH FINGERPRINT) dependencies to CONTEXT's snapshot."
+  (for-each
+    (lambda (entry)
+      (let ((path (car entry))
+            (fingerprint (cadr entry)))
+        (unless (hash-get-handle
+                  (input-cache-context-fingerprints context)
+                  (normalize-input-path path))
+          (hash-set! (input-cache-context-fingerprints context)
+                     (normalize-input-path path) fingerprint))))
+    dependencies))
+
+(define (input-cache-fingerprint-snapshot context)
+  "Return CONTEXT's initial dependency fingerprints as (PATH DIGEST) pairs."
+  (if context
+      (sort (hash-map->list
+              (lambda (path fingerprint) (list path fingerprint))
+              (input-cache-context-fingerprints context))
+            (lambda (left right) (string<? (car left) (car right))))
+      '()))
 
 (define (register-input-dependencies! context paths)
   (when context
@@ -337,7 +386,8 @@
                         (map (lambda (file)
                                (let ((key (normalize-input-path file)))
                                  (list (normalize-input-path key)
-                                       (input-fingerprint file))))
+                                       (input-cache-dependency-fingerprint
+                                         context file))))
                              local-paths))))
                   (snapshot (append page-snapshot shared-snapshot
                                     local-snapshot))
@@ -362,7 +412,9 @@
                                                (every (lambda (input)
                                                         (match input
                                                           ((file digest)
-                                                           (equal? digest (input-fingerprint file)))
+                                                           (equal? digest
+                                                             (input-cache-dependency-fingerprint
+                                                               context file)))
                                                           (_ #f))) extra)
                                                (begin (register (map car extra))
                                                       (unpack document)))))
@@ -387,6 +439,7 @@
                                             '() trace)
                                  (lambda (a b) (string<? (car a) (car b))))))
                    (register (map car extra))
+                   (record-input-cache-dependencies! context extra)
                    (report 'miss)
                    (catch 'uncacheable-content
                      (lambda ()

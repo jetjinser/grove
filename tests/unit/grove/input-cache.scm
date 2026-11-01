@@ -169,6 +169,19 @@
             (not (equal? before (input-fingerprint alias))))))
       (delete-file alias)
       (put dependency "one"))
+    (let ((context (make-input-cache-context #t '())))
+      (let* ((before (input-cache-dependency-fingerprint context dependency))
+             (info (stat dependency)))
+        (put dependency "two")
+        (utime dependency (stat:atime info) (stat:mtime info))
+        (test-equal "cache dependency lookups share the build snapshot"
+          before (input-cache-dependency-fingerprint context dependency))
+        (test-equal "build snapshot retains the first dependency fingerprint"
+          before (cadr (assoc dependency
+                              (input-cache-fingerprint-snapshot context))))
+        (test-assert "a changed dependency still differs from the build snapshot"
+          (not (equal? before (input-fingerprint dependency))))
+        (put dependency "one")))
     (build-project (project #t) #:progress
       (lambda (stage detail)
         (when (eq? stage 'input-cache) (set! statuses (cons detail statuses)))
@@ -590,6 +603,35 @@
           '(1 2) (list stable-runs changing-runs))
         (test-equal "only artifacts owned by the changed renderer are affected"
           '("changing.txt") (build-report-affected-artifacts changed)))
+    (let* ((snapshot-output (string-append root "/snapshot-output"))
+           (mutated? #f)
+           (renders 0)
+           (snapshot-project
+            (make-project
+              #:collect-sources (lambda () (list source))
+              #:read-source reader
+              #:analyze
+              (lambda (context)
+                (unless mutated?
+                  (set! mutated? #t)
+                  (put dependency "after analysis"))
+                (project-input-value
+                  (car (project-context-inputs context))))
+              #:renderers
+              (list (make-cached-renderer
+                      (lambda (_)
+                        (set! renders (+ renders 1))
+                        (list (make-artifact "snapshot.txt" "snapshot")))
+                      #:configuration 'snapshot))
+              #:output-directory snapshot-output)))
+      (put source "Snapshot")
+      (put dependency "before analysis")
+      (build-project/report snapshot-project)
+      (let ((second (build-project/report snapshot-project)))
+        (test-equal "analysis-time dependency drift prevents a stale build-state hit"
+          2 renders)
+        (test-assert "analysis-time dependency drift is not a renderer cache hit"
+          (not (build-report-render-cache-hit? second)))))
     (prune-input-cache! (make-input-cache-context #t '()))
     ;;     The prune owns the input-cache subtree: entries outside the
     ;;   current selection go, while sibling subtrees (artifacts) are

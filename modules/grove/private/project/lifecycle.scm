@@ -285,7 +285,9 @@ The callback receives the model, input port, and output port."
       (write-project-build!
         (project-output-directory project) state-path state-temp-path
         current-sources artifacts owners identity progress
-        #:earlier-sources pre-build-sources
+        #:earlier-sources
+        (append pre-build-sources
+                (input-cache-fingerprint-snapshot input-cache-context))
         #:prune (lambda () (prune-input-cache! input-cache-context))))
     (let* ((report
              (make-build-report (map build-state-source-path current-sources)
