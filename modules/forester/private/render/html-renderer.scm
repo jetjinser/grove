@@ -62,8 +62,7 @@
                            (html-nav-link-attributes entry))
                      entry))
                (html-presentation-site-nav presentation))
-          (html-presentation-title-decorations presentation)
-          (html-presentation-metadata-item-map presentation))))
+          (html-presentation-cache-identity presentation))))
 
 (define-record-type <html-options>
   (%make-html-options highlighters routes mathjax-src backmatter
@@ -150,6 +149,12 @@
                  #:rules rules
                  #:context context))))
 
+(define (html-page-sources forest presentation page-id)
+  (delete-duplicates
+    (append (page-source-paths forest page-id)
+            (html-presentation-page-sources presentation forest page-id))
+    string=?))
+
 (define (render-html-changed forest options changed old-artifacts dirty-paths)
   (let* ((presentation (html-options-presentation options))
          (style (html-presentation-style presentation))
@@ -180,8 +185,9 @@
                (page-artifacts
                  (map (lambda (page)
                         (let* ((path (cdr (assoc (site-page-id page) route-table)))
-                               (sources (page-source-paths
-                                          forest (site-page-id page))))
+                               (sources (html-page-sources
+                                          forest presentation
+                                          (site-page-id page))))
                           (reuse-artifact path sources old-artifacts changed
                             (lambda () (render-page page #f)))))
                       (pages forest))))
@@ -327,8 +333,8 @@ behavior. Use MAKE-HTML-RENDERER to add the output to a project lifecycle."
                (make-artifact
                  (cdr (assoc (site-page-id page) route-table))
                  (render-page page #f)
-                 #:sources (page-source-paths
-                             forest (site-page-id page))))
+                 #:sources (html-page-sources
+                             forest presentation (site-page-id page))))
              forest-pages
              (iota total 1))))))
 (define* (make-html-renderer #:key (options (make-html-options))
@@ -361,7 +367,8 @@ when caching cannot be identified safely, otherwise a cached renderer."
           (og-image-alt (html-options-og-image-alt options))
           (hreflang? (html-options-hreflang? options))
           (language-switcher? (html-options-language-switcher? options))
-          (effective-cache? (renderer-cacheable? rules rules-id cache?)))
+          (effective-cache? (and (renderer-cacheable? rules rules-id cache?)
+                                 (html-presentation-cacheable? presentation))))
       (validate-rules-id rules-id)
       (set! rules-id (snapshot-data rules-id))
       (unless (boolean? cache?)

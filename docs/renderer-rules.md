@@ -223,6 +223,11 @@ The cache controls live on renderer factories rather than render options.
 that renderer's opaque rules identity with `#:html-rules-id`, and list files
 read by the rules in the project's `#:extra-sources`.
 HTML renderer identity includes declarative presentation data and resolved
-page routes. Text and Gemtext identities include their own options and routes;
+page routes. Page decorations and metadata may instead be pure procedures of
+`(forest page-id)`. Give a presentation containing such procedures a stable
+`#:cache-id`; use `#:page-sources` for additional per-page files and declare
+those paths in the project. Grove combines them with Forester's page source
+closure, so a changed page or metadata file rerenders only dependent HTML
+artifacts. Text and Gemtext identities include their own options and routes;
 custom rules need a stable `#:rules-id`. Derived artifacts require a
 `#:configuration` procedure so their inputs are part of the cache identity.

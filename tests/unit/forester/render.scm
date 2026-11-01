@@ -1418,6 +1418,51 @@
     (string-contains html "<span class=\"summary\">S</span>")))
 
 (let* ((forest (make-forest (make-site (list algebra limits))))
+       (dynamic-presentation
+         (make-html-presentation
+           #:title-decorations
+           (lambda (model page-id)
+             (list `(span ,(string-append
+                             "Decorated "
+                             (site-page-title (require-page model page-id))))))
+           #:metadata-items
+           (lambda (model page-id)
+             (list `(li ,(string-append
+                           "Title: "
+                           (site-page-title (require-page model page-id))))))
+           #:page-sources
+           (lambda (_model page-id)
+             (if (string=? page-id "algebra")
+                 '("entity-metadata.scm")
+                 '()))
+           #:cache-id 'page-title-presentation-v1))
+       (options (make-html-options
+                  #:routes (make-html-routes #:home-page "algebra")
+                  #:presentation dynamic-presentation))
+       (renderer (make-html-renderer #:options options))
+       (html (assoc-ref (site->html forest #:options options) "algebra"))
+       (artifacts (render-html forest #:options options))
+       (home-artifact (find (lambda (artifact)
+                              (string=? (artifact-path artifact) "index.html"))
+                            artifacts)))
+  (test-assert "model-derived title decoration renders from the forest"
+    (string-contains html "Decorated Algebra"))
+  (test-assert "model-derived metadata renders from the forest"
+    (string-contains html "Title: Algebra"))
+  (test-assert "model-derived page presentation is cacheable with a cache ID"
+    (cached-renderer? renderer))
+  (test-assert "page presentation sources attach to that page artifact"
+    (member "entity-metadata.scm" (artifact-sources home-artifact) string=?))
+  (test-assert "model-derived page presentation is not cached without an ID"
+    (procedure?
+      (make-html-renderer
+        #:options
+        (make-html-options
+          #:presentation
+          (make-html-presentation
+            #:title-decorations (lambda (_model _page-id) '())))))))
+
+(let* ((forest (make-forest (make-site (list algebra limits))))
        (routes (make-html-routes #:home-page "algebra"))
        (html (site->html
                forest

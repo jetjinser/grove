@@ -251,15 +251,19 @@ from the HTML presentation are appended after these."
                            context))))
             '()))))
 
-(define (presentation-title-decoration presentation page)
-  (html-presentation-title-decoration presentation (site-page-id page)))
+(define (presentation-title-decoration presentation forest page)
+  (html-presentation-title-decoration-for
+    presentation forest (site-page-id page)))
 
 (define (presentation-metadata-items presentation page context)
   (append (default-metadata-items page context)
-          (html-presentation-metadata-items presentation (site-page-id page))))
+          (html-presentation-metadata-items-for
+            presentation (render-context-ref context 'forest)
+            (site-page-id page))))
 
 (define (presentation-title-decoration-procedure presentation)
-  (lambda (_forest page) (presentation-title-decoration presentation page)))
+  (lambda (forest page)
+    (presentation-title-decoration presentation forest page)))
 
 (define (presentation-metadata-items-procedure presentation)
   (lambda (page context) (presentation-metadata-items presentation page context)))

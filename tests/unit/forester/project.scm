@@ -3,6 +3,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (tests unit forester project)
+  #:use-module (ice-9 string-fun)
   #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-64)
@@ -750,6 +751,62 @@
                    (read-test-file
                      (string-append presentation-output "/index.html"))
                    "Title decoration changed")))))
+      (let* ((dynamic-output
+               (string-append project-root "/dynamic-presentation-output"))
+             (dynamic-routes
+               (make-html-routes
+                 #:home-page "algebra"
+                 #:page-path
+                 (lambda (id) (string-append "notes/" id ".html"))))
+             (algebra-source (string-append source-directory "/algebra.plant"))
+             (original (call-with-input-file algebra-source get-string-all))
+             (dynamic-project
+               (make-site-project
+                 #:title "Dynamic presentation"
+                 #:source-directory source-directory
+                 #:prepare (make-scribble-module-setup module-directory)
+                 #:read-page
+                 (make-page-reader (make-scribble-document-reader))
+                 #:analyze make-forest
+                 #:renderers
+                 (list
+                   (make-html-renderer
+                     #:options
+                     (make-html-options
+                       #:routes dynamic-routes
+                       #:mathjax-src #f
+                       #:presentation
+                       (make-html-presentation
+                         #:title-decorations
+                         (lambda (forest page-id)
+                           (list `(span (@ (class "model-title"))
+                                        ,(site-page-title
+                                           (require-page forest page-id)))))
+                         #:cache-id 'page-title-v1))))
+                 #:output-directory dynamic-output)))
+        (let ((first (build-project/report dynamic-project)))
+          (test-assert "model-derived page presentation builds initially"
+            (and (not (build-report-render-cache-hit? first))
+                 (string-contains
+                   (read-test-file (string-append dynamic-output "/index.html"))
+                   "model-title"))))
+        (let ((same (build-project/report dynamic-project)))
+          (test-assert "unchanged model-derived presentation reuses its artifacts"
+            (build-report-render-cache-hit? same)))
+        (write-test-file
+          algebra-source
+          (string-replace-substring original "@title{Algebra}"
+                                    "@title{Algebra Revised}"))
+        (let* ((changed (build-project/report dynamic-project))
+               (affected (build-report-affected-artifacts changed)))
+          (test-assert "model-derived presentation updates the changed page"
+            (and (member "index.html" affected string=?)
+                 (string-contains
+                   (read-test-file (string-append dynamic-output "/index.html"))
+                   "Algebra Revised")))
+          (test-assert "model-derived presentation reuses unrelated pages"
+            (not (member "notes/unicode.html" affected string=?))))
+        (write-test-file algebra-source original))
       (write-test-file
         (string-append source-directory "/broken.plant")
         (string-append

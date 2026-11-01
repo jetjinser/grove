@@ -10,6 +10,9 @@
   #:use-module (grove style html element)
   #:use-module (grove render rules)
   #:use-module (grove private snapshot)
+  #:use-module (grove private procedure)
+  #:use-module (grove private fingerprint)
+  #:use-module (grove private files)
   #:use-module (grove private string-fun)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
@@ -32,9 +35,14 @@
             html-presentation-home-link
             html-presentation-site-nav
             html-presentation-title-decoration
+            html-presentation-title-decoration-for
             html-presentation-title-decorations
             html-presentation-metadata-items
-            html-presentation-metadata-item-map))
+            html-presentation-metadata-items-for
+            html-presentation-metadata-item-map
+            html-presentation-cache-identity
+            html-presentation-page-sources
+            html-presentation-cacheable?))
 
 (define-record-type <html-nav-link>
   (%make-html-nav-link page-id label attributes)
@@ -156,7 +164,8 @@ is a list of symbol/string pairs."
 
 (define-record-type <html-presentation>
   (%make-html-presentation style rules head home-link site-nav
-                           title-decorations metadata-items)
+                           title-decorations metadata-items page-sources
+                           cache-id)
   html-presentation?
   (style html-presentation-style)
   (rules html-presentation-rules)
@@ -164,7 +173,9 @@ is a list of symbol/string pairs."
   (home-link html-presentation-home-link)
   (site-nav html-presentation-site-nav/raw)
   (title-decorations html-presentation-title-decorations/raw)
-  (metadata-items html-presentation-metadata-item-map/raw))
+  (metadata-items html-presentation-metadata-item-map/raw)
+  (page-sources html-presentation-page-sources/raw)
+  (cache-id html-presentation-cache-id/raw))
 
 (define (html-presentation-head presentation)
   (snapshot-data (html-presentation-head/raw presentation)))
@@ -173,19 +184,36 @@ is a list of symbol/string pairs."
   (snapshot-data (html-presentation-site-nav/raw presentation)))
 
 (define (html-presentation-title-decorations presentation)
-  (snapshot-data (html-presentation-title-decorations/raw presentation)))
+  (let ((value (html-presentation-title-decorations/raw presentation)))
+    (if (procedure? value) value (snapshot-data value))))
 
 (define (html-presentation-metadata-item-map presentation)
-  (snapshot-data (html-presentation-metadata-item-map/raw presentation)))
+  (let ((value (html-presentation-metadata-item-map/raw presentation)))
+    (if (procedure? value) value (snapshot-data value))))
+
+(define (page-sxml-source? value)
+  (or (valid-page-sxml-map? value)
+      (procedure-accepts-arguments? value 2)))
+
+(define (valid-page-sources? value)
+  (or (and (filesystem-path-list? value)
+           (unique-filesystem-path-list? value))
+      (procedure-accepts-arguments? value 2)))
 
 (define* (make-html-presentation #:key (style (make-html-style))
                                  (rules empty-render-rules)
                                  (head '()) (home-link #f) (site-nav '())
-                                 (title-decorations '()) (metadata-items '()))
+                                 (title-decorations '()) (metadata-items '())
+                                 (page-sources '())
+                                 (cache-id #f))
   "Build a declarative HTML presentation.
 
 HEAD and SITE-NAV are static SXML child lists. TITLE-DECORATIONS and
-METADATA-ITEMS map non-empty page IDs to static SXML child lists."
+METADATA-ITEMS may map page IDs to static SXML child lists, or be procedures
+of FOREST and PAGE-ID that return such a list. PAGE-SOURCES is a path list or
+a procedure of FOREST and PAGE-ID returning additional source paths for the
+page artifact. Dynamic page projections are cacheable only when CACHE-ID
+identifies their stable behavior."
   (unless (html-style? style)
     (error "presentation style must be an HTML style" style))
   (unless (render-rules? rules)
@@ -200,12 +228,18 @@ METADATA-ITEMS map non-empty page IDs to static SXML child lists."
   (unless (or (not home-link) (html-home-link? home-link))
     (error "HTML presentation home link must be an HTML home-link value or #f"
            home-link))
-  (unless (valid-page-sxml-map? title-decorations)
-    (error "HTML title decorations must map page IDs to SXML lists"
+  (unless (page-sxml-source? title-decorations)
+    (error "HTML title decorations must map page IDs to SXML lists or accept a forest and page ID"
            title-decorations))
-  (unless (valid-page-sxml-map? metadata-items)
-    (error "HTML metadata items must map page IDs to SXML lists"
+  (unless (page-sxml-source? metadata-items)
+    (error "HTML metadata items must map page IDs to SXML lists or accept a forest and page ID"
            metadata-items))
+  (unless (valid-page-sources? page-sources)
+    (error "HTML page sources must be unique paths or accept a forest and page ID"
+           page-sources))
+  (unless (or (not cache-id) (fingerprintable-datum? cache-id))
+    (error "HTML presentation cache ID must be stable Scheme data or #f"
+           cache-id))
   (%make-html-presentation
     style rules
     (snapshot-data head)
@@ -223,8 +257,13 @@ METADATA-ITEMS map non-empty page IDs to static SXML child lists."
                    (html-nav-link-attributes entry)))
                (snapshot-data entry)))
          site-nav)
-    (snapshot-data title-decorations)
-    (snapshot-data metadata-items)))
+    (if (procedure? title-decorations) title-decorations
+        (snapshot-data title-decorations))
+    (if (procedure? metadata-items) metadata-items
+        (snapshot-data metadata-items))
+    (if (procedure? page-sources) page-sources
+        (snapshot-data page-sources))
+    (and cache-id (snapshot-data cache-id))))
 
 (define (merge-page-sxml base overlay)
   (fold (lambda (entry result)
@@ -238,17 +277,91 @@ METADATA-ITEMS map non-empty page IDs to static SXML child lists."
                 (append result (list entry)))))
         base overlay))
 
-(define (page-sxml-fragments entries page-id)
+(define (page-sxml-fragments entries forest page-id who)
+  (let ((fragments
+          (if (procedure? entries)
+              (entries forest page-id)
+              (let ((entry (and page-id (assoc page-id entries))))
+                (if entry (snapshot-data (cdr entry)) '())))))
+    (unless (static-sxml-list? fragments)
+      (error "dynamic HTML presentation must return a static SXML list"
+             who page-id fragments))
+    (snapshot-data fragments)))
+
+(define (page-sxml-map-identity entries cache-id)
+  (if (procedure? entries)
+      (and cache-id (list 'dynamic-page-sxml cache-id))
+      (snapshot-data entries)))
+
+(define (html-presentation-cacheable? presentation)
+  (or (not (or (procedure? (html-presentation-title-decorations/raw presentation))
+               (procedure? (html-presentation-metadata-item-map/raw presentation))
+               (procedure? (html-presentation-page-sources/raw presentation))))
+      (html-presentation-cache-id/raw presentation)))
+
+(define (html-presentation-cache-identity presentation)
+  (let ((cache-id (html-presentation-cache-id/raw presentation)))
+    (list (page-sxml-map-identity
+            (html-presentation-title-decorations/raw presentation) cache-id)
+          (page-sxml-map-identity
+            (html-presentation-metadata-item-map/raw presentation) cache-id)
+          (if (procedure? (html-presentation-page-sources/raw presentation))
+              (and cache-id (list 'dynamic-page-sources cache-id))
+              (snapshot-data (html-presentation-page-sources/raw presentation))))))
+
+(define (html-presentation-page-sources presentation forest page-id)
+  (let* ((source-spec (html-presentation-page-sources/raw presentation))
+         (sources (if (procedure? source-spec)
+                      (source-spec forest page-id)
+                      source-spec)))
+    (unless (and (filesystem-path-list? sources)
+                 (unique-filesystem-path-list? sources))
+      (error "HTML page source projection must return unique paths"
+             page-id sources))
+    (snapshot-data sources)))
+
+(define (page-sxml-fragments/static entries page-id)
   (let ((entry (and page-id (assoc page-id entries))))
     (if entry (snapshot-data (cdr entry)) '())))
 
 (define (html-presentation-title-decoration presentation page-id)
-  (page-sxml-fragments
-    (html-presentation-title-decorations/raw presentation) page-id))
+  (if (procedure? (html-presentation-title-decorations/raw presentation))
+      (error "dynamic title decoration requires a forest; use html-presentation-title-decoration-for")
+      (page-sxml-fragments/static
+        (html-presentation-title-decorations/raw presentation) page-id)))
+
+(define (html-presentation-title-decoration-for presentation forest page-id)
+  (page-sxml-fragments (html-presentation-title-decorations/raw presentation)
+                       forest page-id 'title-decoration))
 
 (define (html-presentation-metadata-items presentation page-id)
-  (page-sxml-fragments
-    (html-presentation-metadata-item-map/raw presentation) page-id))
+  (if (procedure? (html-presentation-metadata-item-map/raw presentation))
+      (error "dynamic metadata items require a forest; use html-presentation-metadata-items-for")
+      (page-sxml-fragments/static
+        (html-presentation-metadata-item-map/raw presentation) page-id)))
+
+(define (html-presentation-metadata-items-for presentation forest page-id)
+  (page-sxml-fragments (html-presentation-metadata-item-map/raw presentation)
+                       forest page-id 'metadata-items))
+
+(define (merge-page-sxml-sources base overlay)
+  (if (or (procedure? base) (procedure? overlay))
+      (lambda (forest page-id)
+        (append (page-sxml-fragments base forest page-id 'base-presentation)
+                (page-sxml-fragments overlay forest page-id 'overlay-presentation)))
+      (merge-page-sxml base overlay)))
+
+(define (merge-page-path-sources base overlay)
+  (if (or (procedure? base) (procedure? overlay))
+      (lambda (forest page-id)
+        (delete-duplicates
+          (append (if (procedure? base) (base forest page-id) base)
+                  (if (procedure? overlay) (overlay forest page-id) overlay))
+          string=?))
+      (delete-duplicates (append base overlay) string=?)))
+
+(define (page-sxml-source-identity presentation)
+  (html-presentation-cache-identity presentation))
 
 (define empty-html-presentation (make-html-presentation))
 
@@ -256,7 +369,24 @@ METADATA-ITEMS map non-empty page IDs to static SXML child lists."
   (unless (and (html-presentation? base) (html-presentation? overlay))
     (error "presentations can only be composed from presentations"
            base overlay))
-  (%make-html-presentation
+  (let* ((base-dynamic? (not (html-presentation-cacheable? base)))
+         (overlay-dynamic? (not (html-presentation-cacheable? overlay)))
+         (dynamic? (or (procedure? (html-presentation-title-decorations/raw base))
+                    (procedure? (html-presentation-metadata-item-map/raw base))
+                    (procedure? (html-presentation-page-sources/raw base))
+                    (procedure? (html-presentation-title-decorations/raw overlay))
+                    (procedure? (html-presentation-metadata-item-map/raw overlay))
+                    (procedure? (html-presentation-page-sources/raw overlay))))
+         (cache-id
+           (and dynamic?
+                (not base-dynamic?)
+                (not overlay-dynamic?)
+                (list 'composed-page-presentation
+                      (page-sxml-source-identity base)
+                      (page-sxml-source-identity overlay)
+                      (html-presentation-cache-id/raw base)
+                      (html-presentation-cache-id/raw overlay)))))
+    (%make-html-presentation
     (compose-html-styles (html-presentation-style base)
                          (html-presentation-style overlay))
     (compose-render-rules (html-presentation-rules base)
@@ -266,10 +396,16 @@ METADATA-ITEMS map non-empty page IDs to static SXML child lists."
         (html-presentation-home-link base))
     (append (html-presentation-site-nav base)
             (html-presentation-site-nav overlay))
-    (merge-page-sxml (html-presentation-title-decorations base)
-                     (html-presentation-title-decorations overlay))
-    (merge-page-sxml (html-presentation-metadata-item-map base)
-                     (html-presentation-metadata-item-map overlay))))
+    (merge-page-sxml-sources
+      (html-presentation-title-decorations/raw base)
+      (html-presentation-title-decorations/raw overlay))
+    (merge-page-sxml-sources
+      (html-presentation-metadata-item-map/raw base)
+      (html-presentation-metadata-item-map/raw overlay))
+    (merge-page-path-sources
+      (html-presentation-page-sources/raw base)
+      (html-presentation-page-sources/raw overlay))
+    cache-id)))
 
 (define (compose-html-presentations . presentations)
   "Compose PRESENTATIONS from left to right, applying each field's law.

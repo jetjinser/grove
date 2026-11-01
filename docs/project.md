@@ -680,12 +680,19 @@ can be composed and passed through the options' `#:presentation` field:
 - `make-html-presentation #:home-link` — a `make-html-home-link` value replaces
   the default link while Grove supplies the route. Its content and attributes
   can add icons or branding without a callback.
-- `make-html-presentation #:title-decorations` — a page-ID-to-SXML map inserted
-  before titles in tree headings and the table of contents. Resolve page
-  metadata while constructing the presentation (for example,
-  `(page-taxon page)`), then store the resulting static markup by page ID.
-- `make-html-presentation #:metadata-items` — a page-ID-to-SXML map appended
-  after the built-in date items in the metadata list.
+- `make-html-presentation #:title-decorations` — a page-ID-to-SXML map, or a
+  `(lambda (forest page-id) ...)` projection, inserted before titles in tree
+  headings and the table of contents.
+- `make-html-presentation #:metadata-items` — a page-ID-to-SXML map, or the
+  same kind of projection, appended after built-in date items.
+- `make-html-presentation #:page-sources` — extra source paths for each page
+  artifact, either a path list or a `(lambda (forest page-id) ...)` projection.
+  Declare these files in the project too, normally with `#:extra-sources`, so
+  Grove notices their changes. This lets dynamic presentation data invalidate
+  only pages that depend on those files.
+- `make-html-presentation #:cache-id` — a stable Scheme value identifying
+  dynamic presentation projections. Static maps already participate directly
+  in cache identity; projections need this ID so Grove can safely reuse pages.
 - `make-html-options #:article?` — wraps the page tree and its backmatter in one
   `<article>` element, leaving the table of contents outside it.
 - `make-html-options #:side-lane` — a list of content element kinds (e.g.
@@ -703,11 +710,14 @@ can be composed and passed through the options' `#:presentation` field:
   as a collapsible `details`/`summary` block.
 
 Static SXML in a presentation participates in its cache identity, so changing
-it invalidates cached pages without requiring a separate identity token. The
-SXML must be well-formed: procedures, duplicate attributes, and repeated page
-IDs are rejected when constructing the value. Composition appends head and
-navigation nodes, appends page fragments by page ID, and lets the rightmost
-declared home link replace earlier ones.
+it invalidates cached pages without a separate identity token. Dynamic page
+projections run only for pages Grove renders; their source paths are combined
+with the page's normal Forester dependency closure. Keep projections pure and
+model-derived, and declare external files with `#:page-sources`. SXML
+fragments remain static data: procedures, duplicate attributes, and repeated
+page IDs are rejected inside a fragment. Composition appends head and
+navigation nodes, appends page fragments by page ID, unions page sources, and
+lets the rightmost declared home link replace earlier ones.
 
 ## Packaging and measurement
 
