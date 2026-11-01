@@ -25,11 +25,13 @@
 (define current-input-cache (make-parameter #f))
 
 (define-record-type <input-cache-context>
-  (%make-input-cache-context enabled? directory shared statuses globals)
+  (%make-input-cache-context enabled? directory shared shared-snapshot
+                             statuses globals)
   input-cache-context?
   (enabled? input-cache-context-enabled?)
   (directory input-cache-context-directory)
   (shared input-cache-context-shared)
+  (shared-snapshot input-cache-context-shared-snapshot)
   (statuses input-cache-context-statuses)
   (globals input-cache-context-globals))
 
@@ -77,7 +79,19 @@
   (unless (and (list? dependencies)
                (every filesystem-path-string? dependencies))
     (error "input cache dependencies must be a list of paths" dependencies))
-  (let ((globals (make-hash-table)))
+  (let* ((globals (make-hash-table))
+         (shared-snapshot
+           (and enabled?
+                (let ((seen (make-hash-table)))
+                  (filter-map
+                    (lambda (path)
+                      (and (not (hash-ref seen path))
+                           (begin
+                             (hash-set! seen path #t)
+                             (let ((key (normalize-input-path path)))
+                               (list path (normalize-input-path key)
+                                     (input-fingerprint path))))))
+                    dependencies)))))
     (for-each (lambda (path) (hash-set! globals path #t)) dependencies)
     ;;     Dependency collection remains active when reuse is disabled.
     ;;     The document cache lives in the per-user shared store, not
@@ -86,7 +100,7 @@
     (%make-input-cache-context
       enabled? (and enabled?
                     (string-append (grove-store-directory) "/input-cache"))
-      dependencies (make-hash-table) globals)))
+      dependencies shared-snapshot (make-hash-table) globals)))
 
 (define (register-input-dependencies! context paths)
   (when context
@@ -284,12 +298,35 @@
                               (begin (hash-set! seen file #t) #t)))
                        paths)))
            (register (append shared dependencies))
-           (let* ((paths (unique-paths (cons path (append shared dependencies))))
-                  (snapshot (map (lambda (file)
-                                   (let ((key (normalize-input-path file)))
-                                     (list (normalize-input-path key)
-                                           (input-fingerprint file))))
-                                 paths))
+           (let* ((seen (make-hash-table))
+                  (page-key (normalize-input-path path))
+                  (page-snapshot
+                    (list (list (normalize-input-path page-key)
+                                (input-fingerprint path))))
+                  (_ (hash-set! seen path #t))
+                  (shared-snapshot
+                    (filter-map
+                      (lambda (entry)
+                        (let ((file (car entry)))
+                          (and (not (hash-ref seen file))
+                               (begin
+                                 (hash-set! seen file #t)
+                                 (cdr entry)))))
+                      (or (input-cache-context-shared-snapshot context)
+                          '())))
+                  (local-paths
+                    (unique-paths
+                      (filter (lambda (file)
+                                (not (hash-ref seen file)))
+                              dependencies)))
+                  (local-snapshot
+                    (map (lambda (file)
+                           (let ((key (normalize-input-path file)))
+                             (list (normalize-input-path key)
+                                   (input-fingerprint file))))
+                         local-paths))
+                  (snapshot (append page-snapshot shared-snapshot
+                                    local-snapshot))
                   (identity (list reader (version) (setlocale LC_CTYPE)
                                   %load-path %load-compiled-path snapshot))
                   (reuse? (and reuse? (input-cache-context-enabled? context)))
