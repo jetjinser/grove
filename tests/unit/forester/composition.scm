@@ -174,8 +174,25 @@
          (make-site-page
            "numbering" "Numbering"
            (evaluate-document
-             "@subtree{@title{Outer} @subtree{@title{Nested}}} @subtree{@title{Sibling}}")))
+             "@subtree{@title{Outer} @paragraph{Shared outer content.} @subtree{@title{Nested}}} @subtree{@title{Sibling}}")))
        (forest (make-forest (make-site (list root))))
+       (root-page (require-page forest "numbering"))
+       (child-page (require-page forest "unstable-0"))
+       (root-subtree
+        (find (lambda (element)
+                (and (content-element? element)
+                     (eq? (content-element-kind element) 'subtree)))
+              (content-document-children (site-page-document root-page))))
+       (root-paragraph
+        (find (lambda (element)
+                (and (content-element? element)
+                     (eq? (content-element-kind element) 'paragraph)))
+              (content-element-children root-subtree)))
+       (child-paragraph
+        (find (lambda (element)
+                (and (content-element? element)
+                     (eq? (content-element-kind element) 'paragraph)))
+              (content-document-children (site-page-document child-page))))
        (nested-html (assoc-ref (render-test-html forest #:mathjax-src #f)
                                "numbering"))
        (make-pages
@@ -187,6 +204,8 @@
     expected (make-pages))
   (test-equal "subtree IDs reset deterministically for each analysis"
     expected (make-pages))
+  (test-eq "unchanged subtree content is shared by its parent and extracted page"
+    root-paragraph child-paragraph)
   (test-equal "page and nested subtrees each render as open disclosures"
     4
     (let loop ((start 0) (count 0))

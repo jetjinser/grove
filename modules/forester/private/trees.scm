@@ -40,6 +40,37 @@
   (and (content-element? content)
        (memq (content-element-kind content) '(subtree forest-query))))
 
+(define (map-content-preserving procedure values)
+  (let loop ((remaining values) (mapped '()) (changed? #f))
+    (if (null? remaining)
+        (if changed? (reverse mapped) values)
+        (let* ((old (car remaining))
+               (new (procedure old)))
+          (loop (cdr remaining) (cons new mapped)
+                (or changed? (not (eq? old new))))))))
+
+(define (with-document-children document children)
+  (if (eq? (ir:content-document-children/raw document) children)
+      document
+      (make-content-document children
+        #:source (ir:content-document-source/raw document))))
+
+(define (rewrite-element element kind children properties)
+  (if (and (eq? kind (content-element-kind element))
+           (eq? (ir:content-element-children/raw element) children)
+           (let ((original
+                   (ir:content-element-properties/raw element)))
+             (or (eq? properties original)
+                 (equal? properties original))))
+      element
+      (make-content-element
+        kind children
+        #:source (ir:content-element-source/raw element)
+        #:properties properties
+        #:style (content-element-style element)
+        #:location (ir:content-element-location/raw element)
+        #:flow-kind (content-element-flow-kind element))))
+
 (define* (walk-owned-content content select? #:key (postorder? #f))
   "Walk content owned by the current tree, stopping at subtree and query nodes."
   (walk-content content
@@ -124,27 +155,27 @@
                              (set! next-id (1+ next-id))
                              (format #f "unstable-~a" id))))))
                 (children
-                  (map (lambda (child)
-                         (transform child (content-element-kind content)))
-                       (ir:content-element-children/raw content)))
+                  (map-content-preserving
+                    (lambda (child)
+                      (transform child (content-element-kind content)))
+                    (ir:content-element-children/raw content)))
                 (properties
-                  (filter (lambda (entry)
-                            (not (eq? (car entry) 'tree-id)))
-                          (ir:content-element-properties/raw content))))
-           (make-content-element
-             kind children
-             #:source (ir:content-element-source/raw content)
-             #:properties (if id
-                              (cons (cons 'tree-id id) properties)
-                              properties)
-             #:style (content-element-style content)
-             #:location (ir:content-element-location/raw content)
-             #:flow-kind (content-element-flow-kind content))))
+                  (let ((properties
+                          (ir:content-element-properties/raw content)))
+                    (if (assq 'tree-id properties)
+                        (filter (lambda (entry)
+                                  (not (eq? (car entry) 'tree-id)))
+                                properties)
+                        properties))))
+           (rewrite-element
+             content kind children
+             (if id (cons (cons 'tree-id id) properties) properties))))
         ((content-document? content)
-         (make-content-document
-           (map (lambda (child) (transform child #f))
-                (ir:content-document-children/raw content))
-           #:source (ir:content-document-source/raw content)))
+         (with-document-children
+           content
+           (map-content-preserving
+             (lambda (child) (transform child #f))
+             (ir:content-document-children/raw content))))
         (else content)))
     (map (lambda (page)
            (make-site-page
@@ -173,7 +204,9 @@ check documents."
     (let next ((content document))
       (cond
         ((content-element? content)
-         (let* ((children (map next (ir:content-element-children/raw content)))
+         (let* ((children
+                  (map-content-preserving
+                    next (ir:content-element-children/raw content)))
                 (kind (content-element-kind content))
                 (id (and (memq kind '(subtree transclude))
                          (occurrence-id content)))
@@ -187,17 +220,11 @@ check documents."
                       (cons (cons 'anchor anchor)
                             (ir:content-element-properties/raw content))
                       (ir:content-element-properties/raw content))))
-           (make-content-element
-             kind children
-             #:source (ir:content-element-source/raw content)
-             #:properties properties
-             #:style (content-element-style content)
-             #:location (ir:content-element-location/raw content)
-             #:flow-kind (content-element-flow-kind content))))
+           (rewrite-element content kind children properties)))
         ((content-document? content)
-         (make-content-document
-           (map next (ir:content-document-children/raw content))
-           #:source (ir:content-document-source/raw content)))
+         (with-document-children content
+           (map-content-preserving
+             next (ir:content-document-children/raw content))))
         (else content))))
   (map
     (lambda (page)
@@ -237,10 +264,10 @@ math ID."
       (let next ((content document) (nested? #f))
         (cond
           ((content-document? content)
-           (make-content-document
-             (map (lambda (child) (next child nested?))
-                  (ir:content-document-children/raw content))
-             #:source (ir:content-document-source/raw content)))
+           (with-document-children content
+             (map-content-preserving
+               (lambda (child) (next child nested?))
+               (ir:content-document-children/raw content))))
           ((not (content-element? content)) content)
           ;; Equations inside subtrees belong to the subtrees' own pages.
           ((or nested?
@@ -277,8 +304,9 @@ math ID."
           (else
            (content-element-with-children
              content
-             (map (lambda (child) (next child nested?))
-                  (ir:content-element-children/raw content))))))))
+             (map-content-preserving
+               (lambda (child) (next child nested?))
+               (ir:content-element-children/raw content))))))))
   (map (lambda (page)
          (make-site-page
            (site-page-id page)

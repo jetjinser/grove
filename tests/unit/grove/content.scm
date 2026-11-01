@@ -243,6 +243,9 @@
   (let* ((new-property (string-copy "updated"))
          (updated (content-with-property element 'role new-property))
          (replaced-children (content-element-with-children element '("replacement")))
+         (unchanged-children
+          (content-element-with-children
+            element (content-element-children element)))
          (new-location
           (list (cons 'file (string-copy "other.plant")) (cons 'line 8)))
          (located (content-with-source-location element new-location)))
@@ -261,7 +264,9 @@
             (content-element-source replaced-children)
             (content-element-properties replaced-children)
             (content-style-name (content-element-style replaced-children))
-            (content-element-flow-kind replaced-children)))))
+            (content-element-flow-kind replaced-children)))
+    (test-eq "unchanged child values preserve the immutable content node"
+      element unchanged-children)))
 
 (let* ((location '((file . "included.plant") (line . 12) (column . 4)))
        (original (make-content-document

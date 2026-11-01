@@ -145,13 +145,21 @@ kinds, the kind itself has no built-in meaning. SOURCE records provenance."
   "Return ELEMENT with CHILDREN, preserving its kind and other properties."
   (unless (content-element? element)
     (error "content-element-with-children requires a content element" element))
-  (make-content-element
-    (content-element-kind element) children
-    #:source (content-element-source/raw element)
-    #:properties (content-element-properties/raw element)
-    #:style (content-element-style element)
-    #:location (content-element-location/raw element)
-    #:flow-kind (content-element-flow-kind element)))
+  (let ((original (content-element-children/raw element)))
+    ;; Content records are immutable. If CHILDREN contains the same values in
+    ;; the same order, keep ELEMENT itself so persistent tree rewrites retain
+    ;; sharing instead of rebuilding an equivalent wrapper at every pass.
+    (if (and (list? children)
+             (= (length original) (length children))
+             (every eq? original children))
+        element
+        (make-content-element
+          (content-element-kind element) children
+          #:source (content-element-source/raw element)
+          #:properties (content-element-properties/raw element)
+          #:style (content-element-style element)
+          #:location (content-element-location/raw element)
+          #:flow-kind (content-element-flow-kind element)))))
 
 (define (content-element-properties element)
   (snapshot-data (content-element-properties/raw element)))
