@@ -2,16 +2,15 @@
 ;;;
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
-;;; Factory for the standalone Grove Guix package. The development
-;;; manifest intentionally supplies tools and dependencies without
-;;; installing this checkout as a package. Blue configures and builds the
-;;; modules and installs a CLI wrapper with the dependency paths it sees.
+;;; Factory for Grove's standalone Guix package, used by both the local
+;;; package entry point and the (grove packages) channel module. Blue builds
+;;; the modules and installs a CLI wrapper with the dependency paths it sees.
 
 (define* (make-grove blue guile faster-minikanren grove-highlights libunistring
                      guile-gcrypt guile-ssh guile-ts coreutils guile-srfi-275
                      libidn2
                      #:key
-                     (version "0-unstable-2026-10-10")
+                     (version "0-unstable-2026-11-01")
                      (source
                       ;;     过滤必须看相对根部的路径：basename 一刀切
                       ;;     会把 modules/grove/build/ 连同根部的构建
@@ -79,6 +78,7 @@
             (lambda* (#:key inputs #:allow-other-keys)
               (let* ((effective #$(version-major+minor
                                    (package-version guile)))
+                     (blue #$(this-package-native-input "blue"))
                      (gcrypt #$(this-package-input "guile-gcrypt"))
                      (minikanren
                       #$(this-package-input "guile-faster-minikanren"))
@@ -92,7 +92,8 @@
                      (ccache (lambda (out)
                                (string-append out "/lib/guile/" effective
                                               "/site-ccache")))
-                     (outs (list gcrypt minikanren ts highlights ssh srfi275)))
+                     (outs (list blue gcrypt minikanren ts highlights ssh
+                                 srfi275)))
                 (setenv "GUILE_LOAD_PATH"
                         (string-join (map site outs) ":"))
                 (setenv "GUILE_LOAD_COMPILED_PATH"

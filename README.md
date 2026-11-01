@@ -47,6 +47,11 @@ guix time-machine -C channels.scm -- build -f guix.scm
 `grove-package.scm` contains the reusable package factory used by that entry
 point.
 
+The repository also exposes the package as `(grove packages)` when used as a
+Guix channel. Pin the channel revision in the consuming project's `channels.scm`
+and add `grove` to its manifest; the package recipe and its pinned build
+dependencies then come from that revision, without a sibling checkout.
+
 Build the linked-notes example:
 
 ```sh

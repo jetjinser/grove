@@ -10,9 +10,9 @@
 (define repository-root
   (dirname (canonicalize-path (current-filename))))
 
-;; The development manifest owns the local dependency package definitions
-;; consumed by the standalone Grove package factory.
-(primitive-load (string-append repository-root "/manifest.scm"))
+;; Share package definitions between the development manifest and channel.
+(primitive-load
+ (string-append repository-root "/guix/package-definitions.scm"))
 (primitive-load (string-append repository-root "/grove-package.scm"))
 
 (make-grove blue guile faster-minikanren grove-highlights libunistring
