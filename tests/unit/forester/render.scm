@@ -347,7 +347,7 @@
     (and (string-contains algebra-html
                           "class=\"forest-tree-block page-tree\" data-tree-id=\"algebra\"")
          (string-contains algebra-html
-                          "<details open=\"open\"><summary><h1 class=\"forest-tree-title\"><span>Algebra &amp; limits</span>")
+                          "<details open=\"open\"><summary><h1 class=\"forest-tree-title\"><span>Algebra &amp; limits</span></h1><a class=\"forest-tree-id\"")
          (string-contains algebra-html "class=\"forest-tree-content\"><p>")))
   (test-assert "page title and body share the collapsible tree"
     (and (not (string-contains algebra-html
@@ -359,6 +359,9 @@
                           "data-tree-id=\"limits\"")
          (string-contains algebra-html "<span>Limits</span>")
          (string-contains algebra-html "[limits]")))
+  (test-assert "backmatter tree id follows its title in the summary"
+    (string-contains algebra-html
+      "<summary><h3 class=\"forest-tree-title\"><span>Limits</span></h3><a class=\"forest-tree-id\""))
   (test-assert "reverse links identify their source by title, not alt"
     (and (string-contains limits-html
                           "<span>Algebra &amp; limits</span>")
@@ -710,7 +713,8 @@
     (and (string-contains (assoc-ref html "target") "href=\"#overview\">Overview</a>")
          (string-contains (assoc-ref html "target") "href=\"#details\">Details</a>")))
   (test-assert "title levels follow display depth"
-    (and (string-contains (assoc-ref html "target") "<h2 class=\"forest-tree-title\"><span>Overview</span>")
+    (and (string-contains (assoc-ref html "target")
+                          "<h2 class=\"forest-tree-title\"><span>Overview</span></h2><a class=\"forest-tree-id\"")
          (string-contains (assoc-ref html "target") "<h3 class=\"forest-tree-title\"><span>Details</span>")))
   (test-assert "tree references use independent routes"
     (and (string-contains (assoc-ref html "source") "href=\"/overview.html\">the overview</a>")

@@ -315,7 +315,13 @@ from the HTML presentation are appended after these."
          (section-attributes
            (map (lambda (attribute)
                   (list (car attribute) (cdr attribute)))
-                attributes)))
+                attributes))
+         (tree-id-link
+           `(a (@ (class "forest-tree-id")
+               (href ,page-url)
+               (aria-label ,(interface-message-format
+                              'tree-open-page (list (display-tree-id id)) context)))
+              "[" ,(display-tree-id id) "]")))
     `(section (@ ,@section-attributes)
        (details ,@(if open? '((@ (open "open"))) '())
        (summary
@@ -323,12 +329,8 @@ from the HTML presentation are appended after these."
            (@ (class "forest-tree-title"))
            ,@title-decoration
            (span ,title))
+         ,tree-id-link
          ,@(metadata-sxml metadata-items))
-       (a (@ (class "forest-tree-id")
-           (href ,page-url)
-           (aria-label ,(interface-message-format
-                          'tree-open-page (list (display-tree-id id)) context)))
-          "[" ,(display-tree-id id) "]")
        (div (@ (class "forest-tree-content"))
             ,@(if (and (pair? content) (eq? (car content) 'article))
                   (cdr content)
