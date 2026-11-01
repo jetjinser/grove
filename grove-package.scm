@@ -10,12 +10,13 @@
                      guile-gcrypt guile-ssh guile-ts coreutils guile-srfi-275
                      libidn2
                      #:key
+                     (source-root (dirname (current-filename)))
                      (version "0-unstable-2026-11-01")
                      (source
                       ;;     过滤必须看相对根部的路径：basename 一刀切
                       ;;     会把 modules/grove/build/ 连同根部的构建
                       ;;     产物目录一起删掉，蓝图的模块树就缺角了。
-                      (let ((root (dirname (current-filename))))
+                      (let ((root source-root))
                         (local-file root "grove-checkout"
                                     #:recursive? #t
                                     #:select?
@@ -173,15 +174,22 @@
                              #$(this-package-input "libidn2")
                              "/bin")))))))))
     (native-inputs (list blue guile))
-    (inputs
-     (append
-      (list guile faster-minikanren grove-highlights libunistring
-            libidn2)
-      (map specification->package
-           (list "coreutils" "guile-gcrypt" "guile-ssh" "guile-ts"))))
-    ;; Project files and extensions can import SRFI 275 directly, and Grove's
-    ;; own Forester IRI support uses it at runtime.
-    (propagated-inputs (list guile-srfi-275))
+    (inputs (list coreutils))
+    ;; Grove is both a command and a Guile library.  Propagate its runtime
+    ;; modules so consumers can use `(grove ...)` from their own Guile process.
+    (propagated-inputs
+     (list guile faster-minikanren grove-highlights libunistring libidn2
+           guile-gcrypt guile-ssh guile-ts guile-srfi-275))
+    (native-search-paths
+     (let ((effective (version-major+minor (package-version guile))))
+       (list
+        (search-path-specification
+         (variable "GUILE_LOAD_PATH")
+         (files (list (string-append "share/guile/site/" effective))))
+        (search-path-specification
+         (variable "GUILE_LOAD_COMPILED_PATH")
+         (files (list (string-append "lib/guile/" effective
+                                    "/site-ccache")))))))
     (synopsis "Static site generator for executable, forester-style notes")
     (description
        "Grove renders Scribble-style trees into connected sites. Analysis

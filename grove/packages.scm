@@ -22,4 +22,5 @@
               (specification->package "guile-ts")
               (specification->package "coreutils")
               guile-srfi-275
-              libidn2))
+              libidn2
+              #:source-root grove-source-root))
