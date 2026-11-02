@@ -5,6 +5,7 @@
 (define-module (forester relations)
   #:use-module (grove unicode)
   #:use-module (grove private relation)
+  #:use-module ((grove private minikanren) #:select (ground-term?))
   #:use-module (grove relation dsl)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-13)
@@ -142,12 +143,50 @@
 (defrel (parento relation child-id parent-id)
   (childo relation parent-id child-id))
 
-(defrel (ancestoro relation ancestor-id descendant-id)
+(define (linear-ancestor-chain relation descendant-id)
+  "Return the nearest-first ancestor IDs for an unambiguous acyclic chain.
+Return #f when the relation branches or cycles, so the relational fallback
+can retain its general behavior for non-tree data."
+  (and (relation? relation)
+       (= (relation-arity relation) 10)
+       (let loop ((node-id descendant-id) (seen '()) (ancestors '()))
+         (cond
+           ((member node-id seen equal?) #f)
+           (else
+            (let ((rows (relation-index-rows relation 0 node-id)))
+              (cond
+                ((null? rows) (reverse ancestors))
+                ((pair? (cdr rows)) #f)
+                (else
+                 (let ((parent-id (list-ref (car rows) 2)))
+                   (if parent-id
+                       (loop parent-id (cons node-id seen)
+                             (cons parent-id ancestors))
+                       (reverse ancestors)))))))))))
+
+(defrel (ancestor-membero value values)
   (conde
-    ((parento relation descendant-id ancestor-id))
-    ((fresh (parent-id)
-       (parento relation descendant-id parent-id)
-       (ancestoro relation ancestor-id parent-id)))))
+    ((fresh (tail)
+       (== values `(,value . ,tail))))
+    ((fresh (head tail)
+       (== values `(,head . ,tail))
+       (ancestor-membero value tail)))))
+
+(defrel (ancestoro relation ancestor-id descendant-id)
+  ;;     Forest content relations have one parent per node. Once the
+  ;;     descendant is ground, follow its indexed parent chain directly;
+  ;;     retain the relational definition for unbound or branching data.
+  (project (relation descendant-id)
+    (let ((ancestors
+            (and (ground-term? descendant-id)
+                 (linear-ancestor-chain relation descendant-id))))
+      (if ancestors
+          (ancestor-membero ancestor-id ancestors)
+          (conde
+            ((parento relation descendant-id ancestor-id))
+            ((fresh (parent-id)
+               (parento relation descendant-id parent-id)
+               (ancestoro relation ancestor-id parent-id))))))))
 
 (defrel (descendanto relation ancestor-id descendant-id)
   (conde

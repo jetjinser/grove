@@ -95,6 +95,29 @@
          (not (member '(#f 0) descendants equal?))
          (not (member '(0 0) descendants equal?)))))
 
+(test-equal "a grounded descendant returns ancestors nearest first"
+  '(1 0)
+  (run* (ancestor-id)
+    (ancestoro content-nodes ancestor-id 2)))
+(test-equal "a grounded ancestor still enumerates descendants in relation order"
+  '(1 2)
+  (run* (descendant-id)
+    (ancestoro content-nodes 0 descendant-id)))
+(test-equal "branching parent rows retain relational path multiplicity"
+  '(1 0 0)
+  (run* (ancestor-id)
+    (ancestoro
+      (make-content-node-relation
+        '((0 "page" #f paragraph 0 () "root" 4 4 #f)
+          (1 "page" 0 paragraph 0 () "left" 4 4 #f)
+          (2 "page" 1 math 0 () "x" 1 1 #t)
+          (2 "page" 0 math 1 () "x" 1 1 #t)))
+      ancestor-id 2)))
+(test-error "ancestor queries reject relations with another schema" #t
+  (run* (ancestor-id)
+    (ancestoro (make-relation '((2 "page" 1 "reference")) #:arity 4)
+      ancestor-id 2)))
+
 (define composition
   (make-composition
     (list (make-subtree-definition "lecture" "exercise"))
