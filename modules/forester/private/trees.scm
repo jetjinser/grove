@@ -160,12 +160,16 @@
                       (transform child (content-element-kind content)))
                     (ir:content-element-children/raw content)))
                 (properties
-                  (let ((properties
-                          (ir:content-element-properties/raw content)))
-                    (if (assq 'tree-id properties)
-                        (filter (lambda (entry)
-                                  (not (eq? (car entry) 'tree-id)))
-                                properties)
+                  (let* ((properties
+                           (ir:content-element-properties/raw content))
+                         (properties
+                           (if (assq 'tree-id properties)
+                               (filter (lambda (entry)
+                                         (not (eq? (car entry) 'tree-id)))
+                                       properties)
+                               properties)))
+                    (if (and id (not (assq 'title properties)))
+                        (cons (cons 'title id) properties)
                         properties))))
            (rewrite-element
              content kind children

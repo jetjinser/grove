@@ -11,7 +11,7 @@ existing tree. Titles are properties; HTML title levels follow display depth.
 
 ## Identity and ownership
 
-A subtree requires exactly one direct title:
+A subtree can have one direct title, which overrides its default title:
 
 ```scheme
 @subtree[#:id "difference-of-squares" #:open? #f]{
@@ -21,7 +21,9 @@ A subtree requires exactly one direct title:
 @transclude["difference-of-squares"]
 ```
 
-Explicit IDs share the file-backed tree namespace and cannot contain `#`.
+When omitted, the title defaults to the tree ID: an explicit `#:id` for a
+named subtree or its generated `unstable-N` ID otherwise. Explicit IDs share
+the file-backed tree namespace and cannot contain `#`.
 Duplicates, unresolved targets, and composition cycles fail during analysis.
 Unnamed subtrees receive `unstable-N` IDs in source-page/document preorder;
 edits can change them. Use explicit IDs for durable references. `#:open?`

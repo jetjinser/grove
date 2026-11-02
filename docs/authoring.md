@@ -26,7 +26,7 @@ Grove owns versus what a project supplies. Commands use `@name{body}` or
 
 | Command | Meaning |
 | --- | --- |
-| `@title{...}` | Page, section, or subtree title; each requires exactly one direct title. |
+| `@title{...}` | Required page or section title; optional subtree title that overrides its ID-based default. |
 | `@summary{...}` | Description used by `<meta>`, Open Graph, and feeds. |
 | `@og-image{assets/cover.png}` | Open Graph image; external HTTP(S) URL/IRI values pass through, relative paths use the site origin and HTML routes. |
 | `@og-image-alt{...}` | Alternative text for `@og-image`; defaults to the page title. |
@@ -99,7 +99,9 @@ generic `(grove site)` page constructor leaves metadata application-defined.
 - `@subtree{...}` without `#:id` receives a position-dependent `unstable-N`
   id. That is fine for pure structure, but never link to it; use `@section`
   for grouping that needs no address.
-- Every subtree needs exactly one direct `@title`.
+- A subtree accepts at most one direct `@title`. If omitted, its title defaults
+  to its explicit ID or generated `unstable-N` ID. Sections still require a
+  title.
 
 ## Language
 

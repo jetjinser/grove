@@ -214,10 +214,16 @@
   (evaluate-document "@section{@paragraph{Body.}}"))
 (test-error "sections reject an empty direct title" #t
   (evaluate-document "@section{@title{}}"))
-(test-error "subtrees require one non-empty direct title" #t
-  (evaluate-document "@subtree{@paragraph{Body.}}"))
+(test-equal "subtrees allow an omitted title"
+  #f
+  (content-element-property
+    (car (content-document-children
+           (evaluate-document "@subtree{@paragraph{Body.}}")))
+    'title))
 (test-error "subtrees reject an empty direct title" #t
   (evaluate-document "@subtree{@title{}}"))
+(test-error "subtrees reject duplicate direct titles" #t
+  (evaluate-document "@subtree{@title{One}@title{Two}}"))
 
 (let ((document
         (evaluate-document

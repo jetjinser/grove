@@ -80,6 +80,24 @@
            (string-contains collapsed-html
                             "<details><summary><h2 class=\"forest-tree-title\"><span>Collapsed</span>")
            (string-contains collapsed-html "Hidden until opened."))))
+
+(let* ((root
+         (make-site-page
+           "root" "Root"
+           (evaluate-document
+             "@subtree[#:id \"named-piece\"]{@paragraph{Named.}}@subtree{@paragraph{Anonymous.}}")))
+       (forest (make-forest (make-site (list root))))
+       (named (require-page forest "named-piece"))
+       (anonymous (require-page forest "unstable-0"))
+       (html (assoc-ref (render-test-html forest #:mathjax-src #f) "root")))
+  (test-equal "an untitled named subtree uses its ID as the title"
+    "named-piece" (site-page-title named))
+  (test-equal "an untitled anonymous subtree uses its generated ID as the title"
+    "unstable-0" (site-page-title anonymous))
+  (test-assert "default subtree titles render at their definition sites"
+    (and (string-contains html "<span>named-piece</span>")
+         (string-contains html "<span>unstable-0</span>"))))
+
   (test-assert "host promotes math derivation disclosures to indexed subtrees"
     (let* ((page
              (make-site-page

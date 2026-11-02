@@ -107,12 +107,17 @@ page and must be a valid anchor ID."
 (define-public (taxon value)
   (topic-element 'taxon value))
 
-(define (extract-titled-body kind body)
+(define* (extract-title-and-body kind body #:optional (required? #t))
   (let ((titles (filter (lambda (element)
                           (and (content-element? element)
                                (eq? (content-element-kind element) 'title)))
                         body)))
     (match titles
+      [()
+       (if required?
+           (error (format #f "Forester ~a requires exactly one direct @title" kind)
+                  0)
+           (values #f body))]
       [(title-element)
        (let ((title-text
                (string-trim-both
@@ -121,7 +126,7 @@ page and must be a valid anchor ID."
          (when (string-null? title-text)
            (error (format #f "Forester ~a title cannot be empty" kind)))
          (values title-text (remove (cut eq? <> title-element) body)))]
-      [_ (error (format #f "Forester ~a requires exactly one direct @title" kind)
+      [_ (error (format #f "Forester ~a accepts at most one direct @title" kind)
                 (length titles))])))
 
 (define*-public (subtree #:key [id #f] [anchor #f] [open? #t] [style #f] . arguments)
@@ -136,13 +141,13 @@ page and must be a valid anchor ID."
     (when anchor
       (checked-anchor-id anchor))
     (call-with-values
-      (lambda () (extract-titled-body "subtree" body))
+      (lambda () (extract-title-and-body "subtree" body #f))
       (lambda (title-text body)
         (make-content-element
           'subtree (decode-flow body)
           #:style style
           #:properties
-          `((title . ,title-text)
+          `(,@(if title-text `((title . ,title-text)) '())
             (open? . ,open?)
             ,@(if id `((tree-id . ,id)) '())
             ,@(cond (anchor `((anchor . ,anchor)))
@@ -158,7 +163,7 @@ A section renders as a nested heading and body but gets no route and no
 anchor; use @subtree with #:id when the group must be linked."
   (let ((body (command-body arguments)))
     (call-with-values
-      (lambda () (extract-titled-body "section" body))
+      (lambda () (extract-title-and-body "section" body))
       (lambda (title-text body)
         (make-content-element
           'section (decode-flow body)
