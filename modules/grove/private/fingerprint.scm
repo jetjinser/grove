@@ -4,7 +4,6 @@
 
 (define-module (grove private fingerprint)
   #:use-module (gcrypt hash)
-  #:use-module (ice-9 binary-ports)
   #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
   #:export (fingerprint-bytes
@@ -47,9 +46,8 @@
                     (and (char>=? character #\a) (char<=? character #\f))))
               (string->list value))))
 
-(define (fingerprint-bytes bytes)
-  (let ((digest (sha256 bytes))
-        (digits "0123456789abcdef"))
+(define (digest-fingerprint digest)
+  (let ((digits "0123456789abcdef"))
     (list->string
      (append-map
       (lambda (index)
@@ -57,6 +55,9 @@
           (list (string-ref digits (quotient byte 16))
                 (string-ref digits (modulo byte 16)))))
       (iota (bytevector-length digest))))))
+
+(define (fingerprint-bytes bytes)
+  (digest-fingerprint (sha256 bytes)))
 
 (define (content-fingerprint content)
   (cond
@@ -73,9 +74,4 @@ Only finite, acyclic data with a stable write representation is accepted."
     (call-with-output-string (lambda (port) (write datum port)))))
 
 (define (file-fingerprint path)
-  (let ((port (open-file path "rb")))
-    (dynamic-wind
-      (lambda () #t)
-      (lambda ()
-        (fingerprint-bytes (get-bytevector-all port)))
-      (lambda () (close-port port)))))
+  (digest-fingerprint (file-sha256 path)))
