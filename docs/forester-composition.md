@@ -40,9 +40,12 @@ repeated occurrences. The contents listing and text output address
 occurrences through the same anchors, and `tree-root-<page-id>` keeps
 anchoring each page's root. Links aimed at an anchor retired by a lost
 uniqueness warn through the fragment registry. Unnamed subtrees anchor under
-their unstable-N IDs, which inherit those IDs' instability. Author anchors
-are emitted as-is (never scoped by embedding, unlike style IDs) and must be
-unique per page together with math IDs; duplicates fail during analysis.
+their unstable-N IDs, which inherit those IDs' instability. An occurrence
+anchor joins its parent's path: a `section` inside `chapter` is addressed as
+`chapter--section`, and an equation `eq-1` inside it as
+`chapter--section--eq-1`. On the standalone section route, its equation keeps
+the unprefixed ID `eq-1`. This keeps repeated embeddings' DOM IDs distinct.
+Duplicate IDs in the resulting page DOM fail during analysis.
 
 Root and subtree prose use the same paragraph decoder. Direct title, summary,
 and dates become frontmatter. `tag` and `taxon` accept one value without a
@@ -244,10 +247,16 @@ splits the target into the page (`target`) and the `fragment`, so the
 reference graph and backlinks stay page-level. A raw `#` in a link's `target`
 property is rejected.
 
-Fragments are existence-checked against the anchors the target page declares
-in its own document: equation IDs, explicit subtree IDs, occurrence anchors,
-and the page's `tree-root-<page-id>` root. Unknown fragments are reported as
-build warnings naming the fragment, the target page, and the source file.
+Fragments are existence-checked against the IDs the target page actually
+renders: its root, owned equation and declared anchors, occurrence anchors,
+and the occurrence-prefixed IDs inside embedded trees. For example, an
+equation `eq-1` inside `chapter` then `section` is addressed in the containing
+page as `page#chapter--section--eq-1`; on the standalone section route it
+remains `section#eq-1`. Unknown fragments are reported as build warnings
+naming the fragment, the target page, and the source file.
+This registry is built from authored subtrees and transclusions. Content
+inserted later by a `forest-query` can add rendered transclusions; fragments
+into those query-generated occurrences are not yet indexed.
 Generated position anchors (`tree-N`, `ref-N`) are implementation details,
 not author contracts, and warn like any other unknown fragment. Links
 returned by queries receive the same check.

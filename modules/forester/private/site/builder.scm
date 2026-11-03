@@ -18,34 +18,53 @@
   #:use-module (forester private entity-iri)
   #:use-module (forester private site model)
   #:use-module (forester private site resolve)
+  #:use-module (forester private render anchors)
   #:use-module ((forester composition) #:prefix composition:)
   #:use-module (forester relations)
   #:use-module (grove relation dsl)
   #:use-module (srfi srfi-1)
   #:export (make-forest))
 
-(define (page-anchor-facts page)
-  "Return (kind . id) pairs for the anchor IDs a page declares in its own
-document: the page's root anchor, explicit math IDs from owned content, the
-anchors of its subtree and transclusion elements, and anchors declared by
-ordinary elements (a term definition, a figure). Anchors brought in through
-transclusions belong to their own pages and stay out of this set."
+(define (page-owned-anchor-ids page prefix root?)
+  "Return IDs rendered in PAGE's owned body under PREFIX.
+
+Nested tree content is handled recursively so its IDs receive the same
+occurrence prefix as the HTML renderer. ROOT? includes the standalone page
+root, which is not repeated when a tree is embedded."
   (let ((document (site-page-document page)))
     (append
-      (list (cons "anchor" (string-append "tree-root-" (site-page-id page))))
-      (map (lambda (id) (cons "math" id))
+      (if root?
+          (list (string-append "tree-root-" (site-page-id page)))
+          '())
+      (map (lambda (element)
+             (string-append prefix
+               (ir:content-element-property/raw element 'id)))
            (filter-map
-             (lambda (element) (ir:content-element-property/raw element 'id))
+             (lambda (element)
+               (and (ir:content-element-property/raw element 'id) element))
              (tree-pass:walk-owned-content document
                (tree-pass:element-kind? 'math) #:postorder? #t)))
-      (map (lambda (id) (cons "anchor" id))
-           (filter-map
-             (lambda (element) (ir:content-element-property/raw element 'anchor))
-             (append (tree-pass:subtree-elements document)
-                     (tree-pass:transclusion-elements document))))
       (map (lambda (element)
-             (cons "anchor" (ir:content-element-property/raw element 'anchor)))
+             (string-append prefix
+               (ir:content-element-property/raw element 'anchor)))
            (tree-pass:declared-anchor-elements document)))))
+
+(define (page-occurrence-facts page prefix)
+  "Return (target . anchor) pairs in the renderer's occurrence order."
+  (let* ((occurrences
+           (tree-pass:walk-content
+             (site-page-document page)
+             (lambda (node)
+               (and (content-element? node)
+                    (memq (content-element-kind node) '(subtree transclude))))
+             #:stop? (tree-pass:element-kind? 'subtree))))
+    (map
+      (lambda (element position)
+        (cons
+          (ir:content-element-property/raw element
+            (if (eq? (content-element-kind element) 'subtree) 'tree-id 'target))
+          (occurrence-anchor element prefix position)))
+      occurrences (iota (length occurrences) 1))))
 
 (define (element-tag-name element)
   "The HTML tag a vocabulary element renders as, from the style's tag
@@ -54,81 +73,45 @@ transclusions belong to their own pages and stay out of this set."
   (content-style-html-tag-name (content-element-style element)))
 
 
-(define (dom-anchor-index pages composition transclusion-index)
-  "Build a page-id → rendered-anchor-ids table.  A page's set is its own
-anchors plus, transitively, the anchors of every tree its rendered DOM
-includes through subtrees and transclusions - the set of anchors a
-fragment link against this page can actually scroll to.  Composition
-cycles are rejected before this runs; the visited guard only guards the
-walk itself."
-  (let* ((own
-          (let ((table (make-hash-table)))
-            (for-each
-              (lambda (page)
-                (hash-set! table (site-page-id page)
-                           (map cdr (page-anchor-facts page))))
+(define (dom-anchor-index pages)
+  "Build and validate each page's exact rendered anchor IDs."
+  (let ((page-index (make-hash-table))
+        (dom (make-hash-table)))
+    (define (dom-of id prefix root? path)
+      (if (member id path)
+          '()                            ;; detailed cycle validation runs later
+          (let* ((page (hash-ref page-index id))
+                 (_ (unless page
+                      (error "unresolved tree occurrence while indexing anchors"
+                             id)))
+                 (occurrences (page-occurrence-facts page prefix)))
+            (append
+              (page-owned-anchor-ids page prefix root?)
+              (map cdr occurrences)
+              (append-map
+                (lambda (entry)
+                  (dom-of (car entry) (string-append (cdr entry) "--") #f
+                          (cons id path)))
+                occurrences)))))
+    (for-each (lambda (page)
+                (hash-set! page-index (site-page-id page) page))
               pages)
-            table))
-         (children
-           (let ((table (make-hash-table)))
-             (define (link! parent child)
-               (hash-set! table parent
-                          (cons child (hash-ref table parent '()))))
-             (for-each
-               (lambda (entry)
-                 (for-each
-                   (lambda (transclusion)
-                     (link! (car entry)
-                            (composition:transclusion-target-tree-id
-                              transclusion)))
-                   (cdr entry)))
-               transclusion-index)
-             (for-each
-               (lambda (definition)
-                 (link! (composition:subtree-definition-parent definition)
-                        (composition:subtree-definition-child definition)))
-               (composition:composition-subtree-definitions composition))
-             table))
-         (dom (make-hash-table)))
-    (define (dom-of id)
-      (or (hash-ref dom id)
-          (let ()
-            (hash-set! dom id '())      ;; cycle guard for the walk
-            (let ((anchors
-                    (apply lset-union equal?
-                           (hash-ref own id '())
-                           (map dom-of (hash-ref children id '())))))
-              (hash-set! dom id anchors)
-              anchors))))
     (for-each
       (lambda (page)
-        (hash-set! dom (site-page-id page)
-                   (dom-of (site-page-id page))))
+        (let* ((id (site-page-id page))
+               (anchors (dom-of id "" #t '()))
+               (seen (make-hash-table)))
+          (for-each
+            (lambda (anchor)
+              (when (hash-ref seen anchor)
+                (error
+                  (format #f "duplicate rendered ID in page ~a (~a): ~a"
+                          id (or (site-page-source page) "<unknown source>") anchor)))
+              (hash-set! seen anchor #t))
+            anchors)
+          (hash-set! dom id (delete-duplicates anchors string=?))))
       pages)
     dom))
-
-(define (ensure-unique-anchor-ids pages)
-  "Reject duplicate author-facing anchor IDs in a page's own rendering.
-
-A page's scope is the set of anchors it declares. Content pulled in through
-transclusions is not scanned, and author anchors may collide with the generated
-tree-N position anchors; both are known limitations of global anchors."
-  (for-each
-    (lambda (page)
-      (let ((seen (make-hash-table)))
-        (for-each
-          (lambda (fact)
-            (let ((id (cdr fact)))
-              (when (hash-ref seen id)
-                (error
-                  (format #f "duplicate ~a ID in page ~a (~a): ~a"
-                          (car fact)
-                          (site-page-id page)
-                          (or (site-page-source page) "<unknown source>")
-                          id)))
-              (hash-set! seen id #t)))
-          (page-anchor-facts page))))
-    pages))
 
 (define (report-forest-phase phase seconds)
   "Forward analysis timing to the caller's callback when one is installed."
@@ -224,8 +207,6 @@ constructor when a Grove site is already in memory."
               (for-each (lambda (page)
                           (hash-set! page-index (site-page-id page) page))
                         pages)))
-         (_ (measure 'anchor-validation
-              (ensure-unique-anchor-ids pages)))
          (reference-facts
            (measure 'references (append-map
              (lambda (source-page)
@@ -342,8 +323,7 @@ constructor when a Grove site is already in memory."
                pages)
              (append-map cdr transclusion-index))))
          (anchor-index
-           (measure 'anchors
-             (dom-anchor-index pages composition transclusion-index)))
+           (measure 'anchor-validation (dom-anchor-index pages)))
          (term-mention-relation
            (measure 'term-mentions
              (make-term-mention-relation

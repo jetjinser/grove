@@ -5,13 +5,19 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # Resource identity and RDF projection
 
-The RDF projection and page-identity policy in this document remain design
-studies, not public API commitments. A narrower IRI convention is implemented:
+**Decision:** Grove does not currently provide a public RDF exporter or a
+second, stable page-identity policy. The prototype established that an RDF
+projection is technically feasible, but no present consumer requires the
+additional vocabulary, identity, serialization, and compatibility decisions.
+Keep this file as a record of that experiment, not as an implementation
+roadmap. Revisit the export boundary when a concrete consumer needs RDF.
+
+A narrower IRI convention is implemented:
 Forester stores described entities as absolute IRI strings and accepts an
 HTTP(S) origin IRI for site output. The modules that emit particular formats
-handle any URI conversion they require. This document asks whether RDF is a
-faithful projection of Grove's relations and whether published page routes
-should serve as page identities.
+handle any URI conversion they require. Grove's existing graph renderer emits
+Grove relation data; it is not an RDF serialization. This document records a
+possible RDF projection and the experiment that tested its feasibility.
 
 ## The useful unification
 
@@ -68,11 +74,10 @@ identity, local address, retrieval route, and filesystem path.
    boundary, not in global identity matching ([RFC 3987 §5.1 and §5.3.1](https://www.rfc-editor.org/rfc/rfc3987.html#section-5.3.1),
    [RDF 1.2 IRI equality](https://www.w3.org/TR/rdf12-concepts/#dfn-iri-equality)).
 
-The remaining design question is whether a stable page IRI should always
-follow the public canonical URL, or whether projects that need identity to
-survive route changes should be able to supply a separate stable identity.
-Using the canonical URL is already coherent for published pages and is the
-smaller default; only the stronger persistence guarantee needs another policy.
+For current page output, the canonical URL remains the natural page IRI when
+configured. Whether projects should have a separate identity that survives
+route changes is deferred with the RDF export decision; Grove has no public
+contract promising such persistence.
 
 The current `@describes` implementation stores the authored value as a string
 and validates it with the SRFI-275 IRI parser, requiring an absolute IRI,
@@ -174,10 +179,10 @@ Forester's transclusion is an authoring/rendering instruction. Provenance could
 describe a generated HTML artifact's dependence on source trees in a separate
 build graph, but that is a different relation and export layer.
 
-This is a candidate profile, not a final vocabulary decision. A public
-namespace and exact `position` datatype remain open. Page metadata such as
-title and summary could use DCMI terms too, but belongs in a separate pass so
-the relation mapping does not expand into a general metadata schema.
+This is a candidate profile, not a final vocabulary decision. Its placeholder
+namespace, exact `position` datatype, and `hasPart` semantics were not settled
+because no exporter is planned. Page metadata such as title and summary would
+be a separate modeling question rather than part of this relation mapping.
 
 ## What the Flora experiment establishes
 
@@ -210,14 +215,11 @@ candidate; that relation was not included in this prototype pass.
 
 ## Current design direction
 
-Treat IRI as the candidate common identity for globally named resources, while
-keeping local page IDs and paths distinct. Keep Grove's current typed
-relations as the source of truth. The tested mapping uses `dcterms:subject`
-for `describes`, `dcterms:references` for authored links, explicit blank-node
-records for occurrence details, and a distinct Grove `transcludes` predicate.
-`dcterms:hasPart` remains a reasonable candidate for declared subtrees, pending
-a separate model-level check. These are export choices, not replacements for
-Grove relations or settled API commitments.
+Keep Grove's current typed relations as the source of truth and keep local page
+IDs and routes distinct from external IRIs. The tested RDF mapping is evidence
+for a possible future export layer, not an adopted profile. If an exporter is
+requested, implement it at the relation/output boundary without replacing
+Grove's internal relation model with RDF terms.
 
 Forester currently stores these values as strings rather than introducing a
 Grove-wide IRI record. It parses authored absolute IRIs where it needs to

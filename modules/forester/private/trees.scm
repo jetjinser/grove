@@ -195,10 +195,9 @@
 tree's own ID. Elements carrying an explicit anchor keep it; repeated
 occurrences stay unanchored, so links aimed at an anchor retired this way
 surface as fragment warnings. Unnamed subtrees anchor under their unstable-N
-IDs and inherit those IDs' instability. Transcluded content is out of scope:
-a tree brought in by another tree's transclusion repeats anchors in the host
-DOM without being counted, the same global-anchor limitation the uniqueness
-check documents."
+IDs and inherit those IDs' instability. This assigns only occurrence-container
+anchors; the renderer prefixes IDs inside embedded content with the complete
+occurrence path, and the page anchor index validates those rendered IDs."
   (define (occurrence-id element)
     (ir:content-element-property/raw element
       (if (eq? (content-element-kind element) 'subtree)

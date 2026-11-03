@@ -109,10 +109,10 @@
     "Measured" (site-page-title (require-page forest "measured")))
   (test-equal "forest timings follow analysis order"
     '(page-normalization identify-trees extract-trees occurrence-anchors
-      equation-numbers page-index-setup anchor-validation
+      equation-numbers page-index-setup
       references transclusions reference-index term-definitions page-index
-      described-entities
-      content composition anchors term-mentions fragment-validation
+      described-entities content composition anchor-validation term-mentions
+      fragment-validation
       tree-cycle-validation relation-index-warmup queries)
     (map car (reverse phases)))
   (test-assert "forest timings report nonnegative seconds"
@@ -128,10 +128,10 @@
            (make-forest (make-site (list page))))))
   (test-equal "analysis timings flow through the parameter hook"
     '(page-normalization identify-trees extract-trees occurrence-anchors
-      equation-numbers page-index-setup anchor-validation
+      equation-numbers page-index-setup
       references transclusions reference-index term-definitions page-index
-      described-entities
-      content composition anchors term-mentions fragment-validation
+      described-entities content composition anchor-validation term-mentions
+      fragment-validation
       tree-cycle-validation relation-index-warmup queries)
     (map car (reverse phases))))
 
@@ -202,6 +202,20 @@
             (string-append
               "@transclude[\"theorem-3\" #:anchor \"same\"]\n"
               "@transclude[\"theorem-3\" #:anchor \"same\"]")))))))
+
+(test-error "authored anchors cannot collide with generated occurrence anchors" #t
+  (make-forest
+    (make-site
+      (list
+        (make-site-page "defs" "Defs"
+          (evaluate-document
+            "@subtree[#:id \"theorem-3\"]{@title{Theorem}}"))
+        (make-site-page "host" "Host"
+          (evaluate-document
+            (string-append
+              "@transclude[\"theorem-3\"]\n"
+              "@transclude[\"theorem-3\"]\n"
+              "@tex-math[#:id \"tree-1\"]{x}")))))))
 
 (test-error "topic IR cannot bypass the canonical topic ID contract" #t
   (make-forest
@@ -277,7 +291,7 @@
              "@subtree[#:id \"chapter\"]{@title{Chapter}\n"
              " @subtree[#:id \"section\"]{@title{Section}\n"
              "  @tex-display-math[#:id \"eq-1\"]{a}}}\n"
-             "@paragraph{See @link[\"book#eq-1\"]{the equation}.}")))
+             "@paragraph{See @link[\"book#chapter--section--eq-1\"]{the equation}.}")))
        (port (open-output-string))
        (forest
          (parameterize ((current-warning-port port))
@@ -285,8 +299,22 @@
              (make-site (list (make-site-page "book" "Book"
                                  container))))))
        (message (get-output-string port)))
-  (test-assert "a container page's registry covers its subtree anchors"
+  (test-assert "a container page's registry uses rendered occurrence prefixes"
     (string-null? message)))
+
+(let* ((container
+         (evaluate-document
+           (string-append
+             "@subtree[#:id \"chapter\"]{@title{Chapter}\n"
+             " @subtree[#:id \"section\"]{@title{Section}\n"
+             "  @tex-display-math[#:id \"eq-1\"]{a}}}\n"
+             "@paragraph{See @link[\"book#eq-1\"]{the equation}.}")))
+       (port (open-output-string)))
+  (parameterize ((current-warning-port port))
+    (make-forest
+      (make-site (list (make-site-page "book" "Book" container)))))
+  (test-assert "unprefixed fragments do not claim an embedded anchor"
+    (string-contains (get-output-string port) "eq-1")))
 
 (let* ((numbered-document
          (evaluate-document

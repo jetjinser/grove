@@ -711,7 +711,8 @@
             (reference-target-page-id reference) (reference-label reference))))
   (test-assert "tree directory follows nested display structure"
     (and (string-contains (assoc-ref html "target") "href=\"#overview\">Overview</a>")
-         (string-contains (assoc-ref html "target") "href=\"#details\">Details</a>")))
+         (string-contains (assoc-ref html "target")
+                          "href=\"#overview--details\">Details</a>")))
   (test-assert "title levels follow display depth"
     (and (string-contains (assoc-ref html "target")
                           "<h2 class=\"forest-tree-title\"><span>Overview</span></h2><a class=\"forest-tree-id\"")
@@ -727,7 +728,8 @@
          (null? (incoming-references forest "target"))))
   (test-assert "text directory and body share occurrence anchors"
     (and (string-contains (assoc-ref text "target") "- Overview [#overview]")
-         (string-contains (assoc-ref text "target") "  - Details [#details]")))
+         (string-contains (assoc-ref text "target")
+                          "  - Details [#overview--details]")))
   (test-equal "tree link queries use the same identities"
     '("overview") (links forest "source")))
 
@@ -795,7 +797,10 @@
 (let* ((definitions
          (make-site-page "definitions" "Definitions"
            (evaluate-document
-             "@subtree[#:id \"theorem-3\"]{@title{Theorem 3}@paragraph{Statement.}}")))
+             (string-append
+               "@subtree[#:id \"theorem-3\"]{@title{Theorem 3}"
+               "@paragraph{Statement.}"
+               "@subtree[#:id \"proof\"]{@title{Proof}@paragraph{Proof.}}}"))))
        (host
          (make-site-page "host" "Host"
            (evaluate-document
@@ -812,6 +817,10 @@
   (test-assert "repeated occurrences fall back to position anchors and warn"
     (and (string-contains (assoc-ref html "host") "id=\"tree-1\"")
          (string-contains (assoc-ref html "host") "id=\"tree-2\"")
+         (string-contains (assoc-ref html "host")
+                          "data-tree-id=\"proof\" id=\"tree-1--proof\"")
+         (string-contains (assoc-ref html "host")
+                          "data-tree-id=\"proof\" id=\"tree-2--proof\"")
          (not (string-contains (assoc-ref html "host")
                                "data-tree-id=\"theorem-3\" id=\"theorem-3\""))
          (string-contains message "does not resolve in page host"))))

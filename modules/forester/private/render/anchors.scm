@@ -10,7 +10,9 @@
 (define (occurrence-anchor element prefix position)
   "Return the anchor for a rendered tree occurrence.
 
-An authored or analyzed anchor takes precedence. Otherwise, derive the same
-position anchor for every renderer from PREFIX and POSITION."
-  (or (ir:content-element-property/raw element 'anchor)
-      (format #f "~atree-~a" prefix position)))
+An authored or analyzed anchor takes precedence over the generated position
+name. PREFIX scopes either name when this occurrence is rendered inside
+another tree, so nested content keeps one consistent occurrence path."
+  (string-append prefix
+    (or (ir:content-element-property/raw element 'anchor)
+        (format #f "tree-~a" position))))
