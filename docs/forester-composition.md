@@ -41,9 +41,9 @@ occurrences through the same anchors, and `tree-root-<page-id>` keeps
 anchoring each page's root. Links aimed at an anchor retired by a lost
 uniqueness warn through the fragment registry. Unnamed subtrees anchor under
 their unstable-N IDs, which inherit those IDs' instability. An occurrence
-anchor joins its parent's path: a `section` inside `chapter` is addressed as
-`chapter--section`, and an equation `eq-1` inside it as
-`chapter--section--eq-1`. On the standalone section route, its equation keeps
+anchor joins its parent's path with `:`: a `section` inside `chapter` is
+addressed as `chapter:section`, and an equation `eq-1` inside it as
+`chapter:section:eq-1`. On the standalone section route, its equation keeps
 the unprefixed ID `eq-1`. This keeps repeated embeddings' DOM IDs distinct.
 Duplicate IDs in the resulting page DOM fail during analysis.
 
@@ -251,7 +251,7 @@ Fragments are existence-checked against the IDs the target page actually
 renders: its root, owned equation and declared anchors, occurrence anchors,
 and the occurrence-prefixed IDs inside embedded trees. For example, an
 equation `eq-1` inside `chapter` then `section` is addressed in the containing
-page as `page#chapter--section--eq-1`; on the standalone section route it
+page as `page#chapter:section:eq-1`; on the standalone section route it
 remains `section#eq-1`. Unknown fragments are reported as build warnings
 naming the fragment, the target page, and the source file.
 This registry is built from authored subtrees and transclusions. Content

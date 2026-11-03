@@ -291,7 +291,7 @@
              "@subtree[#:id \"chapter\"]{@title{Chapter}\n"
              " @subtree[#:id \"section\"]{@title{Section}\n"
              "  @tex-display-math[#:id \"eq-1\"]{a}}}\n"
-             "@paragraph{See @link[\"book#chapter--section--eq-1\"]{the equation}.}")))
+             "@paragraph{See @link[\"book#chapter:section:eq-1\"]{the equation}.}")))
        (port (open-output-string))
        (forest
          (parameterize ((current-warning-port port))

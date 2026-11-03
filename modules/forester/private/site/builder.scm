@@ -90,7 +90,7 @@ root, which is not repeated when a tree is embedded."
               (map cdr occurrences)
               (append-map
                 (lambda (entry)
-                  (dom-of (car entry) (string-append (cdr entry) "--") #f
+                  (dom-of (car entry) (anchor-child-prefix (cdr entry)) #f
                           (cons id path)))
                 occurrences)))))
     (for-each (lambda (page)

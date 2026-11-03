@@ -513,8 +513,8 @@
                           #:mathjax-src #f)
                         "repeat-host")))
   (test-assert "repeated transclusions receive distinct HTML anchor prefixes"
-    (and (string-contains html "tree-1--ref-1")
-         (string-contains html "tree-2--ref-1"))))
+    (and (string-contains html "tree-1:ref-1")
+         (string-contains html "tree-2:ref-1"))))
 
 (test-error "transclusion cycles fail forest analysis" #t
   (make-forest
@@ -615,8 +615,8 @@
   (test-assert "transclusions accept styles without changing target identity"
     (string-contains host-html "class=\"forest-tree-block transclusion reuse\""))
   (test-assert "authored HTML IDs are scoped per tree display"
-    (and (string-contains host-html "id=\"tree-2--intro\"")
-         (string-contains host-html "id=\"tree-3--intro\"")
+    (and (string-contains host-html "id=\"tree-2:intro\"")
+         (string-contains host-html "id=\"tree-3:intro\"")
          (string-contains (assoc-ref html "styled-target") "id=\"intro\""))))
 
 (test-error "element styles cannot replace navigation IDs" #t

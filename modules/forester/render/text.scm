@@ -68,7 +68,7 @@
       (let* ((id (tree-occurrence-target element))
              (target (require-page forest id))
              (anchor (occurrence-anchor element prefix position))
-             (child-prefix (string-append anchor "--"))
+             (child-prefix (anchor-child-prefix anchor))
              (target-context
                (and context
                     (render-context-with context
@@ -116,7 +116,7 @@
                       (target (require-page forest target-id))
                       (anchor (occurrence-anchor element prefix position)))
                  (string-append indent "- " (site-page-title target) " [#" anchor "]\n"
-                   (entries target-id (string-append anchor "--")
+                   (entries target-id (anchor-child-prefix anchor)
                             (string-append indent "  ")))))
              occurrences (iota (length occurrences) 1)))))
   (let ((items (entries (site-page-id page) "" "")))

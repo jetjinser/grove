@@ -188,7 +188,7 @@ backlog report collects the mention."
           (if (eq? (content-element-kind element) 'subtree)
               "inline-subtree" "transclusion")
           id (site-page-title target) (html-page-url routes id)
-          (subtree-content-sxml forest routes target (string-append anchor "--") (1+ depth) highlighters
+          (subtree-content-sxml forest routes target (anchor-child-prefix anchor) (1+ depth) highlighters
                                 #:title-decoration title-decoration
                                 #:metadata-items metadata-items
                                 #:extra-handlers extra-handlers
@@ -198,7 +198,7 @@ backlog report collects the mention."
                                                #:forest forest
                                                #:routes routes
                                                #:page target
-                                               #:anchor-prefix (string-append anchor "--"))
+                                               #:anchor-prefix (anchor-child-prefix anchor))
                                              context))
           #:anchor anchor #:depth (1+ depth)
           #:context context
@@ -495,7 +495,7 @@ top-level taxon element; pages without one contribute nothing."
                                  (if (member target-id visited)
                                      '()
                                      (entries target-id
-                                              (string-append anchor "--")
+                                              (anchor-child-prefix anchor)
                                               (cons target-id visited)))))
                           `(li (a (@ (href ,(string-append base-url "#"
                                                            anchor)))

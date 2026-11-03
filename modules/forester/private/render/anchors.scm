@@ -5,7 +5,12 @@
 (define-module (forester private render anchors)
   #:use-module ((grove private ir) #:prefix ir:)
   #:use-module (ice-9 format)
-  #:export (occurrence-anchor))
+  #:export (occurrence-anchor
+            anchor-child-prefix))
+
+(define (anchor-child-prefix anchor)
+  "Return the prefix for IDs rendered inside the occurrence ANCHOR."
+  (string-append anchor ":"))
 
 (define (occurrence-anchor element prefix position)
   "Return the anchor for a rendered tree occurrence.
