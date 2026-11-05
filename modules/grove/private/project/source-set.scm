@@ -11,6 +11,7 @@
   #:export (make-project-source-set
             project-source-set-entries
             project-source-set-changes
+            project-source-set-stable?
             project-source-changes-added
             project-source-changes-modified
             project-source-changes-removed
@@ -21,10 +22,11 @@
 ;; discovered them. This is the boundary shared by full builds and retained-
 ;; model rebuilds; artifact source lists form the outgoing dependency edges.
 (define-record-type <project-source-set>
-  (%make-project-source-set entries changes)
+  (%make-project-source-set entries changes baseline)
   project-source-set?
   (entries project-source-set-entries)
-  (changes project-source-set-changes))
+  (changes project-source-set-changes)
+  (baseline project-source-set-baseline))
 
 (define-record-type <project-source-changes>
   (%make-project-source-changes added modified removed)
@@ -94,6 +96,7 @@
 
 (define* (make-project-source-set declared runtime previous
                                   #:key (fingerprint input-fingerprint)
+                                        (baseline '())
                                         (omit-unavailable? #f))
   "Create this build's tracked input entries and their changes from PREVIOUS.
 DECLARED and RUNTIME are unique path lists; declared paths remain path-sensitive
@@ -117,7 +120,26 @@ while equal-content runtime paths may move between build processes."
              (list declared runtime) '(source runtime))))
     (%make-project-source-set
       entries
-      (and previous (changed-sources previous entries)))))
+      (and previous (changed-sources previous entries))
+      baseline)))
+
+(define* (project-source-set-stable? source-set
+                                     #:key (fingerprint input-fingerprint))
+  "Return whether SOURCE-SET inputs stayed unchanged through the build."
+  (let ((entries (project-source-set-entries source-set)))
+    (not
+      (or (any (lambda (entry)
+                 (let ((source (source-entry-by-path entries (car entry))))
+                   (not (equal? (cadr entry)
+                                (if source
+                                    (build-state-source-fingerprint source)
+                                    (fingerprint (car entry)))))))
+               (project-source-set-baseline source-set))
+          (any (lambda (entry)
+                 (not (equal? (build-state-source-fingerprint entry)
+                              (fingerprint
+                                (build-state-source-path entry)))))
+               entries)))))
 
 (define (project-source-changes-all changes)
   (append (project-source-changes-added changes)

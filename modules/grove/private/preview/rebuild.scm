@@ -69,7 +69,7 @@ preserves the prior analysis result."
              ;;     reflects these bytes, and a source edited during the
              ;;     render must not enter the state as if the render had
              ;;     seen it.
-             (current-sources
+             (current-source-set
                 (let* ((retained
                          (filter
                            (lambda (source)
@@ -96,13 +96,14 @@ preserves the prior analysis result."
                                        (not (member path known string=?)))
                                      pipeline-runtime-sources))
                            string=?)))
-                  (project-source-set-entries
-                    (make-project-source-set
-                      declared runtime #f
-                      #:fingerprint
-                      (lambda (path)
-                        (false-if-exception (file-fingerprint path)))
-                      #:omit-unavailable? #t))))
+                  (make-project-source-set
+                    declared runtime #f
+                    #:fingerprint
+                    (lambda (path)
+                      (false-if-exception (file-fingerprint path)))
+                    #:omit-unavailable? #t)))
+             (current-sources
+               (project-source-set-entries current-source-set))
              (render-result
                 (begin
                   (progress 'render #f)
@@ -125,7 +126,7 @@ preserves the prior analysis result."
          (validate-project-artifacts artifacts progress)
          (write-project-build!
            (project-output-directory project) state-path state-temp-path
-           current-sources artifacts owners identity progress
+           current-source-set artifacts owners identity progress
            #:fingerprint
            (lambda (path)
              (false-if-exception (file-fingerprint path))))
