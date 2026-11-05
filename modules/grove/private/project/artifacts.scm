@@ -8,21 +8,14 @@
   #:use-module (grove private artifact-store)
   #:use-module (grove private build-state)
   #:use-module (grove private files)
+  #:use-module (grove private project source-set)
   #:use-module (ice-9 binary-ports)
   #:use-module (ice-9 textual-ports)
   #:use-module (srfi srfi-1)
-  #:export (paths-intersect?
-            source-entry-by-path
+  #:export (source-entry-by-path
             artifact-entry-by-path
-            changed-sources
             affected-artifacts
             load-cached-artifacts))
-
-(define (source-paths entries)
-  (map build-state-source-path entries))
-
-(define (paths-intersect? paths candidates)
-  (any (lambda (path) (member path candidates string=?)) paths))
 
 (define (source-entry-by-path entries path)
   (find (lambda (entry)
@@ -33,61 +26,6 @@
   (find (lambda (entry)
           (string=? (build-state-artifact-path entry) path))
         entries))
-
-(define (changed-sources old-sources current-sources)
-  ;;     Unfingerprinted paths do not count as additions or removals.
-  ;;     If a path remains in both snapshots, however, a transition
-  ;;     between absent and present content is a modification. Runtime
-  ;;     inputs (such as modules resolved through the load path) can
-  ;;     also land under different absolute paths across build
-  ;;     processes, so equal-content runtime additions and removals
-  ;;     cancel. Declared project sources never cancel: a renamed page
-  ;;     remains a real change.
-  (let* ((added
-           (filter (lambda (entry)
-                     (and (build-state-source-fingerprint entry)
-                          (not (source-entry-by-path
-                                 old-sources (build-state-source-path entry)))))
-                   current-sources))
-         (removed
-           (filter (lambda (entry)
-                     (and (build-state-source-fingerprint entry)
-                          (not (source-entry-by-path
-                                 current-sources (build-state-source-path entry)))))
-                   old-sources))
-         (modified
-           (filter (lambda (entry)
-                     (let ((previous
-                             (source-entry-by-path
-                               old-sources (build-state-source-path entry))))
-                       (and previous
-                            (not (equal? (build-state-source-fingerprint previous)
-                                         (build-state-source-fingerprint
-                                           entry))))))
-                   current-sources))
-         (churned
-           (lset-intersection
-             (lambda (left right)
-               (equal? (build-state-source-fingerprint left)
-                       (build-state-source-fingerprint right)))
-             (filter (lambda (entry)
-                       (eq? (build-state-source-kind entry) 'runtime))
-                     added)
-             (filter (lambda (entry)
-                       (eq? (build-state-source-kind entry) 'runtime))
-                     removed)))
-         (churned-paths (source-paths churned))
-         (added (filter (lambda (entry)
-                          (not (member (build-state-source-path entry)
-                                       churned-paths string=?)))
-                        added))
-         (removed (filter (lambda (entry)
-                            (not (member (build-state-source-path entry)
-                                         churned-paths string=?)))
-                          removed)))
-    (values (source-paths added)
-            (source-paths modified)
-            (source-paths removed))))
 
 (define (artifact-affected? artifact previous changed)
   (let* ((path (out:artifact-path/raw artifact))

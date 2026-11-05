@@ -6,6 +6,7 @@
   #:use-module ((grove private artifact) #:prefix out:)
   #:use-module (grove private build-state)
   #:use-module (grove private project artifacts)
+  #:use-module (grove private project source-set)
   #:use-module (srfi srfi-1)
   #:export (renderer-identities-match?
             renderer-cache-available?

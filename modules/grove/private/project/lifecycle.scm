@@ -14,6 +14,7 @@
   #:use-module (grove private asset-pipeline)
   #:use-module (grove private renderer)
   #:use-module (grove private project artifacts)
+  #:use-module (grove private project source-set)
   #:use-module (grove private project incremental)
   #:use-module (grove private project publication)
   #:use-module (grove private project renderers)
@@ -215,22 +216,15 @@ The callback receives the model, input port, and output port."
                                 pipeline-runtime-sources)
                               string=?)
                             declared-sources))
-         (current-sources
-           (append
-             (map (lambda (path)
-                    (list path (input-fingerprint path) 'source))
-                  declared-sources)
-             (map (lambda (path)
-                    (list path (input-fingerprint path) 'runtime))
-                  runtime-sources)))
-         (source-changes
-           (call-with-values
-             (lambda () (changed-sources previous-sources current-sources))
-             list))
-         (added (car source-changes))
-         (modified (cadr source-changes))
-         (removed (caddr source-changes))
-         (changed (append added modified removed))
+         (source-set
+           (make-project-source-set declared-sources runtime-sources
+                                    previous-sources))
+         (current-sources (project-source-set-entries source-set))
+         (source-changes (project-source-set-changes source-set))
+         (added (project-source-changes-added source-changes))
+         (modified (project-source-changes-modified source-changes))
+         (removed (project-source-changes-removed source-changes))
+         (changed (project-source-changes-all source-changes))
           (identity (renderer-identity (project-cache? project) model
                                        (project-renderers project)))
           (retired (retired-pipeline-paths pipeline-artifacts previous-artifacts))

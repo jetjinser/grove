@@ -6,6 +6,7 @@
   #:use-module (grove private project model)
   #:use-module (grove private project incremental)
   #:use-module (grove private project artifacts)
+  #:use-module (grove private project source-set)
   #:use-module (grove private project publication)
   #:use-module (grove private project renderers)
   #:use-module (grove private cache-dir)
@@ -70,28 +71,38 @@ preserves the prior analysis result."
              ;;     seen it.
              (current-sources
                 (let* ((retained
-                         (filter-map
+                         (filter
                            (lambda (source)
                              (let ((path (build-state-source-path source)))
-                               (and (or (eq? (build-state-source-kind source)
-                                             'source)
-                                        (member path analysis-inputs string=?))
-                                    (let ((digest
-                                            (false-if-exception
-                                              (file-fingerprint path))))
-                                      (and digest
-                                           (list path digest
-                                                 (build-state-source-kind source)))))))
+                               (or (eq? (build-state-source-kind source) 'source)
+                                   (member path analysis-inputs string=?))))
                            previous-sources))
-                       (known (map car retained)))
-                  (append retained
-                    (filter-map
+                       (known (map build-state-source-path retained))
+                       (declared
+                         (map build-state-source-path
+                              (filter (lambda (source)
+                                        (eq? (build-state-source-kind source)
+                                             'source))
+                                      retained)))
+                       (runtime
+                         (delete-duplicates
+                           (append
+                             (map build-state-source-path
+                                  (filter (lambda (source)
+                                            (eq? (build-state-source-kind source)
+                                                 'runtime))
+                                          retained))
+                             (filter (lambda (path)
+                                       (not (member path known string=?)))
+                                     pipeline-runtime-sources))
+                           string=?)))
+                  (project-source-set-entries
+                    (make-project-source-set
+                      declared runtime #f
+                      #:fingerprint
                       (lambda (path)
-                        (and (not (member path known string=?))
-                             (let ((digest (false-if-exception
-                                             (file-fingerprint path))))
-                               (and digest (list path digest 'runtime)))))
-                      pipeline-runtime-sources))))
+                        (false-if-exception (file-fingerprint path)))
+                      #:omit-unavailable? #t))))
              (render-result
                 (begin
                   (progress 'render #f)

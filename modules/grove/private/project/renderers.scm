@@ -9,6 +9,7 @@
   #:use-module (grove private build-state)
   #:use-module (grove private fingerprint)
   #:use-module (grove private project artifacts)
+  #:use-module (grove private project source-set)
   #:use-module (grove private renderer)
   #:use-module (grove project diagnostic)
   #:use-module (srfi srfi-1)
