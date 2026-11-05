@@ -149,25 +149,14 @@
                  references))))))
 
 (define (context-text forest page routes label)
-  (let ((sources (context-pages forest (site-page-id page))))
-    (if (null? sources)
-        ""
-        (string-append
-          (string-append "\n\n" label ":\n")
-          (string-concatenate
-            (map (lambda (source)
-                   (string-append "- "
-                     (page-reference routes
-                       (text-page-path routes (site-page-id page))
-                       source)
-                     "\n"))
-                 sources))))))
+  (page-list-backmatter-text
+    page routes label (context-pages forest (site-page-id page))))
 
 (define (page-list-backmatter-text page routes label targets)
   (if (null? targets)
       ""
       (string-append
-        (string-append "\n\n" label ":\n")
+        "\n\n" label ":\n"
         (string-concatenate
           (map (lambda (target)
                  (string-append "- "
