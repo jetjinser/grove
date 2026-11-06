@@ -578,12 +578,18 @@ model.
 
 Scheme runners are silent unless given `#:progress`, a `(stage detail)` callback.
 Stages are `collect`, `sources`, `prepare`, `read`, `read-done`, `input-cache`,
-`analyze`, `render`, `render-renderer`, `validate`, and `write`. `sources`
+`analyze`, `pipeline-start`, `pipeline`, `render`, `render-renderer`, `validate`,
+and `write`. `sources`
 carries a count, read events carry a path, and `write` carries the output
 directory. `input-cache` carries `(hits . total-inputs)` when the project read
 at least one input. Each `render-renderer` event carries `(index seconds
 artifact-count)`, with a zero-based renderer index and elapsed time in seconds.
-Other details are `#f`. A complete build-cache hit skips both render events.
+`pipeline-start` carries the pipeline name. Each `pipeline` event carries
+`(name cache-status seconds output-count)`, where `cache-status` is `hit`,
+`miss`, or `disabled`. This lets callers show each step's execution or cache
+reuse and elapsed time; the CLI reports the same information during build,
+check, and preview rebuilds. Stages not described above carry `#f`. A complete
+build-cache hit skips both render events.
 These are the lifecycle events sent to Scheme callbacks. The CLI may add
 `analysis-phase-start` events (whose detail is a phase symbol) and
 `analysis-phase` events (whose detail is `(phase . seconds)`) while Forester

@@ -658,6 +658,43 @@
     (map artifact-content (car result)))
   (test-equal "a shared producer runs once for all consumers" 1 producer-runs))
 
+(let* ((events '())
+       (runs 0)
+       (pipeline
+        (make-asset-pipeline
+          #:name "progress-observable"
+          #:procedure
+          (lambda (_)
+            (set! runs (1+ runs))
+            (list (make-artifact "progress-observable.txt" "done")))))
+      (project-key "pipeline-progress-project"))
+  (define* (run #:key (cache? #t))
+    (run-asset-pipelines
+      (list pipeline) project-key
+      #:cache? cache?
+      #:progress (lambda (stage detail)
+                   (set! events (append events (list (cons stage detail)))))))
+  (run)
+  (test-equal "pipeline progress reports start and completion in order"
+    '(pipeline-start pipeline) (map car events))
+  (test-equal "pipeline start identifies the named step"
+    "progress-observable" (cdr (car events)))
+  (let ((detail (cdr (cadr events))))
+    (test-equal "pipeline completion reports a cache miss" 'miss (cadr detail))
+    (test-assert "pipeline completion reports elapsed seconds"
+      (and (number? (caddr detail)) (>= (caddr detail) 0)))
+    (test-equal "pipeline completion reports output count" 1 (cadddr detail)))
+  (set! events '())
+  (run)
+  (test-equal "pipeline progress reports cache hits" 'hit
+    (cadr (cdr (cadr events))))
+  (test-equal "pipeline progress does not rerun a cached step" 1 runs)
+  (set! events '())
+  (run #:cache? #f)
+  (test-equal "pipeline progress identifies disabled caching" 'disabled
+    (cadr (cdr (cadr events))))
+  (test-equal "uncached pipeline progress reflects the procedure run" 2 runs))
+
 (let* ((producer
         (make-asset-pipeline
           #:name "missing-output-producer"

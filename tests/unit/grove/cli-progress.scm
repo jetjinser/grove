@@ -55,6 +55,17 @@
            (format #f "~12@a ~18a 160ms~%" "Analyzing" "content"))
          (string-contains out
            (format #f "~12@a 2: 9 artifacts in 60ms~%" "Renderer")))))
+(test-assert "pipeline progress reports cache status and output count"
+  (let ((out (capture
+               (lambda ()
+                 (call-with-cli-progress "Building" "project.scm"
+                   (lambda (report)
+                     (report 'pipeline-start "compile-math")
+                     (report 'pipeline '("compile-math" hit 0.02 3))))))))
+    (and (string-contains out
+           (format #f "~12@a compile-math: cache hit, 3 artifacts in 20ms~%"
+                   "Pipeline"))
+         #t)))
 (test-assert "redirected progress preserves ordered statuses and reports input reuse"
   (let ((out (capture
                (lambda ()

@@ -163,7 +163,8 @@ The callback receives the model, input port, and output port."
              (run-asset-pipelines (project-pipelines project)
                                   (current-project-key)
                                   #:cache? (and write?
-                                                (project-cache? project)))))
+                                                (project-cache? project))
+                                  #:progress progress)))
          (pipeline-artifacts (car pipeline-result))
          (pipeline-owners (cadr pipeline-result))
          (pipeline-declared-sources

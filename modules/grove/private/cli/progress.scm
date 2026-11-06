@@ -221,6 +221,29 @@ whole process lifetime, no sampling needed."
                  (format #f "~18a ~a" (car detail)
                          (format-duration (cdr detail)))
                  port))))
+        ((pipeline-start)
+         (finish-stage)
+         (when terminal?
+           (clear-progress)
+           (status-line port "Pipeline" (format #f "~a…" detail) "1;36")
+           (set! active? #t)
+           (force-output port)))
+        ((pipeline)
+         (clear-progress)
+         (let ((name (car detail))
+               (status (cadr detail))
+               (seconds (caddr detail))
+               (count (cadddr detail)))
+           (print-cli-status "Pipeline"
+             (format #f "~a: ~a, ~d artifact~:p in ~a"
+                     name
+                     (case status
+                       ((hit) "cache hit")
+                       ((miss) "cache miss")
+                       ((disabled) "cache disabled")
+                       (else (error "unknown pipeline cache status" status)))
+                     count (format-duration seconds))
+             port)))
         ((render-renderer)
          ;;     One line per renderer: artifacts and wall time locate a
          ;;     slow renderer without per-page noise.

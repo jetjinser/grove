@@ -10,6 +10,7 @@
   #:use-module (grove private files)
   #:use-module (grove private fingerprint)
   #:use-module (grove private input dependencies)
+  #:use-module (grove private procedure)
   #:use-module (ice-9 binary-ports)
   #:use-module (ice-9 ftw)
   #:use-module (ice-9 textual-ports)
@@ -257,12 +258,18 @@
             (rmdir path))
           (delete-file path)))))
 
-(define* (run-asset-pipelines pipelines project-key #:key (cache? #t))
+(define* (run-asset-pipelines pipelines project-key #:key (cache? #t)
+                             (progress (lambda (_stage _detail) #t)))
   "Run declared asset pipelines in dependency order; return published artifacts,
 owners, and runtime inputs. Output references are materialized only on a cache
-miss. CACHE? controls reads and writes to the shared content store."
+miss. CACHE? controls reads and writes to the shared content store. PROGRESS
+receives a `pipeline-start` event with the pipeline name and a `pipeline` event
+with its name, cache status, elapsed seconds, and output count."
   (unless (boolean? cache?)
     (error "pipeline cache option must be a boolean" cache?))
+  (unless (procedure-accepts-arguments? progress 2)
+    (error "pipeline progress callback must accept a stage and detail"
+           progress))
   (let ((ordered (pipeline-declaration-order pipelines))
         (workspace #f))
     (define (ensure-workspace!)
@@ -282,11 +289,14 @@ miss. CACHE? controls reads and writes to the shared content store."
                     (delete-duplicates (reverse runtime-inputs) string=?))
               (let* ((pipeline (car remaining))
                      (name (asset-pipeline-name pipeline))
+                     (started (get-internal-real-time))
+                     (_started (progress 'pipeline-start name))
                      (inputs (pipeline-input-table pipeline produced))
                      (identity (pipeline-identity pipeline project-key inputs))
+                     (cached (and cache?
+                                  (restore-pipeline-artifacts identity inputs)))
                      (execution
-                       (or (and cache?
-                                (restore-pipeline-artifacts identity inputs))
+                       (or cached
                            (begin
                              (when (pair? (pipeline-output-inputs pipeline))
                                (ensure-workspace!))
@@ -294,6 +304,14 @@ miss. CACHE? controls reads and writes to the shared content store."
                                                      workspace cache?))))
                      (all-produced (car execution))
                      (dependencies (cadr execution))
+                     (status (cond (cached 'hit)
+                                   (cache? 'miss)
+                                   (else 'disabled)))
+                     (seconds (/ (- (get-internal-real-time) started)
+                                 internal-time-units-per-second))
+                     (_finished (progress 'pipeline
+                                          (list name status seconds
+                                                (length all-produced))))
                      (published-here
                        (if (asset-pipeline-publish-consumed? pipeline)
                            all-produced

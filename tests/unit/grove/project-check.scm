@@ -183,6 +183,7 @@
           6 pipeline-runs)))
     (let* ((producer-runs 0)
            (consumer-runs 0)
+           (pipeline-events '())
            (producer
             (make-asset-pipeline
               #:name (format #f "check-graph-producer-~a" (getpid))
@@ -208,6 +209,20 @@
               #:read-source (lambda (_) #f)
               #:pipelines (list consumer producer)
               #:output-directory (string-append root "/pipeline-graph-output"))))
+      (build-project/report
+        graph-project
+        #:progress (lambda (stage detail)
+                     (when (memq stage '(pipeline-start pipeline))
+                       (set! pipeline-events
+                         (append pipeline-events (list (cons stage detail)))))))
+      (test-equal "project progress reports every composed pipeline in order"
+        '(pipeline-start pipeline pipeline-start pipeline)
+        (map car pipeline-events))
+      (test-equal "project progress reports initial pipeline cache misses"
+        '(miss miss)
+        (map (lambda (event) (cadr (cdr event)))
+             (filter (lambda (event) (eq? (car event) 'pipeline))
+                     pipeline-events)))
       (build-project graph-project)
       (test-equal "build executes each composed pipeline stage once"
         '(1 1) (list producer-runs consumer-runs))
