@@ -269,8 +269,11 @@ input port, and output port by BROWSE-PROJECT."
            renderers))
   (unless (and (list? pipelines)
                (every asset-pipeline? pipelines)
-               (unique-pipeline-names? pipelines))
-    (error "project pipelines must be asset pipelines with unique names"
+               (unique-pipeline-names? pipelines)
+               (every (lambda (pipeline)
+                        (pipeline-references-contained? pipeline pipelines))
+                      pipelines))
+    (error "project pipelines must have unique names and included producers"
            pipelines))
   (unless (filesystem-path-string? output-directory)
     (error "project requires a non-empty output directory" output-directory))

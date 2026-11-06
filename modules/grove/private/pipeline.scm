@@ -10,30 +10,93 @@
   #:use-module (grove private files)
   #:use-module (grove private fingerprint)
   #:use-module (grove private input dependencies)
+  #:use-module (ice-9 binary-ports)
+  #:use-module (ice-9 ftw)
+  #:use-module (ice-9 textual-ports)
+  #:use-module (rnrs bytevectors)
   #:use-module (srfi srfi-1)
   #:export (run-asset-pipelines
             merge-pipeline-artifacts))
 
-;;     Run declared asset pipelines against the shared store. Each
-;;     pipeline's identity includes its name, version, project fingerprint,
-;;     each declared and materialized input path, and each content
-;;     fingerprint. Outputs are indexed under that key, and every output
-;;     blob is content-addressed.
-;;     A hit materializes artifacts without
-;;     running the procedure at all; a miss - changed inputs, edited
-;;     project, corrupted or missing index - runs it. The caller must ensure
-;;     that identical tracked inputs and version produce identical bytes.
-;;     Content addressing verifies stored-byte integrity, not determinism.
+(define (pipeline-output-inputs pipeline)
+  (filter pipeline-output? (asset-pipeline-inputs pipeline)))
 
-(define (pipeline-input-table pipeline)
-  ;;     (declared path -> materialized path), registered so the
-  ;;     fingerprints memoize across the build.
-  (map (lambda (path) (cons path (depend-on! path)))
+(define (pipeline-declaration-order pipelines)
+  (let ((states '()) (ordered '()))
+    (define (state pipeline)
+      (let ((entry (assq pipeline states))) (and entry (cdr entry))))
+    (define (visit pipeline)
+      (case (state pipeline)
+        ((done) #t)
+        ((visiting) (error "asset pipeline dependency cycle"
+                           (asset-pipeline-name pipeline)))
+        (else
+         (set! states (acons pipeline 'visiting states))
+         (for-each
+           (lambda (reference)
+             (let ((producer (pipeline-output-pipeline reference)))
+               (unless (memq producer pipelines)
+                 (error "asset pipeline producer is not included in project"
+                        (asset-pipeline-name producer)
+                        (asset-pipeline-name pipeline)))
+               (visit producer)))
+           (pipeline-output-inputs pipeline))
+         (set! states (assq-set! states pipeline 'done))
+         (set! ordered (append ordered (list pipeline))))))
+    (for-each visit pipelines)
+    ordered))
+
+(define (pipeline-consumed-output? pipeline path pipelines)
+  (any (lambda (consumer)
+         (any (lambda (reference)
+                (and (eq? pipeline (pipeline-output-pipeline reference))
+                     (string=? path (pipeline-output-path reference))))
+              (pipeline-output-inputs consumer)))
+       pipelines))
+
+(define (pipeline-input-table pipeline produced)
+  (map (lambda (input)
+         (if (string? input)
+             (cons input (depend-on! input))
+             (let* ((producer (pipeline-output-pipeline input))
+                    (path (pipeline-output-path input))
+                    (artifacts (assq-ref produced producer))
+                    (artifact (and artifacts
+                                   (find (lambda (candidate)
+                                           (string=? path
+                                             (out:artifact-path/raw candidate)))
+                                         artifacts))))
+               (unless artifact
+                 (error "asset pipeline did not produce referenced output"
+                        (asset-pipeline-name producer) path
+                        (asset-pipeline-name pipeline)))
+               (cons input artifact))))
        (asset-pipeline-inputs pipeline)))
+
+(define (pipeline-input-description input-table)
+  (map (lambda (entry)
+         (let ((input (car entry)) (value (cdr entry)))
+           (if (string? input)
+               (list 'file input value (input-fingerprint value))
+               (list 'output
+                     (asset-pipeline-name (pipeline-output-pipeline input))
+                     (pipeline-output-path input)
+                     (content-fingerprint (out:artifact-content/raw value))))))
+       input-table))
+
+(define (pipeline-input-sources input-table)
+  (delete-duplicates
+    (append-map
+      (lambda (entry)
+        (if (string? (car entry))
+            (list (cdr entry))
+            (or (out:artifact-sources/raw (cdr entry)) '())))
+      input-table)
+    string=?))
 
 (define (pipeline-artifact-sources inputs dependencies)
   (delete-duplicates
-    (append (map cdr inputs) (map car dependencies))
+    (append (pipeline-input-sources inputs) (map car dependencies))
     string=?))
 
 (define (pipeline-identity pipeline project-key input-table)
@@ -42,10 +105,7 @@
           (asset-pipeline-name pipeline)
           (asset-pipeline-version pipeline)
           project-key
-          (map car input-table)
-          (map cdr input-table)
-          (map (lambda (pair) (input-fingerprint (cdr pair)))
-               input-table))))
+          (pipeline-input-description input-table))))
 
 (define (restore-index-artifacts entries sources)
   (let loop ((remaining entries) (artifacts '()))
@@ -60,8 +120,7 @@
 
 (define (valid-cached-artifact-set? artifacts)
   ;; An index can be well-formed Scheme data while still describing an
-  ;; impossible artifact set (for example, duplicate paths or file/directory
-  ;; conflicts). Treat that as a cache miss so the pipeline can regenerate it.
+  ;; impossible artifact set. Treat that as a cache miss and regenerate it.
   (catch #t
     (lambda () (validate-artifacts artifacts) #t)
     (lambda args #f)))
@@ -100,8 +159,6 @@
               (cadddr index))))
 
 (define (read-pipeline-index identity)
-  ;; Runtime Scheme loads are discovered while the procedure runs. Keep their
-  ;; fingerprints in this pipeline-specific index beside its returned outputs.
   (let ((index (read-artifact-index identity valid-pipeline-index?)))
     (and index (list (caddr index) (cadddr index)))))
 
@@ -109,7 +166,41 @@
   (write-artifact-index!
     identity (list 'grove-pipeline-index 1 dependencies entries)))
 
-(define (run-pipeline-procedure pipeline identity inputs cache?)
+(define (materialize-input! workspace pipeline reference artifact)
+  (let* ((relative (pipeline-output-path reference))
+         (key (scheme-datum-fingerprint
+                (list "grove-pipeline-input"
+                      (asset-pipeline-name pipeline)
+                      (asset-pipeline-name
+                        (pipeline-output-pipeline reference))
+                      relative)))
+         (path (string-append workspace "/" key "/" (basename relative)))
+         (parent (dirname path))
+         (content (out:artifact-content/raw artifact)))
+    (ensure-directory parent)
+    (if (string? content)
+        (call-with-output-file path
+          (lambda (port)
+            (set-port-encoding! port "UTF-8")
+            (display content port)))
+        (let ((port (open-file path "wb")))
+          (dynamic-wind
+            (lambda () #t)
+            (lambda () (put-bytevector port content))
+            (lambda () (close-port port)))))
+    path))
+
+(define (resolve-pipeline-input workspace pipeline input-table requested)
+  (let ((entry (find (lambda (candidate)
+                       (pipeline-input-key=? requested (car candidate)))
+                     input-table)))
+    (unless entry
+      (error "asset pipeline asked for an undeclared input" requested))
+    (if (string? (car entry))
+        (cdr entry)
+        (materialize-input! workspace pipeline (car entry) (cdr entry)))))
+
+(define (run-pipeline-procedure pipeline identity inputs workspace cache?)
   (let* ((trace (make-hash-table))
          (artifact-list
           (call-with-input-trace trace
@@ -117,14 +208,12 @@
               (let ((artifacts
                       ((asset-pipeline-procedure pipeline)
                        (lambda (declared)
-                         (or (assoc-ref inputs declared)
-                             (error "asset pipeline asked for an undeclared input"
-                                    declared))))))
+                         (resolve-pipeline-input workspace pipeline inputs
+                                                 declared)))))
                 (unless (and (list? artifacts) (every artifact? artifacts))
                   (error "asset pipeline must return a list of artifacts"
                          (asset-pipeline-name pipeline) artifacts))
                 (validate-artifacts artifacts)
-                ;; Artifact-local sources are tracked like explicit reads.
                 (for-each
                   (lambda (artifact)
                     (for-each depend-on! (or (artifact-sources artifact) '())))
@@ -156,36 +245,74 @@
         (write-pipeline-index identity dependencies entries))
       (list outputs (map car dependencies)))))
 
+(define (remove-tree path)
+  (let ((info (false-if-exception (lstat path))))
+    (when info
+      (if (eq? (stat:type info) 'directory)
+          (begin
+            (for-each (lambda (name)
+                        (unless (member name '("." ".."))
+                          (remove-tree (string-append path "/" name))))
+                      (scandir path))
+            (rmdir path))
+          (delete-file path)))))
+
 (define* (run-asset-pipelines pipelines project-key #:key (cache? #t))
-  "Run every declared asset pipeline; return (artifacts owners runtime-inputs),
-where each owner maps the artifact path to the pipeline name for the
-build state's renderer field, and RUNTIME-INPUTS lists dynamically read
-files, including for pipelines that return no artifacts. CACHE? controls
-reads and writes to the shared content store."
+  "Run declared asset pipelines in dependency order; return published artifacts,
+owners, and runtime inputs. Output references are materialized only on a cache
+miss. CACHE? controls reads and writes to the shared content store."
   (unless (boolean? cache?)
     (error "pipeline cache option must be a boolean" cache?))
-  (let loop ((pipelines pipelines) (artifacts '()) (owners '())
-             (runtime-inputs '()))
-    (if (null? pipelines)
-        (list (reverse artifacts) (reverse owners)
-              (delete-duplicates (reverse runtime-inputs) string=?))
-        (let* ((pipeline (car pipelines))
-               (name (asset-pipeline-name pipeline))
-               (inputs (pipeline-input-table pipeline))
-               (identity (pipeline-identity pipeline project-key inputs))
-               (execution (or (and cache?
-                                   (restore-pipeline-artifacts identity inputs))
-                              (run-pipeline-procedure pipeline identity inputs
-                                                      cache?)))
-               (produced (car execution))
-               (dependencies (cadr execution))
-               (markers (map (lambda (artifact)
-                               (cons (out:artifact-path/raw artifact) name))
-                             produced)))
-          (loop (cdr pipelines)
-                (append (reverse produced) artifacts)
-                (append (reverse markers) owners)
-                (append (reverse dependencies) runtime-inputs))))))
+  (let ((ordered (pipeline-declaration-order pipelines))
+        (workspace #f))
+    (define (ensure-workspace!)
+      (or workspace
+          (set! workspace
+            (mkdtemp (string-append
+                       (or (getenv "TMPDIR") "/tmp")
+                       "/grove-pipeline-XXXXXX"))))
+      workspace)
+    (dynamic-wind
+      (lambda () #t)
+      (lambda ()
+        (let loop ((remaining ordered) (produced '()) (published '())
+                   (owners '()) (runtime-inputs '()))
+          (if (null? remaining)
+              (list (reverse published) (reverse owners)
+                    (delete-duplicates (reverse runtime-inputs) string=?))
+              (let* ((pipeline (car remaining))
+                     (name (asset-pipeline-name pipeline))
+                     (inputs (pipeline-input-table pipeline produced))
+                     (identity (pipeline-identity pipeline project-key inputs))
+                     (execution
+                       (or (and cache?
+                                (restore-pipeline-artifacts identity inputs))
+                           (begin
+                             (when (pair? (pipeline-output-inputs pipeline))
+                               (ensure-workspace!))
+                             (run-pipeline-procedure pipeline identity inputs
+                                                     workspace cache?))))
+                     (all-produced (car execution))
+                     (dependencies (cadr execution))
+                     (published-here
+                       (if (asset-pipeline-publish-consumed? pipeline)
+                           all-produced
+                           (remove
+                             (lambda (artifact)
+                               (pipeline-consumed-output?
+                                 pipeline (out:artifact-path/raw artifact)
+                                 pipelines))
+                             all-produced)))
+                     (markers
+                       (map (lambda (artifact)
+                              (cons (out:artifact-path/raw artifact) name))
+                            published-here)))
+                (loop (cdr remaining)
+                      (acons pipeline all-produced produced)
+                      (append (reverse published-here) published)
+                      (append (reverse markers) owners)
+                      (append (reverse dependencies) runtime-inputs))))))
+      (lambda () (when workspace (remove-tree workspace))))))
 
 ;;     Pipeline outputs shadow same-path artifacts from renderers and
 ;;     the previous state, and outputs retired from a pipeline's

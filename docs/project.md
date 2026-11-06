@@ -397,9 +397,23 @@ receives the same union of pipeline-wide dependencies and artifact-level
 `#:sources`; this keeps affected-artifact reporting conservative. Split
 outputs with independent dependencies into separate pipelines when their
 affected-artifact reporting should remain independent.
-Each value in a project's `#:pipelines` list runs independently: a pipeline
-cannot read another pipeline's output. Put a multi-step conversion in one
-pipeline procedure when later steps consume earlier results.
+Pipeline inputs may also refer to a declared output of another pipeline with
+`pipeline-output`. Grove derives execution order from these references, so
+project list order does not define dependencies. Consumed outputs are private
+intermediates by default; unconsumed outputs become site artifacts. Set
+`#:publish-consumed? #t` on a producer when its consumed outputs should also be
+published. The cache key for a consumer includes the referenced output bytes,
+so a producer rerun caused by changed file inputs does not invalidate its
+consumers when it emits identical bytes. Project code and load-time dependency
+changes still invalidate pipelines through the project fingerprint. Source
+lineage also flows across the reference, allowing build reports to identify
+the original files behind downstream artifacts.
+
+The lookup supplied to a pipeline procedure accepts its declared file paths
+and output references. A referenced output is materialized as a temporary
+file only when the consumer runs; use it during the procedure and do not keep
+the path. Pipelines that do not reference other pipelines keep their existing
+single-step behavior.
 
 Arbitrary Scheme I/O is not intercepted. Declare a file before reading it:
 

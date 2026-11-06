@@ -7,6 +7,7 @@
   #:use-module (grove cache)
   #:use-module (grove input)
   #:use-module (grove output)
+  #:use-module (grove project)
   #:use-module (grove pipeline)
   #:use-module (grove private input cache)
   #:use-module (grove private pipeline)
@@ -21,8 +22,7 @@
 ;;     fingerprint, input fingerprints - misses the shared store, and
 ;;     everything it returns rides the ordinary artifact machinery.
 
-(define root (string-append "/tmp/grove-pipeline-test-"
-                            (number->string (getpid))))
+(define root (mkdtemp "/tmp/grove-pipeline-test-XXXXXX"))
 (define store (string-append root "/store"))
 (define inputs-directory (string-append root "/inputs"))
 (define input-a (string-append inputs-directory "/a.txt"))
@@ -38,8 +38,8 @@
 (define runtime-marker #f)
 
 (setenv "GROVE_STORE_DIR" store)
+(setenv "GROVE_CACHE_DIR" (string-append root "/cache"))
 (current-project-key "project-v1")
-(mkdir root)
 (mkdir inputs-directory)
 (mkdir path-root)
 (mkdir path-directory-a)
@@ -627,6 +627,55 @@
       #f)
     (lambda args #t)))
 
+(let* ((producer-runs 0)
+       (producer
+        (make-asset-pipeline
+          #:name "fanout-producer"
+          #:procedure
+          (lambda (_)
+            (set! producer-runs (1+ producer-runs))
+            (list (make-byte-artifact "private/shared.bin"
+                    (string->utf8 "shared bytes"))))))
+       (reference (pipeline-output producer "private/shared.bin"))
+       (make-consumer
+        (lambda (name output)
+          (make-asset-pipeline
+            #:name name
+            #:inputs (list reference)
+            #:procedure
+            (lambda (in)
+              (list (make-artifact output
+                      (call-with-input-file (in reference) get-string-all)))))))
+       (left (make-consumer "fanout-left" "site/left.txt"))
+       (right (make-consumer "fanout-right" "site/right.txt"))
+       (result (run-asset-pipelines (list right producer left)
+                                    "pipeline-fanout-project")))
+  (test-equal "one producer can feed multiple consumer pipelines"
+    '("site/left.txt" "site/right.txt")
+    (sort (map artifact-path (car result)) string<?))
+  (test-equal "fan-out consumers receive identical producer bytes"
+    '("shared bytes" "shared bytes")
+    (map artifact-content (car result)))
+  (test-equal "a shared producer runs once for all consumers" 1 producer-runs))
+
+(let* ((producer
+        (make-asset-pipeline
+          #:name "missing-output-producer"
+          #:procedure (lambda (_) '())))
+       (reference (pipeline-output producer "missing.txt"))
+       (consumer
+        (make-asset-pipeline
+          #:name "missing-output-consumer"
+          #:inputs (list reference)
+          #:procedure (lambda (_) '()))))
+  (test-assert "a consumer fails clearly when its producer omits a referenced output"
+    (catch #t
+      (lambda ()
+        (run-asset-pipelines (list consumer producer)
+                             "missing-pipeline-output-project")
+        #f)
+      (lambda args #t))))
+
 (test-assert "a pipeline must return artifacts rather than arbitrary values"
   (catch #t
     (lambda ()
@@ -637,6 +686,127 @@
        (current-project-key))
       #f)
     (lambda args #t)))
+
+(let* ((source (string-append inputs-directory "/graph-source.txt"))
+       (producer-runs 0)
+       (producer-content "one")
+       (consumer-runs 0)
+       (producer
+        (make-asset-pipeline
+          #:name "graph-source"
+          #:inputs (list source)
+          #:procedure
+          (lambda (in)
+            (set! producer-runs (1+ producer-runs))
+            (call-with-input-file (in source) get-string-all)
+            (list (make-artifact "private/source.txt"
+                    producer-content)))))
+       (source-ref (pipeline-output producer "private/source.txt"))
+       (consumer #f)
+       (run (lambda ()
+              (run-asset-pipelines (list consumer producer)
+                                   "pipeline-graph-project"))))
+  (define (make-consumer reference)
+    (make-asset-pipeline
+      #:name "graph-consumer"
+      #:inputs (list reference)
+      #:procedure
+      (lambda (in)
+        (set! consumer-runs (1+ consumer-runs))
+        (list (make-artifact "site/final.txt"
+                (string-append "consumed: "
+                  (call-with-input-file (in reference) get-string-all)))))))
+  (call-with-output-file source (lambda (port) (display "initial input" port)))
+  (set! consumer (make-consumer source-ref))
+  (let ((result (run)))
+    (test-equal "pipeline output reference schedules producer before consumer"
+      '("site/final.txt")
+      (map artifact-path (car result)))
+    (test-equal "consumed producer output is private by default"
+      "consumed: one"
+      (artifact-content (car (car result))))
+    (test-equal "the first graph build runs each stage once"
+      '(1 1) (list producer-runs consumer-runs)))
+  (run)
+  (test-equal "warm graph build reuses both stages"
+    '(1 1) (list producer-runs consumer-runs))
+  (call-with-output-file source
+    (lambda (port) (display "changed input, same output" port)))
+  (run)
+  (test-equal "same upstream bytes preserve consumer cache entries"
+    '(2 1) (list producer-runs consumer-runs))
+  (set! producer-content "two")
+  (call-with-output-file source
+    (lambda (port) (display "changed input and output" port)))
+  (let ((result (run)))
+    (test-equal "source content changes propagate through graph edges"
+      '(3 2) (list producer-runs consumer-runs))
+    (test-equal "consumer receives changed producer bytes"
+      "consumed: two"
+      (artifact-content (car (car result)))))
+  (let* ((output-directory (string-append root "/graph-project-output"))
+         (project
+          (make-project
+            #:collect-sources (lambda () '())
+            #:read-source (lambda (_) #f)
+            #:pipelines (list consumer producer)
+            #:output-directory output-directory))
+         (artifacts (build-project project)))
+    (test-equal "project builds publish only the graph's final artifact"
+      '("site/final.txt") (map artifact-path artifacts))
+    (test-equal "project builds publish graph artifacts to disk"
+      "consumed: two"
+      (call-with-input-file (string-append output-directory "/site/final.txt")
+        get-string-all))))
+
+(let* ((producer
+        (make-asset-pipeline
+          #:name "publish-consumed-producer"
+          #:publish-consumed? #t
+          #:procedure
+          (lambda (_)
+            (list (make-artifact "shared/intermediate.txt" "shared")))))
+       (reference (pipeline-output producer "shared/intermediate.txt"))
+       (consumer
+        (make-asset-pipeline
+          #:name "publish-consumed-consumer"
+          #:inputs (list reference)
+          #:procedure
+          (lambda (in)
+            (list (make-artifact "site/also-final.txt"
+                    (call-with-input-file (in reference) get-string-all))))))
+       (artifacts
+        (car (run-asset-pipelines (list consumer producer)
+                                  "pipeline-publish-project"))))
+  (test-equal "a producer can publish an output that is also consumed"
+    '("shared/intermediate.txt" "site/also-final.txt")
+    (sort (map artifact-path artifacts) string<?)))
+
+(test-error "pipeline outputs must name a real producer" #t
+  (pipeline-output #f "not-an-artifact.txt"))
+
+(let* ((producer
+        (make-asset-pipeline
+          #:name "omitted-graph-producer"
+          #:procedure (lambda (_) (list (make-artifact "x.txt" "x")))))
+       (reference (pipeline-output producer "x.txt"))
+       (consumer
+        (make-asset-pipeline
+          #:name "omitted-graph-consumer"
+          #:inputs (list reference)
+          #:procedure (lambda (_) '()))))
+  (test-assert "a graph rejects a producer omitted from the project"
+    (catch #t
+      (lambda ()
+        (run-asset-pipelines (list consumer) "omitted-producer-project")
+        #f)
+      (lambda args #t)))
+  (test-error "project construction rejects a producer omitted from its graph"
+    #t
+    (make-project
+      #:collect-sources (lambda () '())
+      #:read-source (lambda (_) #f)
+      #:pipelines (list consumer))))
 
 (delete-file input-b)
 (test-assert "a missing input fails the pipeline loudly"

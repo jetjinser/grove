@@ -170,7 +170,10 @@ The callback receives the model, input port, and output port."
            (delete-duplicates
              (append-map
                (lambda (pipeline)
-                 (map depend-on! (asset-pipeline-inputs pipeline)))
+                 (append-map
+                   (lambda (input)
+                     (if (string? input) (list (depend-on! input)) '()))
+                   (asset-pipeline-inputs pipeline)))
                (project-pipelines project))
              string=?))
          (pipeline-runtime-sources

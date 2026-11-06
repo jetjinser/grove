@@ -104,13 +104,14 @@ of the analyzed model. A renderer can also invoke an external tool when its
 input is model data, such as source embedded in a page, and the generated asset
 belongs to that content. Use a renderer rule when a custom content node should
 become inline output markup. A pipeline procedure receives an input lookup,
-which resolves each unique declared `#:inputs` path to a materialized path,
-and returns a list of Grove artifacts, which may be empty. Grove
-validates their paths and contents and attaches the pipeline's declared and
-runtime-read dependencies to every artifact returned by that pipeline. This
-is a conservative pipeline-wide dependency set: artifact `#:sources` also
-contribute to the union, so one output may be marked affected when a file was
-declared by another output. Split outputs into separate pipelines when they
-have independent inputs and should have independent affected-artifact
-reporting. See the
+which resolves each unique declared file path or `pipeline-output` reference
+to a materialized path, and returns a list of Grove artifacts, which may be
+empty. Grove validates their paths and contents and attaches the pipeline's
+declared, upstream, and runtime-read dependencies to every artifact returned
+by that pipeline. Consumed outputs remain private by default; unconsumed
+outputs are published. Set `#:publish-consumed? #t` when a consumed output
+should also appear in the site. Pipeline dependencies are conservative within
+each stage: artifact `#:sources` also contribute to the union, so one output
+may be marked affected when a file was declared by another output. Split
+outputs with independent inputs into separate pipelines. See the
 [customization guide](customizing.md) for examples.

@@ -25,7 +25,7 @@ justify a distinct type.
 | HTML presentation | typed product of style, rules, head, home link, navigation, and page fragments | `compose-html-presentations` combines any number of layers left to right; the empty presentation is the unit | HTML renderer |
 | Site outputs | ordinary renderer procedures or cached renderer values | ordered renderer list | project build |
 | Render context | typed wrapper around an association list | `render-context-with` overlays keys; present `#f` remains distinct from absence | rules and renderers |
-| Asset pipelines | typed producer with name, version, inputs, and procedure | ordered independent producers; each producer returns an artifact list | build pipeline with content-addressed caching |
+| Asset pipelines | typed producer with name, version, file or output-reference inputs, and procedure | Grove infers dependency order; consumed outputs are private intermediates, final outputs are site artifacts | build pipeline with content-addressed caching |
 
 An HTML presentation is a product of distinct composition laws: styles and
 head/navigation nodes append in order, later rules override and may delegate,
@@ -79,12 +79,12 @@ protocol.
   associations internally.
 - Asset pipelines and filesystem effects declare dependencies and produce
   artifact lists. They belong to the build interpreter, not to a pure value
-  composition protocol. Pipeline order is execution order, not a dependency
-  graph: one pipeline cannot declare another pipeline's output as an input.
+  composition protocol. A `pipeline-output` reference declares a data edge;
+  Grove infers execution order and content-based invalidation from it. A
+  consumed output stays private unless its producer opts into publishing it.
   Pipeline artifacts take precedence over same-path renderer artifacts;
-  duplicate output paths fail artifact validation. Compose dependent stages
-  inside one producer procedure, or declare a real source file as the shared
-  input to independent producers.
+  duplicate published paths fail artifact validation. Keep unrelated work in
+  separate pipelines when its inputs and cache boundary are independent.
 - The content algebra remains a free set of constructors; sequencing it as a
   monad would conflate content structure with rendering order.
 

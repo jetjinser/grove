@@ -187,10 +187,43 @@ with `depend-on!` before reading or passing it to the tool; see the
 [project guide](project.md#dependencies-and-caching) for how this affects cache
 reuse.
 
-Each value in `#:pipelines` is an independent file-to-artifact generator. A
-pipeline can perform several tool steps inside its procedure, but its outputs
-are not inputs to sibling pipelines. If one generated result feeds another,
-compose those steps in one pipeline procedure.
+Pipelines can be composed by referring to an output directly. Grove infers the
+dependency and runs the producer first, regardless of list order:
+
+```scheme
+(define prepared-page
+  (make-asset-pipeline
+    #:name "prepare-page"
+    #:inputs (list "source.svg")
+    #:procedure
+    (lambda (in)
+      (list (make-artifact "intermediate/page.txt"
+              (call-with-input-file (in "source.svg") get-string-all))))))
+
+(define published-page
+  (let ((page (pipeline-output prepared-page "intermediate/page.txt")))
+    (make-asset-pipeline
+      #:name "publish-page"
+      #:inputs (list page)
+      #:procedure
+      (lambda (in)
+        (list (make-artifact "page.txt"
+                (string-append "published: "
+                  (call-with-input-file (in page) get-string-all))))))))
+
+(make-forester-project
+  #:home "hello"
+  #:pipelines (list published-page prepared-page))
+```
+
+An output referenced by another pipeline is private by default, while the
+final unconsumed output is published. Set `#:publish-consumed? #t` on a
+producer to publish its outputs as well. The referenced file is materialized
+for the consumer on a cache miss and removed after the pipeline graph runs;
+do not retain that temporary path or make output bytes depend on its temporary
+absolute location. Separate pipelines provide independent cache boundaries,
+so keep a multi-step conversion in one procedure when it does not need
+independent reuse.
 
 ### Cache identity
 
