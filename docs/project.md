@@ -409,11 +409,21 @@ changes still invalidate pipelines through the project fingerprint. Source
 lineage also flows across the reference, allowing build reports to identify
 the original files behind downstream artifacts.
 
+Pipeline cache indices and content blobs live in Grove's per-user store, but
+file inputs retain their resolved paths in the cache identity because a
+pipeline may use the materialized path itself. Identical outputs still share
+content-addressed blobs across checkouts; a pipeline that reads the same
+relative file from a different checkout may therefore rerun while reusing the
+stored output bytes. Document-analysis cache entries have a separate,
+path-normalized sharing contract.
+
 The lookup supplied to a pipeline procedure accepts its declared file paths
 and output references. A referenced output is materialized as a temporary
 file only when the consumer runs; use it during the procedure and do not keep
 the path. Pipelines that do not reference other pipelines keep their existing
-single-step behavior.
+single-step behavior. Since a reference must point to an already constructed
+pipeline value, forward and cyclic references cannot be expressed by this
+public API.
 
 Arbitrary Scheme I/O is not intercepted. Declare a file before reading it:
 

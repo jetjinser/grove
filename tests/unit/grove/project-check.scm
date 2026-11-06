@@ -180,7 +180,43 @@
         (build-project uncached-project)
         (build-project uncached-project)
         (test-equal "disabling project caching also disables pipeline reuse"
-          6 pipeline-runs))))
+          6 pipeline-runs)))
+    (let* ((producer-runs 0)
+           (consumer-runs 0)
+           (producer
+            (make-asset-pipeline
+              #:name (format #f "check-graph-producer-~a" (getpid))
+              #:inputs (list pipeline-input)
+              #:procedure
+              (lambda (in)
+                (set! producer-runs (+ producer-runs 1))
+                (list (make-artifact "private/check-input.txt"
+                        (call-with-input-file (in pipeline-input) get-string-all))))))
+           (reference (pipeline-output producer "private/check-input.txt"))
+           (consumer
+            (make-asset-pipeline
+              #:name (format #f "check-graph-consumer-~a" (getpid))
+              #:inputs (list reference)
+              #:procedure
+              (lambda (in)
+                (set! consumer-runs (+ consumer-runs 1))
+                (list (make-artifact "site/check-result.txt"
+                        (call-with-input-file (in reference) get-string-all))))))
+           (graph-project
+            (make-project
+              #:collect-sources (lambda () '())
+              #:read-source (lambda (_) #f)
+              #:pipelines (list consumer producer)
+              #:output-directory (string-append root "/pipeline-graph-output"))))
+      (build-project graph-project)
+      (test-equal "build executes each composed pipeline stage once"
+        '(1 1) (list producer-runs consumer-runs))
+      (test-equal "build publishes only the composed graph's final output"
+        '("site/check-result.txt")
+        (map artifact-path (build-project graph-project)))
+      (check-project graph-project)
+      (test-equal "project checks execute each composed stage without cache reuse"
+        '(2 2) (list producer-runs consumer-runs))))
   (lambda ()
     (system* "rm" "-rf" root)))
 (test-end "project checks")
