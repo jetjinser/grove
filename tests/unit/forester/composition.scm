@@ -321,7 +321,8 @@
   (test-assert "default HTML backmatter shows transclusion context"
     (and (string-contains (assoc-ref html "reusable")
                           "class=\"backmatter context\"")
-         (string-contains (assoc-ref html "reusable") "<h2>Context</h2>")
+         (string-contains (assoc-ref html "reusable")
+                          "<h2 class=\"forest-tree-title\">Context</h2>")
          (string-contains (assoc-ref html "reusable")
                           "data-tree-id=\"host\"")
          (string-contains (assoc-ref html "reusable")
@@ -444,7 +445,8 @@
     '("idea")
     (map site-page-id (related-pages forest "source")))
   (test-assert "HTML Related lists linked non-reference pages"
-    (and (string-contains (assoc-ref html "source") "<h2>Related</h2>")
+    (and (string-contains (assoc-ref html "source")
+                          "<h2 class=\"forest-tree-title\">Related</h2>")
          (string-contains (assoc-ref html "source")
                           "data-tree-id=\"idea\"")
          (string-contains (assoc-ref html "source")
@@ -456,7 +458,8 @@
     '("citation")
     (map site-page-id (reference-pages forest "source")))
   (test-assert "HTML References shows the transcluded tree's citation"
-    (and (string-contains (assoc-ref html "source") "<h2>References</h2>")
+    (and (string-contains (assoc-ref html "source")
+                          "<h2 class=\"forest-tree-title\">References</h2>")
          (string-contains (assoc-ref html "source")
                           "data-tree-id=\"citation\"")
          (string-contains (assoc-ref html "source")
