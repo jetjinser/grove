@@ -59,6 +59,18 @@
   '((section "Title" "\n" "Subsection"))
   "@section{Title\nSubsection}")
 
+(test-parse "Multiline body removes its shared indentation and boundary lines"
+  '((code "alpha" "\n" "  " "beta"))
+  "@code{\n    alpha\n      beta\n  }")
+
+(test-parse "Inline first body line keeps its leading space"
+  '((code " alpha" "\n" "beta "))
+  "@code{ alpha\n    beta }")
+
+(test-parse "Nested body commands use the enclosing body's margin"
+  '((code (bold "alpha") "\n" "beta"))
+  "@code{\n  @bold{alpha}\n  beta\n}")
+
 
 (test-parse "Command with positional arguments"
   '((item #:style 'bold "content"))
@@ -162,7 +174,7 @@
   "@cmd{   }")
 
 (test-parse "Body with only newline"
-  '((cmd))
+  '((cmd "\n"))
   "@cmd{\n}")
 
 (test-parse "Body with leading newline and text"
@@ -170,7 +182,7 @@
   "@cmd{\nhello}")
 
 (test-parse "Body with leading newline, spaces, and text"
-  '((cmd "  hello"))
+  '((cmd "hello"))
   "@cmd{\n  hello}")
 
 (test-parse "Body with leading space then newline"

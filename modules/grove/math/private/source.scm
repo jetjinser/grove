@@ -7,6 +7,7 @@
   #:use-module (grove ir)
   #:use-module (grove math private syntax)
   #:use-module (grove math diagnostic)
+  #:use-module (language scribble source)
   #:use-module (srfi srfi-1)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-13)
@@ -61,10 +62,18 @@
             (set-source-properties! text `((segments . ,(reverse segments)))))
           text)
         (let* ((fragment (car fragments))
-               (text (content-verbatim-string (list fragment)))
                (properties (cond ((string? fragment) (source-properties fragment))
                                  ((content-text? fragment) (source-properties (ir:content-text-value/raw fragment)))
-                                 ((content-layout? fragment) (source-properties (ir:content-layout-raw/raw fragment))))))
+                                 ((content-layout? fragment) (source-properties (ir:content-layout-raw/raw fragment)))))
+               (scribble (scribble-source-property properties 'scribble))
+               (newline? (and (pair? scribble) (eq? (car scribble) 'newline)))
+               (text (if newline?
+                         (string-append
+                           (or (scribble-source-property properties
+                                 'scribble-trailing-space)
+                               "")
+                           (cadr scribble))
+                         (content-verbatim-string (list fragment)))))
           (collect (cdr fragments) (+ offset (string-length text)) (cons text texts)
             (cons (cons offset properties) segments))))))
 

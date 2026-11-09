@@ -700,7 +700,31 @@
        (form (find pair? (scribble-parse (open-input-string text)))))
   (test-equal "Unicode and tab-expanded columns do not corrupt source slices"
     "(list \"λ\"\t3)" (source-text (source-properties (cadr form)))))
+(let* ((source "@code{\n    alpha\n      beta\n  }")
+       (form (car (scribble-parse (open-input-string source))))
+       (body (cdr form))
+       (newline (cadr body))
+       (indent (caddr body)))
+  (test-equal "deindented source keeps a marked relative indentation fragment"
+    'indentation (scribble-source-property (source-properties indent) 'scribble))
+  (test-equal "deindented source records the original following line margin"
+    '(newline "\n      ")
+    (scribble-source-property (source-properties newline) 'scribble))
+  (test-equal "source-text of retained indentation points to its exact source slice"
+    "  " (source-text (source-properties indent)))
+  (test-equal "source-range remains available on normalized text fragments"
+    '(2 5 2 10)
+    (let ((range (source-range (source-properties (car body)))))
+      (list (assq-ref range 'line) (assq-ref range 'column)
+            (assq-ref range 'end-line) (assq-ref range 'end-column)))))
 (test-equal "missing reader ranges do not invent source text" #f (source-text #f))
+
+(let* ((env (default-environment scribble))
+       (source
+         "@use-modules[(language scribble source)]\n@(define-syntax inspect-indent\n  (lambda (stx)\n    (syntax-case stx ()\n      ((_ first newline indent last)\n       (let ((indent-kind\n               (scribble-source-property (syntax-source #'indent) 'scribble))\n             (newline-info\n               (scribble-source-property (syntax-source #'newline) 'scribble)))\n         (unless (and (eq? indent-kind 'indentation) (pair? newline-info) (eq? (car newline-info) 'newline)) (syntax-violation #f \"metadata missing\" stx)) #'(verbatim \"source metadata visible to macro\"))))))\n@inspect-indent{\n    alpha\n      beta\n  }")
+       (document (evaluate-document env source)))
+  (test-equal "source properties resolve from macro argument syntax locations"
+    "source metadata visible to macro" (content->text document)))
 
 (call-with-temporary-source
   "@(define-module (tests literate-provider) #:export (answer))\n@use-modules[(language scribble source)]\n@(define answer \"one\")\nProvider."

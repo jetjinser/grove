@@ -2,7 +2,7 @@
 ;;; SPDX-License-Identifier: GPL-3.0-or-later
 
 (define-module (language scribble source)
-  #:export (source-range source-text))
+  #:export (scribble-source-property source-range source-text))
 
 (define current-ranges (make-parameter #f))
 
@@ -53,3 +53,9 @@ an expression are not included. No file is reopened."
        (substring (assq-ref properties 'source-buffer)
                   (assq-ref properties 'start-offset)
                   (assq-ref properties 'end-offset)))))
+
+(define (scribble-source-property properties name)
+  "Return NAME from SOURCE-PROPERTIES or SYNTAX-SOURCE, if available.
+When called during Scribble evaluation, syntax locations are resolved against
+that evaluation's parsed source ranges."
+  (assq-ref (complete-properties properties) name))
