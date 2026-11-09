@@ -367,14 +367,15 @@
                           "<span>Algebra &amp; limits</span>")
          (not (string-contains limits-html "<span>limits</span>"))))
   (test-assert "backlinks have a semantic heading"
-    (string-contains limits-html "<h2>Backlinks</h2>"))
+    (string-contains limits-html
+      "<h2 class=\"forest-tree-title\">Backlinks</h2>"))
   (test-assert "backmatter headings use the renderer message catalog"
     (and (string-contains
            (assoc-ref (render-test-html
                         (make-forest (make-site (list algebra limits)))
                         #:messages (backmatter-messages "Link sources"))
                       "limits")
-           "<h2>Link sources</h2>")
+           "<h2 class=\"forest-tree-title\">Link sources</h2>")
          (string-contains
            (assoc-ref (site->text
                         (make-forest (make-site (list algebra limits)))
@@ -1745,12 +1746,23 @@
                              #:routes (make-html-routes #:home-page "paper")
                              #:mathjax-src #f))
                "paper"))
+       (collapsible-html (assoc-ref
+                           (site->html forest
+                             #:options (make-html-options
+                                         #:routes (make-html-routes #:home-page "paper")
+                                         #:mathjax-src #f
+                                         #:backmatter-details? #t))
+                           "paper"))
        (text (assoc-ref (site->text forest) "paper"))
        (gemtext (assoc-ref (site->gemtext forest) "paper")))
   (test-assert "HTML renders DOI IRIs as resolver links"
-    (and (string-contains html "class=\"describes\"")
+    (and (string-contains html
+           "<aside class=\"backmatter describes\"><h2 class=\"forest-tree-title\">Describes</h2>")
          (string-contains html "href=\"https://doi.org/10.1146/annurev.fluid.29.1.123\"")
          (string-contains html "doi:10.1146/annurev.fluid.29.1.123")))
+  (test-assert "described entities follow the collapsible backmatter option"
+    (string-contains collapsible-html
+      "<aside class=\"backmatter forest-tree-block describes\"><details open=\"open\"><summary><h2 class=\"forest-tree-title\">Describes</h2>"))
   (test-assert "text and Gemtext expose described entity links"
     (and (string-contains text "https://doi.org/10.1146/annurev.fluid.29.1.123")
          (string-contains gemtext "=> https://doi.org/10.1146/annurev.fluid.29.1.123 doi:10.1146/annurev.fluid.29.1.123"))))

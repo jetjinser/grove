@@ -397,7 +397,7 @@ top-level taxon element; pages without one contribute nothing."
            (summary (h2 (@ (class "forest-tree-title")) ,label))
            (div (@ (class "forest-tree-content")) ,@content)))
       `(aside (@ (class ,(string-append "backmatter " class)))
-         (h2 ,label)
+         (h2 (@ (class "forest-tree-title")) ,label)
          ,@content)))
 
 (define (backlinks-sxml forest page routes label details? metadata-items context)
@@ -534,20 +534,22 @@ top-level taxon element; pages without one contribute nothing."
             (html-asset-url routes path))
         suffix))))
 
-(define (describes-sxml page context)
+(define (describes-sxml page context details?)
   (let ((iris (or (assq-ref (site-page-metadata page) 'describes) '())))
     (if (null? iris)
         '()
         (list
-          `(section (@ (class "describes"))
-             (h2 ,(interface-message 'describes context))
-             (ul
-               ,@(map (lambda (iri)
-                        (let ((href (entity-iri-href iri)))
-                          `(li ,(if href
-                                    `(a (@ (href ,href)) (code ,iri))
-                                    `(code ,iri)))))
-                      iris)))))))
+          (backmatter-section-sxml
+            "describes" (interface-message 'describes context)
+            (list
+              `(ul
+                 ,@(map (lambda (iri)
+                          (let ((href (entity-iri-href iri)))
+                            `(li ,(if href
+                                      `(a (@ (href ,href)) (code ,iri))
+                                      `(code ,iri)))))
+                        iris)))
+            details?)))))
 
 (define (content-has-tex-math? content)
   (cond
@@ -683,7 +685,7 @@ to the lane, and an in-place numbered marker links to it."
                                         (title-decoration forest page)
                                         '())))
          (article (append (list tree)
-                          (describes-sxml page context)
+                          (describes-sxml page context backmatter-details?)
                           (if lane (side-lane-sxml lane) '())
                           (backmatter-sxml forest page routes backmatter
                                            labels reference-taxon-id
