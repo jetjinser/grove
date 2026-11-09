@@ -707,16 +707,27 @@
        (indent (caddr body)))
   (test-equal "deindented source keeps a marked relative indentation fragment"
     'indentation (scribble-source-property (source-properties indent) 'scribble))
-  (test-equal "deindented source records the original following line margin"
+  (test-equal "Scribble newline metadata records the original line break and margin"
     '(newline "\n      ")
     (scribble-source-property (source-properties newline) 'scribble))
-  (test-equal "source-text of retained indentation points to its exact source slice"
-    "  " (source-text (source-properties indent)))
+  (test-equal "newline source span includes its consumed following indentation"
+    "\n      " (source-text (source-properties newline)))
+  (test-equal "source lookup keeps synthetic indentation tied to authored spaces"
+    "      " (source-text (source-properties indent)))
   (test-equal "source-range remains available on normalized text fragments"
     '(2 5 2 10)
     (let ((range (source-range (source-properties (car body)))))
       (list (assq-ref range 'line) (assq-ref range 'column)
             (assq-ref range 'end-line) (assq-ref range 'end-column)))))
+(let* ((source "@code{\n  alpha  \n    beta\n}")
+       (body (cdr (car (scribble-parse (open-input-string source)))))
+       (newline (find (lambda (fragment)
+                        (and (string? fragment)
+                             (scribble-source-property
+                               (source-properties fragment) 'scribble)))
+                      body)))
+  (test-equal "newline source span covers trailing space, EOL, and next indentation"
+    "  \n    " (source-text (source-properties newline))))
 (test-equal "missing reader ranges do not invent source text" #f (source-text #f))
 
 (let* ((env (default-environment scribble))

@@ -66,14 +66,11 @@
                                  ((content-text? fragment) (source-properties (ir:content-text-value/raw fragment)))
                                  ((content-layout? fragment) (source-properties (ir:content-layout-raw/raw fragment)))))
                (scribble (scribble-source-property properties 'scribble))
+               (indentation? (eq? scribble 'indentation))
                (newline? (and (pair? scribble) (eq? (car scribble) 'newline)))
-               (text (if newline?
-                         (string-append
-                           (or (scribble-source-property properties
-                                 'scribble-trailing-space)
-                               "")
-                           (cadr scribble))
-                         (content-verbatim-string (list fragment)))))
+               (text (cond (indentation? "")
+                           (newline? (cadr scribble))
+                           (else (content-verbatim-string (list fragment))))))
           (collect (cdr fragments) (+ offset (string-length text)) (cons text texts)
             (cons (cons offset properties) segments))))))
 

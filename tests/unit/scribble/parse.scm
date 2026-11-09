@@ -63,9 +63,53 @@
   '((code "alpha" "\n" "  " "beta"))
   "@code{\n    alpha\n      beta\n  }")
 
-(test-parse "Inline first body line keeps its leading space"
-  '((code " alpha" "\n" "beta "))
-  "@code{ alpha\n    beta }")
+(test-parse "Inline first-line column controls following indentation"
+  '((foo "x" "\n" " " "y"))
+  "@foo{x\n      y}")
+
+(test-parse "Whitespace before line breaks is discarded"
+  '((foo "a" "\n" "b"))
+  "@foo{a  \n  b  \n}")
+
+(test-parse "Indentation before a boundary newline is discarded"
+  '((foo "hello"))
+  "@foo{ \nhello}")
+
+(test-parse "Blank lines keep their newlines without indentation spaces"
+  '((foo "\n" "\n"))
+  "@foo{\n  \n}")
+
+(test-parse "Irregular indentation is relative to the least column"
+  '((foo "  " "a" "\n" " " "b" "\n" "c"))
+  "@foo{\n    a\n   b\n  c}")
+
+(test-parse "Tab indentation uses Scribble's eight-column stops"
+  '((foo "alpha" "\n" "  " "beta"))
+  "@foo{\n\talpha\n\t  beta\n\t}")
+
+(test-parse "CRLF boundary lines follow Scribble deindentation"
+  '((foo "alpha" "\n" "beta"))
+  "@foo{\r\n  alpha\r\n  beta\r\n}")
+
+(test-parse "A discarded line comment keeps its newline column marker"
+  '((foo "alpha" "\n" "  " "beta"))
+  "@foo{\n  alpha\n    @; discarded comment\n  beta\n}")
+
+(test-parse "A comment at column zero participates in Scribble's body margin"
+  '((foo "  " "alpha" "\n" "beta"))
+  "@foo{\n  alpha\n@; discarded comment\n  beta\n}")
+
+(test-parse "An inline body comment does not split adjacent text"
+  '((foo "alpha beta"))
+  "@foo{alpha @; discarded comment\n  beta}")
+
+(test-parse "Inline body comments preserve preceding spaces"
+  '((foo "alpha  beta"))
+  "@foo{\n  alpha  @; discarded comment\n  beta\n}")
+
+(test-parse "@|| preserves selected line-boundary spaces"
+  '((foo " bar " "\n" " baz"))
+  "@foo{\n  @|| bar @||\n  @|| baz}")
 
 (test-parse "Nested body commands use the enclosing body's margin"
   '((code (bold "alpha") "\n" "beta"))
@@ -186,7 +230,7 @@
   "@cmd{\n  hello}")
 
 (test-parse "Body with leading space then newline"
-  '((cmd " " "\n" "hello"))
+  '((cmd "hello"))
   "@cmd{ \nhello}")
 
 

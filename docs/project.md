@@ -494,6 +494,21 @@ The Scribble reader preserves ordinary Scheme syntax, including dotted pairs,
 rest arguments, quoted data, and macros using `...` or `#'`. Content source
 annotations apply to explicit at-commands rather than every nested Scheme pair.
 
+For `{...}` and pipe-delimited bodies, Grove follows Scribble's reader rules
+for trimming boundary lines, measuring the least indentation column, expanding
+tabs at eight-column stops, dropping trailing horizontal space before a line
+break, preserving blank lines, and honoring `@||` whitespace boundaries. The
+implementation is checked against Racket's `scribble/reader` on adversarial
+examples and generated indentation cases. Newline source spans cover the
+original trailing space, line ending, and indentation consumed from the next
+line, as in Scribble. Grove keeps a generated indentation fragment's source
+range on the authored indentation characters so its source lookup can
+distinguish that fragment from the preceding newline. This is a deliberate
+difference from Racket's shared syntax location: Guile drops syntax properties
+and Grove recovers them by source location. Grove implements the Scribble
+reader forms it supports, not Racket's customizable readtables or every
+reader extension.
+
 A document (`.plant`) evaluates each top-level `@(...)` form in a page
 environment, so a bare `@(define (helper) …)` at the top level binds
 `helper` for every later form in that page — no `begin` wrapper is needed.

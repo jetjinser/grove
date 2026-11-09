@@ -117,9 +117,28 @@
 (define (horizontal-space? ch)
   (memv ch '(#\space #\tab)))
 
+(define scribble-whitespace-boundary (list 'scribble-whitespace-boundary))
+(define scribble-comment-boundary (list 'scribble-comment-boundary))
+(define scribble-column-marker (list 'scribble-column-marker))
+
+(define (whitespace-boundary? value)
+  (eq? value scribble-whitespace-boundary))
+
+(define (comment-boundary? value)
+  (eq? value scribble-comment-boundary))
+
+(define (make-column-marker column properties)
+  (vector scribble-column-marker column properties))
+
+(define (column-marker? value)
+  (and (vector? value) (= (vector-length value) 3)
+       (eq? (vector-ref value 0) scribble-column-marker)))
+
 (define (source-newline? value)
   (and (string? value) (string=? value "\n")
-       (assq-ref (source-properties value) 'scribble-newline)))
+       (or (assq-ref (source-properties value) 'scribble-newline)
+           (let ((scribble (assq-ref (source-properties value) 'scribble)))
+             (and (pair? scribble) (eq? (car scribble) 'newline))))))
 
 (define (split-body-lines fragments)
   (let loop ((fragments fragments) (line '()) (lines '()))
@@ -133,9 +152,46 @@
 
 (define (line-content? fragments)
   (any (lambda (fragment)
-         (or (not (string? fragment))
-             (string-any (lambda (ch) (not (horizontal-space? ch))) fragment)))
+         (or (and (not (string? fragment))
+                  (not (or (whitespace-boundary? fragment)
+                           (comment-boundary? fragment))))
+             (and (string? fragment)
+                  (string-any (lambda (ch)
+                                (not (or (horizontal-space? ch)
+                                         (char=? ch #\return))))
+                              fragment))))
        fragments))
+
+(define (remove-whitespace-boundaries fragments)
+  (filter (lambda (fragment) (not (whitespace-boundary? fragment)))
+          fragments))
+
+(define (merge-comment-separated-strings fragments)
+  (let loop ((rest fragments) (result '()))
+    (cond
+      ((and (pair? rest)
+            (pair? (cdr rest))
+            (pair? (cddr rest))
+            (string? (car rest))
+            (comment-boundary? (cadr rest))
+            (string? (caddr rest)))
+       (let* ((left (car rest))
+              (right (caddr rest))
+              (merged (string-append left right))
+              (right-properties (source-properties right)))
+         (when right-properties
+           (for-each
+             (lambda (key)
+               (let ((field (assq key right-properties)))
+                 (when field
+                   (set-source-property! merged key (cdr field)))))
+             '(end-line end-column end-offset)))
+         (loop (cdddr rest) (cons merged result))))
+      ((pair? rest)
+       (if (comment-boundary? (car rest))
+           (loop (cdr rest) result)
+           (loop (cdr rest) (cons (car rest) result))))
+      (else (reverse result)))))
 
 (define (line-indent fragments)
   (let loop ((fragments fragments) (indent ""))
@@ -182,23 +238,6 @@
              properties)))
     slice))
 
-(define (line-strip-prefix fragments count)
-  (let loop ((fragments fragments) (remaining count))
-    (cond
-      ((or (zero? remaining) (null? fragments)) fragments)
-      ((not (string? (car fragments))) fragments)
-      (else
-       (let* ((text (car fragments))
-              (spaces (let scan ((i 0))
-                        (if (and (< i (string-length text))
-                                 (horizontal-space? (string-ref text i)))
-                            (scan (+ i 1)) i)))
-              (take (min remaining spaces)))
-         (if (= take (string-length text))
-             (loop (cdr fragments) (- remaining take))
-             (cons (source-slice text take (string-length text))
-                   (cdr fragments))))))))
-
 (define (line-take-prefix fragments count)
   (let loop ((fragments fragments) (remaining count) (prefix '()))
     (cond
@@ -220,138 +259,261 @@
                (cons (source-slice text take (string-length text))
                      (cdr fragments)))))))))
 
+(define (line-indent-width fragments)
+  (string-fold
+    (lambda (ch column)
+      (if (char=? ch #\tab)
+          (+ column (- 8 (modulo column 8)))
+          (+ column 1)))
+    0 (line-indent fragments)))
+
 (define (line-strip-trailing-space fragments)
-  (let loop ((fragments (reverse fragments)) (suffix '()))
+  (let loop ((fragments (reverse fragments)) (suffix '())
+             (suffix-properties #f))
     (cond
       ((null? fragments)
-       (values '() (list->string suffix)))
+       (values '() (list->string suffix) suffix-properties))
       ((not (string? (car fragments)))
-       (values (reverse fragments) (list->string suffix)))
+       (values (reverse fragments) (list->string suffix) suffix-properties))
       (else
        (let* ((text (car fragments))
               (start (let scan ((i (- (string-length text) 1)))
                        (if (and (>= i 0)
-                                (horizontal-space? (string-ref text i)))
+                                (or (horizontal-space? (string-ref text i))
+                                    (char=? (string-ref text i) #\return)))
                            (scan (- i 1)) (+ i 1)))))
          (cond
            ((= start (string-length text))
-            (values (reverse fragments) (list->string suffix)))
+            (values (reverse fragments) (list->string suffix)
+                    suffix-properties))
            ((zero? start)
             (loop (cdr fragments)
-                  (append (string->list text) suffix)))
+                  (append (string->list text) suffix)
+                  (source-properties text)))
            (else
-            (values (append (reverse (cdr fragments))
-                            (if (zero? start) '()
-                                (list (source-slice text 0 start))))
-                    (list->string
-                      (append (string->list (substring text start)) suffix))))))))))
+            (let ((trailing (source-slice text start (string-length text))))
+              (values (append (reverse (cdr fragments))
+                              (list (source-slice text 0 start)))
+                      (list->string
+                        (append (string->list trailing) suffix))
+                      (source-properties trailing))))))))))
+
+(define (set-source-span! value start-properties end-properties)
+  (when (and start-properties end-properties)
+    (for-each
+      (lambda (key)
+        (let ((field (assq key start-properties)))
+          (when field (set-source-property! value key (cdr field)))))
+      '(filename line column offset start-offset source-buffer))
+    (for-each
+      (lambda (key)
+        (let ((field (assq key end-properties)))
+          (when field (set-source-property! value key (cdr field)))))
+      '(end-line end-column end-offset))))
+
+(define (line-indent-end-properties line)
+  (let* ((indent (line-indent line))
+         (prefix (call-with-values
+                   (lambda () (line-take-prefix line (string-length indent)))
+                   (lambda (prefix _rest) prefix))))
+    (and (pair? prefix) (source-properties (last prefix)))))
 
 (define (mark-indentation value)
   (set-source-property! value 'scribble 'indentation)
   value)
 
-(define (decorate-newline newline following-indent)
+(define (decorate-newline newline original-newline)
   (when newline
     (set-source-property!
       newline 'scribble
-      (list 'newline (string-append "\n" following-indent))))
+      (list 'newline original-newline)))
   newline)
 
-(define (normalize-body fragments)
-  "Remove Scribble's body margin while retaining original indentation metadata."
+(define (normalize-body fragments body-start)
+  "Normalize body lines using Scribble's column-marker indentation rules."
   (let* ((lines (split-body-lines fragments))
          (has-content? (any (lambda (entry) (line-content? (car entry))) lines))
          (has-newline? (any cadr lines)))
-    (if (or (not has-content?) (not has-newline?))
-        fragments
-        (let* ((remove-opening?
-                 (and (pair? lines) (null? (caar lines)) (cadar lines)))
+    (if (and (not has-newline?)
+             (not (any column-marker? fragments)))
+        (merge-comment-separated-strings
+          (remove-whitespace-boundaries fragments))
+        (let* ((only-newlines? (not has-content?))
+               (remove-opening?
+                 (and (not only-newlines?) (pair? lines)
+                      (not (line-content? (caar lines))) (cadar lines)))
                (remove-closing?
-                 (and (> (length lines) 1)
+                 (and (not only-newlines?) (> (length lines) 1)
                       (not (line-content? (car (last lines))))
                       (cadr (list-ref lines (- (length lines) 2)))))
                (start (if remove-opening? 1 0))
                (end (if remove-closing? (- (length lines) 1) (length lines)))
                (selected (take (drop lines start) (- end start)))
-               (inline-first?
-                 (and (pair? selected) (line-content? (caar selected))
-                      (not remove-opening?)))
-               (indents
-                 (filter-map
-                   (lambda (entry index)
-                     (and (line-content? (car entry))
-                          (not (and inline-first? (= index 0)))
-                          (line-indent (car entry))))
-                   selected (iota (length selected))))
-               (margin (if (null? indents) ""
-                           (let ((shortest
-                                   (apply min (map string-length indents))))
-                             (if (zero? shortest) ""
-                                 (substring (car indents) 0 shortest)))))
-               (original-lines (drop lines start)))
-          (let loop ((lines selected) (index 0) (result '()))
-            (if (null? lines)
-                (append-map identity (reverse result))
-                (let* ((entry (car lines))
-                       (line (car entry))
-                       (newline (cadr entry))
-                       (content? (line-content? line))
-                       (preserve-leading-space?
-                         (and (= index 0) (not content?) (pair? line)))
-                       (remove-count
-                         (cond ((and inline-first? (= index 0)) 0)
-                               (preserve-leading-space? 0)
-                               ((not content?) (string-length (line-indent line)))
-                               ((string-prefix? margin (line-indent line))
-                                (string-length margin))
-                               (else 0)))
-                       (rest (line-strip-prefix line remove-count))
-                       (deindent-line?
-                         (and content?
-                              (not (and inline-first? (= index 0)))))
-                       (relative-source rest)
-                       (relative-indent
-                         (if deindent-line? (line-indent relative-source) ""))
-                       (indent-values
-                         (call-with-values
-                           (lambda ()
-                             (line-take-prefix relative-source
-                               (string-length relative-indent)))
-                           list))
-                       (indent-pieces (car indent-values))
-                       (rest (if deindent-line?
-                                 (cadr indent-values)
-                                 relative-source))
-                       (closing-newline?
-                         (and remove-closing?
-                              (= index (- (length selected) 1))))
-                       (values (if (and newline (not closing-newline?)
-                                        (not preserve-leading-space?))
-                                   (call-with-values
-                                     (lambda () (line-strip-trailing-space rest))
-                                     list)
-                                   (list rest "")))
-                       (rest (car values))
-                       (trailing (cadr values))
-                       (next-line
-                         (and (< (+ index 1) (length original-lines))
-                              (list-ref original-lines (+ index 1))))
-                       (newline (decorate-newline
-                                  (and (not closing-newline?) newline)
-                                  (if next-line
-                                      (line-indent (car next-line)) "")))
-                       (pieces
-                         (append
-                           (map mark-indentation indent-pieces)
-                           rest
-                           (if (and newline (not (string-null? trailing)))
-                               (begin
-                                 (set-source-property! newline
-                                   'scribble-trailing-space trailing)
-                                 '())
-                               '())
-                           (if newline (list newline) '()))))
-                  (loop (cdr lines) (+ index 1) (cons pieces result)))))))))
+               ;; Scribble's initial marker is the source column immediately
+               ;; after `{`.  A leading newline discards that marker.
+               (columns
+                 (append
+                   (if (and (not (null? lines))
+                            (line-content? (caar lines))
+                            (assq-ref body-start 'column))
+                       (list (assq-ref body-start 'column))
+                       '())
+                   (append-map
+                     (lambda (entry)
+                       (filter-map
+                         (lambda (fragment)
+                           (and (column-marker? fragment)
+                                (vector-ref fragment 1)))
+                         (car entry)))
+                     lines)
+                   (append-map
+                     (lambda (entry)
+                       (let* ((line (car entry))
+                              (markers
+                                (filter-map
+                                  (lambda (fragment)
+                                    (and (column-marker? fragment)
+                                         (vector-ref fragment 1)))
+                                  line)))
+                         (if (or (pair? markers) (not (line-content? line)))
+                             '()
+                             (list (line-indent-width line)))))
+                     (if (pair? lines) (cdr lines) '()))))
+               (margin (if (null? columns) 0 (apply min columns)))
+               (result
+                 (if only-newlines?
+                     (let loop ((rest lines) (next-lines (cdr lines))
+                                (out '()))
+                       (if (null? rest)
+                           (reverse out)
+                           (let* ((entry (car rest))
+                                  (newline (cadr entry))
+                                  (next-indent
+                                    (if (pair? next-lines)
+                                        (line-indent (caar next-lines)) "")))
+                             (call-with-values
+                               (lambda ()
+                                 (line-strip-trailing-space (car entry)))
+                               (lambda (line trailing trailing-properties)
+                                 (let ((out
+                                         (if newline
+                                             (let ((newline
+                                                     (decorate-newline newline
+                                                       (string-append trailing
+                                                         "\n" next-indent))))
+                                               (set-source-span! newline
+                                                 (or trailing-properties
+                                                     (source-properties newline))
+                                                 (and (pair? next-lines)
+                                                   (line-indent-end-properties
+                                                     (caar next-lines))))
+                                               (cons newline out))
+                                             out)))
+                                   (loop (cdr rest)
+                                     (if (pair? next-lines)
+                                         (cdr next-lines) '())
+                                     out)))))))
+                     (let loop ((rest selected) (index start) (out '()))
+                       (if (null? rest)
+                           (append-map identity (reverse out))
+                           (let* ((entry (car rest))
+                                  (line (car entry))
+                                  (newline (cadr entry))
+                                  (content? (line-content? line))
+                                  (first-line? (= index 0))
+                                  (indent (line-indent line))
+                                  (explicit-space? (any whitespace-boundary? line))
+                                  (has-column-marker? (any column-marker? line))
+                                  (prefix-pieces
+                                    (if first-line? '()
+                                        (call-with-values
+                                          (lambda ()
+                                            (line-take-prefix line
+                                              (string-length indent)))
+                                          list)))
+                                  (visible
+                                    (if first-line? line
+                                        (cadr prefix-pieces)))
+                                  (visible (remove-whitespace-boundaries visible))
+                                  (width
+                                    (if (and content? (not first-line?)
+                                             (not has-column-marker?))
+                                        (max 0 (- (line-indent-width line)
+                                                  margin))
+                                        0))
+                                  (values
+                                    (if (and newline (not explicit-space?))
+                                        (call-with-values
+                                          (lambda ()
+                                            (line-strip-trailing-space visible))
+                                          list)
+                                        (list visible "" #f)))
+                                  (visible (car values))
+                                  (trailing (cadr values))
+                                  (trailing-properties (caddr values))
+                                  (closing-newline?
+                                    (and remove-closing?
+                                         (= index (- (length lines) 2))))
+                                  (next-line
+                                    (and (< (+ index 1) (length lines))
+                                         (list-ref lines (+ index 1))))
+                                  (newline-text
+                                    (string-append trailing "\n"
+                                      (if next-line
+                                          (line-indent (car next-line)) "")))
+                                  (newline
+                                    (and newline (not closing-newline?)
+                                         (let ((newline
+                                                 (decorate-newline newline
+                                                   newline-text)))
+                                           (set-source-span! newline
+                                             (or trailing-properties
+                                                 (source-properties newline))
+                                             (and next-line
+                                               (line-indent-end-properties
+                                                 (car next-line))))
+                                           newline)))
+                                  (synthetic
+                                    (if (> width 0)
+                                        (let ((spaces (make-string width #\space)))
+                                          (when (pair? (car prefix-pieces))
+                                            (set-source-properties!
+                                              spaces
+                                              (source-properties
+                                                (caar prefix-pieces))))
+                                          (mark-indentation spaces))
+                                        #f))
+                                  (visible
+                                    (append-map
+                                      (lambda (fragment)
+                                        (if (column-marker? fragment)
+                                            (let ((width
+                                                    (max 0 (- (vector-ref
+                                                                fragment 1)
+                                                              margin))))
+                                              (if (zero? width)
+                                                  '()
+                                                  (let ((spaces
+                                                          (make-string width
+                                                            #\space)))
+                                                    (when (vector-ref
+                                                            fragment 2)
+                                                      (set-source-properties!
+                                                        spaces
+                                                        (vector-ref
+                                                          fragment 2)))
+                                                    (list
+                                                      (mark-indentation
+                                                        spaces)))))
+                                            (list fragment)))
+                                      visible))
+                                  (pieces
+                                    (append (if synthetic (list synthetic) '())
+                                            visible
+                                            (if newline (list newline) '()))))
+                             (loop (cdr rest) (+ index 1)
+                                   (cons pieces out))))))))
+          (merge-comment-separated-strings result)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; list utils
@@ -530,8 +692,10 @@
             [punc  (read-punctuation in)]
             [body? (eqv? (peek-char in) #\{)]
             [body  (cond [body? (read-char in)
-                                (normalize-body
-                                  (scribble-parse in punc ec #:need-close? #t))]
+                                (let ((body-start (position in)))
+                                  (normalize-body
+                                    (scribble-parse in punc ec #:need-close? #t)
+                                    body-start))]
                          [else '()])]
             [extra-bodies
               (if (and body? (pair? cmd))
@@ -539,10 +703,12 @@
                     (if (eqv? (peek-char in) #\{)
                         (begin
                           (read-char in)
-                          (let ((fragments
-                                  (normalize-body
-                                    (scribble-parse in punc ec
-                                                    #:need-close? #t))))
+                          (let* ((body-start (position in))
+                                 (fragments
+                                   (normalize-body
+                                     (scribble-parse in punc ec
+                                                     #:need-close? #t)
+                                     body-start)))
                             (loop
                               (cons (if (= (length fragments) 1)
                                         (car fragments)
@@ -590,6 +756,34 @@
       (cond [(char-whitespace? ch)  (read-char in) (skip-space in)]
             [(eqv? ch comment-char) (read-line in) (skip-space in)])))
 
+  (define-inlinable (skip-comment-line in)
+    ;; Keep the line ending for the body reader: it carries both layout and
+    ;; source-location information, even when the comment itself is discarded.
+    (let loop ()
+      (let ((ch (peek-char in)))
+        (cond ((or (eof-object? ch) (eqv? ch #\newline))
+               (unless (eof-object? ch) (read-char in)))
+              ((eqv? ch #\return)
+               (read-char in)
+               (when (eqv? (peek-char in) #\newline)
+                 (read-char in)))
+              (else (read-char in) (loop))))))
+
+  (define (skip-line-indentation in)
+    (let loop ()
+      (when (horizontal-space? (peek-char in))
+        (read-char in)
+        (loop))))
+
+  (define (empty-line-prefix? str res)
+    (and (every horizontal-space? str)
+         (every (lambda (fragment)
+                  (and (string? fragment)
+                       (string-every horizontal-space? fragment)))
+                (take-while (lambda (fragment)
+                              (not (source-newline? fragment)))
+                            res))))
+
   (define (tok str res punc depth)
     (let* ([start (position in)] [c (read-char in)])
       (when (null? str) (set! text-start start))
@@ -609,13 +803,33 @@
               (read-char in)
               (cond [(eqv? brace-char (peek-char in))
                      (scribble-parse-escape in escape-char)]
-                    [else (read-line in)])
-              (tok str res punc depth)]
+                    [(not need-close?)
+                     (read-line in)
+                     (tok str res punc depth)]
+                    [else
+                     (let* ((column (assq-ref start 'column))
+                            (line-prefix? (empty-line-prefix? str res))
+                            (res (if line-prefix?
+                                     (cons (make-column-marker column start)
+                                           res)
+                                     (if (pair? str)
+                                         (cons scribble-comment-boundary
+                                           (collect str res start))
+                                         (collect str res start)))))
+                       (skip-comment-line in)
+                       (skip-line-indentation in)
+                       (tok '() res punc depth))])]
              [(eqv? c #\|)
               (read-char in)
               (let loop ([ls (collect str res start)])
                 (skip-space in)
-                (cond [(eqv? #\| (peek-char in)) (read-char in) (tok '() ls punc depth)]
+                (cond [(eqv? #\| (peek-char in))
+                       (read-char in)
+                       (tok '()
+                         (if need-close?
+                             (cons scribble-whitespace-boundary ls)
+                             ls)
+                         punc depth)]
                       [else (loop (cons (scribble-read in) ls))]))]
              [else
               (let* ([str (drop str (length punc))]
